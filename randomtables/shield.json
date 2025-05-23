@@ -1,0 +1,915 @@
+[
+  {
+    "text": "Tiny sparks explode forth, forcing the attacker to make a DC [[2d6+8]] Constitution saving throw or have disadvantage on their next attack!✨",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The ground beneath the attacker becomes slick for 1 round, forcing a DC [[2d6+8]] Dexterity saving throw or causing them to fall prone!🛹",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A small shockwave bursts outward, dealing [[2d6+8]] thunder damage to the attacker!🧨",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker is singed by magical fire, taking 1d6 fire damage a the beginning of their turn each round for [[d8]] rounds!🔥 ||(or until they spend an action to pat out the flames)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker’s weapon warps each time they make an attack against you for the rest of combat!⛓️‍💥 ||(imposes a permanent cumulative -1 penalty on attack rolls with that weapon)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A flash of light erupts, forcing the attacker to make a DC [[2d6+8]] Constitution saving throw or be blinded for [[1d4]] rounds!☀️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker is shifted back in time several seconds, forced to repeat their turn next round!⏲️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dark tendrils rise from the ground, forcing the attacker to make a DC [[2d6+8]] Str Save or become restrained until the end of their next turn!⛓️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker's weapon turns to quicksilver!🫗",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker must succeed a DC [[2d6+8]] Con Save ||or they become [[d40000]] bees||!🐝🐝🐝🐝🐝 ||DM Note:||||🐝🐝🐝🐝🐝||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker is shoved [[1d6x5]] feet away and must succeed on a DC [[2d6+8]] Dex Save or fall prone!🙌",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A fiery explosion bursts forth in a [[1d6x5]]-foot radius, dealing [[20d6]] fire damage to the attacker and all targets within range (DC [[2d6+8]] Dex Save halves damage)!🧨",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A fiery explosion bursts forth in a [[1d6x5]]-foot radius, dealing [[[[1d8+7]]d6]] fire damage to the attacker and all targets within range (DC [[2d6+8]] Dex Save halves damage)!🧨",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A rift opens up behind the attacker, and they fall backwards into it!🕳️ ||(they are deposited [[1d6x5]] in a random direction (d8 going clockwise from 1 being North: [[1d8]]) and take [[2d6+8]] psychic damage)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker’s next attack roll automatically rolls a natural 1!😵",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker's next attack roll automatically rolls a natural 20!🎰",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Regain one expended spell slot of [[2d4+1d3-2]]th level or lower!🪄",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dark tendrils grab at the attacker’s feet, reducing their movement speed by 10 feet for [[1d4]] turns!🕳️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker must pass a DC [[2d6+8]] Con Save ||or turn to [[2000d4]] gold pieces||!🪙",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker is shunted into the Ethereal Plane for [[1d4]] rounds, reappearing in the same spot!🌁",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You are shunted into the Ethereal Plane for [[1d4]] rounds!🌁",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker must make a DC [[2d6+8]] Wisdom saving throw or become Frightened of you for the next [[1d4]] rounds!👻",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker's attack's damage is maximized!❤️‍🩹",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker regains hit points equal to half the damage dealt to you!💖",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker gains a +[[1d4]] bonus to their attack rolls for the next [[2d+8]] rounds!🎲",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker’s speed increases by [[2d4x5]] feet until the end of their next turn!📏",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker absorbs the wild magic, gaining [[2d6+8]] temporary hit points and dealing an additional [[2d6+8]] force damage on their next attack!🐂",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker gains Growing Armor!🛡️||DM Note:||||+2 AC per round, -2 Dex per round as the armor grows out of control||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker gains Raging Power!🐂||DM Note:||||+1d6 attack damage per turn, 1d6(+bonus) psychic damage per turn, instant kill at 0||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker gains Titan's Growth!📏||DM Note:||||+1 foot per round, +2 Str per round, -2 Dex per round||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker gains Burning Blade!❤️‍🔥||DM Note:||||Attacker is immune to pain, and gets a cumulative +1d6 fire damage to attacks each round. Takes 1d6(+bonus) fire damage each turn||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker gains Arcane Shield!🛡️||DM Note:||||Each round attacker gains +1d4 to temporary hitpoint rolls, then gains 1d4 temporary hitpoints. Loses cohesion with matter, -1 Str and Dex per round||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker gains Entropic Feedback!⏲️||DM Note:||||Can TPK! Attacker is set to initiative 1, and their initiative doubles each round. Under initiative 5, they can only take one action per round. At initiative 10, and then at 100 and every multiple of 10 thereafter, they take an extra action per round||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker gains Cursed Fury!🐂||DM Note:||||Can TPK! Attacker has disadvantage to all Int and Wis tests. Attacker will blindly attack whatever it can until it passes out. Each round must pas a Wis save equal to damage it took last round or pass out. Each round, gains +2 to all melee damage||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker gains Nyxbound Blessing!🕳️||DM Note:||||Attacker loses cohesion with the material plane, -2 Str per round, +2 spell proficiency per round. If they were a caster, they might be back someday||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker gains Nyxbound Burden!🕳️||DM Note:||||Each round, attacker is bound by another tendril of shadow, reducing their speed by 5 feet per tendril. Each turn they take d4 damage per tendril, body is claimed by Nyx at 0hp. If they are a caster, they might be back someday||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You teleport [[1d6x5]] feet in a random direction (d8 for direction, clockwise starting with 1 = North: [[d8]])!🧭",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your voice becomes unnaturally loud, audible up to [[10d6x5]] feet away, regardless of volume for the next [[1d4]] hours!📣.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You grow a pair of spectral wings!🪽",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "All food and drink within [[10d6x5]] feet of you becomes perfectly seasoned and irresistibly delicious!😮 ||(*irresistibly*)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "All your clothing changes color to bright neon hues!👙",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You regain [[2d4]] sorcery point!🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your next melee attack emits a shockwave, dealing [[2d6+8]] thunder damage to all creatures in a [[1d6x5]]-foot cone!⚡",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You grow [[3d2-3]] extra fingers on each hand for [[3d6+6]] hours!👍",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You grow [[3d2-3]] extra fingers on each hand!👍",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The ground within a [[2d6x5]]-foot radius of you turns soft, weak, or fragile!🧽",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The sound of a loud gong emanates from your location, audible up to [[20d6x5]] feet!🔔",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You smell irresistibly like baked goods for [[3d6+6]] hours!🥖 ||(*irresistibly*))||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker's weapon turns to steam!☁️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker's weapon turns to water!💦",
+    "unique": true,
+    "used": [
+      "144624468763869184"
+    ]
+  },
+  {
+    "text": "Attacker's weapon Disintegrates to ash!😵 attacker must pass a DC [[2d6+8]] Con save ||or Disintegrate to ash themselves||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A harmless spectral hand appears and follows you, offering assistance for [[1d4]] hours!✌️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A harmless spectral hand appears and follows you, offering assistance for [[3d6+6]] hours!✌️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Your hair grows [[2d6+8]] inches longer instantly!💈",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your next spell casts without requiring verbal or somatic components!🤫",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "All bees in your possession turn into coins!🐝🪙 Roll another Shield Surge.",
+    "unique": true,
+    "used": [
+      "144624468763869184"
+    ]
+  },
+  {
+    "text": "All bees in your possession turn into bees!🐝➡️🐝 Roll [[1d4]] more Shield Surges.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You gain a tattoo somewhere on your body representing your last cast spell!🈚",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The temperature within [[20d6x5]] feet of you falls by [[1d4x20]] degrees Fahrenheit for [[3d6+6]] hours!🥶",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The temperature within [[20d6x5]] feet of you rises by [[1d4x20]] degrees Fahrenheit for [[3d6+6]] hours!🥵",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "All torches, lanterns, and open flames within [[10d6x5]] feet of you extinguish!🧯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your size increases by one category for [[1d4]] minutes, doubling your weight!📏",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your size decreases by one category for [[1d4]] minutes, halving your weight!📏",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your size increases by one category for *[[3d6+6]] hours*, doubling your weight!📏",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your size decreases by one category for *[[3d6+6]] hours*, halving your weight!📏",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your size increases by one category for *[[1d4]] days*, doubling your weight!📏",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Your size decreases by one category for *[[1d4]] days*, halving your weight!📏",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Glitter erupts from you, heavily obscuring you until the end of your next turn!🎉",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A loud voice announces your name and location to all creatures within [[10d6x5]] feet!🎯",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker is blasted with a jolt of electricity, taking [[2d6+8]] lightning damage and cannot take reactions until the end of their next turn!⚡",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker's weapon turns to stone!🪨 ||(your mileage may vary with this one)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You blast the attacker with flames, dealing [[3d6+6]] damage!🔥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker disappears!🕵️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker disappears!💀️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A copy of you is performing the exact actions you took about six seconds ago for the next [[2d4]] rounds!⏱️ (keep moving and see if you can get some fun effects out of it)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker must pass a DC [[2d6+8]] Wis Save or be Polymorphed for [[1d4]] minutes!🐑",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker is Polymorphed for [[1d4]] minutes, no save!🐑",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker must pass a DC [[2d6+8]] Wis Save or be True Polymorphed!🐑 ||(if target is still polymorphed in [[1d4]] hours, the effects are permanent)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker is True Polymorphed, no save!🐑 ||(if target is still polymorphed in [[1d4]] hours, the effects are permanent)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker's weapon becomes red-hot!🌶️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker must pass a DC [[2d6+8]] Wis Save or be affected by Tasha's Hideous Laughter for [[2d4]] rounds!🤣 ||(may retry save each turn and when taking damage, gaining advantage on rolls caused by damage)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker is affected by Otto's Irresistable Dance for [[2d4]] rounds!🕺 ||(disadvantage on attacks and Dex Saves, must use all movement dancing. attacks against it have advantage. as an action, target may attampt a DC [[2d6+8]] Wis Save to end the effect)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker forgets the last [[1d4]] minutes completely!🤔",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker forgets the events of the last [[1d12]] years!🤔",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "What's all this then?🤔 ||DM Note:||||Everyone but the attacker forgets the attacker ever existed||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker takes [[10d10]] force damage and is launched that many feet straight away, with the sound like a cannon firing!🎊 ||(oh hallelujah, it's raining men)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker takes [[20d20]] force damage and is launched that many feet straight away, with the sound like a bomb detonating!🎊 ||(DC [[2d6+8]] Con Save for each creature in that many feet or be deafened for that many rounds)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker becomes slick with grease for [[1d4]] rounds, falling prone and requiring a DC [[2d6+8]] Dex Save to stand up or move more than half speed for the duration!🛢️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker must pass a DC [[2d6+8]] Con Save ||or age [[1d100]] years||!👴",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker must pass a DC [[2d6+8]] Con Save ||or become [[1d100]] years younger||!👶",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker takes [[1d6]] Str damage!💪",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker takes [[1d6]] Dex damage!👟",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker takes [[1d6]] Con damage!🍻",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker takes [[1d6]] Int damage!🧠",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker takes [[1d6]] Wis damage!😶‍🌫️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker takes [[1d6]] Cha damage!🤐",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You take [[1d6]] Str damage!💪",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You take [[1d6]] Dex damage!👟",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You take [[1d6]] Con damage!🍻",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You take [[1d6]] Wis damage!😶‍🌫️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You take [[1d6]] Cha damage!🤐",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You take [[1d6]] Int damage!🧠",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker rolls a Wild Surge!🎲",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker is weilding Kluggschmeide, the Mind Forge!🧠",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker is weilding Weltschmeide, the World Forge!🌋",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker is weilding Greifenschmeide, the Grip Forge!🦞",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker is weilding Zephyrschmeide, the Wind Forge!🌬️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker is weilding Festschmeide, the Unmoving Forge!🏰",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A wild Delayed Blast Fireball with [[1d4]] turns left before detonation is created behind the attacker!🧨 ||([[[[1d3+11]]d6]] fire damage, +6 damage and +5 feet of radius for each turn that has passed, max +60 damage and 50 foot radius. DC [[2d6+8]] Dex Save halves damage)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker takes psychic damage equal to half the damage they dealt to you!⚔️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Each creature who can see you makes a roll on the Wild Surge ||(not Shield)|| table!🎰",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker is surrounded by buzzing insects ||(why not bees? 🐝)||, imposing disadvantage on all attacks for [[1d4]] rounds!🪰",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The shield explodes into shards of arcane energy, dealing [[10d4!<4]] force damage to any adjacent hostiles, pushing them that many feet away, and destroying the shield ||until it can be repaired||!💔",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Somewhere, someone has just sworn a pledge to stop you if it's the last thing they do!🤬",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The shield erupts with sticky green goo!🧫(creatures in melee range must pass a DC [[2d6+8]] Dex Save or be restrained. may spend an action to re-attempt using Str or Dex)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A toxic mist surrounds you!😷 Creatures must succeed on a DC [[2d6+8]] Con Save ||or take [[2d6+8]] poison damage and be poisoned for [[1d4]] rounds||.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "An invisible force grips the attacker’s throat, silencing and restraining them for [[10d6]] rounds!🫳 ||(action to attempt a DC [[2d6+8]] Str or Dex Save to break free at disadvantage unless they have some good reason to not have a hard time fighting an invisible magic hand. attacker loses conciousness after a number of rounds equal to their Con)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker must pass a DC [[2d6+8]] Wis Save ||or be incapacitated for [[1d4]] rounds as visions of shadows swallowing them invade their mind||!🕳️ ||(damage allows another save with advantage)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker moves in slow motion, imposing disadvantage on all d20 tests until the end of their next turn!🥴",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your body moves in slow motion, imposing disadvantage until the end of your next turn!🥴",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker is branded with a glowing sigil!✅ All attacks against them gain advantage until the end of their next turn.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker believes they’re on fire!🐦‍🔥",
+    "unique": true,
+    "used": [
+      "144624468763869184"
+    ]
+  },
+  {
+    "text": "The attacker’s weapon or armor becomes strongly magnetized!🧲",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attack plays out twice due to a wild spark of chronomancy, rolling the attack a second time!🤺",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker gains [[2d6+8]] temp HP!➕",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker’s weapon becomes magical for [[1d4]] minutes, gaining a +1 to attack and damage rolls!🧝",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A cloud of flour erupts forth, heavily obscuring the area in a [[1d6x5]]-foot radius around you until the end of your next turn!🎂",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A wave of syrup covers the attacker, halving their movement speed for [[1d4]] rounds!🥞",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A cast-iron skillet falls from out of nowhere onto the attacker, knocking them prone on a DC [[2d6+8]] Str save!🍳",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A rolling pin, seemingly fired at great speed from somewhere, bonks the attacker on the head, dealing 1d8 bludgeoning damage and preventing reactions from the attacker until the end of their next turn!🗞️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The ground beneath the attacker in a [[1d6x5]] foot radius turns into custard, becoming difficult terrain for [[1d4]] minutes!🍮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The ground beneath the attacker in a [[[[1d6]]d6x5]] foot radius turns into custard, becoming difficult terrain!🍮",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker suddenly stops in their tracks!🍰",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker suddenly stops in their tracks!☃️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A spicy cinnamon cloud envelops the attacker, forcing a DC [[2d6+8]] Constitution save or causing them to sneeze uncontrollably for [[1d4]] rounds!🤧",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Giant croissants wrap around the attacker, restraining them for [[1d4]] hours or until using an action to pass a DC [[2d6+8]] Str save!🥐",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The attacker's weapon turns to cake!🍰",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A tasty tart materializes in the attacker’s hand!🥧 ||(restores [[2d6+6]] hit points when eaten)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A tasty tart materializes in the attacker’s hand!🥧 ||(DC [[2d6+8]] Con save or die when eaten)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A tasty tart materializes in the attacker’s hand!🥧 ||(DC [[2d6+8]] Con save or be poisoned for [[3d6+6]] hours)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A tasty tart materializes in the attacker’s hand!🥧 ||(DC [[2d6+8]] Wis save or become frenzied and attempt to eat anything they can for the next [[3d6+6]] hours)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A tasty tart materializes in the attacker’s hand!🥧 ||(is a lil' mimic)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Do you know the muffin man?🍩 ||(a sentient baked good lurks nearby)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A burst of hot steam escapes the shield, scalding the attacker for [[3d6]] fire damage and heavily obscuring a [[1d6x5]]-foot radius until your next turn!🌫️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bagels fall restraining the attacker until they succeed on a DC [[2d6+8]] Str Save as an action!🥯",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You are trapped by a falling pile of meringue, restrained until you spend an action escaping!🍦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A mountain of stale baguettes and loaves tumble onto you, knocking you prone!🍞🥐🥖",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Two spectral rolling pins appear follow around the attacker. They affect the attacker per the Geas spell, attacking them once per day if they act counter to a single request of yours up to [[3d6+6]] words long!🤜🤛",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A burst of black pepper causes the attacker to sneeze uncontrollably for 1 round, forcing them to drop any held weapons!🤧",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grape vines sprout from the ground, tangling your legs and reducing your movement speed by half for [[1d4]] rounds!🍇",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Grape vines sprout from the ground, tangling the attacker’s legs and reducing their movement speed by half for [[1d4]] rounds!🍇",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You drop a giant sticky bun on you and your attacker, reducing your movement by half while reducing your attacker to 0 speed until the end of their next turn!🍩",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A magical table laden with food appears briefly near you and the attacker. If anyone spends their action eating, they regain [[2d6+8]] hit points!🍝 ||(table and uneaten food vanishes after [[2d4]] rounds)||",
+    "unique": true,
+    "used": [
+      "718689667075145779"
+    ]
+  },
+  {
+    "text": "Attacker gains Candied Strikes!🍭||DM Note:||||attacker gains an extra 1d6 damage to attacks, and -2 to Str. Is quickly becoming too encased in candy|| ",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker gains Pain Armor!🥖||DM Note:||||The attacker gains temporary hit points equal to 100% of their maximum HP each round as a crusty bread armor forms over them. they lose 2 Dexterity per turn as they turn into bread||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The area becomes a chaotic mess of flying utensils, rolling pins, and pots!🍲 ||(all creatures within [[2d6x5]] feet must make a DC [[2d5+8]] Dexterity save or take [[3d6]] bludgeoning damage and lose their reaction until the end of your next turn)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Random ingredients (flour, sugar, butter, and eggs) rain down in a [[2d6x5]]-foot radius!🍳 Vision is heavily obscured, and the ground becomes difficult terrain for [[1d4]] minutes.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloudy with a chance of meatballs!🍝 ||(gigantic foods rain down in a *[[2d6x5]]-mile* radius over the course of [[1d4]] hours, during which vision is obscured. Afterwards, the ground becomes difficult terrain for [[1d12]] days as the surrounding areas recover. Major economic and ecological effects can be expected in the short term)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A swarm of animated kitchen tools attacks any hostiles within a [[1d6x5]]-foot radius for [[1d4]] minutes, dealing 1d6 damage per round!🍴",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Two illusory versions of you appear and mimic your mannerisms with uncanny precision!🪞 ||(they last until physically interacted with, and require a DC [[2d6+8]] Int Save to see through)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker’s weapon turns into a bouquet of brightly colored flowers for [[1d4]] rounds!💐",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker gains Barkskin!🌲 ||DM Note:||||attacker gains +2 AC each round but loses 2 Dex each round as they become a tree||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker grows antlers or horns!😈",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker gains Blinding Speed!🚆 ||DM Note:||||Gains d4x10 speed each round and -2 Int each round, eventually goes way past cool||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker gains Dance 'til You Drop!🕺 ||DM Note:||||each round, more and more lines appear under and near the attacker. at the end of the attacker's turn, the attacker and other creatures in melee range must pass a DC [[2d6+8]] Dex Save +1 DC for each round the attacker has been cursed or be split by impossibly sharp walls of force)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker must pass a DC [[2d6+8]] Int Save or the area around the attacker becomes filled with illusory flowers and bushes, creating difficult terrain for the attacker!🏖️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The attacker has two reflections appear nearby and behave like them!🪞 ||(until each reflection succeeds on a DC [[2d6+8]] Wis Save, they must target the attacker and then make a Wis Save after the attack. If they succeed however...)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Attacker must succeed a DC [[2d6+8]] Cha Save or now hold the belief that you are irresistably delicious!🍖",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Gotta go fast!👟 gain an extra reaction every round for the next [[1d4]] rounds",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A sweet, golden nectar splashes from the shield, landing on the attacker and healing them for [[2d6+8]] hit points!🍯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Starfall!🌠 ||a single large chunk or several small chunks of starmetal are called down in the surrounding area||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "What's that racket!🫨 a mess of clashing sounds in a [[20d6x5]]-foot radius centered on you for the next [[2d6+8]] rounds prevent any effective verbal communication, cause skill checks based on listening to fail, cause concentration checks to be rolled with disadvantage, but still allow spellcasting",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "One Star Review!🌟 ||(a star is created in the sky above the location, visible across the world. It glimmers with fey energy and becomes a marker for travelers and scholars. People will investigate the cause of this)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You shrink by 1 foot for [[3d6+6]] hours!📏 (minimum 1 foot tall)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your voice becomes high-pitched like a chipmunk’s for [[1d6]] hours!🐿️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your hands are covered in glowing runes for [[3d6+6]] hours!♒ Grants advantage on Arcana checks for the duration.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You can’t stop sneezing for [[1d4]] rounds, causing disadvantage on all rolls, but all rolls of 1 on any die explode for the duration!🤧",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A harmless burst of butterflies erupts around you!🦋",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You cast Faerie Fire centered on yourself, no concentration required!🎆 (lasts for [[1d4]] minutes)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bees!🐝🐝🐝 ||([[1d40000]] to 'bee' specific)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Attacker starts shedding a fine layer of glitter!✨ ||(Wish or Greater Restoration can remove this)||",
+    "unique": true,
+    "used": []
+  }
+]

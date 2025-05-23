@@ -1,0 +1,693 @@
+[
+  {
+    "text": "You shrink by 1 foot for [[3d6+6]] hours!📏 (minimum 1 foot tall)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your voice becomes high-pitched like a chipmunk’s for [[1d6]] hours!🐿️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your hands are covered in glowing runes for [[3d6+6]] hours!♒ Grants advantage on Arcana checks for the duration.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You can’t stop sneezing for [[1d4]] rounds, causing disadvantage on all rolls, but all rolls of 1 on any die explode for the duration!🤧",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Did your shadow just move?😨||(it did!)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Did your shadow just move?😨 ||(it was probably nothing... this time!)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A harmless burst of butterflies erupts around you!🦋",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You cast Faerie Fire centered on yourself, no concentration required!🎆 (lasts for [[1d4]] minutes)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You are surrounded by faint, ghostly music for [[3d6+6]] hours!👻🎵",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "An illusory duplicate of you appears nearby and mirrors your movements for [[1d12]] minutes!🪞",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You emit bubbles every time you speak for [[1d6]] hours!🧼",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You can only speak in rhyme or song for [[1d4]] minutes!🎶",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A rain cloud appears above you, soaking you in water for [[1d4]] hours!🌧️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "An extraplanar unicorn appears!🦄",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You cast Fireball centered on yourself!💥",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You cast Polymorph on yourself, turning into a random creature for [[1d4]] hours!🐥",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You cast Gust of Wind in a random direction for [[1d4]] rounds!🌪️ (roll a d8 to determine direction, 1 = North, clockwise: [[1d8]])",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You cast Mage Hand, but it's not taking orders from you!👏 (lasts for [[1d6+6]] rounds)",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You cast Speak with *Gossipy* Animals!😼",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You teleport 10 feet in a random direction! (roll a d8 for direction, 1 = North, clockwise: [[1d8]])🧭",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Every drinkable liquid within [[20d6]] feet turns into mead!🍹",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Your clothing becomes an elaborate ball gown or tuxedo for [[3d6+6]] hours!🎩",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You use up a 1st-level spell slot (if available), but every plant in the area grows taller!🌱",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You glow with dim light in a 30-foot radius for [[3d6+6]] hours!🕯️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "All creatures within [[10d6]] feet other than you must make a Wisdom save or burst into uncontrollable laughter!🤣 (your character feels mortified!)",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A loud, disembodied voice narrates your every action for [[3d6]] minutes!🧐",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A harmless ||but curious|| object lurks nearby!🎃",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "[[1d4]] squirrels hop out of your pockets!🐿️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A mischievous prankster imp appears!😈",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Bees!🐝🐝🐝 ||([[1d40000]] to bee specific)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A shower of flower petals rains down in a 30-foot radius centered on you! 🌺",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Natural ground in a [[5d6]]-foot radius around you current location turns to sponge-like material for [[1d4]] hours!🧽 (artificial ground feels weak, may break easier)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gravity reverses in a 10-foot radius around you for [[1d4]] rounds!↕️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A sudden gust of wind blows through, scattering loose objects!🌬️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The temperature in a [[10d6]]-foot radius around you drops by 20 degrees for [[3d6+6]] hours.☃️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A faint, sparkling mist fills the area in a [[10d6]]-foot radius around you for [[3d6]] minutes! ✨",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You regain all lost hit points!💯",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You may spend a hit die to regain a Hit Die + Con Mod health!💓",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You restore one level of exhaustion!☕",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "What just happened!? You feel completely enervated, suffer [[1d4]] levels of exhaustion!🛌 (this cannot bring you to 6 levels of exhaustion)",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "If it hits it crits! Your next successful attack roll before a rest crits!🎯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You notice you're standing on a crushed four-leaf clover!🪦||(until you critically fail a roll, when making a d20 test that can critically fail, roll a d4. on a 1, treat the roll as a critical failure)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A shimmering shield surrounds you!🛡️ (gain +2 AC for [[1d4]] hours)",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You gain truesight up to 30 feet for [[1d4]] minutes! 👁️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You gain truesight up to 120 feet for [[3d6+6]] *hours*! 👁️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You feel a swelling of arcane magic!🪄 ||(your next spell before a rest's damage is maximized)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You become invisible (per *Greater* Invisibility) for [[1d4]] *hours*! 🕵️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You become invisible (per *Greater* Invisibility) for [[1d4]] minutes! 🕵️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You become invisible (per *Greater* Invisibility) for *[[3d6+6]] hours*! 🕵️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You become invisible (per Invisibility) for [[1d4]] hours! 🕵️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You become invisible (per Invisibility). How long you ask? Until broken per the spell description (infinite duration)! 🕵️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You can See Invisibility for the next [[1d4]] hours!🔎",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You can See Invisibility for the next *[[3d6+6]] hours*!🔎",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You can barely mutter words for the next [[1d4]] hours!🤐",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You are blinded for [[1d4]] rounds!🙈",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You lose your sense of taste and smell for [[3d6+6]] hours. 🙊",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "For the next minute, every time you cast a spell, roll a d4. On a 1, it causes another Wild Magic Surge!🎰",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your body becomes incredibly light, halving your weight and doubling your movement speed for [[1d4]] hours!🏎️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You are surrounded by illusory flames that deal no damage but make you appear terrifying for [[1d4]] hours!🔥",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A sentient object nearby has some... notes, and begins giving you unsolicited advice.🧐",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A talking skull appears, answering one question of the player's choice using no more than [[3d6+6]] words!💀",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A spectral butler appears and offers to start cleaning up the area!🧐||(I see you! lol. Their name is Lucian Volare, they are quick-witted, clever, and just finds cleaning up oddly satisfying)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A tiny portal opens and throws a pie into your face before vanishing!🥧 ||it's the pie from earlier/later!||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You feel compelled to throw a pie the first time you get an opportunity today! 🥧||it vanishes through a portal the moment it leaves your hand, and hits you earlier/later||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A swarm of [[10d6]] harmless frogs rain down in a 30-foot radius!🐸",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Your clothing turns into a random local historical outfit!👘",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You grow an extra pair of eyes before going away in [[3d6+6]] hours. They appear wherever you would like!👀 ||(gain advantage on perception rolls that rely on sight for the duration)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Your entire body becomes covered in harmless, tattoos. The tattoos glow for the first [[3d6+6]] hours.💮",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You turn into your choice of species for the next [[1d4]] hours! 🐧",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You emit a loud quacking noise every time you move for [[1d6]] minutes. 🦆",
+    "unique": true,
+    "used": [
+      "144624468763869184"
+    ]
+  },
+  {
+    "text": "A dramatic drumroll plays every time you cast a spell for the next [[1d4]] hours!🥁",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A deep, ominous bell starts tolling every 10 seconds for the next [[1d4]] minutes! You worry that it is counting down... to what tho?🕰️ ||(DM note:|||| should be in temp encounters notes)||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Every time you speak, it sounds like you're shouting through a megaphone for [[1d4]] minutes!📣",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You emit a satisfying \"pop\" noise whenever you take damage for the next [[1d4]] hours!🫧",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The sound of a choir singing echoes faintly around you for [[1d4]] hours! 👥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your footsteps sound like horse hooves for [[1d4]] hours!🐎",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A mysterious, haunting melody seems to follow you for the next [[3d6+6]] hours.🎵",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Random animal noises accompany your speech for [[1d4]] hours!🙊",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "All unattended objects and all terrain within [[10d12]] feet of your current location are tinted the color of your choice for [[1d12]] days.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A glowing rune appears on your forehead and remains for [[3d6+6]] hours!♊",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You appear as though you’re standing in a spotlight for [[1d4]] hours!🔦",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "For the next [[1d4]] minutes, your face changes to mimic the last creature you looked at!👹",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your hands become incredibly sticky for [[1d4]] hours!🙌",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You start shedding a fine layer of glitter for [[1d4]] hours.✨",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "All coins in your possession briefly transform into bees before returning to normal [[1d4]] rounds later. 🐝🐝🐝",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A tiny floating orb of light appears and follows you!🌞",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A tiny, sentient mushroom person sprouts from the ground and matures in [[1d4]] minutes ||(if you can keep it safe)||!🍄",
+    "unique": true,
+    "used": [
+      "718689667075145779"
+    ]
+  },
+  {
+    "text": "A Mage Hand appears and offers you a high-five!🙌",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A mischievous pixie appears and tries to steal from you before fleeing!",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "For the next [[1d4]] hours, every time you take damage, a burst of confetti explodes around you!🎉",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The next creature you attack is surrounded by illusory stars for the next [[1d4]] rounds, granting advantage to all attacks against it!✨",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Your wielded weapon (if any) shatters into harmless glitter but immediately starts to piece itself back together, and reforms after [[1d4]] rounds!⛓️‍💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You accidentally cast Thunderwave targeting yourself!⛈️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The next time you are hit, you teleport 30 feet in a random direction!🧭 (roll a d8 for direction, 1 = North, clockwise: [[1d8]])",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The next melee attack against you causes the attacker to be pushed 15 feet away!🐂",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You can now move small, lightweight objects near you (quills, coins, etc.) when you’re concentrating.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Your voice now echoes faintly, as if you’re speaking in a large hall.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Your skin now always feels comfortably warm, regardless of external temperature.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Your eyes now sparkle like stars in low light.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Once per day, when you fail a Charisma check, you now laugh uncontrollably for 1d4 rounds.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Your veins now glow faintly in the dark, dimly illuminating a 5-foot radius.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You now occasionally hear indistinct whispers when alone, but they seem harmless enough.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Tattoos or birthmarks on your skin now rearrange themselves into new patterns each night.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You develop uncanny pupils in each eye, granting advantage on Perception checks relying on sight but unsettling others who see your eyes.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You occasionally discharge small static shocks when touching objects or people. ||(1 on a d4)||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You now strongly overpronounce some words, seemingly at random.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "When you cast a spell of 1st level or higher, now there’s a 10% chance it repeats itself at the start of your next turn (same target).",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You now float 1 inch off the ground when standing still.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You constantly sparkle faintly as though covered in starlight, drawing unwanted attention in dark environments.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Every time you tell a lie, a small flower grows somewhere on your body.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A translucent tail grows from your back, betraying your emotions and offering others advantage opposed insight checks to determine the truth.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Magical light spells illuminate you twice as brightly.",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The Stars Align!🌠||A constellation above is permanently rearranged into new patterns! Scholars will spend decades debating the meaning, and diviners find their predictions unreliable, but potentially delicious, until they adjust to the new star maps||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Opposite Day!☯️ ||Two unrelated words (e.g., \"bread\" and \"sword\") permanently swap meanings. Dictionaries and texts update instantly, but the party retains their original understanding||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "New God, Old Tricks!🔱 ||A god no one remembers suddenly becomes a major force in the world. Temples, clerics, and worshipers appear overnight, with the deity claiming they’ve always existed||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Standing Stones!👣||We will, we will, rock you!||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "I am the Lorax!🌳||A nearby forest becomes sentient with a unified consciousness. It communicates with visitors through rustling leaves and can influence animals and plants within its borders||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Royale w/ Cheese!🫅||A minor noble or royal figure suddenly appears where the shield was struck, bewildered and confused, claiming you are abducting them from their court||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Everyone except the party forgets the last day!😴",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The terrain in a *[[1d6x5]]-mile* radius around you becomes a floating island!🏝️",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Blue Moon!🌚 ||A new moon appears, and only the party remembers that there used to be only one moon||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Starfall!🌠 ||a single large chunk or several small chunks of starmetal are called down in the surround area||",
+    "unique": true,
+    "used": [
+      "718689667075145779"
+    ]
+  },
+  {
+    "text": "One Star Review! 🌟 ||A star is created in the sky above the location, visible across the world. It glimmers with fey energy and becomes a marker for travelers and scholars||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A burst of fey magic causes plants to grow wildly within [[20d6x5]] feet!🌹 Thorny vines, glowing mushrooms, and strange flowers sprout overnight, blocking some paths and entrances.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Endless Twilight!🌃 A nearby area has fallen into perpetual nighttime ||a piece of the Dark Star has fallen, and it would be a mess if it fell into the wrong hands||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "The Mayor's Shoes!👑||DM Note:||||A mayor is swapped with a criminal and now is wanted by the mayor. check your notes||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Puppet Master!🎃 ||spoilers for real tho:||||scarecrows, dolls, puppets, etc. in the area all come to life, and when people aren't looking, work to bring any others they can to life||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Endless Echo!🎵 ||an extraplanar sound becomes omnipresent in an area. It doesn’t seem to harm anyone but unnerves the locals and grows louder at night|| ||the source is an extraplanar rift||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Clockwork Companions!🐜 A faint ticking sound pervades the area, and small clockwork creatures (e.g., mechanical beetles or mice) emerge from cracks and crevices. ||They act harmlessly at first but begin dismantling objects and creating more until stopped||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Color Drain!🩶 ||You drain all the color from the surrounding *[[1d12]] miles*, gaining twice that many sorcery points. The color returns in that many days",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Winking Star!🤩 ||spoilers:||||A(n other) star in the sky over a town begin winking, as if trying to communicate||",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You cast Talk with *Impatient* Plants!🌵",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "You cast Speak with *Ungrateful* Dead!💀",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "It was never truly asleep, but now it stirs!🦑",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Planar Pests!🐞 ||Tiny creatures from another plane flood the area. While harmless individually, their sheer number could disrupt daily life||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Green Thumb!🎃 ||spoilers:||||for real tho:||||plants in the area all come to life, and when people aren't looking, creep around and work to bring any others they can elsewhere to life||",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "Every morning, roll a(n additional) Wild Magic Surge.",
+    "unique": false,
+    "used": []
+  }
+]

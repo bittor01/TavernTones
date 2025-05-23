@@ -1,0 +1,94 @@
+/* Basic reset for consistency across browsers */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #2E2E2E;
+  color: #D3D3D3;
+  font-family: 'Palatino Linotype', Palatino, serif;
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  margin-top: 50px;
+  padding-left: 20px;
+}
+
+/* Ensure controls are in a column layout */
+.controls {
+  display: flex;
+  flex-direction: column;
+  margin-right: 20px;
+  margin-left: 20px;
+}
+
+.exitButton {
+  font-family: inherit;
+}
+
+.playPauseButton {
+  font-family: inherit;
+}
+
+.selectFileButton {
+  font-family: inherit;
+}
+
+/* Styles for the log area */
+.logArea {
+  width: 300px; /* Adjust width as needed */
+  height: 200px; /* Adjust height as needed */
+  border: 2px solid #444; /* Slightly darker border to match button color */
+  overflow-y: auto; /* Scroll if content overflows */
+  background-color: #3E3E3E; /* Slightly lighter background to distinguish it */
+  padding: 10px;
+  box-sizing: border-box;
+  color: #D3D3D3; /* Match text color */
+  margin-right: 50px;
+}
+
+/* Styles for the selected file label */
+.fileLabel {
+  margin-top: 10px; /* Space above the label */
+  margin-right: 20px;
+  margin-left: 20px;
+}
+
+/* Optional: Styling for individual log entries */
+.logArea div {
+  margin-top: 2px;
+  padding-inline: 5px;
+  padding-block-start: 5px;
+}
+
+button {
+  all: unset; /* Resets all styles to default */
+  font-family: 'Palatino Linotype', Palatino, serif;
+  /* Reapply your custom styles */
+  background-color: #444;
+  color: #D3D3D3;
+  padding: 10px 20px;
+  margin: 10px 0;
+  border: none;
+  cursor: pointer;
+}
+
+button:disabled {
+  background-color: #555;
+  color: #888;
+  cursor: not-allowed;
+}
+
+input[type="file"] {
+  margin-top: 20px;
+  color: #D3D3D3;
+}
+
+button:hover:enabled {
+  background-color: #555;
+}
