@@ -115,9 +115,6 @@ client.once('ready', async () => {
     }
     */
 
-    // let currentTrack = null; // Replaced by currentPlayingFilePath
-    // let filePath = null; // This global filePath is being removed. Local variables will be used in open-file-dialog.
-
     //Connect to the voice channel
 
     //connection status enums
@@ -444,11 +441,6 @@ client.once('ready', async () => {
                             await message.reply('No references available from the last response.');
                         }
                         break;
-                        
-                    case content.includes('!h'):
-                        logToRenderer('Help command detected');
-                        await message.reply('Commands:\n!su (surge)\n!sh (shield)\n!ll (Llama model)\n!re (Reasoner model)\n!in (inspect referenced material from last response)\n!h (returns this help message)\nany other message will return the currently playing track and album, if any.');
-                        break;
 
                     case content.includes('!pl'):
                         logToRenderer('!pl command detected');
@@ -548,6 +540,11 @@ client.once('ready', async () => {
                             replyMessage += "\nPlease check your terms or ensure the 'chill' folder exists and has music.";
                             await message.reply(replyMessage);
                         }
+                        break;
+                    
+                    case content.includes('!h'):
+                        logToRenderer('Help command detected');
+                        await message.reply('Commands:\n!su (surge)\n!sh (shield)\n!ll (Llama model)\n!re (Reasoner model)\n!in (inspect referenced material from last response)\n!h (returns this help message)\nany other message will return the currently playing track and album, if any.');
                         break;
 
                     default:
