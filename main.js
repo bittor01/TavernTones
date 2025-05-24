@@ -17,7 +17,12 @@ const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
 let connection;
 let lastResponse = null; // Variable to store the last response
 
+let pendingAudioResource = null;
+let currentAudioResource = null;
+let pendingFilePath = null;
+let currentPlayingFilePath = null;
 
+let mp3Cache = new Map(); // Cache for decoded MP3 buffers
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -110,8 +115,8 @@ client.once('ready', async () => {
     }
     */
 
-    let currentTrack = null;
-    let filePath = null;
+    // let currentTrack = null; // Replaced by currentPlayingFilePath
+    // let filePath = null; // This global filePath is being removed. Local variables will be used in open-file-dialog.
 
     //Connect to the voice channel
 
@@ -450,16 +455,16 @@ client.once('ready', async () => {
                         if (player && player.state.status == AudioPlayerStatus.Playing) {
                             // Get the file path of the currently playing track
                             
-                            if (filePath) {
+                            if (currentPlayingFilePath) {
                                 // Extract album and track name
-                                const albumName = path.basename(path.dirname(filePath)); // Last subfolder
-                                const trackName = path.basename(filePath, path.extname(filePath)); // Filename without extension
+                                const albumName = path.basename(path.dirname(currentPlayingFilePath)); // Last subfolder
+                                const trackName = path.basename(currentPlayingFilePath, path.extname(currentPlayingFilePath)); // Filename without extension
                                 
-                                logToRenderer('Reply sent successfully with track and album name.');
+                                logToRenderer('Reply sent successfully with track and album name: ' + currentPlayingFilePath);
                                 await message.reply(`I'm currently playing: **${trackName}** from the album **${albumName}**`);
                             }
                             else {
-                                logToRenderer('Reply sent successfully, but no filename was found.');
+                                logToRenderer('Reply sent successfully, but no currentPlayingFilePath was found.');
                                 await message.reply('Sorry, no track information available.');
                             }
                         }
@@ -480,23 +485,41 @@ client.once('ready', async () => {
         mainWindow.webContents.send('log-message', message);
     }
 
-    ipcMain.on('play-music', async (event, filePath) => {
-        if (filePath) {
-            try {
-                logToRenderer('Starting or resuming music: ', player.state.status);
-                await checkStartResume(filePath);
+    ipcMain.on('play-music', async (event, filePathFromRenderer) => {
+        logToRenderer('Play command received. Pending: ' + !!pendingAudioResource + ', Current: ' + !!currentAudioResource + ', Renderer Path: ' + filePathFromRenderer);
+
+        if (pendingAudioResource && pendingFilePath) {
+            logToRenderer(`Switching to new track: ${pendingFilePath}`);
+            if (player.state.status === AudioPlayerStatus.Playing || player.state.status === AudioPlayerStatus.Paused) {
+                player.stop(true); // Stop current playback if any
+                logToRenderer('Stopped current track to play new one.');
             }
-            catch (error) {
-                logToRenderer('Error in checkStartResume: ', error);
+            await startPlaybackFromResource(pendingAudioResource, pendingFilePath);
+            pendingAudioResource = null;
+            pendingFilePath = null;
+        } else if (currentAudioResource && player.state.status === AudioPlayerStatus.Paused) {
+            logToRenderer('Resuming current track: ' + currentPlayingFilePath);
+            player.unpause();
+        } else if (currentAudioResource && player.state.status === AudioPlayerStatus.Playing) {
+            logToRenderer('Current track is already playing: ' + currentPlayingFilePath);
+            // Optional: Implement restart if filePathFromRenderer matches currentPlayingFilePath
+            // For now, do nothing if already playing.
+        } else if (filePathFromRenderer) {
+            logToRenderer('Play command: No pending resource, not paused. Attempting to play from renderer path: ' + filePathFromRenderer);
+            const readableStream = await createReadableStream(filePathFromRenderer);
+            if (readableStream) {
+                const resourceToPlay = createAudioResource(readableStream);
+                await startPlaybackFromResource(resourceToPlay, filePathFromRenderer);
+            } else {
+                logToRenderer('Failed to create stream for: ' + filePathFromRenderer);
             }
-        }
-        else {
-            logToRenderer('Received null or invalid filePath.');
+        } else {
+            logToRenderer('Play command: Nothing to play and no pending track or renderer path.');
         }
     });
 
     ipcMain.on('pause-music', () => {
-        logToRenderer('Pausing music: ' + player.state.status);
+        logToRenderer('Pause command received. Current player status: ' + player.state.status);
         pauseAudio();
     });
 
@@ -523,79 +546,105 @@ client.once('ready', async () => {
         ]
         });
 
-        filePath = result.filePaths[0] || null;
-        if (filePath) {
-            if (path.extname(filePath).toLowerCase() === '.lnk') {
+        let selectedPath = result.filePaths[0] || null;
+        let resolvedPathAfterLinkCheck = selectedPath; // Assume it's the same unless it's a link
+
+        if (resolvedPathAfterLinkCheck) {
+            if (path.extname(resolvedPathAfterLinkCheck).toLowerCase() === '.lnk') {
                 try {
-                    const shortcut = shell.readShortcutLink(filePath);
+                    const shortcut = shell.readShortcutLink(resolvedPathAfterLinkCheck);
                     const targetPath = shortcut.target || null;
 
-                    // Check if the resolved target path exists
                     if (targetPath && fs.existsSync(targetPath)) {
-                        filePath = targetPath;
-                        return targetPath; // Return the resolved target path
+                        resolvedPathAfterLinkCheck = targetPath;
+                        logToRenderer('Resolved .lnk to: ' + resolvedPathAfterLinkCheck);
                     } else {
-                        logToRenderer('Resolved shortcut target does not exist: ', targetPath);
-                        return null; // Target path doesn't exist, return null
+                        logToRenderer('Resolved shortcut target does not exist or is invalid: ' + targetPath);
+                        resolvedPathAfterLinkCheck = null; 
                     }
                 }
                 catch (error) {
-                    logToRenderer('Error resolving shortcut: ', error);
-                    return null; // Return null in case of error
+                    logToRenderer('Error resolving shortcut: ' + error);
+                    resolvedPathAfterLinkCheck = null; 
                 }
             }
+
+            if (resolvedPathAfterLinkCheck) { 
+                const readableStream = await createReadableStream(resolvedPathAfterLinkCheck);
+                if (readableStream) {
+                    pendingAudioResource = createAudioResource(readableStream);
+                    pendingFilePath = resolvedPathAfterLinkCheck;
+                    logToRenderer(`Audio resource for ${resolvedPathAfterLinkCheck} created and ready.`);
+                } else {
+                    pendingAudioResource = null;
+                    pendingFilePath = null; // Clear pending if resource creation fails
+                    logToRenderer(`Failed to create audio resource for ${resolvedPathAfterLinkCheck}.`);
+                    resolvedPathAfterLinkCheck = null; // Reflect failure in returned path
+                }
+            } else { 
+                pendingAudioResource = null;
+                pendingFilePath = null;
+                logToRenderer(`File path is null after link check, cannot create audio resource.`);
+            }
+        } else { 
+            pendingAudioResource = null;
+            pendingFilePath = null;
+            logToRenderer('No file selected.');
         }
-        return filePath; // Return the selected file path
+        return resolvedPathAfterLinkCheck; // Return the path that was processed (or null)
     });
 
 
     //Begin audio proccessing
     async function createReadableStream(filePath) {
-        if (filePath) {
-            const ext = path.extname(filePath).toLowerCase();
-    
-            if (ext === '.mp3') {
-                try {
-                    // Create a Lame decoder instance
-                    const lame = new Lame({
-                        output: 'buffer',
-                        bitrate: 64,          // Optional: Set bitrate for quality control (adjust as needed)
-                        sfreq: 44.1,          // Set sample frequency to 44.1kHz
-                        mode: 's',            // 'm' for mono, 's' for stereo (Discord supports both)
-                        bitwidth: 16          // Set bit width to 16-bit for compatibility
-                    }).setFile(filePath);
-    
-                    await lame.decode();
-    
-                    // Get the decoded PCM buffer
-                    const buffer = lame.getBuffer();
-    
-                    // Create a readable stream from the buffer
-                    const readableStream = new stream.PassThrough();
-                    readableStream.end(buffer);
-    
-                    logToRenderer('Successfully created readable stream from MP3 file.');
-                    return readableStream;
-                } catch (error) {
-                    logToRenderer('Error processing MP3 file: ' + error.message);
-                    return null;
-                }
-            } else if (ext === '.wav') {
-                try {
-                    // Create a readable stream from the WAV file
-                    const wavStream = fs.createReadStream(filePath);
-                    logToRenderer('Successfully created readable stream from WAV file.');
-                    return wavStream;
-                } catch (error) {
-                    logToRenderer('Error processing WAV file: ' + error.message);
-                    return null;
-                }
-            } else {
-                logToRenderer('Unsupported file type: ' + ext);
+        if (!filePath) { // Ensure filePath is not null or undefined
+            logToRenderer('createReadableStream: filePath is null or undefined.');
+            return null;
+        }
+        const ext = path.extname(filePath).toLowerCase();
+
+        if (ext === '.mp3') {
+            if (mp3Cache.has(filePath)) {
+                logToRenderer('Creating stream from cached MP3 buffer: ' + filePath);
+                const cachedBuffer = mp3Cache.get(filePath);
+                const readableStream = new stream.PassThrough();
+                readableStream.end(cachedBuffer);
+                return readableStream;
+            }
+            try {
+                // Create a Lame decoder instance
+                const lame = new Lame({
+                    output: 'buffer',
+                    bitrate: 64,          // Optional: Set bitrate for quality control (adjust as needed)
+                    sfreq: 44.1,          // Set sample frequency to 44.1kHz
+                    mode: 's',            // 'm' for mono, 's' for stereo (Discord supports both)
+                    bitwidth: 16          // Set bit width to 16-bit for compatibility
+                }).setFile(filePath);
+
+                await lame.decode();
+                const buffer = lame.getBuffer();
+                mp3Cache.set(filePath, buffer); // Cache the buffer
+                logToRenderer('MP3 decoded and cached: ' + filePath);
+
+                const readableStream = new stream.PassThrough();
+                readableStream.end(buffer);
+                return readableStream;
+            } catch (error) {
+                logToRenderer('Error processing MP3 file in createReadableStream: ' + error.message);
+                return null;
+            }
+        } else if (ext === '.wav') {
+            try {
+                // Create a readable stream from the WAV file
+                const wavStream = fs.createReadStream(filePath);
+                logToRenderer('Successfully created readable stream from WAV file.');
+                return wavStream;
+            } catch (error) {
+                logToRenderer('Error processing WAV file in createReadableStream: ' + error.message);
                 return null;
             }
         } else {
-            logToRenderer('No path passed: ' + filePath);
+            logToRenderer('Unsupported file type in createReadableStream: ' + ext);
             return null;
         }
     }
@@ -607,89 +656,107 @@ client.once('ready', async () => {
     //AudioPlayerStatus.Idle
     //AudioPlayerStatus.AutoPaused
 
-    let playing;
-    let audioResource;
+    // let playing; // This flag's usage needs to be reviewed or removed if player.state.status is sufficient.
+    // let audioResource; // Replaced by currentAudioResource and pendingAudioResource
     let player = createAudioPlayer();
     connection.subscribe(player);
-    async function playAudioInVoiceChannel(filePath) {
-        playing = false;
+
+    async function startPlaybackFromResource(audioResourceToPlay, filePathOfResource) {
+        currentPlayingFilePath = filePathOfResource;
+        currentAudioResource = audioResourceToPlay;
+        // playing = false; // Reset playing flag, to be set true after buffering
+
+        logToRenderer('Attempting to play resource for: ' + currentPlayingFilePath + '. Player state: ' + player.state.status);
         
-        logToRenderer('Player state: ' + player.state.status);
-        async function playResource() {
-            const readableStream = await createReadableStream(filePath);
-            if (readableStream) {
-                player.removeAllListeners();
-                
-                player.on(AudioPlayerStatus.Idle, async () => {
-                    if (playing && filePath) {
-                        logToRenderer('Playback finished, restarting loop...');
-                        await playResource(); // Restart playback if looping is enabled
-                    }
-                });
-            
-                player.on(AudioPlayerStatus.AutoPaused, () => {
-                    if (playing && filePath) {
-                        logToRenderer('Autopaused, check connection...');
-                    }
-                });
-            
-                player.on('error', (error) => {
-                    logToRenderer('Error playing audio: ', error);
-                });
+        player.removeAllListeners(AudioPlayerStatus.Idle); // Clear specific listeners to avoid duplicates
+        player.removeAllListeners(AudioPlayerStatus.AutoPaused);
+        player.removeAllListeners('error');
 
-                audioResource = createAudioResource(readableStream);
-                player.play(audioResource);
-                logToRenderer('Player state: ' + player.state.status);
-                while (player.state.status == AudioPlayerStatus.Buffering) {
-                    await sleep(10);
+        player.on(AudioPlayerStatus.Idle, async () => {
+            logToRenderer('Player entered Idle state. Current track: ' + currentPlayingFilePath);
+            if (currentPlayingFilePath) { // Check if there's a track to loop
+                logToRenderer('Playback finished, restarting loop for: ' + currentPlayingFilePath);
+                const newReadableStream = await createReadableStream(currentPlayingFilePath);
+                if (newReadableStream) {
+                    const newAudioResourceForLoop = createAudioResource(newReadableStream);
+                    currentAudioResource = newAudioResourceForLoop; // Update current resource
+                    player.play(newAudioResourceForLoop); // Play the new resource for the loop
+                    // playing = true; // Set playing to true again after loop starts
+                } else {
+                    logToRenderer('Failed to create stream for looping: ' + currentPlayingFilePath);
+                    // playing = false;
+                    currentPlayingFilePath = null; // Clear current playing path if looping fails
+                    currentAudioResource = null;
                 }
-                logToRenderer('Player state: ' + player.state.status);
-                playing = true;
+            } else {
+                logToRenderer('Player Idle and no currentPlayingFilePath, so not looping.');
+                // playing = false;
+                currentAudioResource = null;
             }
-            else {
-                logToRenderer('Failed to create readable stream');
+        });
+    
+        player.on(AudioPlayerStatus.AutoPaused, () => {
+            // if (playing && currentPlayingFilePath) { // Consider if 'playing' flag is still needed
+            if (currentPlayingFilePath) {
+                logToRenderer('Autopaused, check connection... Track: ' + currentPlayingFilePath);
             }
-        }
+        });
+    
+        player.on('error', (error) => {
+            logToRenderer(`Error playing audio for ${currentPlayingFilePath}: ${error.message}`);
+            // playing = false;
+            currentPlayingFilePath = null;
+            currentAudioResource = null;
+        });
 
-        await playResource();
+        player.play(audioResourceToPlay);
+        logToRenderer('Player.play called. Player state: ' + player.state.status);
+        
+        try {
+            await entersState(player, AudioPlayerStatus.Playing, 5000); // Wait for playing state
+            logToRenderer('Player is now Playing. Player state: ' + player.state.status);
+            // playing = true;
+        } catch (error) {
+            logToRenderer(`Player did not enter Playing state for ${currentPlayingFilePath}: ${error.message}. Current state: ${player.state.status}`);
+            // playing = false;
+            // If it fails to enter playing, it might go to Idle or stay Buffering/Paused. The Idle handler should then take over or it might be an error.
+        }
     }
 
     function pauseAudio() {
-        if (player && player.state.status != AudioPlayerStatus.Paused) {
-            player.pause(true);
-            logToRenderer('Audio paused: ' + player.state.status);
-        }
-        else {
-            logToRenderer('No audio is currently playing: ' + player.state.status);
+        if (player && player.state.status === AudioPlayerStatus.Playing) {
+            player.pause(true); // Pass true to pause even if resource is still buffering
+            logToRenderer('Audio paused. Player state: ' + player.state.status);
+        } else {
+            logToRenderer('Audio is not playing or player unavailable. Player state: ' + player.state.status);
         }
     }
 
     function resumeAudio() {
-        if (player && player.state.status != AudioPlayerStatus.Playing) {
+        if (player && player.state.status === AudioPlayerStatus.Paused) {
             player.unpause();
-            logToRenderer('Audio resumed: ' + player.state.status);
-        }
-        else {
-            logToRenderer('Audio is not paused: ' + player.state.status);
+            logToRenderer('Audio resumed. Player state: ' + player.state.status);
+        } else {
+            logToRenderer('Audio is not paused or player unavailable. Player state: ' + player.state.status);
         }
     }
 
-    async function checkStartResume(filePath) {
-        if (filePath && currentTrack && filePath == currentTrack) {
-            if (player.state.status != AudioPlayerStatus.Playing) {
-                logToRenderer('Resuming audio: ' + player.state.status);
-                resumeAudio();
-            }
-            else {
-                logToRenderer('Track is already playing: ' + player.state.status);
-            }
-        }
-        else {
-            logToRenderer('Playing new track: ' + player.state.status + ' ' + filePath);
-            await playAudioInVoiceChannel(filePath);
-        }
-        currentTrack = filePath;
-    }
+    // async function checkStartResume(filePath) { // This function is now removed/commented out
+    //     if (filePath && currentTrack && filePath == currentTrack) {
+    //         if (player.state.status != AudioPlayerStatus.Playing) {
+    //             logToRenderer('Resuming audio: ' + player.state.status);
+    //             resumeAudio();
+    //         }
+    //         else {
+    //             logToRenderer('Track is already playing: ' + player.state.status);
+    //         }
+    //     }
+    //     else {
+    //         logToRenderer('Playing new track: ' + player.state.status + ' ' + filePath);
+    //         await playAudioInVoiceChannel(filePath); // This would now be startPlaybackFromResource
+    //     }
+    //     currentTrack = filePath; // Replaced by currentPlayingFilePath
+    // }
 });
 
 client.login(DISCORD_TOKEN);
