@@ -656,8 +656,6 @@ client.once('ready', async () => {
     //AudioPlayerStatus.Idle
     //AudioPlayerStatus.AutoPaused
 
-    // let playing; // This flag's usage needs to be reviewed or removed if player.state.status is sufficient.
-    // let audioResource; // Replaced by currentAudioResource and pendingAudioResource
     let player = createAudioPlayer();
     connection.subscribe(player);
 
@@ -740,23 +738,6 @@ client.once('ready', async () => {
             logToRenderer('Audio is not paused or player unavailable. Player state: ' + player.state.status);
         }
     }
-
-    // async function checkStartResume(filePath) { // This function is now removed/commented out
-    //     if (filePath && currentTrack && filePath == currentTrack) {
-    //         if (player.state.status != AudioPlayerStatus.Playing) {
-    //             logToRenderer('Resuming audio: ' + player.state.status);
-    //             resumeAudio();
-    //         }
-    //         else {
-    //             logToRenderer('Track is already playing: ' + player.state.status);
-    //         }
-    //     }
-    //     else {
-    //         logToRenderer('Playing new track: ' + player.state.status + ' ' + filePath);
-    //         await playAudioInVoiceChannel(filePath); // This would now be startPlaybackFromResource
-    //     }
-    //     currentTrack = filePath; // Replaced by currentPlayingFilePath
-    // }
 });
 
 client.login(DISCORD_TOKEN);
