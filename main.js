@@ -448,16 +448,13 @@ client.once('ready', async () => {
                         const fullCommand = message.content.substring(message.content.toLowerCase().indexOf('!pl')).trim();
                         const parts = fullCommand.split(/\s+/); // Split by one or more spaces
                         // parts[0] is "!pl" itself. commandArgs will be the actual arguments after "!pl".
-                        const commandArgs = parts.slice(1).filter(arg => arg.length > 0); // Filter out empty strings that might result from multiple spaces
+                        const commandArgs = parts.slice(2).filter(arg => arg.length > 2); // Filter out empty strings that might result from multiple spaces
 
                         let parsedFolder = null;
                         let parsedSong = null;
 
-                        if (commandArgs.length === 1) {
+                        if (commandArgs.length == 1) {
                             // A single argument is provided.
-                            // This could be intended as a folder name (e.g., "!pl ambient" -> random song from "ambient" folder).
-                            // Or, it could be intended as a song name (e.g., "!pl mysong" -> "mysong" from the default "chill" folder).
-                            // The findMusic function (to be implemented in the next plan step) will resolve this ambiguity.
                             // For now, we will assign the single argument to parsedFolder, and findMusic will check if it's a folder.
                             // If not, findMusic will then try it as a song with "chill" as the folder.
                             parsedFolder = commandArgs[0];
@@ -509,21 +506,40 @@ client.once('ready', async () => {
 
 
                         if (songFilePath) {
-                            logToRenderer(`!pl: Song found: ${songFilePath}. Attempting to play.`);
-                            const readableStream = await createReadableStream(songFilePath); // Assumes createReadableStream is available
+                            if (path.extname(songFilePath).toLowerCase() === '.lnk') {
+                                try {
+                                    const shortcut = shell.readShortcutLink(songFilePath);
+                                    const targetPath = shortcut.target || null;
 
-                            if (readableStream) {
-                                const audioResourceToPlay = createAudioResource(readableStream); // Assumes createAudioResource is available
-                                await startPlaybackFromResource(audioResourceToPlay, songFilePath); // Assumes startPlaybackFromResource is available
+                                    if (targetPath && fs.existsSync(targetPath)) {
+                                        songFilePath = targetPath;
+                                        logToRenderer('Resolved .lnk to: ' + songFilePath);
+                                    } else {
+                                        logToRenderer('Resolved shortcut target does not exist or is invalid: ' + targetPath);
+                                        songFilePath = null; 
+                                    }
+                                }
+                                catch (error) {
+                                    logToRenderer('Error resolving shortcut: ' + error);
+                                    resolvedPathAfterLinkCheck = null;
+                                }
+                            }
+                            if (songFilePath) {
+                                const readableStream = await createReadableStream(songFilePath); // Assumes createReadableStream is available
 
-                                const actualSongName = path.parse(songFilePath).name;
-                                const actualFolderName = path.basename(path.dirname(songFilePath));
-                                
-                                await message.reply(`Now playing: **${actualSongName}** from the folder **${actualFolderName}**.`);
-                                logToRenderer(`!pl: Playback started for ${actualSongName} from ${actualFolderName}.`);
-                            } else {
-                                logToRenderer(`!pl: Failed to create readable stream for ${songFilePath}.`);
-                                await message.reply(`Sorry, I found the song '${path.parse(songFilePath).name}' but encountered an error trying to play it.`);
+                                if (readableStream) {
+                                    const audioResourceToPlay = createAudioResource(readableStream); // Assumes createAudioResource is available
+                                    await startPlaybackFromResource(audioResourceToPlay, songFilePath); // Assumes startPlaybackFromResource is available
+
+                                    const actualSongName = path.parse(songFilePath).name;
+                                    const actualFolderName = finalFolderUsed;
+                                    
+                                    await message.reply(`Now playing: **${actualSongName}** from the folder **${actualFolderName}**.`);
+                                    logToRenderer(`!pl: Playback started for ${actualSongName} from ${actualFolderName}.`);
+                                } else {
+                                    logToRenderer(`!pl: Failed to create readable stream for ${songFilePath}.`);
+                                    await message.reply(`Sorry, I found the song '${path.parse(songFilePath).name}' but encountered an error trying to play it.`);
+                                }
                             }
                         } else {
                             logToRenderer(`!pl: No song path found after all attempts for parsedFolder='${parsedFolder}', parsedSong='${parsedSong}'.`);
@@ -992,7 +1008,7 @@ async function findMusic(folderSearchTerm, songSearchTerm) {
         // Filter for .mp3 and .wav files
         const audioFiles = filesInFolder.filter(file => {
             const ext = path.extname(file).toLowerCase();
-            return ext === '.mp3' || ext === '.wav';
+            return ext === '.mp3' || ext === '.wav'|| ext === '.lnk';
         });
 
         if (audioFiles.length === 0) {
