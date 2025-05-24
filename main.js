@@ -450,6 +450,106 @@ client.once('ready', async () => {
                         await message.reply('Commands:\n!su (surge)\n!sh (shield)\n!ll (Llama model)\n!re (Reasoner model)\n!in (inspect referenced material from last response)\n!h (returns this help message)\nany other message will return the currently playing track and album, if any.');
                         break;
 
+                    case content.includes('!pl'):
+                        logToRenderer('!pl command detected');
+                        
+                        const fullCommand = message.content.substring(message.content.toLowerCase().indexOf('!pl')).trim();
+                        const parts = fullCommand.split(/\s+/); // Split by one or more spaces
+                        // parts[0] is "!pl" itself. commandArgs will be the actual arguments after "!pl".
+                        const commandArgs = parts.slice(1).filter(arg => arg.length > 0); // Filter out empty strings that might result from multiple spaces
+
+                        let parsedFolder = null;
+                        let parsedSong = null;
+
+                        if (commandArgs.length === 1) {
+                            // A single argument is provided.
+                            // This could be intended as a folder name (e.g., "!pl ambient" -> random song from "ambient" folder).
+                            // Or, it could be intended as a song name (e.g., "!pl mysong" -> "mysong" from the default "chill" folder).
+                            // The findMusic function (to be implemented in the next plan step) will resolve this ambiguity.
+                            // For now, we will assign the single argument to parsedFolder, and findMusic will check if it's a folder.
+                            // If not, findMusic will then try it as a song with "chill" as the folder.
+                            parsedFolder = commandArgs[0];
+                            logToRenderer(`!pl: Single argument received: '${parsedFolder}'. This will be interpreted by findMusic either as a folder name or a song name (from 'chill' folder).`);
+                        } else if (commandArgs.length >= 2) {
+                            // Two or more arguments. Assume the first is the folder and the second is the song.
+                            parsedFolder = commandArgs[0];
+                            parsedSong = commandArgs[1];
+                            if (commandArgs.length > 2) {
+                                logToRenderer(`!pl: More than two arguments received. Using first as folder ('${parsedFolder}') and second as song ('${parsedSong}'). Additional arguments are ignored.`);
+                            } else {
+                                logToRenderer(`!pl: Two arguments received: Folder='${parsedFolder}', Song='${parsedSong}'.`);
+                            }
+                        } else {
+                            // No arguments (only "!pl"). Both parsedFolder and parsedSong remain null.
+                            // findMusic will use the default "chill" folder and pick a random song.
+                            logToRenderer("!pl: No arguments received after command. Default 'chill' folder and random song will be used by findMusic.");
+                        }
+
+                        let songFilePath = null;
+                        let finalFolderUsed = parsedFolder; // Keep track of what folder was effectively used for messages
+                        let finalSongUsed = parsedSong; // Keep track of what song was effectively used
+
+                        // Initial attempt to find music
+                        if (parsedFolder || parsedSong) { // If any specific search terms were given
+                            songFilePath = await findMusic(parsedFolder, parsedSong);
+                        } else { // Case: just "!pl" - implies chill and random
+                            songFilePath = await findMusic(null, null); // findMusic defaults to "chill" and random
+                            finalFolderUsed = "chill"; // For messaging
+                        }
+
+                        // Handle ambiguity: if a single argument was given (parsedFolder has a value, parsedSong is null)
+                        // and it wasn't found as a folder, try it as a song in the "chill" folder.
+                        if (!songFilePath && parsedFolder && !parsedSong) {
+                            logToRenderer(`!pl: Initial search for folder '${parsedFolder}' (with random song) failed. Attempting to find '${parsedFolder}' as a song in 'chill' folder.`);
+                            songFilePath = await findMusic("chill", parsedFolder); // Treat original parsedFolder as song, in "chill"
+                            if (songFilePath) {
+                                finalFolderUsed = "chill";
+                                finalSongUsed = parsedFolder; // The original single argument is now considered the song
+                            }
+                        }
+                        
+                        // If still no song path after all attempts, and it was just "!pl" (no args)
+                        // This case should have been handled by findMusic(null,null) -> "chill", random.
+                        // If it's still null here, it means "chill" folder or random song selection failed.
+                        if (!songFilePath && !parsedFolder && !parsedSong) {
+                             logToRenderer(`!pl: Default search for random song in 'chill' folder failed.`);
+                        }
+
+
+                        if (songFilePath) {
+                            logToRenderer(`!pl: Song found: ${songFilePath}. Attempting to play.`);
+                            const readableStream = await createReadableStream(songFilePath); // Assumes createReadableStream is available
+
+                            if (readableStream) {
+                                const audioResourceToPlay = createAudioResource(readableStream); // Assumes createAudioResource is available
+                                await startPlaybackFromResource(audioResourceToPlay, songFilePath); // Assumes startPlaybackFromResource is available
+
+                                const actualSongName = path.parse(songFilePath).name;
+                                const actualFolderName = path.basename(path.dirname(songFilePath));
+                                
+                                await message.reply(`Now playing: **${actualSongName}** from the folder **${actualFolderName}**.`);
+                                logToRenderer(`!pl: Playback started for ${actualSongName} from ${actualFolderName}.`);
+                            } else {
+                                logToRenderer(`!pl: Failed to create readable stream for ${songFilePath}.`);
+                                await message.reply(`Sorry, I found the song '${path.parse(songFilePath).name}' but encountered an error trying to play it.`);
+                            }
+                        } else {
+                            logToRenderer(`!pl: No song path found after all attempts for parsedFolder='${parsedFolder}', parsedSong='${parsedSong}'.`);
+                            let replyMessage = "Sorry, I couldn't find the music you were looking for. ";
+                            if (parsedFolder && parsedSong) {
+                                replyMessage += `I looked for folder containing '${parsedFolder}' and song containing '${parsedSong}'.`;
+                            } else if (parsedFolder) { // Only parsedFolder was initially given
+                                replyMessage += `I tried finding a folder containing '${parsedFolder}' (for a random song), and also tried finding a song named '${parsedFolder}' in the 'chill' folder.`;
+                            } else if (parsedSong) { // Only parsedSong was initially given (parsedFolder was null)
+                                 replyMessage += `I looked for a song containing '${parsedSong}' in the 'chill' folder.`;
+                            } else { // Only "!pl"
+                                replyMessage += `I tried to play a random song from the 'chill' folder but couldn't.`;
+                            }
+                            replyMessage += "\nPlease check your terms or ensure the 'chill' folder exists and has music.";
+                            await message.reply(replyMessage);
+                        }
+                        break;
+
                     default:
                         logToRenderer('No recognized command found.');
                         if (player && player.state.status == AudioPlayerStatus.Playing) {
@@ -830,5 +930,108 @@ async function askGPT4All(prompt, model) {
     } catch (error) {
         logToRenderer(`Error: ${error.message}`);
         throw new Error(`An error occurred while running the query: ${error.message}`);
+    }
+}
+
+// Add this function somewhere in main.js, for example, near other helper functions.
+// Ensure fs, path, DEFAULT_LOCAL_FOLDER, and logToRenderer are accessible.
+async function findMusic(folderSearchTerm, songSearchTerm) {
+    logToRenderer(`findMusic: Initiating search with folderSearchTerm='${folderSearchTerm}', songSearchTerm='${songSearchTerm}'.`);
+
+    let targetFolderToSearch;
+    // Determine the folder name to search for. Default to "chill" if no folder term is provided.
+    if (!folderSearchTerm || folderSearchTerm.trim() === "") {
+        targetFolderToSearch = "chill";
+        logToRenderer(`findMusic: folderSearchTerm is empty or null. Using default 'chill' folder.`);
+    } else {
+        targetFolderToSearch = folderSearchTerm;
+    }
+
+    let actualFolderPath = null;
+    let foundFolderOriginalName = null;
+
+    // Phase 1: Find the folder
+    try {
+        // Check if DEFAULT_LOCAL_FOLDER is accessible
+        // DEFAULT_LOCAL_FOLDER should be available from process.env
+        if (!DEFAULT_LOCAL_FOLDER || !fs.existsSync(DEFAULT_LOCAL_FOLDER)) {
+            logToRenderer(`findMusic: Error - DEFAULT_LOCAL_FOLDER ('${DEFAULT_LOCAL_FOLDER}') is not defined or does not exist.`);
+            return null;
+        }
+
+        // Get all directory names from DEFAULT_LOCAL_FOLDER
+        const allEntities = fs.readdirSync(DEFAULT_LOCAL_FOLDER, { withFileTypes: true });
+        const subDirectories = allEntities.filter(dirent => dirent.isDirectory()).map(dirent => dirent.name);
+
+        if (subDirectories.length === 0) {
+            logToRenderer(`findMusic: No sub-folders found within DEFAULT_LOCAL_FOLDER ('${DEFAULT_LOCAL_FOLDER}').`);
+            return null;
+        }
+
+        // Attempt to match the targetFolderToSearch with a directory name (substring match, case-insensitive)
+        const targetFolderLower = targetFolderToSearch.toLowerCase();
+        for (const dirName of subDirectories) {
+            if (dirName.toLowerCase().includes(targetFolderLower)) {
+                actualFolderPath = path.join(DEFAULT_LOCAL_FOLDER, dirName);
+                foundFolderOriginalName = dirName; // Store the actual name of the matched folder
+                logToRenderer(`findMusic: Successfully matched folder: name='${foundFolderOriginalName}', path='${actualFolderPath}'.`);
+                break; // Use the first match
+            }
+        }
+
+        if (!actualFolderPath) {
+            logToRenderer(`findMusic: No folder found containing '${targetFolderToSearch}' within '${DEFAULT_LOCAL_FOLDER}'.`);
+            return null; // Folder not found
+        }
+
+    } catch (error) {
+        logToRenderer(`findMusic: Exception while accessing or reading DEFAULT_LOCAL_FOLDER ('${DEFAULT_LOCAL_FOLDER}'): ${error.message}`);
+        return null;
+    }
+
+    // Phase 2: Find the song within the identified folder
+    try {
+        const filesInFolder = fs.readdirSync(actualFolderPath);
+        // Filter for .mp3 and .wav files
+        const audioFiles = filesInFolder.filter(file => {
+            const ext = path.extname(file).toLowerCase();
+            return ext === '.mp3' || ext === '.wav';
+        });
+
+        if (audioFiles.length === 0) {
+            logToRenderer(`findMusic: No audio files (.mp3 or .wav) found in the folder '${foundFolderOriginalName}'.`);
+            return null;
+        }
+
+        let songFilePath = null;
+
+        // If a songSearchTerm is provided, try to find a matching song
+        if (songSearchTerm && songSearchTerm.trim() !== "") {
+            const songSearchLower = songSearchTerm.toLowerCase();
+            for (const fileName of audioFiles) {
+                const songNameWithoutExt = path.parse(fileName).name; // Get filename without extension
+                if (songNameWithoutExt.toLowerCase().includes(songSearchLower)) {
+                    songFilePath = path.join(actualFolderPath, fileName);
+                    logToRenderer(`findMusic: Successfully matched song: '${fileName}' in folder '${foundFolderOriginalName}'. Full path: '${songFilePath}'.`);
+                    break; // Use the first match
+                }
+            }
+            if (!songFilePath) {
+                logToRenderer(`findMusic: No song found containing '${songSearchTerm}' in folder '${foundFolderOriginalName}'.`);
+                return null; // Specific song not found
+            }
+        } else {
+            // No songSearchTerm provided, so pick a random song from the folder
+            const randomIndex = Math.floor(Math.random() * audioFiles.length);
+            const randomSongName = audioFiles[randomIndex];
+            songFilePath = path.join(actualFolderPath, randomSongName);
+            logToRenderer(`findMusic: No songSearchTerm provided. Selected random song: '${randomSongName}' from folder '${foundFolderOriginalName}'. Full path: '${songFilePath}'.`);
+        }
+        
+        return songFilePath; // Return the full path to the song, or null if errors occurred
+
+    } catch (error) {
+        logToRenderer(`findMusic: Exception while reading files from folder '${foundFolderOriginalName}' (path: '${actualFolderPath}'): ${error.message}`);
+        return null;
     }
 }
