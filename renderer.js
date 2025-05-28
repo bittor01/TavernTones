@@ -55,4 +55,28 @@ document.addEventListener('DOMContentLoaded', () => {
     window.electron.ipcRenderer.on('log-message', (event, message) => {
         logMessage(message);
     });
+
+    // Listen for GUI state updates from the main process
+    window.electron.ipcRenderer.on('update-gui-state', (event, state) => {
+        // state object will be like { isPlaying: <boolean>, filePath: <string | null> }
+        
+        logMessage(`Received state update: isPlaying=${state.isPlaying}, filePath=${state.filePath}`);
+
+        // Update internal isPlaying variable
+        isPlaying = state.isPlaying;
+
+        // Update play/pause button text
+        playPauseButton.textContent = isPlaying ? 'Pause' : 'Play';
+
+        // Update selected file path and label
+        if (state.filePath) {
+            selectedFilePath = state.filePath;
+            selectedFileLabel.textContent = selectedFilePath; // Use selectedFilePath for consistency
+            playPauseButton.disabled = false; // Enable button if there's a file
+        } else {
+            selectedFilePath = null;
+            selectedFileLabel.textContent = 'No file selected';
+            playPauseButton.disabled = true; // Disable button if no file
+        }
+    });
 });
