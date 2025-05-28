@@ -541,8 +541,9 @@ client.once('ready', async () => {
                                         pendingAudioResource = newResource;
                                         pendingFilePath = songFilePath;
                                         logToRenderer(`!pl: Current track is playing/paused. Pending ${songFilePath}`);
-                                        await message.reply(`Okay, queuing up: **${songNameForMessage}**. It will play after the current track finishes or is stopped.`);
+                                        await message.reply(`Okay, queuing up: **${songNameForMessage}**. It will play when ready.`);
                                         player.stop(true); // Stop current to trigger Idle, which should then play pending.
+                                        await startPlaybackFromResource(pendingAudioResource, pendingFilePath);
                                     } else {
                                         currentPlayingFilePath = songFilePath;
                                         currentAudioResource = newResource;
@@ -761,7 +762,7 @@ client.once('ready', async () => {
     });
 
 
-    //Begin audio proccessing
+    //Begin audio processing
     async function createReadableStream(filePath) {
         if (!filePath) { // Ensure filePath is not null or undefined
             logToRenderer('createReadableStream: filePath is null or undefined.');
