@@ -1,0 +1,194 @@
+[
+  {
+    "name": "The Prism",
+    "depiction": "A beam of light refracting through a prism",
+    "effect": "Immediately draw a card of each other suit 🌈",
+    "used": []
+  },
+  {
+    "name": "Wheel of Fortune",
+    "depiction": "A colorful spinning wheel divided into strange symbols",
+    "effect": "All creatures in a 1 mile radius suffer from an effect from the wheel. Roll a d6 ||[[d6]]||: 1-Heal [[4d8]] HP and one level of exhaustion, 2-The next crop harvest will have double yields, 3-Grant inspiration, 4-Range of all attacks halved for the next minute, 5-Speed halved for the next minute, 6-Knocked prone) 🎡",
+    "used": []
+  },
+  {
+    "name": "Mirrored Madness",
+    "depiction": "A mirror hall at a funhouse filled with warped reflections",
+    "effect": "For 10 minutes, creatures within one mile see illusions of themselves acting out their worst fears, causing all saving throws against fear effects to have disadvantage 😱",
+    "used": []
+  },
+  {
+    "name": "Tightrope Walk",
+    "depiction": "A tightrope stretched between two trees with a clown walking upside down under it",
+    "effect": "For the next minute, all creatures within a mile are buffeted by strange gravitational waves. Creatures who move more than half their speed on their turn must pass a DC [[2d6+6]] Dexterity Save or fall prone 🎪",
+    "used": []
+  },
+  {
+    "name": "Stolen Voice",
+    "depiction": "A disembodied mouth with a bead of energy emerging from it",
+    "effect": "For the next 10 minutes, all creatures within a mile have their voices replaced with that of a random creature of the same type 🙊",
+    "used": []
+  },
+  {
+    "name": "Lost in the Woods",
+    "depiction": "A confused person standing seemingly right side up on the underside of a dense forest canopy",
+    "effect": "For the next hour, the surrounding terrain seems to shift and change when not being looked at. Mundane and magical sensors seem to shift randomly, and the sky seems to slowly spin around. Navigating within the affected area is impossible without a DC [[2d6+6]] Survival Check",
+    "used": []
+  },
+  {
+    "name": "Oldest Joke in the Book",
+    "depiction": "As you gaze at the card, your mind reels, unable to truly comprehend what it sees. You look away quickly. Was that... a clown monster? A horrid jester? A trickster god?",
+    "effect": "||It was never truly asleep||||, but now it stirs... ||🤡",
+    "used": []
+  },
+  {
+    "name": "Bounce House",
+    "depiction": "A inflated bounce castle with a smiling face on it",
+    "effect": "For the next hour, all creatures within a mile are affected by a strange gravity-altering effect. They can jump twice as high and far, but must succeed on a DC [[2d6+6]] Dexterity Save or be knocked prone when they land 🏰",
+    "used": []
+  },
+  {
+    "name": "Mirror of Truth",
+    "depiction": "A mirror that seems to peer deep inside the mind of the viewer",
+    "effect": "For the next hour, all creatures within a mile see illusions of what people think instead of what they are actually doing. Affected creatures have advantage on Insight checks, and disadvantage on Deception, Perception, and Persuasion checks 🪞",
+    "used": []
+  },
+  {
+    "name": "Jorrick's Mask",
+    "depiction": "A porcelain mask with colorful makeup and a wide smile",
+    "effect": "For the next minute, creatures within a mile find the mundane hilarious. Whenever a creature within the affected area makes a d20 test (other than a Save), they must pass a DC [[2d6+6]] Wisdom Save or burst into laughter, incapacitating them for one round 😂",
+    "used": []
+  },
+  {
+    "name": "Magician's Wand",
+    "depiction": "A archetypal magician's wand with a corny star on the tip",
+    "effect": "For the next hour, whenever a spell is cast within a mile, there is a 50% chance it will cause a wild magic surge 🪄",
+    "used": []
+  },
+  {
+    "name": "Carnival of Lights",
+    "depiction": "A fun-looking, but ghostly, carnival with colorful lights and strange music playing",
+    "effect": "For the next hour, open space within a mile is filled by a spectral carnival. Creatures within the area must succeed on a DC [[2d6+6]] Wisdom Save or be charmed by the carnival, causing them to engage with the carnival and be distracted by the sights and sounds. Any damage ends the effect for that creature 🎠",
+    "used": []
+  },
+  {
+    "name": "Fool's Whispers",
+    "depiction": "A yelling mouth next to an ear",
+    "effect": "For the next hour, all thoughts become audible whispers. Creatures within the area have disadvantage on Stealth, and Deception, and advantage on Insight checks 🗣️👂",
+    "used": []
+  },
+  {
+    "name": "Lucky Coin",
+    "depiction": "A coin on its edge",
+    "effect": "For the next minute, all creatures within a mile gain advantage on Saving Throws 🪙",
+    "used": []
+  },
+  {
+    "name": "A Good Laugh",
+    "depiction": "A disembodied laughing mouth",
+    "effect": "For the next minute, creatures within a mile roll a d4 at the beginning of their turn. on a 1, they spend their turn incapacitated, laughing uncontrollably 😂",
+    "used": []
+  },
+  {
+    "name": "The Web",
+    "depiction": "A giant spider web with a grinning face woven in the center",
+    "effect": "For the next minute, spidersilk rains from the sky within a mile, creating difficult (and flammable) terrain outdoors. Creatures outdoors within the area who did not move last turn must succeed on a DC [[2d6+6]] Dexterity Save or be restrained by the webs 🕸️",
+    "used": []
+  },
+  {
+    "name": "Mask of Madness",
+    "depiction": "A twisted version of Jorrick's mask, with a sinister grin",
+    "effect": "For the next hour, creatures within a mile are affected by a strange madness. They must succeed on a DC [[2d6+6]] Wisdom Save or be frightened of all other creatures, and have disadvantage on all attacks and ability checks against them. Affected creatures may attempt to save one per turn anytime they can't see another creature 😵",
+    "used": []
+  },
+  {
+    "name": "The Fool's Fortune",
+    "depiction": "A hapless jester falling backwards into a pit of treasure",
+    "effect": "Each creature within a mile must flip a coin. on a heads, they gain advantage on their next d20 test before the end of a long rest. On tails, they suffer disadvantage on their next d20 test before the end of a long rest 🎭",
+    "used": []
+  },
+  {
+    "name": "Night of the Living Clowns",
+    "depiction": "A horde of ghostly clowns with glowing eyes",
+    "effect": "All corpses that were once clowns within a mile rise as undead zombies 🧟",
+    "used": []
+  },
+  {
+    "name": "Shifting Sands",
+    "depiction": "Dunes of multicolored sand shifting in the wind",
+    "effect": "For the next minute, at the beginning of each creature within a mile's turn, they are teleported 5 feet in a random direction ⛱️",
+    "used": []
+  },
+  {
+    "name": "Double-Edged Sword",
+    "depiction": "A sword with a blade that seems to shimmer and change color",
+    "effect": "For the next minute, all creatures within a mile suffer from an ethereal weakness that gives a penalty of [[2d4]] to AC and Saving Throws ⚔️",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  }
+]

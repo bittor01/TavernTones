@@ -1,0 +1,122 @@
+[
+  {
+    "name": "The Prism",
+    "depiction": "A beam of light refracting through a prism",
+    "effect": "Immediately draw a card of each other suit 🌈",
+    "used": []
+  },
+  {
+    "name": "Silent Court",
+    "depiction": "A circle of courtiers whispering behind a king",
+    "effect": "Target creature within 90 feet must make a DC [[2d6+6]] Wisdom Save or be silenced for [[1d4]] rounds. If they fail, they cannot speak or cast spells with verbal components 🤐",
+    "used": []
+  },
+  {
+    "name": "Archmage's Edict",
+    "depiction": "An archmage rebuking a student",
+    "effect": "The next spell that requires you to make a save within a minute is countered unless the caster passes a DC [[2d6+6]] Intelligence Save. If they fail, they take [[2d6]] psychic damage and cannot cast spells until the end of their next turn 🧙‍♂️",
+    "used": []
+  },
+  {
+    "name": "Jester's Wit",
+    "depiction": "A jester goading attacks away from a king",
+    "effect": "Any number of targets within 60 feet of you have disadvantage on attack rolls against targets other than you for the next [[1d4]] rounds 🤡",
+    "used": []
+  },
+  {
+    "name": "Executioner's Gift",
+    "depiction": "A huge bespoke axe with a royal crest",
+    "effect": "For the next [[1d4]] rounds, a creature within 60 feet of you has advantage on attack rolls and disadvantage on saving throws 🪓",
+    "used": []
+  },
+  {
+    "name": "Court Whispers",
+    "depiction": "Shadowy figures whispering to each other in a darkened hall",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  }
+]
