@@ -504,8 +504,8 @@ client.once('ready', async () => {
                              logToRenderer(`!pl: Default search for random song in 'chill' folder failed.`);
                         }
 
-
                         if (songFilePath) {
+                            // Resolve .lnk file if necessary
                             if (path.extname(songFilePath).toLowerCase() === '.lnk') {
                                 try {
                                     const shortcut = shell.readShortcutLink(songFilePath);
@@ -513,36 +513,56 @@ client.once('ready', async () => {
 
                                     if (targetPath && fs.existsSync(targetPath)) {
                                         songFilePath = targetPath;
-                                        logToRenderer('Resolved .lnk to: ' + songFilePath);
+                                        logToRenderer('!pl: Resolved .lnk to: ' + songFilePath);
                                     } else {
-                                        logToRenderer('Resolved shortcut target does not exist or is invalid: ' + targetPath);
+                                        logToRenderer('!pl: Resolved shortcut target does not exist or is invalid: ' + targetPath);
+                                        await message.reply(`Sorry, the shortcut for '${path.parse(songFilePath).name}' is broken or points to a missing file.`);
                                         songFilePath = null; 
                                     }
-                                }
-                                catch (error) {
-                                    logToRenderer('Error resolving shortcut: ' + error);
-                                    resolvedPathAfterLinkCheck = null;
+                                } catch (error) {
+                                    logToRenderer('!pl: Error resolving shortcut: ' + error);
+                                    await message.reply(`Sorry, I encountered an error trying to open the shortcut for '${path.parse(songFilePath).name}'.`);
+                                    songFilePath = null;
                                 }
                             }
-                            if (songFilePath) {
-                                const readableStream = await createReadableStream(songFilePath); // Assumes createReadableStream is available
 
-                                if (readableStream) {
-                                    const audioResourceToPlay = createAudioResource(readableStream); // Assumes createAudioResource is available
-                                    await startPlaybackFromResource(audioResourceToPlay, songFilePath); // Assumes startPlaybackFromResource is available
-
-                                    const actualSongName = path.parse(songFilePath).name;
-                                    const actualFolderName = finalFolderUsed;
-                                    
-                                    await message.reply(`Now playing: **${actualSongName}** from the folder **${actualFolderName}**.`);
-                                    logToRenderer(`!pl: Playback started for ${actualSongName} from ${actualFolderName}.`);
-                                } else {
+                            if (songFilePath) { // Check again if songFilePath is still valid after .lnk resolution
+                                const readableStream = await createReadableStream(songFilePath);
+                                if (!readableStream) {
                                     logToRenderer(`!pl: Failed to create readable stream for ${songFilePath}.`);
-                                    await message.reply(`Sorry, I found the song '${path.parse(songFilePath).name}' but encountered an error trying to play it.`);
+                                    await message.reply(`Sorry, I found the song '${path.parse(songFilePath).name}' but encountered an error trying to prepare it.`);
+                                    // return; // Exit if stream creation fails - removed to allow falling through to "song not found" logic if needed, though this path implies song was found but stream failed.
+                                } else {
+                                    const newResource = createAudioResource(readableStream);
+                                    const songNameForMessage = path.parse(songFilePath).name;
+                                    const folderNameForMessage = path.basename(path.dirname(songFilePath));
+
+                                    if (player.state.status === AudioPlayerStatus.Playing || player.state.status === AudioPlayerStatus.Paused) {
+                                        pendingAudioResource = newResource;
+                                        pendingFilePath = songFilePath;
+                                        logToRenderer(`!pl: Current track is playing/paused. Pending ${songFilePath}`);
+                                        await message.reply(`Okay, queuing up: **${songNameForMessage}**. It will play after the current track finishes or is stopped.`);
+                                        player.stop(true); // Stop current to trigger Idle, which should then play pending.
+                                    } else {
+                                        currentPlayingFilePath = songFilePath;
+                                        currentAudioResource = newResource;
+                                        await startPlaybackFromResource(newResource, songFilePath);
+                                        await message.reply(`Now playing: **${songNameForMessage}** from folder **${folderNameForMessage}**.`);
+                                        logToRenderer(`!pl: Playback started immediately for ${songNameForMessage} from ${folderNameForMessage}.`);
+                                    }
                                 }
+                            } else {
+                                // This else block will be reached if .lnk resolution set songFilePath to null.
+                                // The original "song not found" logic below will handle the reply.
+                                logToRenderer(`!pl: songFilePath became null after .lnk processing, likely due to a broken link.`);
                             }
-                        } else {
-                            logToRenderer(`!pl: No song path found after all attempts for parsedFolder='${parsedFolder}', parsedSong='${parsedSong}'.`);
+                        }
+                        
+                        // This 'else' corresponds to the 'if (songFilePath)' block before .lnk processing.
+                        // If songFilePath was initially null (findMusic failed) OR if .lnk processing made it null AND readableStream creation failed/wasn't attempted
+                        // then this block will execute to inform the user.
+                        if (!songFilePath) { // Re-check songFilePath as it might have been nulled by .lnk processing or stream failure
+                            logToRenderer(`!pl: No valid song path to play. parsedFolder='${parsedFolder}', parsedSong='${parsedSong}'.`);
                             let replyMessage = "Sorry, I couldn't find the music you were looking for. ";
                             if (parsedFolder && parsedSong) {
                                 replyMessage += `I looked for folder containing '${parsedFolder}' and song containing '${parsedSong}'.`;
@@ -553,11 +573,24 @@ client.once('ready', async () => {
                             } else { // Only "!pl"
                                 replyMessage += `I tried to play a random song from the 'chill' folder but couldn't.`;
                             }
-                            replyMessage += "\nPlease check your terms or ensure the 'chill' folder exists and has music.";
+                            replyMessage += "\nPlease check your terms or ensure the 'chill' folder exists and has music (and that any shortcuts are valid!).";
                             await message.reply(replyMessage);
                         }
                         break;
                     
+                    case content.includes('!pa'):
+                        logToRenderer('!pa command detected');
+                        if (player.state.status === AudioPlayerStatus.Playing) {
+                            pauseAudio(); // This function already exists in main.js
+                            await message.reply('Playback paused.');
+                            // GUI update via IPC will be handled in a later step.
+                        } else if (player.state.status === AudioPlayerStatus.Paused) {
+                            await message.reply('Playback is already paused.');
+                        } else {
+                            await message.reply('Nothing is currently playing to pause.');
+                        }
+                        break;
+
                     case content.includes('!h'):
                         logToRenderer('Help command detected');
                         await message.reply('Commands:\n!su (surge)\n!sh (shield)\n!ll (Llama model)\n!re (Reasoner model)\n!in (inspect referenced material from last response)\n!h (returns this help message)\nany other message will return the currently playing track and album, if any.');
@@ -613,6 +646,9 @@ client.once('ready', async () => {
         } else if (currentAudioResource && player.state.status === AudioPlayerStatus.Paused) {
             logToRenderer('Resuming current track: ' + currentPlayingFilePath);
             player.unpause();
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: currentPlayingFilePath });
+            }
         } else if (currentAudioResource && player.state.status === AudioPlayerStatus.Playing) {
             logToRenderer('Current track is already playing: ' + currentPlayingFilePath);
             // Optional: Implement restart if filePathFromRenderer matches currentPlayingFilePath
@@ -704,6 +740,23 @@ client.once('ready', async () => {
             pendingFilePath = null;
             logToRenderer('No file selected.');
         }
+
+        // Send GUI update after file dialog processing
+        if (mainWindow && mainWindow.webContents) {
+            if (pendingFilePath) { // Successfully loaded a file
+                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: pendingFilePath, isPending: true });
+            } else { // File selection failed or was cancelled, or processing failed
+                // Check if a track was already playing/paused and maintain its state, or send a general non-playing state
+                const status = player.state.status;
+                const wasPlaying = status === AudioPlayerStatus.Playing;
+                const wasPaused = status === AudioPlayerStatus.Paused; 
+                if (wasPlaying || wasPaused) { 
+                     mainWindow.webContents.send('update-gui-state', { isPlaying: wasPlaying, filePath: currentPlayingFilePath });
+                } else {
+                     mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: currentPlayingFilePath }); // Or null if nothing was there
+                }
+            }
+        }
         return resolvedPathAfterLinkCheck; // Return the path that was processed (or null)
     });
 
@@ -784,25 +837,50 @@ client.once('ready', async () => {
         player.removeAllListeners('error');
 
         player.on(AudioPlayerStatus.Idle, async () => {
-            logToRenderer('Player entered Idle state. Current track: ' + currentPlayingFilePath);
-            if (currentPlayingFilePath) { // Check if there's a track to loop
-                logToRenderer('Playback finished, restarting loop for: ' + currentPlayingFilePath);
+            logToRenderer('Player entered Idle state. Current track: ' + currentPlayingFilePath + '. Pending track: ' + pendingFilePath);
+            if (pendingAudioResource && pendingFilePath) {
+                logToRenderer('Idle: Pending resource found. Starting playback for: ' + pendingFilePath);
+                const resourceToPlay = pendingAudioResource;
+                const pathForResource = pendingFilePath;
+
+                // Clear pending resources *before* starting new playback to avoid race conditions or re-queueing issues.
+                pendingAudioResource = null;
+                pendingFilePath = null;
+
+                // Update current track info
+                // currentPlayingFilePath = pathForResource; // This will be set by startPlaybackFromResource
+                // currentAudioResource = resourceToPlay; // This will be set by startPlaybackFromResource
+                
+                await startPlaybackFromResource(resourceToPlay, pathForResource);
+                // The "Now playing..." message to Discord should be handled by the command that initiated the pending track,
+                // or we can add a generic message here if preferred. For now, startPlaybackFromResource will update GUI.
+                // If a Discord message is needed:
+                // const textChannel = client.channels.cache.get(TEXT_CHANNEL_ID); // Assuming TEXT_CHANNEL_ID is defined
+                // if (textChannel) {
+                //     textChannel.send(`Now playing: **${path.parse(pathForResource).name}** from **${path.basename(path.dirname(pathForResource))}**.`);
+                // }
+            } else if (currentPlayingFilePath) { // Existing loop logic
+                logToRenderer('Idle: No pending resource. Attempting to loop current track: ' + currentPlayingFilePath);
                 const newReadableStream = await createReadableStream(currentPlayingFilePath);
                 if (newReadableStream) {
                     const newAudioResourceForLoop = createAudioResource(newReadableStream);
-                    currentAudioResource = newAudioResourceForLoop; // Update current resource
-                    player.play(newAudioResourceForLoop); // Play the new resource for the loop
-                    // playing = true; // Set playing to true again after loop starts
+                    // currentAudioResource = newAudioResourceForLoop; // This will be set by startPlaybackFromResource
+                    await startPlaybackFromResource(newAudioResourceForLoop, currentPlayingFilePath); // Play the new resource for the loop
                 } else {
-                    logToRenderer('Failed to create stream for looping: ' + currentPlayingFilePath);
-                    // playing = false;
-                    currentPlayingFilePath = null; // Clear current playing path if looping fails
+                    logToRenderer('Idle: Failed to create stream for looping: ' + currentPlayingFilePath);
+                    currentPlayingFilePath = null; 
                     currentAudioResource = null;
+                    if (mainWindow && mainWindow.webContents) {
+                        mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
+                    }
                 }
             } else {
-                logToRenderer('Player Idle and no currentPlayingFilePath, so not looping.');
-                // playing = false;
-                currentAudioResource = null;
+                logToRenderer('Player Idle and no currentPlayingFilePath or pendingFilePath, so not looping or starting new track.');
+                // Ensure GUI reflects that nothing is playing
+                if (mainWindow && mainWindow.webContents) {
+                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
+                }
+                currentAudioResource = null; // Ensure this is also cleared
             }
         });
     
@@ -818,6 +896,9 @@ client.once('ready', async () => {
             // playing = false;
             currentPlayingFilePath = null;
             currentAudioResource = null;
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
+            }
         });
 
         player.play(audioResourceToPlay);
@@ -827,10 +908,17 @@ client.once('ready', async () => {
             await entersState(player, AudioPlayerStatus.Playing, 5000); // Wait for playing state
             logToRenderer('Player is now Playing. Player state: ' + player.state.status);
             // playing = true;
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: currentPlayingFilePath });
+            }
         } catch (error) {
             logToRenderer(`Player did not enter Playing state for ${currentPlayingFilePath}: ${error.message}. Current state: ${player.state.status}`);
             // playing = false;
             // If it fails to enter playing, it might go to Idle or stay Buffering/Paused. The Idle handler should then take over or it might be an error.
+            // Ensure GUI is updated if playback fails to start
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: currentPlayingFilePath });
+            }
         }
     }
 
@@ -838,6 +926,9 @@ client.once('ready', async () => {
         if (player && player.state.status === AudioPlayerStatus.Playing) {
             player.pause(true); // Pass true to pause even if resource is still buffering
             logToRenderer('Audio paused. Player state: ' + player.state.status);
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: currentPlayingFilePath });
+            }
         } else {
             logToRenderer('Audio is not playing or player unavailable. Player state: ' + player.state.status);
         }
