@@ -6,18 +6,27 @@
 	],
 	"settings": {
 		"cSpell.words": [
+			"Antilife",
+			"Antimagic",
 			"apploader",
 			"Autopaused",
 			"calmweather",
 			"chatmodel",
 			"choppyweather",
+			"Divin",
+			"Ench",
 			"encountertables",
 			"environmentvars",
+			"Evoc",
 			"gguf",
+			"HWCS",
+			"Illu",
+			"Necro",
 			"qwen",
 			"randomtables",
 			"specialweather",
-			"taverntones"
+			"taverntones",
+			"Volare"
 		]
 	}
 }

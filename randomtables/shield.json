@@ -409,7 +409,7 @@
     "used": []
   },
   {
-    "text": "The attacker is affected by Otto's Irresistable Dance for [[2d4]] rounds!🕺 ||(disadvantage on attacks and Dex Saves, must use all movement dancing. attacks against it have advantage. as an action, target may attampt a DC [[2d6+8]] Wis Save to end the effect)||",
+    "text": "The attacker is affected by Otto's Irresistible Dance for [[2d4]] rounds!🕺 ||(disadvantage on attacks and Dex Saves, must use all movement dancing. attacks against it have advantage. as an action, target may attempt a DC [[2d6+8]] Wis Save to end the effect)||",
     "unique": false,
     "used": []
   },
@@ -519,27 +519,27 @@
     "used": []
   },
   {
-    "text": "The attacker is weilding Kluggschmeide, the Mind Forge!🧠",
+    "text": "The attacker is wielding Kluggschmeide, the Mind Forge!🧠",
     "unique": true,
     "used": []
   },
   {
-    "text": "The attacker is weilding Weltschmeide, the World Forge!🌋",
+    "text": "The attacker is wielding Weltschmeide, the World Forge!🌋",
     "unique": true,
     "used": []
   },
   {
-    "text": "The attacker is weilding Greifenschmeide, the Grip Forge!🦞",
+    "text": "The attacker is wielding Greifenschmeide, the Grip Forge!🦞",
     "unique": true,
     "used": []
   },
   {
-    "text": "The attacker is weilding Zephyrschmeide, the Wind Forge!🌬️",
+    "text": "The attacker is wielding Zephyrschmeide, the Wind Forge!🌬️",
     "unique": true,
     "used": []
   },
   {
-    "text": "The attacker is weilding Festschmeide, the Unmoving Forge!🏰",
+    "text": "The attacker is wielding Festschmeide, the Unmoving Forge!🏰",
     "unique": true,
     "used": []
   },
@@ -584,7 +584,7 @@
     "used": []
   },
   {
-    "text": "An invisible force grips the attacker’s throat, silencing and restraining them for [[10d6]] rounds!🫳 ||(action to attempt a DC [[2d6+8]] Str or Dex Save to break free at disadvantage unless they have some good reason to not have a hard time fighting an invisible magic hand. attacker loses conciousness after a number of rounds equal to their Con)||",
+    "text": "An invisible force grips the attacker’s throat, silencing and restraining them for [[10d6]] rounds!🫳 ||(action to attempt a DC [[2d6+8]] Str or Dex Save to break free at disadvantage unless they have some good reason to not have a hard time fighting an invisible magic hand. attacker loses consciousness after a number of rounds equal to their Con)||",
     "unique": false,
     "used": []
   },
@@ -843,7 +843,7 @@
     "used": []
   },
   {
-    "text": "Attacker must succeed a DC [[2d6+8]] Cha Save or now hold the belief that you are irresistably delicious!🍖",
+    "text": "Attacker must succeed a DC [[2d6+8]] Cha Save or now hold the belief that you are irresistibly delicious!🍖",
     "unique": true,
     "used": []
   },
