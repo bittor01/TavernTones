@@ -1,4 +1,4 @@
 environmentvars.env
 node_modules/
-package-lock.json
 *.bak
+TavernTones.code-workspace
