@@ -1,0 +1,327 @@
+[
+  {
+    "text": "Acid Splash - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blade Ward - 0th level Abjuration 🛡️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Booming Blade - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bright Sparks - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Chill Touch - 0th level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Control Flames - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Create Bonfire - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dancing Lights - 0th level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Douse Light - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Drayfn's Bane of Excellence - 0th level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Drizzle - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Druidcraft - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eldritch Blast - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elementalism - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Encode Thoughts - 0th level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Finger Guns - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Fire Bolt - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Flowering - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Friends - 0th level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Frostbite - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Green-Flame Blade - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Guidance - 0th level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gust - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gust Barrier - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Holy Word - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Infestation - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Jolt - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Light - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lightning Lure - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mage Hand - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Magic Stone - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mend Plants - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mending - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Message - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Sliver - 0th level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Minor Illusion - 0th level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mold Earth - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Moment to Think - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Obfuscate Object - 0th level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Poison Spray - 0th level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prestidigitation - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Primal Savagery - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Produce Flame - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ray of Frost - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Resilient Friendship - 0th level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Resistance - 0th level Abjuration 🛡️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Retrieve - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Root Grab - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sacred Flame - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shape Water - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shillelagh - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shocking Grasp - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sorcerous Burst - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spare the Dying - 0th level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Starry Wisp - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sword Burst - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Task - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Thaumaturgy - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Thorn Whip - 0th level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Thunderclap - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Toll the Dead - 0th level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "True Strike - 0th level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Vicious Mockery - 0th level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Word of Misfortune - 0th level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Word of Radiance - 0th level Evocation 💥",
+    "unique": false,
+    "used": []
+  }
+]
