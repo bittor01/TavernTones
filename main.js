@@ -309,20 +309,24 @@ client.once('ready', async () => {
 
                     case content.includes('!ro'):
                         logToRenderer('!ro command detected');
-                        // Regex to capture: !ro <folderName> <iterationCount> <tableArgsStr>
-                        // folderName: alphanumeric, underscores, hyphens
-                        // iterationCount: digits
-                        // tableArgsStr: the rest
-                        const roRegex = /^!ro\s+([a-zA-Z0-9_-]+)\s+(\d+)\s+(.*)/;
-                        // We use message.content here, not the lowercased 'content', to preserve case for folderName if needed.
-                        const roMatch = message.content.match(roRegex); 
+                        // Find the index of '!ro' (case-insensitive)
+                        const roIndex = message.content.toLowerCase().indexOf('!ro');
+                        if (roIndex === -1) {
+                            await message.reply('Invalid command format. Usage: @TT !ro <folderName> <numberOfIterations> <weight1> <tableName1> <weight2> <tableName2> ...');
+                            break;
+                        }
+                        // Get everything after '!ro'
+                        const roArgsStr = message.content.slice(roIndex + 3).trim();
+                        const roArgs = roArgsStr.split(/\s+/);
 
-                        if (!roMatch) {
+                        if (roArgs.length < 3) {
                             await message.reply('Invalid command format. Usage: @TT !ro <folderName> <numberOfIterations> <weight1> <tableName1> <weight2> <tableName2> ...');
                             break;
                         }
 
-                        const [, folderName, iterationCountStr, tableArgsStr] = roMatch;
+                        const folderName = roArgs[0];
+                        const iterationCountStr = roArgs[1];
+                        const tableArgs = roArgs.slice(2);
 
                         // Validate folderName
                         const validFolders = getValidTableFolders(); 
@@ -338,8 +342,7 @@ client.once('ready', async () => {
                             break;
                         }
 
-                        // Parse tableArgsStr for tableEntries
-                        const tableArgs = tableArgsStr.trim().split(/\s+/);
+                        // Parse tableArgs for tableEntries
                         const roTableEntries = [];
                         if (tableArgs.length === 0 || tableArgs.length % 2 !== 0) {
                             await message.reply('Invalid weight or table name format in table arguments. Ensure you have pairs of weight and table names, and at least one pair.');
@@ -349,10 +352,10 @@ client.once('ready', async () => {
                         let validRoTableArgs = true;
                         for (let i = 0; i < tableArgs.length; i += 2) {
                             const weightStr = tableArgs[i];
-                            const tableName = tableArgs[i + 1]; // This could be undefined if tableArgs has an odd length, handled by the check above.
+                            const tableName = tableArgs[i + 1];
                             const weight = parseInt(weightStr, 10);
 
-                            if (isNaN(weight) || weight <= 0 || !tableName) { // Check !tableName as well
+                            if (isNaN(weight) || weight <= 0 || !tableName) {
                                 await message.reply('Invalid weight or table name format. Weights must be positive integers and table names must be provided.');
                                 validRoTableArgs = false;
                                 break;
@@ -365,8 +368,6 @@ client.once('ready', async () => {
                         }
 
                         if (roTableEntries.length === 0) {
-                            // This check is technically redundant due to earlier checks (tableArgs.length === 0 or length % 2 !==0)
-                            // but kept for safety. The main scenario for this would be if validRoTableArgs became false.
                             await message.reply('You must specify at least one valid table and weight.');
                             break;
                         }
@@ -602,8 +603,9 @@ client.once('ready', async () => {
                                     }
                                 }
                             } else {
-                                // This else block will be reached if .lnk resolution set songFilePath to null.
-                                // The original "song not found" logic below will handle the reply.
+                                // This 'else' corresponds to the 'if (songFilePath)' block before .lnk processing.
+                                // If songFilePath was initially null (findMusic failed) OR if .lnk processing made it null AND readableStream creation failed/wasn't attempted
+                                // then this block will execute to inform the user.
                                 logToRenderer(`!pl: songFilePath became null after .lnk processing, likely due to a broken link.`);
                             }
                         }
