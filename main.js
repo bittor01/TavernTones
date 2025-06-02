@@ -333,8 +333,8 @@ client.once('ready', async () => {
 
                         // Parse and validate iterationCount
                         const iterationCount = parseInt(iterationCountStr, 10);
-                        if (isNaN(iterationCount) || iterationCount <= 0 || iterationCount > 50) {
-                            await message.reply('Invalid number of iterations. Please use a number between 1 and 50.');
+                        if (isNaN(iterationCount) || iterationCount <= 0 || iterationCount > 999) {
+                            await message.reply('Invalid number of iterations. Please use a number between 1 and 999.');
                             break;
                         }
 
