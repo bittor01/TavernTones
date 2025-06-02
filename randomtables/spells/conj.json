@@ -1,0 +1,637 @@
+[
+  {
+    "text": "Air Bubble - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Arcane Gate - 6th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Armament - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Arms of Hadar - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Banishing Smite - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blade of Disaster - 9th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bubble Lift - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Butterfly Storm - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Call Lightning - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloud of Daggers - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloudkill - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conjure Animals - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conjure Barrage - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conjure Celestial - 7th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conjure Elemental - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conjure Ferryman - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conjure Fey - 6th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conjure Giant - 6th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conjure Minor Elementals - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conjure Ocean - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conjure Volley - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conjure Woodland Beings - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Create Bonfire - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Create Food and Water - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Create Spirit Train Stop - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dara Blocks - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Demiplane - 8th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dimension Door - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Drawmij's Instant Summons - 6th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dream of the Blue Veil - 7th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Drizzle - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Duplicate - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dust Devil - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ensnaring Strike - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Entangle - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Etherealness - 7th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Evard's Black Tentacles - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Far Step - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Find Familiar - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Find Greater Steed - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Find Steed - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Flaming Sphere - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Fog Cloud - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Forest Guard - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gate - 9th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Giant Insect - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Globe of Twilight - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Goodberry - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grasping Vine - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grease - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grim Shadows - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Guardian of Faith - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hail of Thorns - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Healing Spirit - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Heroes' Feast - 6th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hunger of Hadar - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ice Knife - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Incendiary Cloud - 8th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Infernal Calling - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Infestation - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Insect Plague - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Leomund's Secret Chest - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lunar Transfer - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mage Hand - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Maze - 8th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mighty Fortress - 8th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Misty Step - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Moonlight Sending - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mordenkainen's Faithful Hound - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mordenkainen's Magnificent Mansion - 7th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Planar Ally - 6th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Plane Shift - 7th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pogmo's Pot - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Polybrachia - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Polychromatic Bubble - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Portho's Portal - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pratfall - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Produce Flame - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Recall - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ride the Lightning - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Root Grab - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Scatter - 6th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shadow Gateway - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shadow Portal - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shadow Step - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sleet Storm - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spider Song - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spirit Guardians - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spray of Cards - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sprout Foliage - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Steel Wind Strike - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stinking Cloud - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Storm Door - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Storm of Vengeance - 9th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Submerge - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Aberration - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Beast - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Celestial - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Construct - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Dragon - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Elemental - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Fey - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Fiend - 6th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Greater Demon - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Jack-o'-lantern - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Lesser Demons - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Shadowspawn - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Vehicle - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sword Burst - 0th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tasha's Bubbling Cauldron - 6th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Teleport - 7th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Teleportation Circle - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Temple of the Gods - 7th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tenser's Floating Disk - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Thunder Step - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tidal Wave - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Transport via Plants - 6th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tree Stride - 5th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tsunami - 8th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Unseen Servant - 1st level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Vegetable Blade - 3rd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Vortex Warp - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wall of Thorns - 6th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Watery Sphere - 4th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Web - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wish - 9th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Word of Recall - 6th level Conjuration 📦",
+    "unique": false,
+    "used": []
+  }
+]
