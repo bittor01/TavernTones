@@ -259,86 +259,135 @@ client.once('ready', async () => {
                             break;
                         }
 
-                        const encounterTablesFolder = path.join(__dirname, 'encountertables'); // Folder for encounter tables
-
                         // Parse weights and table names
                         const tableEntries = [];
+                        let validArgs = true; // Flag to track argument validity
                         for (let i = 0; i < args.length; i += 2) {
                             const weight = parseInt(args[i], 10);
                             const tableName = args[i + 1];
 
                             if (isNaN(weight) || weight <= 0 || !tableName) {
                                 await message.reply('Invalid format. Please ensure weights are positive integers and table names are valid.');
-                                break;
+                                validArgs = false; // Set flag to false
+                                break; // Exit loop early
                             }
-
                             tableEntries.push({ weight, tableName });
                         }
 
-                        // Check if all JSON files exist
-                        const missingTables = tableEntries.filter(entry => {
-                            const filePath = path.join(encounterTablesFolder, `${entry.tableName}.json`);
-                            return !fs.existsSync(filePath);
-                        });
+                        if (!validArgs) { // Check flag before proceeding
+                            break; // Exit case if arguments were invalid
+                        }
+                        
+                        if (tableEntries.length === 0 && args.length > 0) {
+                            // This case implies that parsing failed to produce entries, 
+                            // possibly due to an odd number of arguments or other unhandled parsing issues,
+                            // though the loop's `!tableName` check should catch most.
+                            // However, if the loop was broken due to invalid format, the message is already sent.
+                            // This is a fallback.
+                            if (validArgs) { // Only send if no other error message was sent
+                                await message.reply('Could not parse table entries. Please check the format.');
+                            }
+                            break;
+                        }
+                        
+                        if (tableEntries.length === 0 && args.length === 0) {
+                             await message.reply('No table arguments provided. Please specify weights and table names.');
+                             break;
+                        }
 
-                        if (missingTables.length > 0) {
-                            await message.reply(`The following tables were not found: ${missingTables.map(entry => entry.tableName).join(', ')}`);
+
+                        // Call the new rollFromTable function
+                        const result = await rollFromTable("encountertables", tableEntries, message.channel.id);
+
+                        if (result.success) {
+                            const finalMessage = `Effect: ||${result.text}||`;
+                            await message.reply(finalMessage);
+                        } else {
+                            await message.reply(result.message); // Send the error message from rollFromTable
+                        }
+                        break;
+
+                    case content.includes('!ro'):
+                        logToRenderer('!ro command detected');
+                        // Regex to capture: !ro <folderName> <iterationCount> <tableArgsStr>
+                        // folderName: alphanumeric, underscores, hyphens
+                        // iterationCount: digits
+                        // tableArgsStr: the rest
+                        const roRegex = /^!ro\s+([a-zA-Z0-9_-]+)\s+(\d+)\s+(.*)/;
+                        // We use message.content here, not the lowercased 'content', to preserve case for folderName if needed.
+                        const roMatch = message.content.match(roRegex); 
+
+                        if (!roMatch) {
+                            await message.reply('Invalid command format. Usage: @TT !ro <folderName> <numberOfIterations> <weight1> <tableName1> <weight2> <tableName2> ...');
                             break;
                         }
 
-                        // Load all tables and calculate total weight
-                        const tables = tableEntries.map(entry => {
-                            const filePath = path.join(encounterTablesFolder, `${entry.tableName}.json`);
-                            const tableData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-                            return { ...entry, data: tableData };
-                        });
+                        const [, folderName, iterationCountStr, tableArgsStr] = roMatch;
 
-                        const totalWeight = tables.reduce((sum, entry) => sum + entry.weight, 0);
+                        // Validate folderName
+                        const validFolders = getValidTableFolders(); 
+                        if (!validFolders.includes(folderName)) {
+                            await message.reply(`Folder '${folderName}' not found. Valid folders are: ${validFolders.join(', ')}.`);
+                            break;
+                        }
 
-                        // Roll to select a table based on weights
-                        const roller = new DiceRoller();
-                        const tableRoll = roller.roll(`1d${totalWeight}`).total;
-                        let cumulativeWeight = 0;
-                        let selectedTable = null;
+                        // Parse and validate iterationCount
+                        const iterationCount = parseInt(iterationCountStr, 10);
+                        if (isNaN(iterationCount) || iterationCount <= 0 || iterationCount > 50) {
+                            await message.reply('Invalid number of iterations. Please use a number between 1 and 50.');
+                            break;
+                        }
 
-                        for (const entry of tables) {
-                            cumulativeWeight += entry.weight;
-                            if (tableRoll <= cumulativeWeight) {
-                                selectedTable = entry;
+                        // Parse tableArgsStr for tableEntries
+                        const tableArgs = tableArgsStr.trim().split(/\s+/);
+                        const roTableEntries = [];
+                        if (tableArgs.length === 0 || tableArgs.length % 2 !== 0) {
+                            await message.reply('Invalid weight or table name format in table arguments. Ensure you have pairs of weight and table names, and at least one pair.');
+                            break;
+                        }
+
+                        let validRoTableArgs = true;
+                        for (let i = 0; i < tableArgs.length; i += 2) {
+                            const weightStr = tableArgs[i];
+                            const tableName = tableArgs[i + 1]; // This could be undefined if tableArgs has an odd length, handled by the check above.
+                            const weight = parseInt(weightStr, 10);
+
+                            if (isNaN(weight) || weight <= 0 || !tableName) { // Check !tableName as well
+                                await message.reply('Invalid weight or table name format. Weights must be positive integers and table names must be provided.');
+                                validRoTableArgs = false;
                                 break;
                             }
+                            roTableEntries.push({ weight, tableName });
                         }
 
-                        if (!selectedTable) {
-                            await message.reply('An error occurred while selecting a table.');
+                        if (!validRoTableArgs) {
+                            break; 
+                        }
+
+                        if (roTableEntries.length === 0) {
+                            // This check is technically redundant due to earlier checks (tableArgs.length === 0 or length % 2 !==0)
+                            // but kept for safety. The main scenario for this would be if validRoTableArgs became false.
+                            await message.reply('You must specify at least one valid table and weight.');
                             break;
                         }
+                        
+                        await message.reply(`Starting ${iterationCount} rolls from folder '${folderName}' in a new thread...`);
+                        const thread = await message.startThread({
+                            name: `Rolls from ${folderName} (${iterationCount} times)`,
+                            autoArchiveDuration: 60, // 60 minutes
+                        });
 
-                        // Roll to select an effect from the selected table
-                        const availableEffects = selectedTable.data.filter(effect => !effect.unique || !effect.used.includes(message.channel.id));
-
-                        if (availableEffects.length === 0) {
-                            await message.reply('No available effects in the selected table.');
-                            break;
-                        }
-
-                        const effect = availableEffects[Math.floor(Math.random() * availableEffects.length)];
-
-                        // Mark the effect as used if it is unique
-                        if (effect.unique) {
-                            if (!Array.isArray(effect.used)) {
-                                effect.used = [];
+                        for (let i = 0; i < iterationCount; i++) {
+                            const result = await rollFromTable(folderName, roTableEntries, message.channel.id);
+                            if (result.success) {
+                                await thread.send(`Roll ${i + 1}: ${result.text}`);
+                            } else {
+                                await thread.send(`Roll ${i + 1} Error: ${result.message}`);
                             }
-                            effect.used.push(message.channel.id);
-
-                            // Save the updated table
-                            const filePath = path.join(encounterTablesFolder, `${selectedTable.tableName}.json`);
-                            fs.writeFileSync(filePath, JSON.stringify(selectedTable.data, null, 2), 'utf8');
+                            // Delay to prevent flooding and potential rate limits
+                            await new Promise(resolve => setTimeout(resolve, 100)); 
                         }
-
-                        // Compose the final message
-                        const finalMessage = `Effect: ||${effect.text}||`;
-                        await message.reply(finalMessage);
+                        await thread.send(`Completed ${iterationCount} rolls from ${folderName}.`);
                         break;
 
                     case content.includes('!ll'):
@@ -953,6 +1002,133 @@ setInterval(() => {
     memoryUsage = process.memoryUsage().rss;
     logToRenderer(`Memory usage is ${((memoryUsage - startingMemUse) / 1024 / 1024).toFixed(2)} MB higher than at launch (${(memoryUsage / 1024 / 1024).toFixed(2)} MB total)`);
 }, 60000);
+
+function getValidTableFolders() {
+    const randomTablesPath = path.join(__dirname, 'randomtables');
+    try {
+        const allEntries = fs.readdirSync(randomTablesPath, { withFileTypes: true });
+        const directories = allEntries
+            .filter(dirent => dirent.isDirectory())
+            .map(dirent => dirent.name);
+        return directories;
+    } catch (error) {
+        logToRenderer(`Error reading '${randomTablesPath}': ${error.message}`);
+        // If the directory doesn't exist or there's another error, return an empty array.
+        return [];
+    }
+}
+
+async function rollFromTable(folderName, tablesConfig, channelId) {
+    const encounterTablesFolder = path.join(__dirname, 'randomtables', folderName);
+
+    // 1. Path Generation (done implicitly in step 2)
+    // 2. File Existence Check
+    const missingTables = [];
+    for (const entry of tablesConfig) {
+        const filePath = path.join(encounterTablesFolder, `${entry.tableName}.json`);
+        if (!fs.existsSync(filePath)) {
+            missingTables.push(entry.tableName);
+        }
+    }
+
+    if (missingTables.length > 0) {
+        return { success: false, message: `Missing tables: ${missingTables.join(', ')}` };
+    }
+
+    // 3. Table Loading
+    const tables = tablesConfig.map(entry => {
+        const filePath = path.join(encounterTablesFolder, `${entry.tableName}.json`);
+        // It's good practice to handle potential errors during file reading and JSON parsing
+        try {
+            const tableData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            return { ...entry, data: tableData, filePath: filePath }; // Store filePath for later use
+        } catch (error) {
+            // Log the error and potentially return a specific error for this table
+            logToRenderer(`Error loading table ${entry.tableName}: ${error.message}`);
+            // Depending on desired strictness, you could either throw here or mark this table as invalid
+            return { ...entry, data: null, filePath: filePath, error: true }; 
+        }
+    });
+
+    // Filter out tables that failed to load, if any
+    const validTables = tables.filter(table => !table.error && table.data);
+    if (validTables.length !== tablesConfig.length) {
+        // This means some tables had read/parse errors
+        const erroredTableNames = tables.filter(t => t.error).map(t => t.tableName).join(', ');
+        return { success: false, message: `Error loading or parsing tables: ${erroredTableNames}`};
+    }
+
+
+    // 4. Weighted Selection (Table)
+    const totalWeight = validTables.reduce((sum, entry) => sum + entry.weight, 0);
+    if (totalWeight <= 0) {
+        return { success: false, message: "Total weight of tables must be positive." };
+    }
+
+    const roller = new DiceRoller(); // Assuming DiceRoller is available
+    const tableRoll = roller.roll(`1d${totalWeight}`).total;
+    let cumulativeWeight = 0;
+    let selectedTableEntry = null;
+
+    for (const entry of validTables) {
+        cumulativeWeight += entry.weight;
+        if (tableRoll <= cumulativeWeight) {
+            selectedTableEntry = entry;
+            break;
+        }
+    }
+
+    if (!selectedTableEntry) {
+        // This should ideally not happen if totalWeight > 0 and tables exist
+        logToRenderer(`Error selecting table. Roll: ${tableRoll}, TotalWeight: ${totalWeight}, Tables: ${JSON.stringify(validTables.map(t=>({tn:t.tableName, w:t.weight})))}`);
+        return { success: false, message: "Error selecting table." };
+    }
+
+    // 5. Effect Selection (from Table)
+    // The selectedTableEntry.data should be the array of effects
+    if (!Array.isArray(selectedTableEntry.data)) {
+        logToRenderer(`Selected table ${selectedTableEntry.tableName} does not contain an array of effects.`);
+        return { success: false, message: `Data format error in table ${selectedTableEntry.tableName}.` };
+    }
+    
+    const availableEffects = selectedTableEntry.data.filter(effect => {
+        return !effect.unique || !Array.isArray(effect.used) || !effect.used.includes(channelId);
+    });
+
+    if (availableEffects.length === 0) {
+        return { success: false, message: `No available effects in the selected table: ${selectedTableEntry.tableName}.` };
+    }
+
+    const effect = availableEffects[Math.floor(Math.random() * availableEffects.length)];
+
+    // 6. Handle Unique Effects
+    if (effect.unique) {
+        if (!Array.isArray(effect.used)) {
+            effect.used = [];
+        }
+        effect.used.push(channelId);
+
+        // Update the original table data array
+        const effectIndexInOriginalTable = selectedTableEntry.data.findIndex(e => e.text === effect.text); // Assuming text is a unique identifier within a table
+        if (effectIndexInOriginalTable !== -1) {
+            selectedTableEntry.data[effectIndexInOriginalTable] = effect; // Update the effect in the loaded table data
+            try {
+                fs.writeFileSync(selectedTableEntry.filePath, JSON.stringify(selectedTableEntry.data, null, 2), 'utf8');
+                logToRenderer(`Updated unique effect usage in ${selectedTableEntry.filePath}`);
+            } catch (error) {
+                logToRenderer(`Error writing updated table ${selectedTableEntry.filePath}: ${error.message}`);
+                // Decide if this is a critical failure. For now, proceed with returning the effect.
+                // Could return a partial success or a specific error:
+                // return { success: false, message: `Failed to save unique effect update for ${selectedTableEntry.tableName}. Effect was still rolled.` };
+            }
+        } else {
+            logToRenderer(`Could not find effect in original table data to update 'used' status. This is unexpected. Effect: ${effect.text}`);
+        }
+    }
+
+    // 7. Return Value
+    return { success: true, text: effect.text };
+}
 
 // Function to get a random effect from a table, filtering out used unique effects for the user
 function getRandomEffect(table, userId) {
