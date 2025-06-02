@@ -1,0 +1,587 @@
+[
+  {
+    "text": "Aganazzar's Scorcher - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Aid - 2nd level Abjuration 🛡️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Air Bubble - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Alter Self - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ambush Prey - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Animal Messenger - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Arcane Lock - 2nd level Abjuration 🛡️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Arcane Vigor - 2nd level Abjuration 🛡️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "At Your Side - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Augury - 2nd level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Barkskin - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Beast Sense - 2nd level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Beast Transmutation - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blindness/Deafness - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bloodletter - 2nd level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blur - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Borrowed Knowledge - 2nd level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Calm Emotions - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloud of Daggers - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conjure Ferryman - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Continual Flame - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Control Animal - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cordon of Arrows - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Counterspy - 2nd level Abjuration 🛡️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crown of Madness - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Darkbolt - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Darkness - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Darkvision - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Defenestration - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Detect Thoughts - 2nd level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dragon's Breath - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Drayfn's Blunted Blade - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dust Devil - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Earthbind - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ember Belly - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Enhance Ability - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Enlarge/Reduce - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Enthrall - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Find Steed - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Find Traps - 2nd level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Flame Blade - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Flaming Sphere - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gentle Repose - 2nd level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gift of Gab - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gust of Wind - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hangover - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Healing Spirit - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Heat Metal - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hibernation - 2nd level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hold Person - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Invisibility - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Jim's Glowing Coin - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Kinetic Jaunt - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Knock - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Krail's Maggot - 2nd level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Krail's Rupture - 2nd level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Leiloch's Irritating Kazoo - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lesser Restoration - 2nd level Abjuration 🛡️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Levitate - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Life Tether - 2nd level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Locate Animals or Plants - 2nd level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Locate Object - 2nd level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Maddening Whispers - 2nd level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Magic Mouth - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Magic Weapon - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Maximilian's Earthen Grasp - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Melf's Acid Arrow - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Spike - 2nd level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mirror Image - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Misty Step - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Monkey's Grasp - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Moonbeam - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mushroom Ballista - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Nathair's Mischief - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Nystul's Magic Aura - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Obscure Object - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ominous Winds - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pass without Trace - 2nd level Abjuration 🛡️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Phantasmal Force - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pillar of Force - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prayer of Healing - 2nd level Abjuration 🛡️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Protection from Poison - 2nd level Abjuration 🛡️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pyrotechnics - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rageful Nimbus - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ray of Enfeeblement - 2nd level Necromancy 💀",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Recall - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rime's Binding Ice - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rope Trick - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Scorching Ray - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "See Invisibility - 2nd level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shadow Adaptation - 2nd level Abjuration 🛡️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shadow Blade - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shared Vision - 2nd level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shatter - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shining Smite - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Silence - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Skywrite - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Slither - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Snilloc's Snowball Swarm - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Signature - 2nd level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spider Climb - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spike Growth - 2nd level Transmutation ⚗️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spiritual Weapon - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spray of Cards - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Suggestion - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Summon Beast - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Switched Form - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tasha's Mind Whip - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Transparency - 2nd level Illusion 🥸",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ugly Duckling - 2nd level Enchantment 🤯",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Vortex Warp - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Warding Bond - 2nd level Abjuration 🛡️",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Warding Wind - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Warp Sense - 2nd level Divination 🔮",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Web - 2nd level Conjuration 📦",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wind Sprint - 2nd level Evocation 💥",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wither and Bloom - 2nd level Necromancy 💀",
+    "unique": false,
+    "used": []
+  }
+]
