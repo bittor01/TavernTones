@@ -4,7 +4,6 @@ const fs = require('fs');
 const path = require('path');
 const stream = require('stream');
 const { Lame } = require('node-lame');
-const { OggVorbisDecoder } = require('@wasm-audio-decoders/ogg-vorbis');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
@@ -825,6 +824,11 @@ client.once('ready', async () => {
         if (ext === '.ogg') {
             try {
                 logToRenderer('Processing OGG file: ' + filePath);
+                const { OggVorbisDecoder } = await import('@wasm-audio-decoders/ogg-vorbis');
+                if (!OggVorbisDecoder) {
+                    logToRenderer('OggVorbisDecoder could not be imported.');
+                    return null;
+                }
                 const uint8ArrayContent = fs.readFileSync(filePath);
                 const decoder = new OggVorbisDecoder();
                 await decoder.ready;
