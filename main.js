@@ -2,7 +2,7 @@ require('dotenv').config({ path: 'environmentvars.env' }); // Load environment v
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const stream = require('stream');
+const { PassThrough, Readable } = require('stream'); // Updated stream import
 const { Lame } = require('node-lame');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 const { Client, GatewayIntentBits } = require('discord.js');
@@ -23,6 +23,7 @@ let pendingFilePath = null;
 let currentPlayingFilePath = null;
 
 let mp3Cache = new Map(); // Cache for decoded MP3 buffers
+let oggPcmCache = new Map();
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -684,38 +685,82 @@ client.once('ready', async () => {
     }
 
     ipcMain.on('play-music', async (event, filePathFromRenderer) => {
-        logToRenderer('Play command received. Pending: ' + !!pendingAudioResource + ', Current: ' + !!currentAudioResource + ', Renderer Path: ' + filePathFromRenderer);
+        logToRenderer(`Play command received. pendingFilePath: ${pendingFilePath}, filePathFromRenderer: ${filePathFromRenderer}`);
+        pendingAudioResource = null; // Ensure this is always null at the start of this handler
 
-        if (pendingAudioResource && pendingFilePath) {
-            logToRenderer(`Switching to new track: ${pendingFilePath}`);
-            if (player.state.status === AudioPlayerStatus.Playing || player.state.status === AudioPlayerStatus.Paused) {
-                player.stop(true); // Stop current playback if any
-                logToRenderer('Stopped current track to play new one.');
+        if (pendingFilePath && (!filePathFromRenderer || filePathFromRenderer === pendingFilePath)) {
+            logToRenderer(`Play command received for pending file: ${pendingFilePath}`);
+
+            const stream = await createReadableStream(pendingFilePath);
+            if (stream) {
+                const resourceToPlay = createAudioResource(stream);
+
+                if (player.state.status === AudioPlayerStatus.Playing || player.state.status === AudioPlayerStatus.Paused) {
+                    if (currentPlayingFilePath === pendingFilePath && player.state.status === AudioPlayerStatus.Paused) {
+                        logToRenderer('Pending file is the same as current and paused. Resuming.');
+                        player.unpause();
+                        mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: currentPlayingFilePath, isPending: false });
+                        pendingFilePath = null; // Clear pending file path
+                        return; // Early exit
+                    }
+                    logToRenderer('Stopping current track to play pending file.');
+                    player.stop(true);
+                }
+
+                currentPlayingFilePath = pendingFilePath;
+                currentAudioResource = resourceToPlay;
+
+                await startPlaybackFromResource(resourceToPlay, pendingFilePath);
+                logToRenderer(`Playback started for pending file: ${pendingFilePath}`);
+                mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: currentPlayingFilePath, isPending: false });
+
+                pendingFilePath = null;
+            } else {
+                logToRenderer(`Failed to create stream for pending file: ${pendingFilePath}`);
+                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: currentPlayingFilePath, isPending: !!pendingFilePath });
+                pendingFilePath = null;
             }
-            await startPlaybackFromResource(pendingAudioResource, pendingFilePath);
-            pendingAudioResource = null;
-            pendingFilePath = null;
-        } else if (currentAudioResource && player.state.status === AudioPlayerStatus.Paused) {
-            logToRenderer('Resuming current track: ' + currentPlayingFilePath);
-            player.unpause();
-            if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: currentPlayingFilePath });
-            }
-        } else if (currentAudioResource && player.state.status === AudioPlayerStatus.Playing) {
-            logToRenderer('Current track is already playing: ' + currentPlayingFilePath);
-            // Optional: Implement restart if filePathFromRenderer matches currentPlayingFilePath
-            // For now, do nothing if already playing.
         } else if (filePathFromRenderer) {
-            logToRenderer('Play command: No pending resource, not paused. Attempting to play from renderer path: ' + filePathFromRenderer);
-            const readableStream = await createReadableStream(filePathFromRenderer);
-            if (readableStream) {
-                const resourceToPlay = createAudioResource(readableStream);
+            logToRenderer('Play command: Direct play from renderer path: ' + filePathFromRenderer);
+
+            const stream = await createReadableStream(filePathFromRenderer);
+            if (stream) {
+                const resourceToPlay = createAudioResource(stream);
+                if (player.state.status === AudioPlayerStatus.Playing || player.state.status === AudioPlayerStatus.Paused) {
+                   if (currentPlayingFilePath === filePathFromRenderer) {
+                       if (player.state.status === AudioPlayerStatus.Paused) {
+                           logToRenderer('Direct play for current paused file. Resuming.');
+                           player.unpause();
+                           mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: currentPlayingFilePath, isPending: false });
+                           return;
+                       }
+                       logToRenderer('Direct play for current playing file. Restarting.');
+                   }
+                   player.stop(true);
+                }
+                currentPlayingFilePath = filePathFromRenderer;
+                currentAudioResource = resourceToPlay;
                 await startPlaybackFromResource(resourceToPlay, filePathFromRenderer);
+                mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: currentPlayingFilePath, isPending: false });
             } else {
                 logToRenderer('Failed to create stream for: ' + filePathFromRenderer);
+                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: currentPlayingFilePath, isPending: false });
             }
+        } else if (currentAudioResource && player.state.status === AudioPlayerStatus.Paused) {
+           logToRenderer('Resuming current track: ' + currentPlayingFilePath);
+           player.unpause();
+           if (mainWindow && mainWindow.webContents) {
+               mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: currentPlayingFilePath, isPending: false });
+           }
         } else {
-            logToRenderer('Play command: Nothing to play and no pending track or renderer path.');
+            logToRenderer('Play command: Nothing to play.');
+            if (mainWindow && mainWindow.webContents) { // Ensure GUI reflects non-playing state if nothing happens
+                mainWindow.webContents.send('update-gui-state', {
+                    isPlaying: false,
+                    filePath: currentPlayingFilePath, // Keep showing current file if paused or idle
+                    isPending: !!pendingFilePath
+                });
+            }
         }
     });
 
@@ -770,44 +815,36 @@ client.once('ready', async () => {
                 }
             }
 
-            if (resolvedPathAfterLinkCheck) { 
-                const readableStream = await createReadableStream(resolvedPathAfterLinkCheck);
-                if (readableStream) {
-                    pendingAudioResource = createAudioResource(readableStream);
-                    pendingFilePath = resolvedPathAfterLinkCheck;
-                    logToRenderer(`Audio resource for ${resolvedPathAfterLinkCheck} created and ready.`);
+            // Simplified logic: only validate path and set pendingFilePath.
+            // Stream and resource creation moved to 'play-music' handler.
+            if (resolvedPathAfterLinkCheck && fs.existsSync(resolvedPathAfterLinkCheck) && fs.statSync(resolvedPathAfterLinkCheck).isFile()) {
+                pendingFilePath = resolvedPathAfterLinkCheck;
+                logToRenderer(`File selected and pending: ${pendingFilePath}`);
+                pendingAudioResource = null; // Ensure pendingAudioResource is null
+            } else {
+                if (resolvedPathAfterLinkCheck) { // Only log if there was a path to check
+                    logToRenderer(`Invalid file or file does not exist: ${resolvedPathAfterLinkCheck}`);
                 } else {
-                    pendingAudioResource = null;
-                    pendingFilePath = null; // Clear pending if resource creation fails
-                    logToRenderer(`Failed to create audio resource for ${resolvedPathAfterLinkCheck}.`);
-                    resolvedPathAfterLinkCheck = null; // Reflect failure in returned path
+                    logToRenderer('No file selected or link resolution failed.');
                 }
-            } else { 
-                pendingAudioResource = null;
                 pendingFilePath = null;
-                logToRenderer(`File path is null after link check, cannot create audio resource.`);
+                pendingAudioResource = null;
+                resolvedPathAfterLinkCheck = null; // Ensure this is null if no valid file
             }
         } else { 
-            pendingAudioResource = null;
             pendingFilePath = null;
-            logToRenderer('No file selected.');
+            pendingAudioResource = null;
+            logToRenderer('No file selected from dialog.');
         }
 
         // Send GUI update after file dialog processing
         if (mainWindow && mainWindow.webContents) {
-            if (pendingFilePath) { // Successfully loaded a file
-                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: pendingFilePath, isPending: true });
-            } else { // File selection failed or was cancelled, or processing failed
-                // Check if a track was already playing/paused and maintain its state, or send a general non-playing state
-                const status = player.state.status;
-                const wasPlaying = status === AudioPlayerStatus.Playing;
-                const wasPaused = status === AudioPlayerStatus.Paused; 
-                if (wasPlaying || wasPaused) { 
-                     mainWindow.webContents.send('update-gui-state', { isPlaying: wasPlaying, filePath: currentPlayingFilePath });
-                } else {
-                     mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: currentPlayingFilePath }); // Or null if nothing was there
-                }
-            }
+            // Update GUI based on whether a file is pending
+            mainWindow.webContents.send('update-gui-state', {
+                isPlaying: player.state.status === AudioPlayerStatus.Playing, // Reflect current playing state
+                filePath: pendingFilePath || currentPlayingFilePath, // Show pending if available, else current
+                isPending: !!pendingFilePath  // True if a file is pending, false otherwise
+            });
         }
         return resolvedPathAfterLinkCheck; // Return the path that was processed (or null)
     });
@@ -822,6 +859,15 @@ client.once('ready', async () => {
         const ext = path.extname(filePath).toLowerCase();
 
         if (ext === '.ogg') {
+            if (oggPcmCache.has(filePath)) {
+                logToRenderer('Creating stream from cached OGG PCM buffer: ' + filePath);
+                const cachedPcmBuffer = oggPcmCache.get(filePath);
+                const readableStream = new PassThrough();
+                readableStream.push(cachedPcmBuffer);
+                readableStream.push(null);
+                logToRenderer('Successfully created stream from cached OGG PCM.');
+                return readableStream;
+            }
             try {
                 logToRenderer('Processing OGG file: ' + filePath);
                 const { OggVorbisDecoder } = await import('@wasm-audio-decoders/ogg-vorbis');
@@ -833,7 +879,9 @@ client.once('ready', async () => {
                 const decoder = new OggVorbisDecoder();
                 await decoder.ready;
                 const { channelData, sampleRate } = await decoder.decodeFile(uint8ArrayContent);
-                await decoder.free();
+                decoder.free(); // Corrected: no await
+
+                logToRenderer('OGG Decoder Output: sampleRate=' + sampleRate + ', numberOfChannels=' + (channelData ? channelData.length : 'null') + (channelData && channelData.length > 0 ? (', samplesPerChannel=' + channelData[0].length) : ''));
 
                 if (!channelData || channelData.length === 0) {
                     logToRenderer('OGG decoding resulted in no channel data for ' + filePath);
@@ -842,39 +890,84 @@ client.once('ready', async () => {
 
                 logToRenderer(`OGG decoded: ${filePath}, Sample Rate: ${sampleRate}, Channels: ${channelData.length}`);
 
-                // Convert Float32Array to 16-bit signed PCM Node.js Buffer
-                const numChannels = channelData.length;
-                const numSamples = channelData[0].length;
-                const pcmBuffer = Buffer.alloc(numSamples * numChannels * 2); // 2 bytes per sample (Int16)
+                let pcmBuffer = null;
+                try { // Inner try specifically for PCM conversion
+                    // Convert Float32Array to 16-bit signed PCM Node.js Buffer
+                    const numChannels = channelData.length;
+                    const numSamples = channelData[0].length;
+                    // Assign to the outer scope pcmBuffer
+                    pcmBuffer = Buffer.alloc(numSamples * numChannels * 2); // 2 bytes per sample (Int16)
 
-                if (numChannels === 1) { // Mono
-                    for (let i = 0; i < numSamples; i++) {
-                        const sample = Math.max(-1, Math.min(1, channelData[0][i])); // Clamp to [-1.0, 1.0]
-                        pcmBuffer.writeInt16LE(Math.round(sample * 32767), i * 2);
-                    }
-                } else { // Stereo (or more channels, interleave)
-                    for (let i = 0; i < numSamples; i++) {
-                        for (let ch = 0; ch < numChannels; ch++) {
-                            const sample = Math.max(-1, Math.min(1, channelData[ch][i])); // Clamp
-                            pcmBuffer.writeInt16LE(Math.round(sample * 32767), (i * numChannels + ch) * 2);
+                    let minSampleInt = 32767;
+                    let maxSampleInt = -32768;
+                    const logFrequency = numSamples > 0 ? Math.floor(numSamples / 4) : 1; // Log roughly 4 samples + first/last, avoid division by zero
+
+                    if (numChannels === 1) { // Mono
+                        for (let i = 0; i < numSamples; i++) {
+                            const sampleFloat = Math.max(-1, Math.min(1, channelData[0][i])); // Clamp to [-1.0, 1.0]
+                            const sampleInt = Math.round(sampleFloat * 32767);
+                            pcmBuffer.writeInt16LE(sampleInt, i * 2);
+
+                            if (sampleInt < minSampleInt) minSampleInt = sampleInt;
+                            if (sampleInt > maxSampleInt) maxSampleInt = sampleInt;
+
+                            if (i === 0) { // Log first sample details
+                                logToRenderer(`OGG PCM Conv: First sample[0][${i}] Float=${sampleFloat.toFixed(4)}, Int=${sampleInt}`);
+                            } else if (i === numSamples - 1) { // Log last sample details
+                                logToRenderer(`OGG PCM Conv: Last sample[0][${i}] Float=${sampleFloat.toFixed(4)}, Int=${sampleInt}`);
+                            } else if (i % logFrequency === 0) { // Log some intermediate samples
+                                logToRenderer(`OGG PCM Conv: Sample[0][${i}] Float=${sampleFloat.toFixed(4)}, Int=${sampleInt}`);
+                            }
+                        }
+                    } else { // Stereo (or more channels, interleave)
+                        for (let i = 0; i < numSamples; i++) {
+                            for (let ch = 0; ch < numChannels; ch++) {
+                                const sampleFloat = Math.max(-1, Math.min(1, channelData[ch][i])); // Clamp
+                                const sampleInt = Math.round(sampleFloat * 32767);
+                                pcmBuffer.writeInt16LE(sampleInt, (i * numChannels + ch) * 2);
+
+                                if (sampleInt < minSampleInt) minSampleInt = sampleInt;
+                                if (sampleInt > maxSampleInt) maxSampleInt = sampleInt;
+
+                                if (i === 0 && ch === 0) { // Log first sample details
+                                    logToRenderer(`OGG PCM Conv: First sample[${ch}][${i}] Float=${sampleFloat.toFixed(4)}, Int=${sampleInt}`);
+                                } else if (i === numSamples - 1 && ch === numChannels -1 ) { // Log last sample details
+                                     logToRenderer(`OGG PCM Conv: Last sample[${ch}][${i}] Float=${sampleFloat.toFixed(4)}, Int=${sampleInt}`);
+                                } else if (i % logFrequency === 0 && ch === 0) { // Log some intermediate samples (only for first channel to avoid too many logs)
+                                    logToRenderer(`OGG PCM Conv: Sample[${ch}][${i}] Float=${sampleFloat.toFixed(4)}, Int=${sampleInt}`);
+                                }
+                            }
                         }
                     }
+                    logToRenderer(`OGG PCM Conv: MinIntSample=${minSampleInt}, MaxIntSample=${maxSampleInt}`);
+                    logToRenderer('OGG PCM Buffer: length=' + (pcmBuffer ? pcmBuffer.length : 'null') + ', content (first 20 bytes): ' + (pcmBuffer ? pcmBuffer.slice(0, 20).toString('hex') : 'N/A'));
+                } catch (pcmError) {
+                    logToRenderer('ERROR during OGG PCM conversion: ' + pcmError.message + (pcmError.stack ? '\nStack: ' + pcmError.stack : ''));
+                    throw pcmError; // Re-throw to be caught by the outer catch
                 }
 
-                const readableStream = new stream.PassThrough();
-                readableStream.push(pcmBuffer);
-                readableStream.end();
-                logToRenderer('Successfully created readable stream from OGG file: ' + filePath);
-                return readableStream;
+                if (pcmBuffer && pcmBuffer.length > 0) {
+                    logToRenderer('Caching OGG PCM buffer for: ' + filePath);
+                    oggPcmCache.set(filePath, pcmBuffer);
+                    const readableStream = new PassThrough();
+                    readableStream.push(pcmBuffer); // Push the buffer
+                    readableStream.push(null);      // Signal EOF
+                    logToRenderer('OGG PCM stream created using PassThrough.');
+                    logToRenderer('Successfully created readable stream from OGG file: ' + filePath);
+                    return readableStream;
+                } else {
+                    logToRenderer('ERROR: OGG PCM buffer is null or empty before creating custom Readable. path: ' + filePath);
+                    return null; // Or handle error as appropriate
+                }
             } catch (error) {
-                logToRenderer('Error processing OGG file in createReadableStream: ' + error.message + ' for ' + filePath);
+                logToRenderer('Error processing OGG file in createReadableStream: ' + error.message + (error.stack ? '\nStack: ' + error.stack : '') + ' for ' + filePath);
                 return null;
             }
         } else if (ext === '.mp3') {
             if (mp3Cache.has(filePath)) {
                 logToRenderer('Creating stream from cached MP3 buffer: ' + filePath);
                 const cachedBuffer = mp3Cache.get(filePath);
-                const readableStream = new stream.PassThrough();
+                const readableStream = new PassThrough(); // Use destructured PassThrough
                 readableStream.end(cachedBuffer);
                 return readableStream;
             }
@@ -893,7 +986,7 @@ client.once('ready', async () => {
                 mp3Cache.set(filePath, buffer); // Cache the buffer
                 logToRenderer('MP3 decoded and cached: ' + filePath);
 
-                const readableStream = new stream.PassThrough();
+                const readableStream = new PassThrough(); // Use destructured PassThrough
                 readableStream.end(buffer);
                 return readableStream;
             } catch (error) {
@@ -923,102 +1016,199 @@ client.once('ready', async () => {
     //AudioPlayerStatus.Idle
     //AudioPlayerStatus.AutoPaused
 
-    let player = createAudioPlayer();
+    let player = createAudioPlayer(); // This is the main player
     connection.subscribe(player);
 
-    async function startPlaybackFromResource(audioResourceToPlay, filePathOfResource) {
-        currentPlayingFilePath = filePathOfResource;
-        currentAudioResource = audioResourceToPlay;
-        // playing = false; // Reset playing flag, to be set true after buffering
+    // Setup main player's event listeners once
+    player.on(AudioPlayerStatus.Idle, async () => {
+        logToRenderer('Main player entered Idle state. Current track: ' + currentPlayingFilePath + '. Pending track: ' + pendingFilePath);
+        // This Idle handler is primarily for looping non-OGG files or playing the next track if a queue system were implemented.
+        // OGG files are handled by a temporary player and should not trigger this main player's looping logic for themselves.
 
-        logToRenderer('Attempting to play resource for: ' + currentPlayingFilePath + '. Player state: ' + player.state.status);
-        
-        player.removeAllListeners(AudioPlayerStatus.Idle); // Clear specific listeners to avoid duplicates
-        player.removeAllListeners(AudioPlayerStatus.AutoPaused);
-        player.removeAllListeners('error');
-
-        player.on(AudioPlayerStatus.Idle, async () => {
-            logToRenderer('Player entered Idle state. Current track: ' + currentPlayingFilePath + '. Pending track: ' + pendingFilePath);
-            if (pendingAudioResource && pendingFilePath) {
-                logToRenderer('Idle: Pending resource found. Starting playback for: ' + pendingFilePath);
-                const resourceToPlay = pendingAudioResource;
-                const pathForResource = pendingFilePath;
-
-                // Clear pending resources *before* starting new playback to avoid race conditions or re-queueing issues.
-                pendingAudioResource = null;
-                pendingFilePath = null;
-
-                // Update current track info
-                // currentPlayingFilePath = pathForResource; // This will be set by startPlaybackFromResource
-                // currentAudioResource = resourceToPlay; // This will be set by startPlaybackFromResource
-                
-                await startPlaybackFromResource(resourceToPlay, pathForResource);
-                // The "Now playing..." message to Discord should be handled by the command that initiated the pending track,
-                // or we can add a generic message here if preferred. For now, startPlaybackFromResource will update GUI.
-                // If a Discord message is needed:
-                // const textChannel = client.channels.cache.get(TEXT_CHANNEL_ID); // Assuming TEXT_CHANNEL_ID is defined
-                // if (textChannel) {
-                //     textChannel.send(`Now playing: **${path.parse(pathForResource).name}** from **${path.basename(path.dirname(pathForResource))}**.`);
-                // }
-            } else if (currentPlayingFilePath) { // Existing loop logic
-                logToRenderer('Idle: No pending resource. Attempting to loop current track: ' + currentPlayingFilePath);
+        if (pendingAudioResource && pendingFilePath) { // This condition might need review if pendingAudioResource is removed
+            logToRenderer('Main player Idle: Pending resource found. Starting playback for: ' + pendingFilePath);
+            const resourceToPlay = pendingAudioResource;
+            const pathForResource = pendingFilePath;
+            pendingAudioResource = null;
+            pendingFilePath = null;
+            await startPlaybackFromResource(resourceToPlay, pathForResource);
+        } else if (currentPlayingFilePath) {
+            const isOggLoop = path.extname(currentPlayingFilePath).toLowerCase() === '.ogg';
+            if (isOggLoop) {
+                logToRenderer('Main player Idle: OGG file finished (expected to be played by temporary player), not looping with main player.');
+                currentPlayingFilePath = null;
+                currentAudioResource = null; // Clear resource tied to main player
+                if (mainWindow && mainWindow.webContents) {
+                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
+                }
+                // Ensure main player remains subscribed if no other pending actions
+                if (connection && connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player !== player) {
+                     connection.subscribe(player);
+                }
+            } else {
+                // Existing loop logic for non-OGG files:
+                logToRenderer('Main player Idle (Looping non-OGG): Forcing player.stop(true) before re-creating resource for loop.');
+                player.stop(true);
+                logToRenderer('Main player Idle: No pending resource. Attempting to loop current (non-OGG) track: ' + currentPlayingFilePath);
                 const newReadableStream = await createReadableStream(currentPlayingFilePath);
                 if (newReadableStream) {
                     const newAudioResourceForLoop = createAudioResource(newReadableStream);
-                    // currentAudioResource = newAudioResourceForLoop; // This will be set by startPlaybackFromResource
-                    await startPlaybackFromResource(newAudioResourceForLoop, currentPlayingFilePath); // Play the new resource for the loop
+                    // currentAudioResource is already set for non-OGG, startPlaybackFromResource will use it.
+                    await startPlaybackFromResource(newAudioResourceForLoop, currentPlayingFilePath);
                 } else {
-                    logToRenderer('Idle: Failed to create stream for looping: ' + currentPlayingFilePath);
+                    logToRenderer('Main player Idle: Failed to create stream for looping non-OGG: ' + currentPlayingFilePath);
                     currentPlayingFilePath = null; 
                     currentAudioResource = null;
                     if (mainWindow && mainWindow.webContents) {
                         mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
                     }
                 }
-            } else {
-                logToRenderer('Player Idle and no currentPlayingFilePath or pendingFilePath, so not looping or starting new track.');
-                // Ensure GUI reflects that nothing is playing
-                if (mainWindow && mainWindow.webContents) {
-                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
-                }
-                currentAudioResource = null; // Ensure this is also cleared
             }
-        });
-    
-        player.on(AudioPlayerStatus.AutoPaused, () => {
-            // if (playing && currentPlayingFilePath) { // Consider if 'playing' flag is still needed
-            if (currentPlayingFilePath) {
-                logToRenderer('Autopaused, check connection... Track: ' + currentPlayingFilePath);
-            }
-        });
-    
-        player.on('error', (error) => {
-            logToRenderer(`Error playing audio for ${currentPlayingFilePath}: ${error.message}`);
-            // playing = false;
-            currentPlayingFilePath = null;
-            currentAudioResource = null;
+        } else {
+            logToRenderer('Main player Idle and no currentPlayingFilePath or pendingFilePath, so not looping or starting new track.');
             if (mainWindow && mainWindow.webContents) {
                 mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
             }
-        });
+            currentAudioResource = null;
+        }
+    });
 
-        player.play(audioResourceToPlay);
-        logToRenderer('Player.play called. Player state: ' + player.state.status);
-        
-        try {
-            await entersState(player, AudioPlayerStatus.Playing, 5000); // Wait for playing state
-            logToRenderer('Player is now Playing. Player state: ' + player.state.status);
-            // playing = true;
-            if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: currentPlayingFilePath });
+    player.on(AudioPlayerStatus.AutoPaused, () => {
+        if (currentPlayingFilePath) { // Check if a track was supposed to be playing
+            logToRenderer('Main player Autopaused, check connection... Track: ' + currentPlayingFilePath);
+        }
+    });
+
+    player.on('error', (error) => {
+        logToRenderer(`Error in main player for ${currentPlayingFilePath}: ${error.message}`);
+        currentPlayingFilePath = null;
+        currentAudioResource = null;
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null, error: true });
+        }
+    });
+
+
+    async function startPlaybackFromResource(audioResourceToPlay, filePathOfResource) {
+        const isOgg = path.extname(filePathOfResource).toLowerCase() === '.ogg';
+
+        if (isOgg) {
+            logToRenderer('Using temporary AudioPlayer for OGG: ' + filePathOfResource);
+
+            if (player.state.status === AudioPlayerStatus.Playing || player.state.status === AudioPlayerStatus.Paused) {
+                logToRenderer('Stopping main player for temporary OGG playback.');
+                player.stop(true);
             }
-        } catch (error) {
-            logToRenderer(`Player did not enter Playing state for ${currentPlayingFilePath}: ${error.message}. Current state: ${player.state.status}`);
-            // playing = false;
-            // If it fails to enter playing, it might go to Idle or stay Buffering/Paused. The Idle handler should then take over or it might be an error.
-            // Ensure GUI is updated if playback fails to start
-            if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: currentPlayingFilePath });
+
+            const tempOggPlayer = createAudioPlayer();
+
+            if (!connection || connection.state.status !== VoiceConnectionStatus.Ready) {
+                logToRenderer('ERROR: Voice connection not available or not ready for temporary OGG player.');
+                if (mainWindow && mainWindow.webContents) {
+                     mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
+                }
+                return;
+            }
+            try {
+                connection.subscribe(tempOggPlayer);
+            } catch (subError) {
+                logToRenderer('ERROR: Failed to subscribe temporary OGG player: ' + subError.message);
+                if (mainWindow && mainWindow.webContents) {
+                     mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
+                }
+                return;
+            }
+
+            currentPlayingFilePath = filePathOfResource;
+            // Do NOT set global currentAudioResource for temp player to avoid main player's Idle confusion
+
+            tempOggPlayer.play(audioResourceToPlay);
+
+            try {
+                await entersState(tempOggPlayer, AudioPlayerStatus.Playing, 5000);
+                logToRenderer('Temporary OGG player is now Playing: ' + filePathOfResource);
+                if (mainWindow && mainWindow.webContents) {
+                    mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: filePathOfResource });
+                }
+            } catch (error) {
+                logToRenderer(`Temporary OGG player did not enter Playing state for ${filePathOfResource}: ${error.message}. Current state: ${tempOggPlayer.state.status}`);
+                if (mainWindow && mainWindow.webContents) {
+                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
+                }
+                tempOggPlayer.stop();
+                if (connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player === tempOggPlayer) {
+                     connection.subscribe(player);
+                }
+                return;
+            }
+
+            tempOggPlayer.once(AudioPlayerStatus.Idle, () => {
+                logToRenderer('Temporary OGG player Idle for: ' + filePathOfResource);
+                tempOggPlayer.stop();
+                if (currentPlayingFilePath === filePathOfResource) {
+                    currentPlayingFilePath = null;
+                }
+                if (mainWindow && mainWindow.webContents) {
+                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
+                }
+                if (connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player === tempOggPlayer) {
+                    logToRenderer('Resubscribing main player after temporary OGG player session (Idle).');
+                    connection.subscribe(player);
+                }
+            });
+            tempOggPlayer.once('error', (error) => {
+                logToRenderer(`ERROR in temporary OGG player for ${filePathOfResource}: ${error.message}`);
+                tempOggPlayer.stop();
+                if (currentPlayingFilePath === filePathOfResource) {
+                    currentPlayingFilePath = null;
+                }
+                if (mainWindow && mainWindow.webContents) {
+                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null, error: true });
+                }
+                if (connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player === tempOggPlayer) {
+                    logToRenderer('Resubscribing main player after temporary OGG player error.');
+                    connection.subscribe(player);
+                }
+            });
+
+        } else { // Not OGG - use main player
+            logToRenderer('Using main player for: ' + filePathOfResource);
+            if (connection && connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player !== player) {
+                logToRenderer('Main player was not subscribed. Re-subscribing.');
+                connection.subscribe(player);
+            } else if (!connection || connection.state.status !== VoiceConnectionStatus.Ready) {
+                logToRenderer('ERROR: Voice connection not ready to subscribe main player.');
+                if (mainWindow && mainWindow.webContents) {
+                     mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
+                }
+                return;
+            }
+
+            currentPlayingFilePath = filePathOfResource;
+            currentAudioResource = audioResourceToPlay; // Main player uses this for looping
+
+            // Crucially, ensure main player's listeners are set up (they are, once, above)
+            // player.removeAllListeners(AudioPlayerStatus.Idle); // This was here before, but listeners are now set once globally
+            // player.removeAllListeners(AudioPlayerStatus.AutoPaused);
+            // player.removeAllListeners('error');
+            // Re-attaching listeners like this on every play can lead to multiple listeners.
+            // They are now set once when the main `player` is created.
+
+            player.play(audioResourceToPlay);
+            logToRenderer('Main player.play called for: ' + filePathOfResource);
+
+            try {
+                await entersState(player, AudioPlayerStatus.Playing, 5000);
+                logToRenderer('Main player is now Playing: ' + currentPlayingFilePath);
+                if (mainWindow && mainWindow.webContents) {
+                    mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: currentPlayingFilePath });
+                }
+            } catch (error) {
+                logToRenderer(`Main player did not enter Playing state for ${currentPlayingFilePath}: ${error.message}. Current state: ${player.state.status}`);
+                if (mainWindow && mainWindow.webContents) {
+                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: currentPlayingFilePath, error: true });
+                }
+                // Don't nullify currentPlayingFilePath here if we want Idle handler to potentially retry/log
             }
         }
     }
