@@ -742,7 +742,7 @@ client.once('ready', async () => {
         properties: ['openFile'],
         defaultPath: defaultFolder,
         filters: [
-            { name: 'Audio Files', extensions: ['wav', 'mp3', 'lnk'] },
+            { name: 'Audio Files', extensions: ['wav', 'mp3', 'ogg', 'lnk'] },
             { name: 'All Files', extensions: ['*'] }
         ]
         });
@@ -821,7 +821,56 @@ client.once('ready', async () => {
         }
         const ext = path.extname(filePath).toLowerCase();
 
-        if (ext === '.mp3') {
+        if (ext === '.ogg') {
+            try {
+                logToRenderer('Processing OGG file: ' + filePath);
+                const { OggVorbisDecoder } = await import('@wasm-audio-decoders/ogg-vorbis');
+                if (!OggVorbisDecoder) {
+                    logToRenderer('OggVorbisDecoder could not be imported.');
+                    return null;
+                }
+                const uint8ArrayContent = fs.readFileSync(filePath);
+                const decoder = new OggVorbisDecoder();
+                await decoder.ready;
+                const { channelData, sampleRate } = await decoder.decodeFile(uint8ArrayContent);
+                await decoder.free();
+
+                if (!channelData || channelData.length === 0) {
+                    logToRenderer('OGG decoding resulted in no channel data for ' + filePath);
+                    return null;
+                }
+
+                logToRenderer(`OGG decoded: ${filePath}, Sample Rate: ${sampleRate}, Channels: ${channelData.length}`);
+
+                // Convert Float32Array to 16-bit signed PCM Node.js Buffer
+                const numChannels = channelData.length;
+                const numSamples = channelData[0].length;
+                const pcmBuffer = Buffer.alloc(numSamples * numChannels * 2); // 2 bytes per sample (Int16)
+
+                if (numChannels === 1) { // Mono
+                    for (let i = 0; i < numSamples; i++) {
+                        const sample = Math.max(-1, Math.min(1, channelData[0][i])); // Clamp to [-1.0, 1.0]
+                        pcmBuffer.writeInt16LE(Math.round(sample * 32767), i * 2);
+                    }
+                } else { // Stereo (or more channels, interleave)
+                    for (let i = 0; i < numSamples; i++) {
+                        for (let ch = 0; ch < numChannels; ch++) {
+                            const sample = Math.max(-1, Math.min(1, channelData[ch][i])); // Clamp
+                            pcmBuffer.writeInt16LE(Math.round(sample * 32767), (i * numChannels + ch) * 2);
+                        }
+                    }
+                }
+
+                const readableStream = new stream.PassThrough();
+                readableStream.push(pcmBuffer);
+                readableStream.end();
+                logToRenderer('Successfully created readable stream from OGG file: ' + filePath);
+                return readableStream;
+            } catch (error) {
+                logToRenderer('Error processing OGG file in createReadableStream: ' + error.message + ' for ' + filePath);
+                return null;
+            }
+        } else if (ext === '.mp3') {
             if (mp3Cache.has(filePath)) {
                 logToRenderer('Creating stream from cached MP3 buffer: ' + filePath);
                 const cachedBuffer = mp3Cache.get(filePath);
@@ -1278,11 +1327,11 @@ async function findMusic(folderSearchTerm, songSearchTerm) {
         // Filter for .mp3 and .wav files
         const audioFiles = filesInFolder.filter(file => {
             const ext = path.extname(file).toLowerCase();
-            return ext === '.mp3' || ext === '.wav'|| ext === '.lnk';
+            return ext === '.mp3' || ext === '.wav' || ext === '.ogg' || ext === '.lnk';
         });
 
         if (audioFiles.length === 0) {
-            logToRenderer(`findMusic: No audio files (.mp3 or .wav) found in the folder '${foundFolderOriginalName}'.`);
+            logToRenderer(`findMusic: No audio files (.mp3, .wav or .ogg) found in the folder '${foundFolderOriginalName}'.`);
             return null;
         }
 
