@@ -4,7 +4,6 @@ const fs = require('fs');
 const path = require('path');
 const stream = require('stream');
 const { Lame } = require('node-lame');
-const { OggVorbisDecoder } = require('@wasm-audio-decoders/ogg-vorbis');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
@@ -743,7 +742,7 @@ client.once('ready', async () => {
         properties: ['openFile'],
         defaultPath: defaultFolder,
         filters: [
-            { name: 'Audio Files', extensions: ['wav', 'mp3', 'ogg', 'lnk'] },
+            { name: 'Audio Files', extensions: ['wav', 'mp3', 'lnk'] },
             { name: 'All Files', extensions: ['*'] }
         ]
         });
@@ -860,52 +859,6 @@ client.once('ready', async () => {
                 return wavStream;
             } catch (error) {
                 logToRenderer('Error processing WAV file in createReadableStream: ' + error.message);
-                return null;
-            }
-        } else if (ext === '.ogg') {
-            logToRenderer('Processing OGG file: ' + filePath);
-            try {
-                const fileBuffer = fs.readFileSync(filePath);
-                const oggData = new Uint8Array(fileBuffer.buffer, fileBuffer.byteOffset, fileBuffer.byteLength);
-
-                const decoder = new OggVorbisDecoder();
-                await decoder.ready;
-                logToRenderer('OggVorbisDecoder is ready for: ' + filePath);
-
-                const { channelData, samplesDecoded, sampleRate } = await decoder.decodeFile(oggData);
-                decoder.free();
-                logToRenderer(`OGG file decoded: ${filePath}, Samples: ${samplesDecoded}, Sample Rate: ${sampleRate}`);
-
-                if (!samplesDecoded || !channelData || channelData.length === 0) {
-                    logToRenderer('OGG decoding produced no data for: ' + filePath);
-                    return null;
-                }
-
-                // Assuming stereo, interleave and convert to 16-bit PCM
-                // @discordjs/voice typically expects a stream of opus packets or raw PCM (s16le).
-                // We are providing raw PCM here.
-                const numChannels = channelData.length;
-                const numSamples = samplesDecoded;
-                const pcmBuffer = Buffer.alloc(numSamples * numChannels * 2); // 2 bytes per sample (16-bit)
-
-                for (let i = 0; i < numSamples; i++) {
-                    for (let ch = 0; ch < numChannels; ch++) {
-                        const sample = Math.max(-1, Math.min(1, channelData[ch][i])); // Clamp to [-1, 1]
-                        const pcmValue = Math.round(sample * 32767); // Scale to 16-bit range
-                        pcmBuffer.writeInt16LE(pcmValue, (i * numChannels + ch) * 2);
-                    }
-                }
-
-                logToRenderer('OGG file converted to PCM buffer for: ' + filePath);
-                const readableStream = new stream.PassThrough();
-                readableStream.end(pcmBuffer);
-                return readableStream;
-
-            } catch (error) {
-                logToRenderer('Error processing OGG file in createReadableStream: ' + error.message);
-                if (error.stack) {
-                    logToRenderer('Stack trace: ' + error.stack);
-                }
                 return null;
             }
         } else {
@@ -1322,14 +1275,14 @@ async function findMusic(folderSearchTerm, songSearchTerm) {
     // Phase 2: Find the song within the identified folder
     try {
         const filesInFolder = fs.readdirSync(actualFolderPath);
-        // Filter for .mp3, .wav and .ogg files
+        // Filter for .mp3 and .wav files
         const audioFiles = filesInFolder.filter(file => {
             const ext = path.extname(file).toLowerCase();
-            return ext === '.mp3' || ext === '.wav' || ext === '.ogg' || ext === '.lnk';
+            return ext === '.mp3' || ext === '.wav'|| ext === '.lnk';
         });
 
         if (audioFiles.length === 0) {
-            logToRenderer(`findMusic: No audio files (.mp3, .wav, or .ogg) found in the folder '${foundFolderOriginalName}'.`);
+            logToRenderer(`findMusic: No audio files (.mp3 or .wav) found in the folder '${foundFolderOriginalName}'.`);
             return null;
         }
 
