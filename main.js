@@ -16,7 +16,7 @@ const BOT_ROLE_ID = process.env.BOT_ROLE_ID;
 const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
 let connection;
 let lastResponse = null; // Variable to store the last response
-
+//adding a comment so i can flipping commit this
 let pendingAudioResource = null;
 let currentAudioResource = null;
 let pendingFilePath = null;
