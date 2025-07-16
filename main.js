@@ -3,7 +3,6 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { PassThrough, Readable } = require('stream'); // Updated stream import
-const { Lame } = require('node-lame');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
@@ -17,9 +16,6 @@ const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
 let connection;
 let lastResponse = null; // Variable to store the last response
 //adding a comment so i can flipping commit this
-
-let mp3Cache = new Map(); // Cache for decoded MP3 buffers
-let oggPcmCache = new Map();
 
 class AudioState {
     constructor() {
@@ -668,7 +664,7 @@ client.once('ready', async () => {
         properties: ['openFile'],
         defaultPath: defaultFolder,
         filters: [
-            { name: 'Audio Files', extensions: ['wav', 'mp3', 'ogg', 'lnk'] },
+            { name: 'Audio Files', extensions: ['wav', 'lnk'] },
             { name: 'All Files', extensions: ['*'] }
         ]
         });
@@ -737,142 +733,7 @@ async function createReadableStream(filePath, useCache = true) {
         }
         const ext = path.extname(filePath).toLowerCase();
 
-        if (ext === '.ogg') {
-        if (useCache && oggPcmCache.has(filePath)) {
-                logToRenderer('Creating stream from cached OGG PCM buffer: ' + filePath);
-                const cachedPcmBuffer = oggPcmCache.get(filePath);
-                const readableStream = new PassThrough();
-                readableStream.push(cachedPcmBuffer);
-                readableStream.push(null);
-                logToRenderer('Successfully created stream from cached OGG PCM.');
-                return readableStream;
-            }
-            try {
-                logToRenderer('Processing OGG file: ' + filePath);
-                const { OggVorbisDecoder } = await import('@wasm-audio-decoders/ogg-vorbis');
-                if (!OggVorbisDecoder) {
-                    logToRenderer('OggVorbisDecoder could not be imported.');
-                    return null;
-                }
-                const uint8ArrayContent = fs.readFileSync(filePath);
-                const decoder = new OggVorbisDecoder();
-                await decoder.ready;
-                const { channelData, sampleRate } = await decoder.decodeFile(uint8ArrayContent);
-                decoder.free(); // Corrected: no await
-
-                logToRenderer('OGG Decoder Output: sampleRate=' + sampleRate + ', numberOfChannels=' + (channelData ? channelData.length : 'null') + (channelData && channelData.length > 0 ? (', samplesPerChannel=' + channelData[0].length) : ''));
-
-                if (!channelData || channelData.length === 0) {
-                    logToRenderer('OGG decoding resulted in no channel data for ' + filePath);
-                    return null;
-                }
-
-                logToRenderer(`OGG decoded: ${filePath}, Sample Rate: ${sampleRate}, Channels: ${channelData.length}`);
-
-                let pcmBuffer = null;
-                try { // Inner try specifically for PCM conversion
-                    // Convert Float32Array to 16-bit signed PCM Node.js Buffer
-                    const numChannels = channelData.length;
-                    const numSamples = channelData[0].length;
-                    // Assign to the outer scope pcmBuffer
-                    pcmBuffer = Buffer.alloc(numSamples * numChannels * 2); // 2 bytes per sample (Int16)
-
-                    let minSampleInt = 32767;
-                    let maxSampleInt = -32768;
-                    const logFrequency = numSamples > 0 ? Math.floor(numSamples / 4) : 1; // Log roughly 4 samples + first/last, avoid division by zero
-
-                    if (numChannels === 1) { // Mono
-                        for (let i = 0; i < numSamples; i++) {
-                            const sampleFloat = Math.max(-1, Math.min(1, channelData[0][i])); // Clamp to [-1.0, 1.0]
-                            const sampleInt = Math.round(sampleFloat * 32767);
-                            pcmBuffer.writeInt16LE(sampleInt, i * 2);
-
-                            if (sampleInt < minSampleInt) minSampleInt = sampleInt;
-                            if (sampleInt > maxSampleInt) maxSampleInt = sampleInt;
-
-                            if (i === 0) { // Log first sample details
-                                logToRenderer(`OGG PCM Conv: First sample[0][${i}] Float=${sampleFloat.toFixed(4)}, Int=${sampleInt}`);
-                            } else if (i === numSamples - 1) { // Log last sample details
-                                logToRenderer(`OGG PCM Conv: Last sample[0][${i}] Float=${sampleFloat.toFixed(4)}, Int=${sampleInt}`);
-                            } else if (i % logFrequency === 0) { // Log some intermediate samples
-                                logToRenderer(`OGG PCM Conv: Sample[0][${i}] Float=${sampleFloat.toFixed(4)}, Int=${sampleInt}`);
-                            }
-                        }
-                    } else { // Stereo (or more channels, interleave)
-                        for (let i = 0; i < numSamples; i++) {
-                            for (let ch = 0; ch < numChannels; ch++) {
-                                const sampleFloat = Math.max(-1, Math.min(1, channelData[ch][i])); // Clamp
-                                const sampleInt = Math.round(sampleFloat * 32767);
-                                pcmBuffer.writeInt16LE(sampleInt, (i * numChannels + ch) * 2);
-
-                                if (sampleInt < minSampleInt) minSampleInt = sampleInt;
-                                if (sampleInt > maxSampleInt) maxSampleInt = sampleInt;
-
-                                if (i === 0 && ch === 0) { // Log first sample details
-                                    logToRenderer(`OGG PCM Conv: First sample[${ch}][${i}] Float=${sampleFloat.toFixed(4)}, Int=${sampleInt}`);
-                                } else if (i === numSamples - 1 && ch === numChannels -1 ) { // Log last sample details
-                                     logToRenderer(`OGG PCM Conv: Last sample[${ch}][${i}] Float=${sampleFloat.toFixed(4)}, Int=${sampleInt}`);
-                                } else if (i % logFrequency === 0 && ch === 0) { // Log some intermediate samples (only for first channel to avoid too many logs)
-                                    logToRenderer(`OGG PCM Conv: Sample[${ch}][${i}] Float=${sampleFloat.toFixed(4)}, Int=${sampleInt}`);
-                                }
-                            }
-                        }
-                    }
-                    logToRenderer(`OGG PCM Conv: MinIntSample=${minSampleInt}, MaxIntSample=${maxSampleInt}`);
-                    logToRenderer('OGG PCM Buffer: length=' + (pcmBuffer ? pcmBuffer.length : 'null') + ', content (first 20 bytes): ' + (pcmBuffer ? pcmBuffer.slice(0, 20).toString('hex') : 'N/A'));
-                } catch (pcmError) {
-                    logToRenderer('ERROR during OGG PCM conversion: ' + pcmError.message + (pcmError.stack ? '\nStack: ' + pcmError.stack : ''));
-                    throw pcmError; // Re-throw to be caught by the outer catch
-                }
-
-                if (pcmBuffer && pcmBuffer.length > 0) {
-                    logToRenderer('Caching OGG PCM buffer for: ' + filePath);
-                    oggPcmCache.set(filePath, pcmBuffer);
-                    const readableStream = new PassThrough();
-                    readableStream.push(pcmBuffer); // Push the buffer
-                    readableStream.push(null);      // Signal EOF
-                    logToRenderer('OGG PCM stream created using PassThrough.');
-                    logToRenderer('Successfully created readable stream from OGG file: ' + filePath);
-                    return readableStream;
-                } else {
-                    logToRenderer('ERROR: OGG PCM buffer is null or empty before creating custom Readable. path: ' + filePath);
-                    return null; // Or handle error as appropriate
-                }
-            } catch (error) {
-                logToRenderer('Error processing OGG file in createReadableStream: ' + error.message + (error.stack ? '\nStack: ' + error.stack : '') + ' for ' + filePath);
-                return null;
-            }
-        } else if (ext === '.mp3') {
-        if (useCache && mp3Cache.has(filePath)) {
-                logToRenderer('Creating stream from cached MP3 buffer: ' + filePath);
-                const cachedBuffer = mp3Cache.get(filePath);
-                const readableStream = new PassThrough(); // Use destructured PassThrough
-                readableStream.end(cachedBuffer);
-                return readableStream;
-            }
-            try {
-                // Create a Lame decoder instance
-                const lame = new Lame({
-                    output: 'buffer',
-                    bitrate: 64,          // Optional: Set bitrate for quality control (adjust as needed)
-                    sfreq: 44.1,          // Set sample frequency to 44.1kHz
-                    mode: 's',            // 'm' for mono, 's' for stereo (Discord supports both)
-                    bitwidth: 16          // Set bit width to 16-bit for compatibility
-                }).setFile(filePath);
-
-                await lame.decode();
-                const buffer = lame.getBuffer();
-                mp3Cache.set(filePath, buffer); // Cache the buffer
-                logToRenderer('MP3 decoded and cached: ' + filePath);
-
-                const readableStream = new PassThrough(); // Use destructured PassThrough
-                readableStream.end(buffer);
-                return readableStream;
-            } catch (error) {
-                logToRenderer('Error processing MP3 file in createReadableStream: ' + error.message);
-                return null;
-            }
-        } else if (ext === '.wav') {
+        if (ext === '.wav') {
             try {
                 // Create a readable stream from the WAV file
                 const wavStream = fs.createReadStream(filePath);
@@ -971,131 +832,44 @@ async function createReadableStream(filePath, useCache = true) {
 
 
     async function startPlaybackFromResource(audioResourceToPlay, filePathOfResource) {
-        const isOgg = path.extname(filePathOfResource).toLowerCase() === '.ogg';
-
-        if (isOgg) {
-            logToRenderer('Using temporary AudioPlayer for OGG: ' + filePathOfResource);
-
-            if (player.state.status === AudioPlayerStatus.Playing || player.state.status === AudioPlayerStatus.Paused) {
-                logToRenderer('Stopping main player for temporary OGG playback.');
-                player.stop(true);
+        logToRenderer('Using main player for: ' + filePathOfResource);
+        if (connection && connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player !== player) {
+            logToRenderer('Main player was not subscribed. Re-subscribing.');
+            connection.subscribe(player);
+        } else if (!connection || connection.state.status !== VoiceConnectionStatus.Ready) {
+            logToRenderer('ERROR: Voice connection not ready to subscribe main player.');
+            if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
             }
+            return;
+        }
 
-            const tempOggPlayer = createAudioPlayer();
+    audioState.setActiveFile(filePathOfResource);
 
-            if (!connection || connection.state.status !== VoiceConnectionStatus.Ready) {
-                logToRenderer('ERROR: Voice connection not available or not ready for temporary OGG player.');
-                if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
-                }
-                return;
+        // Crucially, ensure main player's listeners are set up (they are, once, above)
+        // player.removeAllListeners(AudioPlayerStatus.Idle); // This was here before, but listeners are now set once globally
+        // player.removeAllListeners(AudioPlayerStatus.AutoPaused);
+        // player.removeAllListeners('error');
+        // Re-attaching listeners like this on every play can lead to multiple listeners.
+        // They are now set once when the main `player` is created.
+
+        player.play(audioResourceToPlay);
+        logToRenderer('Main player.play called for: ' + filePathOfResource);
+
+        try {
+            await entersState(player, AudioPlayerStatus.Playing, 5000);
+        audioState.setPlayerStatus(AudioPlayerStatus.Playing);
+        logToRenderer('Main player is now Playing: ' + audioState.activeFile);
+            if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: audioState.activeFile });
             }
-            try {
-                connection.subscribe(tempOggPlayer);
-            } catch (subError) {
-                logToRenderer('ERROR: Failed to subscribe temporary OGG player: ' + subError.message);
-                if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
-                }
-                return;
+        } catch (error) {
+        logToRenderer(`Main player did not enter Playing state for ${audioState.activeFile}: ${error.message}. Current state: ${player.state.status}`);
+        audioState.setPlayerStatus(AudioPlayerStatus.Idle);
+            if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: audioState.activeFile, error: true });
             }
-
-        audioState.setActiveFile(filePathOfResource);
-            // Do NOT set global currentAudioResource for temp player to avoid main player's Idle confusion
-
-            tempOggPlayer.play(audioResourceToPlay);
-
-            try {
-                await entersState(tempOggPlayer, AudioPlayerStatus.Playing, 5000);
-            audioState.setPlayerStatus(AudioPlayerStatus.Playing);
-                logToRenderer('Temporary OGG player is now Playing: ' + filePathOfResource);
-                if (mainWindow && mainWindow.webContents) {
-                    mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: filePathOfResource });
-                }
-            } catch (error) {
-                logToRenderer(`Temporary OGG player did not enter Playing state for ${filePathOfResource}: ${error.message}. Current state: ${tempOggPlayer.state.status}`);
-            audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-                if (mainWindow && mainWindow.webContents) {
-                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
-                }
-                tempOggPlayer.stop();
-                if (connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player === tempOggPlayer) {
-                connection.subscribe(player);
-                }
-                return;
-            }
-
-            tempOggPlayer.once(AudioPlayerStatus.Idle, () => {
-                logToRenderer('Temporary OGG player Idle for: ' + filePathOfResource);
-                tempOggPlayer.stop();
-            if (audioState.activeFile === filePathOfResource) {
-                audioState.clearActiveFile();
-                }
-            audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-                if (mainWindow && mainWindow.webContents) {
-                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
-                }
-                if (connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player === tempOggPlayer) {
-                    logToRenderer('Resubscribing main player after temporary OGG player session (Idle).');
-                    connection.subscribe(player);
-                }
-            });
-            tempOggPlayer.once('error', (error) => {
-                logToRenderer(`ERROR in temporary OGG player for ${filePathOfResource}: ${error.message}`);
-                tempOggPlayer.stop();
-            if (audioState.activeFile === filePathOfResource) {
-                audioState.clearActiveFile();
-                }
-            audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-                if (mainWindow && mainWindow.webContents) {
-                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null, error: true });
-                }
-                if (connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player === tempOggPlayer) {
-                    logToRenderer('Resubscribing main player after temporary OGG player error.');
-                    connection.subscribe(player);
-                }
-            });
-
-        } else { // Not OGG - use main player
-            logToRenderer('Using main player for: ' + filePathOfResource);
-            if (connection && connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player !== player) {
-                logToRenderer('Main player was not subscribed. Re-subscribing.');
-                connection.subscribe(player);
-            } else if (!connection || connection.state.status !== VoiceConnectionStatus.Ready) {
-                logToRenderer('ERROR: Voice connection not ready to subscribe main player.');
-                if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
-                }
-                return;
-            }
-
-        audioState.setActiveFile(filePathOfResource);
-
-            // Crucially, ensure main player's listeners are set up (they are, once, above)
-            // player.removeAllListeners(AudioPlayerStatus.Idle); // This was here before, but listeners are now set once globally
-            // player.removeAllListeners(AudioPlayerStatus.AutoPaused);
-            // player.removeAllListeners('error');
-            // Re-attaching listeners like this on every play can lead to multiple listeners.
-            // They are now set once when the main `player` is created.
-
-            player.play(audioResourceToPlay);
-            logToRenderer('Main player.play called for: ' + filePathOfResource);
-
-            try {
-                await entersState(player, AudioPlayerStatus.Playing, 5000);
-            audioState.setPlayerStatus(AudioPlayerStatus.Playing);
-            logToRenderer('Main player is now Playing: ' + audioState.activeFile);
-                if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: audioState.activeFile });
-                }
-            } catch (error) {
-            logToRenderer(`Main player did not enter Playing state for ${audioState.activeFile}: ${error.message}. Current state: ${player.state.status}`);
-            audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-                if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: audioState.activeFile, error: true });
-                }
-                // Don't nullify currentPlayingFilePath here if we want Idle handler to potentially retry/log
-            }
+            // Don't nullify currentPlayingFilePath here if we want Idle handler to potentially retry/log
         }
     }
 
@@ -1435,11 +1209,11 @@ async function findMusic(folderSearchTerm, songSearchTerm) {
         // Filter for .mp3 and .wav files
         const audioFiles = filesInFolder.filter(file => {
             const ext = path.extname(file).toLowerCase();
-            return ext === '.mp3' || ext === '.wav' || ext === '.ogg' || ext === '.lnk';
+            return ext === '.wav' || ext === '.lnk';
         });
 
         if (audioFiles.length === 0) {
-            logToRenderer(`findMusic: No audio files (.mp3, .wav or .ogg) found in the folder '${foundFolderOriginalName}'.`);
+            logToRenderer(`findMusic: No audio files (.wav) found in the folder '${foundFolderOriginalName}'.`);
             return null;
         }
 
