@@ -27,6 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedFileLabel.textContent = filePath; // Display selected file path
                 playPauseButton.disabled = false; // Enable play/pause button
                 logMessage(`Selected file: ${filePath}`); // Log file selection
+                isPlaying = false;
+                playPauseButton.textContent = 'Play';
             }
         });
     });
