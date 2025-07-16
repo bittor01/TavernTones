@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     playPauseButton.addEventListener('click', () => {
+        logMessage(`Play/Pause button clicked. isPlaying: ${isPlaying}`);
         if (isPlaying) {
             window.electron.ipcRenderer.send('pause-music'); // Use window.electron for IPC
         } else {

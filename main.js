@@ -615,7 +615,7 @@ client.once('ready', async () => {
     }
 
     ipcMain.on('play-music', async (event, filePathFromRenderer) => {
-    logToRenderer(`Play command received. pendingFile: ${audioState.pendingFile}, filePathFromRenderer: ${filePathFromRenderer}`);
+    logToRenderer(`Play command received. pendingFile: ${audioState.pendingFile}, filePathFromRenderer: ${filePathFromRenderer}, playerStatus: ${audioState.playerStatus}`);
 
     if (audioState.pendingFile) {
         logToRenderer(`Play command received for pending file: ${audioState.pendingFile}`);
@@ -640,7 +640,7 @@ client.once('ready', async () => {
     });
 
     ipcMain.on('pause-music', () => {
-        logToRenderer('Pause command received. Current player status: ' + player.state.status);
+        logToRenderer('Pause command received. Current player status: ' + player.state.status + ', isPlaying: ' + audioState.isPlaying);
     if (audioState.isPlaying) {
         pauseAudio();
     }
@@ -878,7 +878,7 @@ async function createReadableStream(filePath, useCache = true) {
             player.pause(true); // Pass true to pause even if resource is still buffering
         audioState.setPlayerStatus(AudioPlayerStatus.Paused);
             logToRenderer('Audio paused. Player state: ' + player.state.status);
-            if (mainWindow && mainWindow.webContents && !audioState.pendingFile) {
+            if (mainWindow && mainWindow.webContents) {
             mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: audioState.activeFile });
             }
         } else {
