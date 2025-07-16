@@ -617,17 +617,17 @@ client.once('ready', async () => {
     ipcMain.on('play-music', async (event, filePathFromRenderer) => {
     logToRenderer(`Play command received. pendingFile: ${audioState.pendingFile}, filePathFromRenderer: ${filePathFromRenderer}`);
 
-    if (audioState.pendingFile && (!filePathFromRenderer || filePathFromRenderer === audioState.pendingFile)) {
+    if (audioState.pendingFile) {
         logToRenderer(`Play command received for pending file: ${audioState.pendingFile}`);
         await play(audioState.pendingFile);
         audioState.clearPendingFile();
-        } else if (filePathFromRenderer) {
+    } else if (audioState.playerStatus === AudioPlayerStatus.Paused) {
+        logToRenderer('Resuming current track: ' + audioState.activeFile);
+        resumeAudio();
+    } else if (filePathFromRenderer) {
             logToRenderer('Play command: Direct play from renderer path: ' + filePathFromRenderer);
         await play(filePathFromRenderer);
-    } else if (audioState.playerStatus === AudioPlayerStatus.Paused) {
-       logToRenderer('Resuming current track: ' + audioState.activeFile);
-        resumeAudio();
-        } else {
+    } else {
             logToRenderer('Play command: Nothing to play.');
             if (mainWindow && mainWindow.webContents) { // Ensure GUI reflects non-playing state if nothing happens
                 mainWindow.webContents.send('update-gui-state', {
@@ -878,7 +878,7 @@ async function createReadableStream(filePath, useCache = true) {
             player.pause(true); // Pass true to pause even if resource is still buffering
         audioState.setPlayerStatus(AudioPlayerStatus.Paused);
             logToRenderer('Audio paused. Player state: ' + player.state.status);
-            if (mainWindow && mainWindow.webContents) {
+            if (mainWindow && mainWindow.webContents && !audioState.pendingFile) {
             mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: audioState.activeFile });
             }
         } else {
@@ -921,6 +921,9 @@ function queue(filePath) {
             player.unpause();
         audioState.setPlayerStatus(AudioPlayerStatus.Playing);
             logToRenderer('Audio resumed. Player state: ' + player.state.status);
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: audioState.activeFile });
+            }
         } else {
             logToRenderer('Audio is not paused or player unavailable. Player state: ' + player.state.status);
         }
