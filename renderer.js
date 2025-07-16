@@ -34,16 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
     playPauseButton.addEventListener('click', () => {
         if (isPlaying) {
             window.electron.ipcRenderer.send('pause-music'); // Use window.electron for IPC
-            playPauseButton.textContent = 'Play';
         } else {
-            if (selectedFilePath) {
-                window.electron.ipcRenderer.send('play-music', selectedFilePath); // Send the selected file path
-                playPauseButton.textContent = 'Pause';
-            } else {
-                logMessage('No file selected'); // Log error if no file selected
-            }
+            window.electron.ipcRenderer.send('play-music', selectedFilePath); // Send the selected file path
         }
-        isPlaying = !isPlaying;
     });
 
     exitButton.addEventListener('click', () => {
@@ -58,9 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Listen for GUI state updates from the main process
     window.electron.ipcRenderer.on('update-gui-state', (event, state) => {
-        // state object will be like { isPlaying: <boolean>, filePath: <string | null> }
+        // state object will be like { isPlaying: <boolean>, filePath: <string | null>, isPending: <boolean> }
         
-        logMessage(`Received state update: isPlaying=${state.isPlaying}, filePath=${state.filePath}`);
+        logMessage(`Received state update: isPlaying=${state.isPlaying}, filePath=${state.filePath}, isPending=${state.isPending}`);
 
         // Update internal isPlaying variable
         isPlaying = state.isPlaying;
@@ -77,6 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedFilePath = null;
             selectedFileLabel.textContent = 'No file selected';
             playPauseButton.disabled = true; // Disable button if no file
+        }
+
+        if (state.isPending) {
+            selectedFileLabel.textContent = `(Queued) ${selectedFileLabel.textContent}`;
         }
     });
 });
