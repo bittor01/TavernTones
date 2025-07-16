@@ -6,6 +6,90 @@
     "used": []
   },
   {
+    "name": "Banner of Unity",
+    "depiction": "A silver standard with intertwined lions flown over a battlefield",
+    "effect": "You plant a spectral banner at a point within 30 feet for the next minute. All allies within 30 feet of it add +1d4 to their attack rolls and saving throws 🦁",
+    "used": []
+  },
+  {
+    "name": "Guardian's Ward",
+    "depiction": "A knight standing firmly with shield raised in a city street",
+    "effect": "All allies within 30 feet gain +1 AC and advantage on saving throws against spells for 1 minute 🛡️",
+    "used": []
+  },
+  {
+    "name": "Lancer's Rally",
+    "depiction": "A knight raising a lance toward the sky, rallying troops",
+    "effect": "All allies within 30 feet gain +1 to attack rolls and saving throws until the end of their next turn, and regain [[1d4+1]] HP 🏇",
+    "used": []
+  },
+  {
+    "name": "Street Savior",
+    "depiction": "A hooded knight warding off danger in a bustling market",
+    "effect": "All allies within 30 feet gain +1 AC and resistance to nonmagical bludgeoning, piercing, and slashing damage until the start of your next turn 🛡️",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
+    "name": "",
+    "depiction": "",
+    "effect": "",
+    "used": []
+  },
+  {
     "name": "",
     "depiction": "",
     "effect": "",

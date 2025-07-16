@@ -45,7 +45,7 @@
     "used": []
   },
   {
-    "text": "The attacker must succeed a DC [[2d6+8]] Con Save ||or they become [[d40000]] bees||!🐝🐝🐝🐝🐝 ||DM Note:||||🐝🐝🐝🐝🐝||",
+    "text": "The attacker must succeed a DC [[2d6+8]] Con Save ||or they become [[20000d4]] bees||!🐝🐝🐝🐝🐝 ||DM Note:||||🐝🐝🐝🐝🐝||",
     "unique": true,
     "used": []
   },
@@ -668,7 +668,9 @@
   {
     "text": "The attacker suddenly stops in their tracks!🍰",
     "unique": true,
-    "used": []
+    "used": [
+      "718689667075145779"
+    ]
   },
   {
     "text": "The attacker suddenly stops in their tracks!☃️",
