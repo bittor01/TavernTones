@@ -664,7 +664,7 @@ client.once('ready', async () => {
         properties: ['openFile'],
         defaultPath: defaultFolder,
         filters: [
-            { name: 'Audio Files', extensions: ['wav', 'lnk'] },
+            { name: 'Audio Files', extensions: ['wav', 'wav.lnk', 'wav - Shortcut.lnk'] },
             { name: 'All Files', extensions: ['*'] }
         ]
         });
