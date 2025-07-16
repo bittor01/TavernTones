@@ -3,3 +3,4 @@ node_modules/
 *.bak
 TavernTones.code-workspace
 settings.json
+Thumbs.db

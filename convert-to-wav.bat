@@ -1,59 +1,44 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 
 REM ##################################################################
-REM ## This script converts an audio file to a WAV file using Audacity.
-REM ##
-REM ## To use it, drag and drop an audio file (.mp3, .ogg, etc.) onto this script.
-REM ## A WAV file with the same name will be created in the same directory.
-REM ##
-REM ## Requirements:
-REM ## - Audacity must be installed.
-REM ## - The script assumes Audacity is installed in the default location.
-REM ##   If not, you will need to edit the audacity_path variable below.
+REM ## Batch Audio Converter using Audacity
+REM ## Converts all dropped audio files (.mp3, .ogg, etc.) to WAV format.
+REM ## Creates WAV files in the same directory as each input file.
+REM ## Requires Audacity and the correct path set below.
 REM ##################################################################
 
 REM ## Configuration
-REM ##################################################################
-REM ## Set the path to the Audacity executable.
-REM ## If Audacity is in your system's PATH, you can just use "audacity".
-set "audacity_path=C:\Program Files\Audacity\audacity.exe"
-REM ##################################################################
+set "audacity_path=C:\Program Files (x86)\Audacity\audacity.exe"
 
-REM ## Main Script
-REM ##################################################################
-REM ## Check if a file was dropped on the script.
-if [%1]==[] (
-    echo "To use this script, drag and drop an audio file onto it."
-    pause
-    exit /b
-)
-
-REM ## Get the full path of the dropped file.
-set "input_file=%~1"
-
-REM ## Get the file name without the extension.
-set "file_name=%~n1"
-
-REM ## Get the directory of the dropped file.
-set "file_dir=%~dp1"
-
-REM ## Set the output file path.
-set "output_file=%file_dir%%file_name%.wav"
-
-REM ## Check if Audacity is installed at the specified path.
+REM ## Check if Audacity exists
 if not exist "%audacity_path%" (
-    echo "Audacity not found at the specified path:"
-    echo "%audacity_path%"
-    echo "Please edit this script to set the correct path to Audacity."
+    echo Audacity not found at:
+    echo %audacity_path%
+    echo Please update the script with the correct path.
     pause
     exit /b
 )
 
-REM ## Run the Audacity command to convert the file.
-echo "Converting %input_file% to %output_file%..."
-"%audacity_path%" -batch "%input_file%" -export "%output_file%,type=wav"
+REM ## Check if any files were dropped
+if [%1]==[] (
+    echo Drag and drop one or more audio files onto this script to convert.
+    pause
+    exit /b
+)
 
-echo "Conversion complete."
+REM ## Loop through all dropped files
+for %%F in (%*) do (
+    set "input_file=%%~fF"
+    set "file_name=%%~nF"
+    set "file_dir=%%~dpF"
+    set "output_file=!file_dir!!file_name!.wav"
+
+    echo.
+    echo Converting !input_file! to !output_file!...
+    "%audacity_path%" -b "!input_file!" -export "!output_file!,type=wav"
+)
+
+echo.
+echo All conversions complete.
 pause
-REM ##################################################################
