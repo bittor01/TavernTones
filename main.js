@@ -1,9 +1,6 @@
 require('dotenv').config({ path: 'environmentvars.env' }); // Load environment variables from .env file
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const fs = require('fs');
-const Store = require('electron-store');
-
-const store = new Store();
 const path = require('path');
 const { PassThrough, Readable } = require('stream'); // Updated stream import
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
@@ -675,11 +672,16 @@ client.once('ready', async () => {
     });
 
     ipcMain.handle('get-initiative-data', () => {
-        return store.get('initiative', []);
+        try {
+            const data = fs.readFileSync('initiative.json', 'utf8');
+            return JSON.parse(data);
+        } catch (error) {
+            return [];
+        }
     });
 
     ipcMain.on('save-initiative-data', (event, data) => {
-        store.set('initiative', data);
+        fs.writeFileSync('initiative.json', JSON.stringify(data, null, 2));
     });
 
     ipcMain.on('open-hp-tracker', () => {
@@ -696,11 +698,16 @@ client.once('ready', async () => {
     });
 
     ipcMain.handle('get-hp-data', () => {
-        return store.get('hp', []);
+        try {
+            const data = fs.readFileSync('hp.json', 'utf8');
+            return JSON.parse(data);
+        } catch (error) {
+            return [];
+        }
     });
 
     ipcMain.on('save-hp-data', (event, data) => {
-        store.set('hp', data);
+        fs.writeFileSync('hp.json', JSON.stringify(data, null, 2));
     });
 
     ipcMain.on('roll-dice', (event, { name, type, bonus }) => {
