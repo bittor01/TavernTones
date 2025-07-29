@@ -92,3 +92,45 @@ input[type="file"] {
 button:hover:enabled {
   background-color: #555;
 }
+
+.initiative-list {
+    border: 1px solid #444;
+    padding: 0.5rem;
+}
+
+.initiative-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem;
+}
+
+.initiative-item.active {
+    background-color: #555;
+}
+
+.creature-list {
+    border: 1px solid #444;
+    padding: 0.5rem;
+}
+
+.creature-item {
+    border: 1px solid #444;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.creature-item.bloodied {
+    background-color: #800;
+}
+
+.dice-log-container {
+    margin-top: 1rem;
+}
+
+.dice-log {
+    height: 100px;
+    overflow-y: scroll;
+    border: 1px solid #444;
+    padding: 0.5rem;
+    background-color: #3E3E3E;
+}
