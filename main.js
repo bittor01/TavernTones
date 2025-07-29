@@ -1,6 +1,9 @@
 require('dotenv').config({ path: 'environmentvars.env' }); // Load environment variables from .env file
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const fs = require('fs');
+const Store = require('electron-store');
+
+const store = new Store();
 const path = require('path');
 const { PassThrough, Readable } = require('stream'); // Updated stream import
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
@@ -656,6 +659,57 @@ client.once('ready', async () => {
 
     ipcMain.handle('get-default-local-folder', () => {
         return DEFAULT_LOCAL_FOLDER;
+    });
+
+    ipcMain.on('open-initiative-tracker', () => {
+        const initiativeWindow = new BrowserWindow({
+            width: 400,
+            height: 600,
+            webPreferences: {
+                preload: path.join(__dirname, 'preload.js'),
+                contextIsolation: true,
+                enableRemoteModule: false,
+            }
+        });
+        initiativeWindow.loadFile('initiative.html');
+    });
+
+    ipcMain.handle('get-initiative-data', () => {
+        return store.get('initiative', []);
+    });
+
+    ipcMain.on('save-initiative-data', (event, data) => {
+        store.set('initiative', data);
+    });
+
+    ipcMain.on('open-hp-tracker', () => {
+        const hpWindow = new BrowserWindow({
+            width: 400,
+            height: 600,
+            webPreferences: {
+                preload: path.join(__dirname, 'preload.js'),
+                contextIsolation: true,
+                enableRemoteModule: false,
+            }
+        });
+        hpWindow.loadFile('hp.html');
+    });
+
+    ipcMain.handle('get-hp-data', () => {
+        return store.get('hp', []);
+    });
+
+    ipcMain.on('save-hp-data', (event, data) => {
+        store.set('hp', data);
+    });
+
+    ipcMain.on('roll-dice', (event, { name, type, bonus }) => {
+        const roller = new DiceRoller();
+        const roll = roller.roll('1d20').total;
+        const result = roll + bonus;
+        const message = `${name} ${type}: ${result} (${roll} + ${bonus})`;
+        mainWindow.webContents.send('log-message', message);
+        mainWindow.webContents.send('dice-log', message);
     });
 
     ipcMain.handle('open-file-dialog', async () => {

@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectFileButton = document.getElementById('selectFileButton');
     const selectedFileLabel = document.getElementById('selectedFileLabel');
     const exitButton = document.getElementById('exitButton');
+    const initiativeTrackerButton = document.getElementById('initiativeTrackerButton');
+    const hpTrackerButton = document.getElementById('hpTrackerButton');
     const logArea = document.getElementById('logArea'); // Logging area
     const maxLogEntries = 25;
 
@@ -47,6 +49,14 @@ document.addEventListener('DOMContentLoaded', () => {
         window.electron.ipcRenderer.send('exit-app'); // Use window.electron for IPC
     });
 
+    initiativeTrackerButton.addEventListener('click', () => {
+        window.electron.ipcRenderer.send('open-initiative-tracker');
+    });
+
+    hpTrackerButton.addEventListener('click', () => {
+        window.electron.ipcRenderer.send('open-hp-tracker');
+    });
+
     // Listen for log messages from the main process
     window.electron.ipcRenderer.on('log-message', (event, message) => {
         logMessage(message);
@@ -57,6 +67,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // state object will be like { isPlaying: <boolean>, filePath: <string | null>, isPending: <boolean> }
         
         logMessage(`Received state update: isPlaying=${state.isPlaying}, filePath=${state.filePath}, isPending=${state.isPending}`);
+
+    window.electron.ipcRenderer.on('dice-log', (event, message) => {
+        const diceLog = document.getElementById('diceLog');
+        const logEntry = document.createElement('div');
+        logEntry.textContent = message;
+        diceLog.appendChild(logEntry);
+        if (diceLog.children.length > maxLogEntries) {
+            diceLog.removeChild(diceLog.firstChild);
+        }
+        diceLog.scrollTop = diceLog.scrollHeight;
+    });
 
         // Update internal isPlaying variable
         isPlaying = state.isPlaying;
