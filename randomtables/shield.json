@@ -705,7 +705,9 @@
   {
     "text": "A tasty tart materializes in the attacker’s hand!🥧 ||(DC [[2d6+8]] Con save or be poisoned for [[3d6+6]] hours)||",
     "unique": true,
-    "used": []
+    "used": [
+      "718689667075145779"
+    ]
   },
   {
     "text": "A tasty tart materializes in the attacker’s hand!🥧 ||(DC [[2d6+8]] Wis save or become frenzied and attempt to eat anything they can for the next [[3d6+6]] hours)||",
@@ -832,7 +834,9 @@
   {
     "text": "Attacker gains Dance 'til You Drop!🕺 ||DM Note:||||each round, more and more lines appear under and near the attacker. at the end of the attacker's turn, the attacker and other creatures in melee range must pass a DC [[2d6+8]] Dex Save +1 DC for each round the attacker has been cursed or be split by impossibly sharp walls of force)||",
     "unique": true,
-    "used": []
+    "used": [
+      "718689667075145779"
+    ]
   },
   {
     "text": "Attacker must pass a DC [[2d6+8]] Int Save or the area around the attacker becomes filled with illusory flowers and bushes, creating difficult terrain for the attacker!🏖️",
