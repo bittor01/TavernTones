@@ -16,9 +16,9 @@ contextBridge.exposeInMainWorld('electron', {
         'roll-stat', 'add-temp-hp', 'edit-creature',
         'remove-creature', 'move-creature-bottom',
         'reset-encounter', 'clear-encounter', 'update-initiative',
-        'copy-creature', 'window-ready',
+        'copy-creature',
         'load-sound', 'play-sound', 'stop-sound', 'unload-sound',
-        'set-loop', 'set-soundboard-volume', 'request-initial-load'
+        'set-loop', 'set-soundboard-volume'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);

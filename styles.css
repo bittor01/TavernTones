@@ -408,7 +408,13 @@ button:disabled {
 
 /* --- Soundboard Styles --- */
 #soundboard-container {
-    flex-shrink: 0; /* Prevent it from shrinking */
+    flex-shrink: 0;
+    flex-basis: 33%;
+    display: flex;
+    flex-direction: column;
+}
+#soundboard-grid {
+    flex-grow: 1; /* Make grid fill the container */
 }
 #soundboard-grid {
     display: grid;

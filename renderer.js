@@ -1,8 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    window.electron.ipcRenderer.send('window-ready');
-    setTimeout(() => {
-        window.electron.ipcRenderer.send('request-initial-load');
-    }, 100); // 100ms delay to ensure main process is ready
     // --- State ---
     let isPlaying = false;
     let initiativeOrder = [];
