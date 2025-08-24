@@ -37,7 +37,6 @@ function saveState() {
             initiativeOrder,
             currentTurnIndex
         };
-        logToRenderer(`saveState: Writing ${initiativeOrder.length} creatures to autosave.json.`);
         fs.writeFileSync(autosavePath, JSON.stringify(state, null, 2));
         logToRenderer('Encounter state autosaved.');
     } catch (error) {
@@ -108,62 +107,540 @@ async function apploader() {
 
 apploader();
 
-// --- Core App Functions ---
-
 // Function to send log messages to the renderer
 function logToRenderer(message) {
-    if (mainWindow) {
-        mainWindow.webContents.send('log-message', message);
-    }
+    mainWindow.webContents.send('log-message', message);
 }
 
-// Function to send initiative updates to the renderer
-function sendInitiativeUpdate() {
-    if (mainWindow) {
-        mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex });
-    }
-}
-
-// --- Load initial state and send to UI ---
-loadState();
-// Small delay to ensure window is ready before sending initial update
-setTimeout(() => {
-    if (mainWindow) {
-        sendInitiativeUpdate();
-    }
-}, 500);
-
-
-// --- IPC Handlers for UI and Core App Logic ---
-
-ipcMain.handle('get-conditions', () => {
-    try {
-        const conditionsData = fs.readFileSync(path.join(__dirname, 'conditions.json'), 'utf8');
-        return JSON.parse(conditionsData);
-    } catch (error) {
-        logToRenderer(`Error loading conditions.json: ${error.message}`);
-        return {};
-    }
+client.on('error', error => {
+    logToRenderer('An error occurred: ', error);
 });
 
-ipcMain.on('edit-creature', (event, { creatureId }) => {
-    const creature = initiativeOrder.find(c => c.id === creatureId);
-    if (creature) {
-        mainWindow.webContents.send('populate-creature-form', creature);
-    }
-});
+client.once('ready', async () => {
+    //Define a nice clean shutdown function
+    const shutdown = async () => {
+        try {
+            console.log('Cleaning up and exiting.');
+            // Remove all event listeners
+            client.removeAllListeners();
+            player.removeAllListeners();
+            connection.removeAllListeners();
+            app.removeAllListeners();
+            ipcMain.removeAllListeners();
 
-ipcMain.on('save-encounter', async () => {
-    try {
-        const { filePath } = await dialog.showSaveDialog(mainWindow, {
-            title: 'Save Encounter',
-            defaultPath: 'encounter.json',
-            filters: [{ name: 'JSON Files', extensions: ['json'] }]
-        });
-        if (filePath) {
-            const state = { initiativeOrder, currentTurnIndex };
-            fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
-            logToRenderer(`Encounter saved to ${filePath}`);
+            // Close any other resources, e.g., voice connections
+            if (connection) {
+                connection.destroy();
+            }
+
+            // Optionally logout
+            await client.destroy();
+
+            app.quit();
+        }
+        catch (error) {
+            console.log('Error during shutdown:', error);
+        }
+    };
+
+    logToRenderer('TavernTones is online!');
+    logToRenderer(`Logged in as ${client.user.tag}`);
+    /* startup message
+    const textChannel = client.channels.cache.get(TEXT_CHANNEL_ID);
+    if (textChannel) {
+        try {
+            const message = await textChannel.send('TavernTones is now online!');
+            // Wait for 5 seconds
+            setTimeout(() => {
+                message.delete()
+                    .then(() => logToRenderer('Announcement message deleted.'))
+                    .catch(error => logToRenderer('Error deleting message: ', error));
+            }, 5000);
+        }
+        catch (error) {
+            logToRenderer('Error sending message: ', error);
+        }
+    }
+    else {
+        logToRenderer('Text channel not found!');
+    }
+    */
+
+    // --- Load initial state and send to UI ---
+    loadState();
+    // Small delay to ensure window is ready before sending
+    setTimeout(() => {
+        if (mainWindow) {
+            sendInitiativeUpdate();
+        }
+    }, 1000);
+
+    //Connect to the voice channel
+
+    //connection status enums
+    //VoiceConnectionStatus.Signalling
+    //VoiceConnectionStatus.Connecting
+    //VoiceConnectionStatus.Ready
+    //VoiceConnectionStatus.Disconnected
+    //VoiceConnectionStatus.Destroyed
+
+    const voiceChannel = client.channels.cache.get(VOICE_CHANNEL_ID);
+    if (voiceChannel && voiceChannel.isVoiceBased()) {
+        try {
+            connection = joinVoiceChannel({
+                channelId: voiceChannel.id,
+                guildId: voiceChannel.guild.id,
+                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+            });
+
+            // Listen for connection status changes
+            connection.on(VoiceConnectionStatus.Ready, () => {
+                logToRenderer('The bot has connected to the channel!');
+            });
+
+            connection.on(VoiceConnectionStatus.Disconnected, () => {
+                logToRenderer('The bot has been disconnected. Attempting to reconnect...');
+                // Optionally, try to reconnect or handle disconnection
+                setTimeout(() => {
+                    joinVoiceChannel({
+                        channelId: voiceChannel.id,
+                        guildId: voiceChannel.guild.id,
+                        adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+                    });
+                }, 5000); // Delay before attempting to reconnect
+            });
+
+            connection.on(VoiceConnectionStatus.Signalling, () => {
+                logToRenderer('The bot is attempting to establish a connection.');
+            });
+
+            connection.on(VoiceConnectionStatus.Destroyed, () => {
+                logToRenderer('The connection has been destroyed.');
+            });
+
+            logToRenderer(`Joined voice channel: ${voiceChannel.name}: ${connection.state.status}`);
+
+            await entersState(connection, VoiceConnectionStatus.Ready, 60000);
+            logToRenderer('Connection is ready!');
+        }
+        catch (error) {
+            logToRenderer('Error joining voice channel: ', error);
+        }
+    }
+    else {
+        logToRenderer('Voice channel not found or is not a voice channel!');
+    }
+
+    client.on('messageCreate', async message => {
+        // Ignore messages from the bot itself
+        if (message.author.bot) {
+            logToRenderer('Ignoring my own message.');
+            return;
+        }
+
+        logToRenderer(`Message received: ${message.content}`); // Log received messages
+
+        if (message.mentions.has(client.user) || message.mentions.roles.has(BOT_ROLE_ID)) { // Check if the bot is mentioned
+            const userId = message.author.id;
+            const content = message.content.toLowerCase();
+
+            try {
+                let typingInterval;
+                switch (true) {
+                    case content.includes('!ping'):
+                        logToRenderer('Ping command detected'); // Log when ping command is detected
+                        await message.reply('Pong!');
+                        logToRenderer('Ping successfully ponged.');
+                        break;
+
+
+
+                    case content.includes('!su'):
+                        const surgeFilePath = path.join(__dirname, 'randomtables/surge.json');
+                        const surgeData = JSON.parse(fs.readFileSync(surgeFilePath, 'utf8'));
+                        const surgeEffect = getRandomEffect(surgeData, userId);
+                        if (surgeEffect) {
+                            const evaluatedText = evaluateDiceRolls(surgeEffect.text);
+                            logToRenderer(evaluatedText + (surgeEffect.unique ? '  - Unique!' : ''));
+                            await message.reply(evaluatedText + (surgeEffect.unique ? '  - 🥳Unique!🎊' : ''));
+
+                            if (surgeEffect.unique) {
+                                if (!Array.isArray(surgeEffect.used)) {
+                                    surgeEffect.used = [];
+                                }
+                                surgeEffect.used.push(userId);
+                                fs.writeFileSync(surgeFilePath, JSON.stringify(surgeData, null, 2), 'utf8');
+                                logToRenderer('Updated surgeData written to file.');
+                            }
+
+                        } else {
+                            await message.reply('No available effects for you.');
+                        }
+                        break;
+
+                    case content.includes('!sh'):
+                        const shieldFilePath = path.join(__dirname, 'randomtables/shield.json');
+                        const shieldData = JSON.parse(fs.readFileSync(shieldFilePath, 'utf8'));
+                        const shieldEffect = getRandomEffect(shieldData, userId);
+                        if (shieldEffect) {
+                            const evaluatedText = evaluateDiceRolls(shieldEffect.text);
+                            logToRenderer(evaluatedText + (shieldEffect.unique ? '  - Unique!' : ''));
+                            await message.reply(evaluatedText + (shieldEffect.unique ? '  - 🥳Unique!🎊' : ''));
+
+                            // Mark the effect as used by the user if it's unique
+                            if (shieldEffect.unique) {
+                                if (!Array.isArray(shieldEffect.used)) {
+                                    shieldEffect.used = [];
+                                }
+                                shieldEffect.used.push(userId);
+                                fs.writeFileSync(shieldFilePath, JSON.stringify(shieldData, null, 2), 'utf8');
+                                logToRenderer('Updated shieldData written to file.');
+                            }
+                        } else {
+                            logToRenderer('No Available effects for user!');
+                            await message.reply('No available effects for you.');
+                        }
+                        break;
+
+                    case content.includes('!en'):
+                        const invalidCharsRegex = /[.,:;\/\\?*"<>|&]+/g;
+                        const regex = /^!\S*\s*(.*)/;
+                        const match = content.match(regex);
+                        let args;
+
+                        if (match) {
+                            // Filtered and split arguments
+                            args = match[1]
+                                .replace(invalidCharsRegex, "")    // Remove invalid characters
+                                .trim()                            // Remove extra spaces at the ends
+                                .split(/\s+/);
+                        } else {
+                            await message.reply('Invalid format. Please use the command like this: @TT !en 80 clear 30 calmweather 15 choppyweather 5 specialweather');
+                            break;
+                        }
+
+                        // Parse weights and table names
+                        const tableEntries = [];
+                        let validArgs = true; // Flag to track argument validity
+                        for (let i = 0; i < args.length; i += 2) {
+                            const weight = parseInt(args[i], 10);
+                            const tableName = args[i + 1];
+
+                            if (isNaN(weight) || weight <= 0 || !tableName) {
+                                await message.reply('Invalid format. Please ensure weights are positive integers and table names are valid.');
+                                validArgs = false; // Set flag to false
+                                break; // Exit loop early
+                            }
+                            tableEntries.push({ weight, tableName });
+                        }
+
+                        if (!validArgs) { // Check flag before proceeding
+                            break; // Exit case if arguments were invalid
+                        }
+
+                        if (tableEntries.length === 0 && args.length > 0) {
+                            // This case implies that parsing failed to produce entries,
+                            // possibly due to an odd number of arguments or other unhandled parsing issues,
+                            // though the loop's `!tableName` check should catch most.
+                            // However, if the loop was broken due to invalid format, the message is already sent.
+                            // This is a fallback.
+                            if (validArgs) { // Only send if no other error message was sent
+                                await message.reply('Could not parse table entries. Please check the format.');
+                            }
+                            break;
+                        }
+
+                        if (tableEntries.length === 0 && args.length === 0) {
+                             await message.reply('No table arguments provided. Please specify weights and table names.');
+                             break;
+                        }
+
+
+                        // Call the new rollFromTable function
+                        const result = await rollFromTable("encountertables", tableEntries, message.channel.id);
+
+                        if (result.success) {
+                            const finalMessage = `Effect: ||${result.text}||`;
+                            await message.reply(finalMessage);
+                        } else {
+                            await message.reply(result.message); // Send the error message from rollFromTable
+                        }
+                        break;
+
+                    case content.includes('!ro'):
+                        logToRenderer('!ro command detected');
+                        // Find the index of '!ro' (case-insensitive)
+                        const roIndex = message.content.toLowerCase().indexOf('!ro');
+                        if (roIndex === -1) {
+                            await message.reply('Invalid command format. Usage: @TT !ro <folderName> <numberOfIterations> <weight1> <tableName1> <weight2> <tableName2> ...');
+                            break;
+                        }
+                        // Get everything after '!ro'
+                        const roArgsStr = message.content.slice(roIndex + 3).trim();
+                        const roArgs = roArgsStr.split(/\s+/);
+
+                        if (roArgs.length < 3) {
+                            await message.reply('Invalid command format. Usage: @TT !ro <folderName> <numberOfIterations> <weight1> <tableName1> <weight2> <tableName2> ...');
+                            break;
+                        }
+
+                        const folderName = roArgs[0];
+                        const iterationCountStr = roArgs[1];
+                        const tableArgs = roArgs.slice(2);
+
+                        // Validate folderName
+                        const validFolders = getValidTableFolders();
+                        if (!validFolders.includes(folderName)) {
+                            await message.reply(`Folder '${folderName}' not found. Valid folders are: ${validFolders.join(', ')}.`);
+                            break;
+                        }
+
+                        // Parse and validate iterationCount
+                        const iterationCount = parseInt(iterationCountStr, 10);
+                        if (isNaN(iterationCount) || iterationCount <= 0 || iterationCount > 999) {
+                            await message.reply('Invalid number of iterations. Please use a number between 1 and 999.');
+                            break;
+                        }
+
+                        // Parse tableArgs for tableEntries
+                        const roTableEntries = [];
+                        if (tableArgs.length === 0 || tableArgs.length % 2 !== 0) {
+                            await message.reply('Invalid weight or table name format in table arguments. Ensure you have pairs of weight and table names, and at least one pair.');
+                            break;
+                        }
+
+                        let validRoTableArgs = true;
+                        for (let i = 0; i < tableArgs.length; i += 2) {
+                            const weightStr = tableArgs[i];
+                            const tableName = tableArgs[i + 1];
+                            const weight = parseInt(weightStr, 10);
+
+                            if (isNaN(weight) || weight <= 0 || !tableName) {
+                                await message.reply('Invalid weight or table name format. Weights must be positive integers and table names must be provided.');
+                                validRoTableArgs = false;
+                                break;
+                            }
+                            roTableEntries.push({ weight, tableName });
+                        }
+
+                        if (!validRoTableArgs) {
+                            break;
+                        }
+
+                        if (roTableEntries.length === 0) {
+                            await message.reply('You must specify at least one valid table and weight.');
+                            break;
+                        }
+
+                        await message.reply(`Starting ${iterationCount} rolls from folder '${folderName}' in a new thread...`);
+                        const thread = await message.startThread({
+                            name: `Rolls from ${folderName} (${iterationCount} times)`,
+                            autoArchiveDuration: 60, // 60 minutes
+                        });
+
+                        for (let i = 0; i < iterationCount; i++) {
+                            const result = await rollFromTable(folderName, roTableEntries, message.channel.id);
+                            if (result.success) {
+                                await thread.send(`Roll ${i + 1}: ${result.text}`);
+                            } else {
+                                await thread.send(`Roll ${i + 1} Error: ${result.message}`);
+                            }
+                            // Delay to prevent flooding and potential rate limits
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                        await thread.send(`Completed ${iterationCount} rolls from ${folderName}.`);
+                        break;
+
+                    case content.includes('!ll'):
+                        logToRenderer('LL command detected');
+                        const llCommandRegex = /!ll\w*\s+(.*)/;
+                        const llMatch = content.match(llCommandRegex);
+                        if (llMatch && llMatch[1]) {
+                            const prompt = llMatch[1];
+                            try {
+                                const startTime = Date.now();
+                                const thinkingMessage = await message.reply('Checking local docs with Llama...');
+                                typingInterval = setInterval(() => message.channel.sendTyping(), 5000); // Show typing indicator every 5 seconds
+                                let response = await askGPT4All(prompt, 'll');
+                                clearInterval(typingInterval); // Stop typing indicator
+                                if (response.length > 1940) {
+                                    const llThread = await message.startThread({
+                                        name: `Response to ${llMatch[1]}`,
+                                        autoArchiveDuration: 15,
+                                        reason: `Response to ${llMatch[1]}`
+                                    });
+                                    const parts = response.match(/[\s\S]{1,1940}/g) || [];
+                                    response += ` (${parts.length} total messages)`;
+                                    for (const part of parts) {
+                                        await llThread.send(part);
+                                        await new Promise(resolve => setTimeout(resolve, 100));
+                                    }
+                                    let time = (Date.now() - startTime) / 1000;
+                                    await thinkingMessage.edit(` - Response sent in ${parts.length} parts and took ${time} seconds.`);
+                                }
+                                else {
+                                    let time = (Date.now() - startTime) / 1000;
+                                    response += `\nResponse sent in ${time} seconds.`;
+                                    await thinkingMessage.edit(response);
+                                }
+                            } catch (error) {
+                                logToRenderer(`Error: ${error}`);
+                                clearInterval(typingInterval);
+                                await message.reply('An error occurred while processing your request. Ask Crisp if it\'s on?');
+                            }
+                        } else {
+                            await message.reply('Invalid format. Please use the command like this: @TT !ll your prompt here');
+                        }
+                        break;
+
+                    case content.includes('!re'):
+                        logToRenderer('RE command detected');
+                        const reCommandRegex = /!re\w*\s+(.*)/;
+                        const reMatch = content.match(reCommandRegex);
+                        if (reMatch && reMatch[1]) {
+                            const prompt = reMatch[1];
+                            try {
+                                const startTime = Date.now();
+                                const thinkingMessage = await message.reply('Checking local docs with Reasoner...');
+                                typingInterval = setInterval(() => message.channel.sendTyping(), 5000); // Show typing indicator every 5 seconds
+                                let response = await askGPT4All(prompt, 're');
+                                clearInterval(typingInterval); // Stop typing indicator
+                                if (response.length > 1940) {
+                                    const reThread = await message.startThread({
+                                        name: `Response to ${reMatch[1]}`,
+                                        autoArchiveDuration: 15,
+                                        reason: `Response to ${reMatch[1]}`
+                                    });
+                                    const parts = response.match(/[\s\S]{1,1940}/g) || [];
+                                    response += ` (${parts.length} total messages)`;
+                                    for (const part of parts) {
+                                        await reThread.send(part);
+                                        await new Promise(resolve => setTimeout(resolve, 100));
+                                    }
+                                    let time = (Date.now() - startTime) / 1000;
+                                    await thinkingMessage.edit(` - Response sent in ${parts.length} parts and took ${time} seconds.`);
+                                }
+                                else {
+                                    let time = (Date.now() - startTime) / 1000;
+                                    response += `\nResponse sent in ${time} seconds.`;
+                                    await thinkingMessage.edit(response);
+                                }
+                            } catch (error) {
+                                logToRenderer(`Error: ${error}`);
+                                clearInterval(typingInterval);
+                                await message.reply('An error occurred while processing your request. Ask Crisp if it\'s on?');
+                            }
+                        } else {
+                            await message.reply('Invalid format. Please use the command like this: @TT !re your prompt here');
+                        }
+                        break;
+
+                    case content.includes('!in'):
+                        logToRenderer('IN command detected');
+                        if (lastResponse && lastResponse.choices && lastResponse.choices[0].references) {
+                            const thread = await message.startThread({
+                                name: 'References',
+                                autoArchiveDuration: 15,
+                                reason: 'References from the last query'
+                            });
+                            for (const ref of lastResponse.choices[0].references) {
+                                await thread.send(`${ref.file}\n\`\`\`${ref.text}\`\`\``);
+                                await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms before sending the next message
+                            }
+                        } else {
+                            await message.reply('No references available from the last response.');
+                        }
+                        break;
+
+                    case content.includes('!pl'):
+                        logToRenderer('!pl command detected');
+
+                        const fullCommand = message.content.substring(message.content.toLowerCase().indexOf('!pl')).trim();
+                        const parts = fullCommand.split(/\s+/); // Split by one or more spaces
+                        // parts[0] is "!pl" itself. commandArgs will be the actual arguments after "!pl".
+                        const commandArgs = parts.slice(1).filter(arg => arg.length > 0); // Filter out empty strings that might result from multiple spaces
+
+                        let parsedFolder = null;
+                        let parsedSong = null;
+
+                        if (commandArgs.length === 1) {
+                            parsedFolder = commandArgs[0];
+                        } else if (commandArgs.length >= 2) {
+                            parsedFolder = commandArgs[0];
+                            parsedSong = commandArgs[1];
+                        }
+
+                        let songFilePath = await findMusic(parsedFolder, parsedSong);
+
+                        if (songFilePath) {
+                            if (path.extname(songFilePath).toLowerCase() === '.lnk') {
+                                try {
+                                    const shortcut = shell.readShortcutLink(songFilePath);
+                                    const targetPath = shortcut.target || null;
+
+                                    if (targetPath && fs.existsSync(targetPath)) {
+                                        songFilePath = targetPath;
+                                    } else {
+                                        songFilePath = null;
+                                    }
+                                } catch (error) {
+                                    songFilePath = null;
+                                }
+                            }
+
+                            if (songFilePath) {
+                                queue(songFilePath);
+                                const songNameForMessage = path.parse(songFilePath).name;
+                                await message.reply(`Okay, queuing up: **${songNameForMessage}**. It will play when ready.`);
+                                if (audioState.isPlaying) {
+                                    player.stop(true);
+                                } else if (audioState.playerStatus === AudioPlayerStatus.Idle) {
+                                    await play(audioState.pendingFile);
+                                    audioState.clearPendingFile();
+                                }
+                            } else {
+                                await message.reply("Sorry, I couldn't find the music you were looking for.");
+                            }
+                        } else {
+                            await message.reply("Sorry, I couldn't find the music you were looking for.");
+                        }
+                        break;
+
+                    case content.includes('!pa'):
+                        logToRenderer('!pa command detected');
+                        if (audioState.isPlaying) {
+                            pauseAudio();
+                            await message.reply('Playback paused.');
+                        } else if (audioState.playerStatus === AudioPlayerStatus.Paused) {
+                            await message.reply('Playback is already paused.');
+                        } else {
+                            await message.reply('Nothing is currently playing to pause.');
+                        }
+                        break;
+
+                    case content.includes('!h'):
+                        logToRenderer('Help command detected');
+                        await message.reply('Commands:\n!su (surge)\n!sh (shield)\n!ll (Llama model)\n!re (Reasoner model)\n!in (inspect referenced material from last response)\n!h (returns this help message)\nany other message will return the currently playing track and album, if any.');
+                        break;
+
+                    default:
+                        logToRenderer('No recognized command found.');
+                        if (audioState.isPlaying) {
+                            if (audioState.activeFile) {
+                                const albumName = path.basename(path.dirname(audioState.activeFile));
+                                const trackName = path.basename(audioState.activeFile, path.extname(audioState.activeFile));
+                                await message.reply(`I'm currently playing: **${trackName}** from the album **${albumName}**`);
+                            } else {
+                                await message.reply('Sorry, no track information available.');
+                            }
+                        } else {
+                            await message.reply('Sorry, I\'m not playing any music right now.');
+                        }
+                        break;
+                }
+            } catch (error) {
+                logToRenderer('Error processing command: ' + error.message);
+            }
         }
     });
 
@@ -177,301 +654,250 @@ ipcMain.on('save-encounter', async () => {
         }
     });
 
+    ipcMain.on('copy-creature', (event, { creatureId }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            // Send a copy of the creature data, but don't remove the original
+            mainWindow.webContents.send('populate-edit-form', creature);
+        }
+    });
+
     //Begin IPC Handling
     function logToRenderer(message) {
         mainWindow.webContents.send('log-message', message);
     }
-});
 
-ipcMain.on('load-encounter', async () => {
-    try {
-        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: 'Load Encounter',
-            properties: ['openFile'],
-            filters: [{ name: 'JSON Files', extensions: ['json'] }]
-        });
-        if (filePaths && filePaths.length > 0) {
-            const savedState = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'));
-            initiativeOrder = savedState.initiativeOrder || [];
-            currentTurnIndex = savedState.currentTurnIndex || 0;
-            logToRenderer(`Encounter loaded from ${filePaths[0]}`);
-            saveState();
-            sendInitiativeUpdate();
+    // --- Music System ---
+    function sendGuiUpdate() {
+        if (mainWindow) {
+            mainWindow.webContents.send('update-gui-state', {
+                isPlaying: audioState.playerStatus === AudioPlayerStatus.Playing,
+                isCaching: audioState.isCaching,
+                filePath: audioState.activeFile || audioState.pendingFile
+            });
         }
-    } catch (error) {
-        logToRenderer(`Error loading encounter: ${error.message}`);
     }
-});
 
-ipcMain.on('add-creature', (event, creature) => {
-    const initiativeInput = creature.initiative.toString();
-    if (initiativeInput.startsWith('+') || initiativeInput.startsWith('-')) {
-        const modifier = parseInt(initiativeInput, 10);
-        const roll = new DiceRoller().roll('1d20').total;
-        creature.initiative = roll + modifier;
-        const message = `${creature.name} rolled initiative: ${roll} ${modifier < 0 ? '-' : '+'} ${Math.abs(modifier)} = ${creature.initiative}`;
-        logToRenderer(message);
-        mainWindow.webContents.send('dice-log', message);
-    } else {
-        creature.initiative = parseFloat(initiativeInput) || 0;
+    const player = createAudioPlayer();
+    if(connection) {
+        connection.subscribe(player);
     }
-    creature.maxHp = creature.hp;
-    creature.tempHp = 0;
-    initiativeOrder.push(creature);
-    initiativeOrder.sort((a, b) => b.initiative - a.initiative);
-    sendInitiativeUpdate();
-    saveState();
-});
 
-ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
-    const creature = initiativeOrder.find(c => c.id === creatureId);
-    if (creature) {
-        creature.reminders = reminders;
-        saveState();
-    }
-});
+    player.on('error', (error) => {
+        logToRenderer(`Player Error: ${error.message}`);
+        audioState.activeFile = null;
+        audioState.playerStatus = AudioPlayerStatus.Idle;
+        sendGuiUpdate();
+    });
 
-ipcMain.on('move-creature-to-bottom', (event, { creatureId }) => {
-    const index = initiativeOrder.findIndex(c => c.id === creatureId);
-    if (index > -1) {
-        const [creature] = initiativeOrder.splice(index, 1);
-        initiativeOrder.push(creature);
-        if (index < currentTurnIndex) {
-            currentTurnIndex--;
-        }
-        sendInitiativeUpdate();
-        saveState();
-    }
-});
-
-ipcMain.on('remove-creature', (event, { creatureId }) => {
-    logToRenderer(`ipc: remove-creature received for id: ${creatureId}`);
-    logToRenderer(`State before removal: ${initiativeOrder.length} creatures.`);
-    const index = initiativeOrder.findIndex(c => c.id === creatureId);
-    logToRenderer(`Found creature at index: ${index}`);
-    if (index > -1) {
-        initiativeOrder.splice(index, 1);
-        logToRenderer(`State after removal: ${initiativeOrder.length} creatures.`);
-        if (index < currentTurnIndex) {
-            currentTurnIndex--;
-        } else if (index === currentTurnIndex && currentTurnIndex === initiativeOrder.length) {
-            currentTurnIndex = 0;
-        }
-        if (currentTurnIndex >= initiativeOrder.length) {
-            currentTurnIndex = 0;
-        }
-        sendInitiativeUpdate();
-        saveState();
-    }
-});
-
-ipcMain.on('next-turn', () => {
-    if (initiativeOrder.length > 0) {
-        const endingTurnCreature = initiativeOrder[currentTurnIndex];
-        if (endingTurnCreature && endingTurnCreature.reminders && endingTurnCreature.reminders.end) {
-            dialog.showMessageBox(mainWindow, { title: `End of Turn: ${endingTurnCreature.name}`, message: endingTurnCreature.reminders.end });
-        }
-        currentTurnIndex = (currentTurnIndex + 1) % initiativeOrder.length;
-        const startingTurnCreature = initiativeOrder[currentTurnIndex];
-        if (startingTurnCreature && startingTurnCreature.reminders && startingTurnCreature.reminders.start) {
-            dialog.showMessageBox(mainWindow, { title: `Start of Turn: ${startingTurnCreature.name}`, message: startingTurnCreature.reminders.start });
-        }
-        if (endingTurnCreature && endingTurnCreature.isFriendly) {
-            dialog.showMessageBox(mainWindow, { type: 'question', title: 'Legendary Action', message: `End of ${endingTurnCreature.name}'s turn. Do you take a legendary action?`, buttons: ['Yes', 'No']});
-        }
-        sendInitiativeUpdate();
-        saveState();
-    }
-});
-
-ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
-    const creature = initiativeOrder.find(c => c.id === creatureId);
-    if (!creature) return;
-    let modifier = 0;
-    if (type === 'check') {
-        const score = creature.scores ? (creature.scores[stat] || 10) : 10;
-        modifier = Math.floor((score - 10) / 2);
-    } else {
-        modifier = creature.saves ? (parseInt(creature.saves[stat], 10) || 0) : 0;
-    }
-    let rollNotation = '1d20';
-    if (rollType === 'adv') rollNotation = '2d20kh1';
-    if (rollType === 'dis') rollNotation = '2d20kl1';
-    const roll = new DiceRoller().roll(rollNotation);
-    const total = roll.total + modifier;
-    const rollDetails = roll.rolls[0].rolls.map(r => r.value).join(', ');
-    const message = `${creature.name} rolled a ${stat.toUpperCase()} ${type} (${rollType})\nResult: ${total} ([${rollDetails}] + ${modifier})`;
-    logToRenderer(message);
-    mainWindow.webContents.send('dice-log', message);
-    const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
-    if (channel) {
-        channel.send(message);
-    }
-});
-
-ipcMain.on('previous-turn', () => {
-    if (initiativeOrder.length > 0) {
-        currentTurnIndex = (currentTurnIndex - 1 + initiativeOrder.length) % initiativeOrder.length;
-        sendInitiativeUpdate();
-        saveState();
-    }
-});
-
-ipcMain.on('update-temp-hp', (event, { creatureId, amount }) => {
-    const creature = initiativeOrder.find(c => c.id === creatureId);
-    if (creature) {
-        creature.tempHp = Math.max(creature.tempHp, amount);
-        sendInitiativeUpdate();
-        saveState();
-    }
-});
-
-ipcMain.on('update-hp', (event, { creatureId, amount }) => {
-    const creature = initiativeOrder.find(c => c.id === creatureId);
-    if (creature) {
-        if (amount > 0) {
-            creature.hp += amount;
+    player.on(AudioPlayerStatus.Idle, () => {
+        audioState.playerStatus = AudioPlayerStatus.Idle;
+        if (audioState.activeFile) {
+            logToRenderer(`Looping: ${audioState.activeFile}`);
+            try {
+                const resource = createAudioResource(fs.createReadStream(audioState.activeFile));
+                player.play(resource);
+            } catch (error) {
+                logToRenderer(`Error creating resource for loop: ${error}`);
+                audioState.activeFile = null;
+                sendGuiUpdate();
+            }
         } else {
-            const damage = Math.abs(amount);
-            const tempHpDamage = Math.min(damage, creature.tempHp);
-            creature.tempHp -= tempHpDamage;
-            const remainingDamage = damage - tempHpDamage;
-            creature.hp -= remainingDamage;
-            if (creature.isConcentrating && remainingDamage > 0) {
-                const dc = Math.max(10, Math.floor(remainingDamage / 2));
-                dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${creature.name} must make a DC ${dc} Constitution saving throw.`, buttons: ['OK']});
+            sendGuiUpdate();
+        }
+    });
+
+    player.on(AudioPlayerStatus.Playing, () => {
+        audioState.playerStatus = AudioPlayerStatus.Playing;
+        sendGuiUpdate();
+    });
+
+    player.on(AudioPlayerStatus.Paused, () => {
+        audioState.playerStatus = AudioPlayerStatus.Paused;
+        sendGuiUpdate();
+    });
+
+    ipcMain.on('play-music', () => {
+        if (audioState.isCaching) return;
+        if (audioState.playerStatus === AudioPlayerStatus.Paused) {
+            player.unpause();
+        } else if (audioState.playerStatus === AudioPlayerStatus.Idle && audioState.activeFile) {
+            try {
+                const resource = createAudioResource(fs.createReadStream(audioState.activeFile));
+                player.play(resource);
+            } catch (error) {
+                logToRenderer(`Error creating resource for play: ${error}`);
+                audioState.activeFile = null;
+                sendGuiUpdate();
             }
         }
-        sendInitiativeUpdate();
-        saveState();
-    }
-});
-
-ipcMain.on('add-condition', (event, { creatureId, condition }) => {
-    const creature = initiativeOrder.find(c => c.id === creatureId);
-    if (creature) {
-        if (!creature.conditions) creature.conditions = [];
-        if (!creature.conditions.includes(condition)) {
-            creature.conditions.push(condition);
-            sendInitiativeUpdate();
-            saveState();
-        }
-    }
-});
-
-ipcMain.on('remove-condition', (event, { creatureId, condition }) => {
-    const creature = initiativeOrder.find(c => c.id === creatureId);
-    if (creature && creature.conditions) {
-        creature.conditions = creature.conditions.filter(c => c !== condition);
-        sendInitiativeUpdate();
-        saveState();
-    }
-});
-
-ipcMain.on('clear-encounter', async (event) => {
-    logToRenderer('ipc: clear-encounter received.');
-    const result = await dialog.showMessageBox(mainWindow, {
-        type: 'question',
-        buttons: ['Save and Clear', 'Clear Without Saving', 'Cancel'],
-        defaultId: 0,
-        title: 'Clear Encounter',
-        message: 'Do you want to save the current encounter before clearing it?'
     });
 
-    logToRenderer(`Clear dialog response: ${result.response}`);
+    ipcMain.on('pause-music', () => {
+        if (audioState.playerStatus === AudioPlayerStatus.Playing) {
+            player.pause();
+        }
+    });
 
-    if (result.response === 0) { // Save and Clear
-        logToRenderer('Clear: User chose to save.');
-        const { filePath } = await dialog.showSaveDialog(mainWindow, {
-            title: 'Save Encounter',
-            defaultPath: 'encounter.json',
-            filters: [{ name: 'JSON Files', extensions: ['json'] }]
-        });
-        if (filePath) {
-            const state = { initiativeOrder, currentTurnIndex };
-            fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
-            logToRenderer(`Encounter saved to ${filePath}`);
+    ipcMain.on('exit-app', async () => {
+        await shutdown();
+    });
+
+    app.on('window-all-closed', async () => {
+        await shutdown();
+    });
+
+    ipcMain.handle('get-default-local-folder', () => {
+        return DEFAULT_LOCAL_FOLDER;
+    });
+
+
+    ipcMain.on('roll-dice', (event, { name, type, bonus }) => {
+        const roller = new DiceRoller();
+        const roll = roller.roll('1d20').total;
+        const result = roll + bonus;
+        const message = `${name} ${type}: ${result} (${roll} + ${bonus})`;
+        mainWindow.webContents.send('log-message', message);
+        mainWindow.webContents.send('dice-log', message);
+    });
+
+    ipcMain.on('save-encounter', async () => {
+        try {
+            const { filePath } = await dialog.showSaveDialog(mainWindow, {
+                title: 'Save Encounter',
+                defaultPath: 'encounter.json',
+                filters: [{ name: 'JSON Files', extensions: ['json'] }]
+            });
+
+            if (filePath) {
+                const state = { initiativeOrder, currentTurnIndex };
+                fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
+                logToRenderer(`Encounter saved to ${filePath}`);
+            }
+        } catch (error) {
+            logToRenderer(`Error saving encounter: ${error.message}`);
+        }
+    });
+
+    ipcMain.on('load-encounter', async () => {
+        try {
+            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+                title: 'Load Encounter',
+                properties: ['openFile'],
+                filters: [{ name: 'JSON Files', extensions: ['json'] }]
+            });
+
+            if (filePaths && filePaths.length > 0) {
+                const savedState = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'));
+                initiativeOrder = savedState.initiativeOrder || [];
+                currentTurnIndex = savedState.currentTurnIndex || 0;
+                logToRenderer(`Encounter loaded from ${filePaths[0]}`);
+                saveState(); // Autosave the newly loaded state
+                sendInitiativeUpdate();
+            }
+        } catch (error) {
+            logToRenderer(`Error loading encounter: ${error.message}`);
+        }
+    });
+
+    // --- Initiative Tracker Handlers ---
+    function sendInitiativeUpdate() {
+        if (mainWindow) {
+            mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex });
+        }
+    }
+
+    ipcMain.on('add-creature', (event, creature) => {
+        const initiativeInput = creature.initiative.toString(); // Ensure it's a string
+        if (initiativeInput.startsWith('+') || initiativeInput.startsWith('-')) {
+            const modifier = parseInt(initiativeInput, 10);
+            const roll = new DiceRoller().roll('1d20').total;
+            creature.initiative = roll + modifier;
+            const message = `${creature.name} rolled initiative: ${roll} ${modifier < 0 ? '-' : '+'} ${Math.abs(modifier)} = ${creature.initiative}`;
+            logToRenderer(message);
+            mainWindow.webContents.send('dice-log', message);
         } else {
-            logToRenderer('Clear: Save dialog cancelled. Aborting clear.');
-            return; // User cancelled save dialog
+            creature.initiative = parseFloat(initiativeInput) || 0;
         }
-    } else if (result.response === 2) { // Cancel
-        logToRenderer('Clear: User cancelled.');
-        return;
-    }
 
-    logToRenderer(`State before clear: ${initiativeOrder.length} creatures.`);
-    initiativeOrder = [];
-    currentTurnIndex = 0;
-    logToRenderer(`State after clear: ${initiativeOrder.length} creatures.`);
-    sendInitiativeUpdate();
-    saveState();
-});
-
-ipcMain.on('reset-encounter', (event) => {
-    initiativeOrder.forEach(creature => {
-        creature.hp = creature.maxHp;
-        creature.tempHp = 0;
-        creature.conditions = [];
-    });
-    currentTurnIndex = 0;
-    initiativeOrder.sort((a, b) => b.initiative - a.initiative);
-    sendInitiativeUpdate();
-    saveState();
-});
-
-ipcMain.on('update-initiative-value', (event, { creatureId, value }) => {
-    const creature = initiativeOrder.find(c => c.id === creatureId);
-    if (creature) {
-        creature.initiative = parseFloat(value);
+        initiativeOrder.push(creature);
         initiativeOrder.sort((a, b) => b.initiative - a.initiative);
         sendInitiativeUpdate();
         saveState();
-    }
-});
-
-ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
-    const creature = initiativeOrder.find(c => c.id === creatureId);
-    if (creature) {
-        creature[flag] = value;
-        sendInitiativeUpdate();
-        saveState();
-    }
-});
-
-ipcMain.on('roll-dice', (event, { name, type, bonus }) => {
-    const roller = new DiceRoller();
-    const roll = roller.roll('1d20').total;
-    const result = roll + bonus;
-    const message = `${name} ${type}: ${result} (${roll} + ${bonus})`;
-    mainWindow.webContents.send('log-message', message);
-    mainWindow.webContents.send('dice-log', message);
-});
+    });
 
 
-// --- Music and Discord Bot ---
-client.once('ready', async () => {
-    logToRenderer('TavernTones is online!');
-    logToRenderer(`Logged in as ${client.user.tag}`);
-
-    const voiceChannel = client.channels.cache.get(VOICE_CHANNEL_ID);
-    if (voiceChannel && voiceChannel.isVoiceBased()) {
-        try {
-            connection = joinVoiceChannel({
-                channelId: voiceChannel.id,
-                guildId: voiceChannel.guild.id,
-                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-            });
-            connection.on(VoiceConnectionStatus.Ready, () => logToRenderer('The bot has connected to the channel!'));
-            connection.on(VoiceConnectionStatus.Disconnected, () => logToRenderer('The bot has been disconnected.'));
-            await entersState(connection, VoiceConnectionStatus.Ready, 60000);
-            logToRenderer('Connection is ready!');
-        } catch (error) {
-            logToRenderer('Error joining voice channel: ' + error);
+    ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            creature.reminders = reminders;
+            saveState();
         }
-    } else {
-        logToRenderer('Voice channel not found or is not a voice based channel!');
-    }
+    });
+
+    ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            creature.reminders = reminders;
+            saveState();
+            // No need to send a full update, as this doesn't change the main display
+        }
+    });
+
+    ipcMain.on('next-turn', () => {
+        if (initiativeOrder.length > 0) {
+            const endingTurnCreature = initiativeOrder[currentTurnIndex];
+            if (endingTurnCreature && endingTurnCreature.reminders && endingTurnCreature.reminders.end) {
+                dialog.showMessageBox(mainWindow, { title: `End of Turn: ${endingTurnCreature.name}`, message: endingTurnCreature.reminders.end });
+            }
+
+            currentTurnIndex = (currentTurnIndex + 1) % initiativeOrder.length;
+
+            const startingTurnCreature = initiativeOrder[currentTurnIndex];
+            if (startingTurnCreature && startingTurnCreature.reminders && startingTurnCreature.reminders.start) {
+                dialog.showMessageBox(mainWindow, { title: `Start of Turn: ${startingTurnCreature.name}`, message: startingTurnCreature.reminders.start });
+            }
+
+            if (endingTurnCreature && endingTurnCreature.isFriendly) {
+                dialog.showMessageBox(mainWindow, { type: 'question', title: 'Legendary Action', message: `End of ${endingTurnCreature.name}'s turn. Do you take a legendary action?`, buttons: ['Yes', 'No']});
+            }
+
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
+    ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (!creature) return;
+
+        let modifier = 0;
+        if (type === 'check') {
+            const score = creature.scores ? (creature.scores[stat] || 10) : 10;
+            modifier = Math.floor((score - 10) / 2);
+        } else { // 'save'
+            modifier = creature.saves ? (parseInt(creature.saves[stat], 10) || 0) : 0;
+        }
+
+        let rollNotation = '1d20';
+        if (rollType === 'adv') rollNotation = '2d20kh1';
+        if (rollType === 'dis') rollNotation = '2d20kl1';
+
+        const roll = new DiceRoller().roll(rollNotation);
+        const total = roll.total + modifier;
+
+        const rollDetails = roll.rolls[0].rolls.map(r => r.value).join(', ');
+        const message = `${creature.name} rolled a ${stat.toUpperCase()} ${type} (${rollType})
+Result: ${total} ([${rollDetails}] + ${modifier})`;
+
+        logToRenderer(message);
+        mainWindow.webContents.send('dice-log', message);
+
+        const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+        if (channel) {
+            channel.send(message);
+        }
+    });
 
     ipcMain.on('reset-encounter', () => {
         initiativeOrder.forEach(c => {
@@ -573,20 +999,100 @@ client.once('ready', async () => {
         }
     });
 
-    // ... Player event listeners ...
-
-    ipcMain.on('play-music', () => {
-        // ...
+    ipcMain.on('add-condition', (event, { creatureId, condition }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            if (!creature.conditions) creature.conditions = [];
+            if (!creature.conditions.includes(condition)) {
+                creature.conditions.push(condition);
+                sendInitiativeUpdate();
+                saveState();
+            }
+        }
     });
 
-    ipcMain.on('pause-music', () => {
-        // ...
+    ipcMain.on('remove-condition', (event, { creatureId, condition }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature && creature.conditions) {
+            creature.conditions = creature.conditions.filter(c => c !== condition);
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
+    ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            creature[flag] = value;
+            sendInitiativeUpdate();
+            saveState();
+        }
     });
 
     ipcMain.handle('open-file-dialog', async () => {
-        // ...
-    });
+        const defaultFolder = process.env.DEFAULT_LOCAL_FOLDER;
+        const result = await dialog.showOpenDialog({
+            properties: ['openFile'],
+            defaultPath: defaultFolder,
+            filters: [
+                { name: 'Audio Files', extensions: ['wav', 'lnk'] },
+                { name: 'All Files', extensions: ['*'] }
+            ]
+        });
 
+        if (result.canceled || result.filePaths.length === 0) {
+            logToRenderer('File selection cancelled.');
+            return null;
+        }
+
+        let selectedPath = result.filePaths[0];
+        let resolvedPath = selectedPath;
+
+        if (path.extname(resolvedPath).toLowerCase() === '.lnk') {
+            try {
+                const shortcut = shell.readShortcutLink(resolvedPath);
+                if (shortcut.target && fs.existsSync(shortcut.target)) {
+                    resolvedPath = shortcut.target;
+                    logToRenderer(`Resolved .lnk to: ${resolvedPath}`);
+                } else {
+                    logToRenderer(`Resolved shortcut target does not exist: ${shortcut.target}`);
+                    return null;
+                }
+            } catch (error) {
+                logToRenderer(`Error resolving shortcut: ${error}`);
+                return null;
+            }
+        }
+
+        if (!fs.existsSync(resolvedPath) || !fs.statSync(resolvedPath).isFile()) {
+            logToRenderer(`Invalid file or file does not exist: ${resolvedPath}`);
+            return null;
+        }
+
+        audioState.pendingFile = resolvedPath;
+        audioState.isCaching = true;
+        logToRenderer(`File selected, caching: ${audioState.pendingFile}`);
+        sendGuiUpdate();
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        audioState.isCaching = false;
+        logToRenderer(`Caching complete for: ${audioState.pendingFile}`);
+
+        if (audioState.playerStatus === AudioPlayerStatus.Idle) {
+            player.stop();
+            audioState.activeFile = audioState.pendingFile;
+            audioState.pendingFile = null;
+            logToRenderer(`Set new active file: ${audioState.activeFile}`);
+        } else {
+            player.stop();
+            audioState.activeFile = audioState.pendingFile;
+            audioState.pendingFile = null;
+        }
+
+        sendGuiUpdate();
+        return audioState.activeFile;
+    });
 });
 
 client.login(DISCORD_TOKEN);

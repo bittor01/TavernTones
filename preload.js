@@ -15,7 +15,8 @@ contextBridge.exposeInMainWorld('electron', {
         'save-encounter', 'load-encounter', 'update-reminders',
         'roll-stat', 'add-temp-hp', 'edit-creature',
         'remove-creature', 'move-creature-bottom',
-        'reset-encounter', 'clear-encounter', 'update-initiative'
+        'reset-encounter', 'clear-encounter', 'update-initiative',
+        'copy-creature'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);

@@ -16,10 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const combatantDetailsListDiv = document.getElementById('combatant-details-list');
     const nextTurnButton = document.getElementById('next-turn-button');
     const previousTurnButton = document.getElementById('previous-turn-button');
-    const resetEncounterBtn = document.getElementById('reset-encounter-btn');
-    const clearEncounterBtn = document.getElementById('clear-encounter-btn');
-    const resetEncounterBtnAlt = document.getElementById('reset-encounter-btn-alt');
-    const clearEncounterBtnAlt = document.getElementById('clear-encounter-btn-alt');
     const maxLogEntries = 50;
 
     const DND_CONDITIONS = {
@@ -40,49 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
         "Stunned": { emoji: "🤯", color: "#ffc107", text: "You are Incapacitated, can't move, and can speak only falteringly. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage." },
         "Unconscious": { emoji: "😴", color: "#343a40", text: "You are Incapacitated, can't move or speak, and are unaware of your surroundings. You drop whatever you're holding and fall prone. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack that hits you is a critical hit if the attacker is within 5 feet of you." }
     };
-
-    // --- HP Bar Helper Functions ---
-    function getHpPercentage(creature) {
-        if (typeof creature.hp !== 'number' || typeof creature.maxHp !== 'number' || creature.maxHp === 0) {
-            return 100; // Default to full if data is invalid
-        }
-        const percentage = (creature.hp / creature.maxHp) * 100;
-        return Math.max(0, Math.min(percentage, 100)); // Cap between 0 and 100
-    }
-
-    function getHpColorClass(creature) {
-        if (typeof creature.hp !== 'number' || typeof creature.maxHp !== 'number') {
-            return 'hp-grey'; // Default for invalid data
-        }
-
-        if (creature.hp <= 0) return 'hp-grey';
-
-        const percentage = (creature.hp / creature.maxHp) * 100;
-        if (percentage > 100) return 'hp-purple';
-        if (percentage > 75) return 'hp-blue';
-        if (percentage > 50) return 'hp-green';
-        if (percentage > 25) return 'hp-yellow';
-        return 'hp-red';
-    }
-
-    function generateConditionTooltip(conditionName) {
-        const lowerCaseName = conditionName.toLowerCase();
-        const data = DND_CONDITIONS_DATA[lowerCaseName];
-        if (!data) return "No description available.";
-
-        let text = `${data.name.toUpperCase()}\n${data.text}`;
-
-        if (data.causes && data.causes.length > 0) {
-            text += '\n\n--------------------\n';
-            data.causes.forEach(causedConditionName => {
-                const causedData = DND_CONDITIONS_DATA[causedConditionName.toLowerCase()];
-                if (causedData) {
-                    text += `\n${causedData.name.toUpperCase()} (Caused by ${data.name})\n${causedData.text}`;
-                }
-            });
-        }
-        return text;
-    }
 
     // --- Initial UI Setup ---
     addCreatureForm.innerHTML = `
@@ -131,16 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="submit" class="add-creature-button">Add Creature</button>
     `;
 
-    // --- Initial Data Load ---
-    (async () => {
-        try {
-            DND_CONDITIONS_DATA = await window.electron.ipcRenderer.invoke('get-conditions');
-            logMessage("Conditions data loaded successfully.");
-        } catch (error) {
-            logMessage(`Error loading conditions data: ${error.message}`);
-        }
-    })();
-
     // --- Logging ---
     function logMessage(message) {
         if (typeof message !== 'string') message = JSON.stringify(message);
@@ -160,20 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('clear-encounter-right').addEventListener('click', () => window.electron.ipcRenderer.send('clear-encounter'));
     saveButton.addEventListener('click', () => window.electron.ipcRenderer.send('save-encounter'));
     loadButton.addEventListener('click', () => window.electron.ipcRenderer.send('load-encounter'));
-
-    resetEncounterBtn.addEventListener('click', () => {
-        if (confirm('Are you sure you want to reset the encounter? This will restore all HP, clear conditions, and reset turns.')) {
-            window.electron.ipcRenderer.send('reset-encounter');
-        }
-    });
-    clearEncounterBtn.addEventListener('click', () => {
-        if (confirm('Are you sure you want to clear the entire encounter?')) {
-            window.electron.ipcRenderer.send('clear-encounter');
-        }
-    });
-    resetEncounterBtnAlt.addEventListener('click', () => resetEncounterBtn.click());
-    clearEncounterBtnAlt.addEventListener('click', () => clearEncounterBtn.click());
-
     nextTurnButton.addEventListener('click', () => window.electron.ipcRenderer.send('next-turn'));
     previousTurnButton.addEventListener('click', () => window.electron.ipcRenderer.send('previous-turn'));
     selectFileButton.addEventListener('click', () => window.electron.ipcRenderer.invoke('open-file-dialog'));
@@ -258,7 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCombatantDetailsList(data.initiativeOrder, data.currentTurnIndex);
     });
 
-
     window.electron.ipcRenderer.on('populate-edit-form', (event, creature) => {
         if (!creature) return;
         document.getElementById('creature-name').value = creature.name || '';
@@ -284,7 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('int-save').value = saves.int || '';
         document.getElementById('wis-save').value = saves.wis || '';
         document.getElementById('cha-save').value = saves.cha || '';
-
     });
 
     // --- Render Functions ---
@@ -296,7 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
         displayOrder.forEach((creature, displayIndex) => {
             const creatureDiv = document.createElement('div');
             creatureDiv.className = 'initiative-entry' + (displayIndex === 0 ? ' active-turn' : '');
-
             creatureDiv.dataset.id = creature.id; // Add id for scrolling
 
             let content = '';
@@ -319,31 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-
             initiativeListDiv.appendChild(creatureDiv);
-        });
-
-        // Add event listeners for this list
-        document.querySelectorAll('.initiative-entry').forEach(entry => {
-            // Click on the whole entry to scroll
-            entry.addEventListener('click', (e) => {
-                // Don't trigger if the click was on the score itself
-                if (e.target.classList.contains('initiative-score')) return;
-
-                const creatureId = e.currentTarget.dataset.id;
-                const targetCombatant = combatantDetailsListDiv.querySelector(`.combatant-details-entry[data-id="${creatureId}"]`);
-                if (targetCombatant) {
-                    targetCombatant.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            });
-        });
-
-        document.querySelectorAll('.initiative-score').forEach(score => {
-            score.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent the scroll-to-view from firing
-                const id = e.currentTarget.dataset.id;
-                createPopup('initiative', id, e.currentTarget);
-            });
         });
     }
 
@@ -365,7 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initiativeOrder.forEach((creature, index) => {
             const creatureDiv = document.createElement('div');
             creatureDiv.className = 'combatant-details-entry' + (index === currentTurnIndex ? ' active-turn' : '');
-
             creatureDiv.dataset.id = creature.id; // Add id for scrolling
 
             const saves = creature.saves || {};
@@ -400,9 +301,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             creatureDiv.innerHTML = `
                 <div class="combatant-header">
-
                     <h4>${creature.name}</h4>
                     <div class="card-controls">
+                        <button class="copy-btn" title="Copy" data-id="${creature.id}">📋</button>
                         <button class="edit-btn" title="Edit" data-id="${creature.id}">📝</button>
                         <button class="move-to-bottom-btn" title="Move to Bottom" data-id="${creature.id}">🔽</button>
                         <button class="remove-btn" title="Remove" data-id="${creature.id}">❌</button>
@@ -411,17 +312,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span>AC: ${creature.ac ?? '?'}</span>
                         <span>Speed: ${creature.speed || '?'}</span>
                         <span>DC: ${creature.saveDc ?? '?'}</span>
-
                     </div>
                 </div>
                 <div class="combatant-body">
                     <div class="main-controls">
                         <div class="hp-bar-container">
-
                             <div class="hp-bar-temp" style="width: ${tempHpPercentage}%;"></div>
                             <div class="hp-bar-current" style="width: ${hpPercentage}%; background-color: ${hpColor};"></div>
                             <span class="hp-bar-text">${hp} / ${maxHp} ${tempHp > 0 ? `(+${tempHp})` : ''}</span>
-
                         </div>
                         <button class="hp-change-btn" data-id="${creature.id}">+/- HP</button>
                         <button class="temp-hp-btn" data-id="${creature.id}">+ Temp HP</button>
@@ -432,7 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <label><input type="checkbox" class="concentration-cb" data-id="${creature.id}" ${creature.isConcentrating ? 'checked' : ''}> Conc.</label>
                         <label><input type="checkbox" class="friendly-cb" data-id="${creature.id}" ${creature.isFriendly ? 'checked' : ''}> Legendary reminder</label>
                         <div class="condition-tags">${(creature.conditions || []).map(conditionName => {
-
                             const condition = DND_CONDITIONS[conditionName];
                             if (!condition) return '';
                             return `
@@ -463,11 +360,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = e.target.dataset.id;
             createPopup('hp', id, e.target);
         }));
-
-        document.querySelectorAll('.temp-hp-btn').forEach(b => b.addEventListener('click', e => {
-            const id = e.target.dataset.id;
-            createPopup('temp-hp', id, e.target);
-        }));
         document.querySelectorAll('.add-condition-btn').forEach(b => b.addEventListener('click', e => {
             const id = e.target.dataset.id;
             createPopup('condition', id, e.target);
@@ -495,7 +387,9 @@ document.addEventListener('DOMContentLoaded', () => {
             createPopup('reminders', id, e.target);
         }));
 
-
+        document.querySelectorAll('.copy-btn').forEach(b => b.addEventListener('click', e => {
+            window.electron.ipcRenderer.send('copy-creature', { creatureId: parseInt(e.target.dataset.id) });
+        }));
         document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', e => {
             window.electron.ipcRenderer.send('edit-creature', { creatureId: parseInt(e.target.dataset.id) });
         }));
@@ -519,17 +413,6 @@ document.addEventListener('DOMContentLoaded', () => {
             contentHTML = `
                 <input type="number" id="popup-hp-input" placeholder="e.g. -10 or 5" autofocus>
                 <button id="popup-hp-ok">Ok</button>
-            `;
-        } else if (type === 'temp-hp') {
-            contentHTML = `
-                <input type="number" id="popup-temp-hp-input" placeholder="e.g. 10" autofocus>
-                <button id="popup-temp-hp-ok">Set</button>
-            `;
-        } else if (type === 'initiative') {
-            const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
-            contentHTML = `
-                <input type="text" id="popup-initiative-input" value="${creature.initiative}" autofocus>
-                <button id="popup-initiative-ok">Set</button>
             `;
         } else if (type === 'condition') {
             contentHTML = `
@@ -591,35 +474,6 @@ document.addEventListener('DOMContentLoaded', () => {
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     document.getElementById('popup-hp-ok').click();
-                }
-            });
-        } else if (type === 'temp-hp') {
-            const input = document.getElementById('popup-temp-hp-input');
-            document.getElementById('popup-temp-hp-ok').addEventListener('click', () => {
-                const amount = parseInt(input.value, 10);
-                if (!isNaN(amount) && amount >= 0) { // Temp HP shouldn't be negative
-                    window.electron.ipcRenderer.send('update-temp-hp', { creatureId: parseInt(creatureId), amount: amount });
-                }
-                popup.remove();
-            });
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    document.getElementById('popup-temp-hp-ok').click();
-                }
-            });
-        } else if (type === 'initiative') {
-            const input = document.getElementById('popup-initiative-input');
-            document.getElementById('popup-initiative-ok').addEventListener('click', () => {
-                const value = input.value;
-                // Basic validation: ensure it's not empty and can be a number
-                if (value.trim() !== '' && !isNaN(parseFloat(value))) {
-                    window.electron.ipcRenderer.send('update-initiative-value', { creatureId: parseInt(creatureId), value: value });
-                }
-                popup.remove();
-            });
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    document.getElementById('popup-initiative-ok').click();
                 }
             });
         } else if (type === 'condition') {
