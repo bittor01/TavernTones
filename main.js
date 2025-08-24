@@ -93,6 +93,13 @@ async function createWindow() {
     console.log('Window created and shown.');
     await mainWindow.loadFile('index.html');
     console.log('index.html loaded.');
+
+    // Load state after a delay
+    setTimeout(() => {
+        console.log('Attempting to load autosave...');
+        loadState();
+        sendInitiativeUpdate();
+    }, 2000);
 }
 
 async function apploader() {
@@ -968,13 +975,6 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
         }
     });
 
-    ipcMain.on('window-ready', () => {
-        loadState(); // Load state into memory
-    });
-
-    ipcMain.on('request-initial-load', () => {
-        sendInitiativeUpdate(); // Now send the loaded data to the UI
-    });
 
     ipcMain.on('reset-encounter', () => {
         initiativeOrder.forEach(c => {
