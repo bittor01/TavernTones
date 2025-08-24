@@ -145,7 +145,7 @@ client.once('ready', async () => {
 
     logToRenderer('TavernTones is online!');
     logToRenderer(`Logged in as ${client.user.tag}`);
-    /* startup message
+    // startup message
     const textChannel = client.channels.cache.get(TEXT_CHANNEL_ID);
     if (textChannel) {
         try {
@@ -164,7 +164,6 @@ client.once('ready', async () => {
     else {
         logToRenderer('Text channel not found!');
     }
-    */
 
     // --- Load initial state and send to UI ---
     loadState();
