@@ -168,6 +168,18 @@ client.once('ready', async () => {
 
     // --- Load initial state and send to UI ---
     loadState();
+
+    // Load conditions data and send to renderer
+    try {
+        const conditionsData = fs.readFileSync(path.join(__dirname, 'conditions.json'), 'utf8');
+        const conditions = JSON.parse(conditionsData);
+        // We can send this once on startup, or whenever requested
+        ipcMain.handle('get-conditions', () => conditions);
+    } catch (error) {
+        logToRenderer(`Error loading conditions.json: ${error.message}`);
+    }
+
+
     // Small delay to ensure window is ready before sending
     setTimeout(() => {
         if (mainWindow) {
@@ -644,6 +656,13 @@ client.once('ready', async () => {
         }
     });
 
+    ipcMain.on('edit-creature', (event, { creatureId }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            mainWindow.webContents.send('populate-creature-form', creature);
+        }
+    });
+
     //Begin IPC Handling
     function logToRenderer(message) {
         mainWindow.webContents.send('log-message', message);
@@ -802,6 +821,10 @@ client.once('ready', async () => {
             creature.initiative = parseFloat(initiativeInput) || 0;
         }
 
+        // Set maxHp to the initial HP value and initialize tempHp
+        creature.maxHp = creature.hp;
+        creature.tempHp = 0;
+
         initiativeOrder.push(creature);
         initiativeOrder.sort((a, b) => b.initiative - a.initiative);
         sendInitiativeUpdate();
@@ -817,12 +840,42 @@ client.once('ready', async () => {
         }
     });
 
-    ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
-        const creature = initiativeOrder.find(c => c.id === creatureId);
-        if (creature) {
-            creature.reminders = reminders;
+    ipcMain.on('move-creature-to-bottom', (event, { creatureId }) => {
+        const index = initiativeOrder.findIndex(c => c.id === creatureId);
+        if (index > -1) {
+            const [creature] = initiativeOrder.splice(index, 1);
+            initiativeOrder.push(creature);
+
+            // If the moved creature was the current turn, or before it, adjust the index
+            if (index < currentTurnIndex) {
+                currentTurnIndex--;
+            }
+            // No need to change currentTurnIndex if the moved creature was the current one
+            // or after the current one, as the array shrinks from before the end.
+            // The new current turn will be correct relative to the shifted array.
+
+            sendInitiativeUpdate();
             saveState();
-            // No need to send a full update, as this doesn't change the main display
+        }
+    });
+
+    ipcMain.on('remove-creature', (event, { creatureId }) => {
+        const index = initiativeOrder.findIndex(c => c.id === creatureId);
+        if (index > -1) {
+            initiativeOrder.splice(index, 1);
+            // If the removed creature was the current turn, or before it, adjust the index
+            if (index < currentTurnIndex) {
+                currentTurnIndex--;
+            } else if (index === currentTurnIndex && currentTurnIndex === initiativeOrder.length) {
+                // If it was the last one and the current turn, wrap around
+                currentTurnIndex = 0;
+            }
+            // Ensure index is always valid
+            if (currentTurnIndex >= initiativeOrder.length) {
+                currentTurnIndex = 0;
+            }
+            sendInitiativeUpdate();
+            saveState();
         }
     });
 
@@ -889,13 +942,34 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
         }
     });
 
+    ipcMain.on('update-temp-hp', (event, { creatureId, amount }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            creature.tempHp = Math.max(creature.tempHp, amount); // Per 5e rules, you take the higher of the two values
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
     ipcMain.on('update-hp', (event, { creatureId, amount }) => {
         const creature = initiativeOrder.find(c => c.id === creatureId);
         if (creature) {
-            creature.hp += amount;
-            if (creature.isConcentrating && amount < 0) {
-                const dc = Math.max(10, Math.floor(-amount / 2));
-                dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${creature.name} must make a DC ${dc} Constitution saving throw.`, buttons: ['OK']});
+            if (amount > 0) {
+                // Healing only affects regular HP
+                creature.hp += amount;
+            } else {
+                // Damage affects Temp HP first
+                const damage = Math.abs(amount);
+                const tempHpDamage = Math.min(damage, creature.tempHp);
+                creature.tempHp -= tempHpDamage;
+
+                const remainingDamage = damage - tempHpDamage;
+                creature.hp -= remainingDamage;
+
+                if (creature.isConcentrating && remainingDamage > 0) {
+                    const dc = Math.max(10, Math.floor(remainingDamage / 2));
+                    dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${creature.name} must make a DC ${dc} Constitution saving throw.`, buttons: ['OK']});
+                }
             }
             sendInitiativeUpdate();
             saveState();
@@ -918,6 +992,64 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
         const creature = initiativeOrder.find(c => c.id === creatureId);
         if (creature && creature.conditions) {
             creature.conditions = creature.conditions.filter(c => c !== condition);
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
+    ipcMain.on('clear-encounter', async (event) => {
+        const result = await dialog.showMessageBox(mainWindow, {
+            type: 'question',
+            buttons: ['Save and Clear', 'Clear Without Saving', 'Cancel'],
+            defaultId: 0,
+            title: 'Clear Encounter',
+            message: 'Do you want to save the current encounter before clearing it?'
+        });
+
+        if (result.response === 0) { // Save and Clear
+            const { filePath } = await dialog.showSaveDialog(mainWindow, {
+                title: 'Save Encounter',
+                defaultPath: 'encounter.json',
+                filters: [{ name: 'JSON Files', extensions: ['json'] }]
+            });
+            if (filePath) {
+                const state = { initiativeOrder, currentTurnIndex };
+                fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
+                logToRenderer(`Encounter saved to ${filePath}`);
+            } else {
+                return; // User cancelled save dialog
+            }
+        } else if (result.response === 2) { // Cancel
+            return;
+        }
+
+        // Clear the state
+        initiativeOrder = [];
+        currentTurnIndex = 0;
+        sendInitiativeUpdate();
+        saveState(); // Autosave the cleared state
+    });
+
+    ipcMain.on('reset-encounter', (event) => {
+        initiativeOrder.forEach(creature => {
+            creature.hp = creature.maxHp;
+            creature.tempHp = 0;
+            creature.conditions = [];
+            // Optionally, reset other flags like concentration
+            // creature.isConcentrating = false;
+        });
+        currentTurnIndex = 0;
+        initiativeOrder.sort((a, b) => b.initiative - a.initiative); // Re-sort in case order was changed
+        sendInitiativeUpdate();
+        saveState();
+    });
+
+    ipcMain.on('update-initiative-value', (event, { creatureId, value }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            // Use parseFloat to handle potential decimal initiatives (e.g., 17.2)
+            creature.initiative = parseFloat(value);
+            initiativeOrder.sort((a, b) => b.initiative - a.initiative);
             sendInitiativeUpdate();
             saveState();
         }

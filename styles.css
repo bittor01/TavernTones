@@ -12,11 +12,46 @@ html, body {
   box-sizing: border-box;
 }
 
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #444;
+    margin-bottom: 12px;
+}
+
+.panel-header h2 {
+    margin: 0;
+    padding: 0;
+    border: none;
+    margin-bottom: 8px; /* Maintain some space below */
+    padding-bottom: 0;
+}
+
+.panel-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.panel-header-btn {
+    background: none;
+    border: none;
+    color: #d4d4d4;
+    font-size: 1.3em;
+    padding: 2px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.panel-header-btn:hover {
+    background-color: #4c4c4c;
+}
+
+
 h2 {
   margin-top: 0;
-  border-bottom: 1px solid #444;
+  /* border-bottom: 1px solid #444; */ /* Handled by panel-header */
   padding-bottom: 8px;
-  margin-bottom: 12px;
+  /* margin-bottom: 12px; */ /* Handled by panel-header */
   font-size: 1.1em;
   color: #cccccc;
 }
@@ -113,6 +148,38 @@ button:disabled {
     flex-grow: 1;
 }
 
+.initiative-entry {
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    background-color: #333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.initiative-entry:hover {
+    background-color: #444;
+}
+
+.initiative-entry.active-turn {
+    background-color: #a0c8ff;
+    color: #111;
+    font-weight: bold;
+}
+
+.initiative-score {
+    min-width: 25px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.active-chevron {
+    color: #111;
+    font-weight: bold;
+}
+
 /* --- Add Creature Form --- */
 #add-creature-form {
     display: flex;
@@ -205,16 +272,54 @@ button:disabled {
     border-bottom: 1px solid #555;
     padding-bottom: 8px;
     margin-bottom: 8px;
+    gap: 10px;
 }
-.combatant-header h4 {
+
+.combatant-header-left, .combatant-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.combatant-header-right {
+    margin-left: auto; /* Pushes this to the right */
+}
+
+.combatant-name {
     margin: 0;
     font-size: 1.2em;
+    white-space: nowrap;
 }
+
 .header-stats {
     display: flex;
     gap: 15px;
     font-size: 0.9em;
     color: #ccc;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: #d4d4d4;
+    font-size: 1.2em;
+    padding: 2px;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-btn:hover {
+    background-color: #555;
 }
 
 .main-controls {
@@ -223,9 +328,40 @@ button:disabled {
     gap: 10px;
     margin-bottom: 8px;
 }
-.hp-display {
-    font-weight: bold;
+.hp-bar-container {
+    flex-grow: 1;
+    height: 24px;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    position: relative;
+    border: 1px solid #444;
+    overflow: hidden; /* Ensures the bar stays within the rounded corners */
 }
+
+.hp-bar {
+    height: 100%;
+    transition: width 0.3s ease-in-out, background-color 0.3s;
+}
+
+.hp-bar-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+    white-space: nowrap;
+}
+
+/* HP Bar Colors */
+.hp-purple { background-color: #9b59b6; } /* Amethyst */
+.hp-blue { background-color: #3498db; } /* Peter River */
+.hp-green { background-color: #2ecc71; } /* Emerald */
+.hp-yellow { background-color: #f1c40f; } /* Sun Flower */
+.hp-red { background-color: #e74c3c; } /* Alizarin */
+.hp-grey { background-color: #95a5a6; } /* Concrete */
+
 
 .secondary-controls {
     display: flex;
