@@ -16,13 +16,80 @@ document.addEventListener('DOMContentLoaded', () => {
     const combatantDetailsListDiv = document.getElementById('combatant-details-list');
     const nextTurnButton = document.getElementById('next-turn-button');
     const previousTurnButton = document.getElementById('previous-turn-button');
+    const resetEncounterBtn = document.getElementById('reset-encounter-btn');
+    const clearEncounterBtn = document.getElementById('clear-encounter-btn');
+    const resetEncounterBtnAlt = document.getElementById('reset-encounter-btn-alt');
+    const clearEncounterBtnAlt = document.getElementById('clear-encounter-btn-alt');
     const maxLogEntries = 50;
 
+    let DND_CONDITIONS_DATA = {};
     const DND_CONDITIONS = [
-        "Blinded", "Charmed", "Deafened", "Exhaustion", "Frightened",
+        "Blinded", "Burning", "Charmed", "Deafened", "Exhaustion", "Frightened",
         "Grappled", "Incapacitated", "Invisible", "Paralyzed", "Petrified",
-        "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious"
+        "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious", "Burning"
     ];
+
+    const CONDITION_STYLES = {
+        "blinded": { emoji: "🙈", color: "#7f8c8d" },
+        "burning": { emoji: "🔥", color: "#e74c3c" },
+        "charmed": { emoji: "😍", color: "#e91e63" },
+        "deafened": { emoji: "🙉", color: "#95a5a6" },
+        "exhaustion": { emoji: "😩", color: "#f39c12" },
+        "frightened": { emoji: "😨", color: "#9b59b6" },
+        "grappled": { emoji: "🤼", color: "#34495e" },
+        "incapacitated": { emoji: "😵", color: "#d35400" },
+        "invisible": { emoji: "👻", color: "#ecf0f1" },
+        "paralyzed": { emoji: "🥶", color: "#3498db" },
+        "petrified": { emoji: "🗿", color: "#5d4037" },
+        "poisoned": { emoji: "🤢", color: "#27ae60" },
+        "prone": { emoji: "🤸", color: "#16a085" },
+        "restrained": { emoji: "⛓️", color: "#2c3e50" },
+        "stunned": { emoji: "🤯", color: "#f1c40f" },
+        "unconscious": { emoji: "😴", color: "#8e44ad" }
+    };
+
+    // --- HP Bar Helper Functions ---
+    function getHpPercentage(creature) {
+        if (typeof creature.hp !== 'number' || typeof creature.maxHp !== 'number' || creature.maxHp === 0) {
+            return 100; // Default to full if data is invalid
+        }
+        const percentage = (creature.hp / creature.maxHp) * 100;
+        return Math.max(0, Math.min(percentage, 100)); // Cap between 0 and 100
+    }
+
+    function getHpColorClass(creature) {
+        if (typeof creature.hp !== 'number' || typeof creature.maxHp !== 'number') {
+            return 'hp-grey'; // Default for invalid data
+        }
+
+        if (creature.hp <= 0) return 'hp-grey';
+
+        const percentage = (creature.hp / creature.maxHp) * 100;
+        if (percentage > 100) return 'hp-purple';
+        if (percentage > 75) return 'hp-blue';
+        if (percentage > 50) return 'hp-green';
+        if (percentage > 25) return 'hp-yellow';
+        return 'hp-red';
+    }
+
+    function generateConditionTooltip(conditionName) {
+        const lowerCaseName = conditionName.toLowerCase();
+        const data = DND_CONDITIONS_DATA[lowerCaseName];
+        if (!data) return "No description available.";
+
+        let text = `${data.name.toUpperCase()}\n${data.text}`;
+
+        if (data.causes && data.causes.length > 0) {
+            text += '\n\n--------------------\n';
+            data.causes.forEach(causedConditionName => {
+                const causedData = DND_CONDITIONS_DATA[causedConditionName.toLowerCase()];
+                if (causedData) {
+                    text += `\n${causedData.name.toUpperCase()} (Caused by ${data.name})\n${causedData.text}`;
+                }
+            });
+        }
+        return text;
+    }
 
     // --- Initial UI Setup ---
     addCreatureForm.innerHTML = `
@@ -71,6 +138,16 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="submit" class="add-creature-button">Add Creature</button>
     `;
 
+    // --- Initial Data Load ---
+    (async () => {
+        try {
+            DND_CONDITIONS_DATA = await window.electron.ipcRenderer.invoke('get-conditions');
+            logMessage("Conditions data loaded successfully.");
+        } catch (error) {
+            logMessage(`Error loading conditions data: ${error.message}`);
+        }
+    })();
+
     // --- Logging ---
     function logMessage(message) {
         if (typeof message !== 'string') message = JSON.stringify(message);
@@ -86,6 +163,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
     saveButton.addEventListener('click', () => window.electron.ipcRenderer.send('save-encounter'));
     loadButton.addEventListener('click', () => window.electron.ipcRenderer.send('load-encounter'));
+
+    resetEncounterBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to reset the encounter? This will restore all HP, clear conditions, and reset turns.')) {
+            window.electron.ipcRenderer.send('reset-encounter');
+        }
+    });
+    clearEncounterBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear the entire encounter?')) {
+            window.electron.ipcRenderer.send('clear-encounter');
+        }
+    });
+    resetEncounterBtnAlt.addEventListener('click', () => resetEncounterBtn.click());
+    clearEncounterBtnAlt.addEventListener('click', () => clearEncounterBtn.click());
+
     nextTurnButton.addEventListener('click', () => window.electron.ipcRenderer.send('next-turn'));
     previousTurnButton.addEventListener('click', () => window.electron.ipcRenderer.send('previous-turn'));
     selectFileButton.addEventListener('click', () => window.electron.ipcRenderer.invoke('open-file-dialog'));
@@ -168,6 +259,46 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCombatantDetailsList(data.initiativeOrder, data.currentTurnIndex);
     });
 
+    window.electron.ipcRenderer.on('populate-creature-form', (event, creature) => {
+        const setVal = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.value = value ?? '';
+        };
+
+        setVal('creature-name', creature.name);
+        // Note: We don't set initiative, as it might be a roll. Let user decide.
+        setVal('creature-hp', creature.hp);
+        setVal('creature-ac', creature.ac);
+        setVal('creature-speed', creature.speed);
+        setVal('attack-modifier', creature.attackMod);
+        setVal('save-dc', creature.saveDc);
+
+        if (creature.scores) {
+            setVal('str-score', creature.scores.str);
+            setVal('dex-score', creature.scores.dex);
+            setVal('con-score', creature.scores.con);
+            setVal('int-score', creature.scores.int);
+            setVal('wis-score', creature.scores.wis);
+            setVal('cha-score', creature.scores.cha);
+        }
+        if (creature.saves) {
+            setVal('str-save', creature.saves.str);
+            setVal('dex-save', creature.saves.dex);
+            setVal('con-save', creature.saves.con);
+            setVal('int-save', creature.saves.int);
+            setVal('wis-save', creature.saves.wis);
+            setVal('cha-save', creature.saves.cha);
+        }
+
+        // Scroll to the top and focus the form
+        const creatureEntryContainer = document.getElementById('creature-entry-container');
+        creatureEntryContainer.scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('creature-name').focus();
+
+        // Now, remove the old creature from the tracker
+        window.electron.ipcRenderer.send('remove-creature', { creatureId: creature.id });
+    });
+
     // --- Render Functions ---
     function renderInitiativeList(initiativeOrder, currentTurnIndex) {
         initiativeListDiv.innerHTML = '';
@@ -177,8 +308,38 @@ document.addEventListener('DOMContentLoaded', () => {
         displayOrder.forEach((creature, displayIndex) => {
             const creatureDiv = document.createElement('div');
             creatureDiv.className = 'initiative-entry' + (displayIndex === 0 ? ' active-turn' : '');
-            creatureDiv.innerHTML = `<span class="initiative-score">${creature.initiative}</span> <span class="creature-name">${creature.name}</span>`;
+            creatureDiv.dataset.id = creature.id; // Add ID for click-to-scroll
+
+            let content = `<span class="initiative-score" data-id="${creature.id}">${creature.initiative}</span> <span class="creature-name">${creature.name}</span>`;
+            if (displayIndex === 0) {
+                content = `<span class="active-chevron">></span> ${content}`;
+            }
+            creatureDiv.innerHTML = content;
+
             initiativeListDiv.appendChild(creatureDiv);
+        });
+
+        // Add event listeners for this list
+        document.querySelectorAll('.initiative-entry').forEach(entry => {
+            // Click on the whole entry to scroll
+            entry.addEventListener('click', (e) => {
+                // Don't trigger if the click was on the score itself
+                if (e.target.classList.contains('initiative-score')) return;
+
+                const creatureId = e.currentTarget.dataset.id;
+                const targetCombatant = combatantDetailsListDiv.querySelector(`.combatant-details-entry[data-id="${creatureId}"]`);
+                if (targetCombatant) {
+                    targetCombatant.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        });
+
+        document.querySelectorAll('.initiative-score').forEach(score => {
+            score.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent the scroll-to-view from firing
+                const id = e.currentTarget.dataset.id;
+                createPopup('initiative', id, e.currentTarget);
+            });
         });
     }
 
@@ -189,6 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initiativeOrder.forEach((creature, index) => {
             const creatureDiv = document.createElement('div');
             creatureDiv.className = 'combatant-details-entry' + (index === currentTurnIndex ? ' active-turn' : '');
+            creatureDiv.dataset.id = creature.id; // Add ID for click-to-scroll target
 
             const saves = creature.saves || {};
             const scores = creature.scores || {};
@@ -215,26 +377,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
             creatureDiv.innerHTML = `
                 <div class="combatant-header">
-                    <h4>${creature.name}</h4>
-                    <div class="header-stats">
-                        <span>AC: ${creature.ac ?? '?'}</span>
-                        <span>Speed: ${creature.speed || '?'}</span>
-                        <span>DC: ${creature.saveDc ?? '?'}</span>
+                    <div class="combatant-header-left">
+                        <button class="edit-creature-btn icon-btn" title="Edit" data-id="${creature.id}">&#128221;</button>
+                        <h4 class="combatant-name">${creature.name}</h4>
+                    </div>
+                    <div class="combatant-header-right">
+                        <div class="header-stats">
+                            <span>AC: ${creature.ac ?? '?'}</span>
+                            <span>Speed: ${creature.speed || '?'}</span>
+                            <span>DC: ${creature.saveDc ?? '?'}</span>
+                        </div>
+                        <div class="header-buttons">
+                            <button class="move-bottom-btn icon-btn" title="Move to Bottom" data-id="${creature.id}">&#11163;</button>
+                            <button class="remove-creature-btn icon-btn" title="Remove" data-id="${creature.id}">&#10060;</button>
+                        </div>
                     </div>
                 </div>
                 <div class="combatant-body">
                     <div class="main-controls">
-                        <span class="hp-display">HP: ${creature.hp ?? '?'}</span>
+                        <div class="hp-bar-container">
+                            <div class="hp-bar ${getHpColorClass(creature)}" style="width: ${getHpPercentage(creature)}%;"></div>
+                            <span class="hp-bar-text">${creature.hp} / ${creature.maxHp} ${creature.tempHp > 0 ? `(+${creature.tempHp})` : ''}</span>
+                        </div>
                         <button class="hp-change-btn" data-id="${creature.id}">+/- HP</button>
+                        <button class="temp-hp-btn" data-id="${creature.id}">+ Temp HP</button>
                         <button class="add-condition-btn" data-id="${creature.id}">+ Condition</button>
                         <button class="reminders-btn" data-id="${creature.id}">Reminders</button>
                     </div>
                     <div class="secondary-controls">
                         <label><input type="checkbox" class="concentration-cb" data-id="${creature.id}" ${creature.isConcentrating ? 'checked' : ''}> Conc.</label>
                         <label><input type="checkbox" class="friendly-cb" data-id="${creature.id}" ${creature.isFriendly ? 'checked' : ''}> Legendary reminder</label>
-                        <div class="condition-tags">${(creature.conditions || []).map(c => `
-                            <span class="condition-tag">${c} <button class="remove-condition-btn" data-id="${creature.id}" data-condition="${c}">x</button></span>
-                        `).join('')}</div>
+                        <div class="condition-tags">${(creature.conditions || []).map(conditionName => {
+                            const style = CONDITION_STYLES[conditionName.toLowerCase()] || { emoji: '❓', color: '#7f8c8d' };
+                            const tooltipText = generateConditionTooltip(conditionName);
+                            return `
+                                <span class="condition-tag" style="background-color: ${style.color};" title="${tooltipText}">
+                                    ${style.emoji} ${conditionName}
+                                    <button class="remove-condition-btn" data-id="${creature.id}" data-condition="${conditionName}">x</button>
+                                </span>
+                            `;
+                        }).join('')}</div>
                     </div>
                     <div class="stats-footer">
                         ${scoresHTML}
@@ -257,6 +439,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = e.target.dataset.id;
             createPopup('hp', id, e.target);
         }));
+
+        document.querySelectorAll('.temp-hp-btn').forEach(b => b.addEventListener('click', e => {
+            const id = e.target.dataset.id;
+            createPopup('temp-hp', id, e.target);
+        }));
         document.querySelectorAll('.add-condition-btn').forEach(b => b.addEventListener('click', e => {
             const id = e.target.dataset.id;
             createPopup('condition', id, e.target);
@@ -278,6 +465,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = e.target.dataset.id;
             createPopup('reminders', id, e.target);
         }));
+
+        // --- New Button Listeners ---
+        document.querySelectorAll('.edit-creature-btn').forEach(b => b.addEventListener('click', e => {
+            const id = parseInt(e.currentTarget.dataset.id);
+            window.electron.ipcRenderer.send('edit-creature', { creatureId: id });
+        }));
+
+        document.querySelectorAll('.remove-creature-btn').forEach(b => b.addEventListener('click', e => {
+            const id = parseInt(e.currentTarget.dataset.id);
+            const creature = initiativeOrder.find(c => c.id === id);
+            if (confirm(`Are you sure you want to remove ${creature.name}?`)) {
+                window.electron.ipcRenderer.send('remove-creature', { creatureId: id });
+            }
+        }));
+
+        document.querySelectorAll('.move-bottom-btn').forEach(b => b.addEventListener('click', e => {
+            const id = parseInt(e.currentTarget.dataset.id);
+            window.electron.ipcRenderer.send('move-creature-to-bottom', { creatureId: id });
+        }));
     }
 
     function createPopup(type, creatureId, targetElement) {
@@ -292,6 +498,17 @@ document.addEventListener('DOMContentLoaded', () => {
             contentHTML = `
                 <input type="number" id="popup-hp-input" placeholder="e.g. -10 or 5" autofocus>
                 <button id="popup-hp-ok">Ok</button>
+            `;
+        } else if (type === 'temp-hp') {
+            contentHTML = `
+                <input type="number" id="popup-temp-hp-input" placeholder="e.g. 10" autofocus>
+                <button id="popup-temp-hp-ok">Set</button>
+            `;
+        } else if (type === 'initiative') {
+            const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
+            contentHTML = `
+                <input type="text" id="popup-initiative-input" value="${creature.initiative}" autofocus>
+                <button id="popup-initiative-ok">Set</button>
             `;
         } else if (type === 'condition') {
             contentHTML = `
@@ -342,6 +559,35 @@ document.addEventListener('DOMContentLoaded', () => {
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     document.getElementById('popup-hp-ok').click();
+                }
+            });
+        } else if (type === 'temp-hp') {
+            const input = document.getElementById('popup-temp-hp-input');
+            document.getElementById('popup-temp-hp-ok').addEventListener('click', () => {
+                const amount = parseInt(input.value, 10);
+                if (!isNaN(amount) && amount >= 0) { // Temp HP shouldn't be negative
+                    window.electron.ipcRenderer.send('update-temp-hp', { creatureId: parseInt(creatureId), amount: amount });
+                }
+                popup.remove();
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('popup-temp-hp-ok').click();
+                }
+            });
+        } else if (type === 'initiative') {
+            const input = document.getElementById('popup-initiative-input');
+            document.getElementById('popup-initiative-ok').addEventListener('click', () => {
+                const value = input.value;
+                // Basic validation: ensure it's not empty and can be a number
+                if (value.trim() !== '' && !isNaN(parseFloat(value))) {
+                    window.electron.ipcRenderer.send('update-initiative-value', { creatureId: parseInt(creatureId), value: value });
+                }
+                popup.remove();
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('popup-initiative-ok').click();
                 }
             });
         } else if (type === 'condition') {

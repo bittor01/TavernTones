@@ -50,7 +50,13 @@
           </div>
       </div>
       <div id="initiative-list-container" class="box">
-        <h2>Initiative Order</h2>
+        <div class="panel-header">
+          <h2>Initiative Order</h2>
+          <div class="panel-buttons">
+            <button id="reset-encounter-btn" class="panel-header-btn" title="Reset Encounter (Refill HP, clear conditions/temp hp)">🔄</button>
+            <button id="clear-encounter-btn" class="panel-header-btn" title="Clear Encounter">🗑️</button>
+          </div>
+        </div>
         <div id="initiative-list">
           <!-- Simple initiative list will be rendered here -->
         </div>
@@ -59,7 +65,13 @@
 
     <!-- -------------------- RIGHT COLUMN -------------------- -->
     <div class="column column-right box">
-      <h2>Combatants</h2>
+      <div class="panel-header">
+        <h2>Combatants</h2>
+        <div class="panel-buttons">
+            <button id="reset-encounter-btn-alt" class="panel-header-btn" title="Reset Encounter (Refill HP, clear conditions/temp hp)">🔄</button>
+            <button id="clear-encounter-btn-alt" class="panel-header-btn" title="Clear Encounter">🗑️</button>
+        </div>
+      </div>
       <div id="combatant-details-list">
         <!-- Full interactive list of all combatants rendered here -->
       </div>

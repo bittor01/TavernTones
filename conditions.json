@@ -1,0 +1,70 @@
+{
+    "blinded": {
+        "name": "Blinded",
+        "text": "• You can't see and automatically fail any ability check that requires sight.\n• Attack rolls against you have Advantage, and your attack rolls have Disadvantage."
+    },
+    "burning": {
+        "name": "Burning",
+        "text": "• A burning creature or object takes 1d4 Fire damage at the start of each of its turns.\n• As an action, you can extinguish fire on yourself by giving yourself the Prone condition and rolling on the ground.\n• The fire also goes out if it is doused, submerged, or suffocated."
+    },
+    "charmed": {
+        "name": "Charmed",
+        "text": "• You can't attack the charmer or target the charmer with damaging abilities or magical effects.\n• The charmer has Advantage on any ability check to interact with you socially."
+    },
+    "deafened": {
+        "name": "Deafened",
+        "text": "• You can't hear and automatically fail any ability check that requires hearing."
+    },
+    "exhaustion": {
+        "name": "Exhaustion",
+        "text": "• This condition is cumulative. Each time you receive it, you gain 1 Exhaustion level. You die if your Exhaustion level is 6.\n• When you make a D20 Test the roll is reduced by 2 times your Exhaustion level.\n• Your Speed is reduced by a number of feet equal to 5 times your Exhaustion level.\n• Finishing a Long Rest removes 1 of your Exhaustion levels. When your Exhaustion level reaches 0, the condition ends."
+    },
+    "frightened": {
+        "name": "Frightened",
+        "text": "• You have Disadvantage on ability checks and attack rolls while the source of fear is within line of sight.\n• You can't willingly move closer to the source of fear."
+    },
+    "grappled": {
+        "name": "Grappled",
+        "text": "• Your Speed is 0 and can't increase.\n• You have Disadvantage on attack rolls against any target other than the grappler.\n• The grappler can drag or carry you when it moves, but every foot of movement costs it 1 extra foot unless you are Tiny or two or more sizes smaller than it."
+    },
+    "incapacitated": {
+        "name": "Incapacitated",
+        "text": "• You can't take any action, Bonus Action, or Reaction.\n• Your Concentration is broken.\n• You can't speak.\n• If you're Incapacitated when you roll Initiative, you have Disadvantage on the roll."
+    },
+    "invisible": {
+        "name": "Invisible",
+        "text": "• If you're Invisible when you roll Initiative, you have Advantage on the roll.\n• You aren't affected by any effect that requires its target to be seen unless the effect's creator can somehow see you.\n• Any equipment you are wearing or carrying is also concealed.\n• Attack rolls against you have Disadvantage, and your attack rolls have Advantage. If a creature can somehow see you, you don't gain this benefit against that creature."
+    },
+    "paralyzed": {
+        "name": "Paralyzed",
+        "causes": ["incapacitated"],
+        "text": "• You have the Incapacitated condition.\n• Your Speed is 0 and can't increase.\n• You automatically fail Strength and Dexterity saving throws.\n• Attack rolls against you have Advantage.\n• Any attack roll that hits you is a Critical Hit if the attacker is within 5 feet of you."
+    },
+    "petrified": {
+        "name": "Petrified",
+        "causes": ["incapacitated"],
+        "text": "• You are transformed, along with any nonmagical objects you are wearing and carrying, into a solid inanimate substance (usually stone). Your weight increases by a factor of ten, and you cease aging.\n• You have the Incapacitated condition.\n• Your Speed is 0 and can't increase.\n• Attack rolls against you have Advantage.\n• You automatically fail Strength and Dexterity saving throws.\n• You have Resistance to all damage.\n• You have Immunity to the Poisoned condition."
+    },
+    "poisoned": {
+        "name": "Poisoned",
+        "text": "• You have Disadvantage on attack rolls and ability checks."
+    },
+    "prone": {
+        "name": "Prone",
+        "text": "• Your only movement options are to crawl or to spend an amount of movement equal to half your Speed (round down) to right yourself and thereby end the condition. If your Speed is 0, you can't right yourself.\n• You have Disadvantage on attack rolls.\n• An attack roll against you has Advantage if the attacker is within 5 feet of you. Otherwise, that attack roll has Disadvantage."
+    },
+    "restrained": {
+        "name": "Restrained",
+        "text": "• Your Speed is 0 and can't increase.\n• Attack rolls against you have Advantage, and your attack rolls have Disadvantage.\n• You have Disadvantage on Dexterity saving throws."
+    },
+    "stunned": {
+        "name": "Stunned",
+        "causes": ["incapacitated"],
+        "text": "• You have the Incapacitated condition.\n• You automatically fail Strength and Dexterity saving throws.\n• Attack rolls against you have Advantage."
+    },
+    "unconscious": {
+        "name": "Unconscious",
+        "causes": ["incapacitated", "prone"],
+        "text": "• You have the Incapacitated and Prone conditions, and you drop whatever you're holding. When this condition ends, you remain Prone.\n• Your Speed is 0 and can't increase.\n• Attack rolls against you have Advantage.\n• You automatically fail Strength and Dexterity saving throws.\n• Any attack roll that hits you is a Critical Hit if the attacker is within 5 feet of you.\n• You're unaware of your surroundings."
+    }
+}
