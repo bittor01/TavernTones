@@ -21,6 +21,7 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environme
 const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
 const BOT_ROLE_ID = process.env.BOT_ROLE_ID;
 const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
+const TEXT_CHANNEL_ID = process.env.TEXT_CHANNEL_ID;
 let connection;
 let lastResponse = null; // Variable to store the last response
 //adding a comment so i can flipping commit this
@@ -807,28 +808,76 @@ client.once('ready', async () => {
         saveState();
     });
 
+
+    ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            creature.reminders = reminders;
+            saveState();
+        }
+    });
+
+    ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            creature.reminders = reminders;
+            saveState();
+            // No need to send a full update, as this doesn't change the main display
+        }
+    });
+
     ipcMain.on('next-turn', () => {
         if (initiativeOrder.length > 0) {
             const endingTurnCreature = initiativeOrder[currentTurnIndex];
+            if (endingTurnCreature && endingTurnCreature.reminders && endingTurnCreature.reminders.end) {
+                dialog.showMessageBox(mainWindow, { title: `End of Turn: ${endingTurnCreature.name}`, message: endingTurnCreature.reminders.end });
+            }
+
+            currentTurnIndex = (currentTurnIndex + 1) % initiativeOrder.length;
+
+            const startingTurnCreature = initiativeOrder[currentTurnIndex];
+            if (startingTurnCreature && startingTurnCreature.reminders && startingTurnCreature.reminders.start) {
+                dialog.showMessageBox(mainWindow, { title: `Start of Turn: ${startingTurnCreature.name}`, message: startingTurnCreature.reminders.start });
+            }
+
             if (endingTurnCreature && endingTurnCreature.isFriendly) {
                 dialog.showMessageBox(mainWindow, { type: 'question', title: 'Legendary Action', message: `End of ${endingTurnCreature.name}'s turn. Do you take a legendary action?`, buttons: ['Yes', 'No']});
             }
-            currentTurnIndex = (currentTurnIndex + 1) % initiativeOrder.length;
+
             sendInitiativeUpdate();
             saveState();
         }
     });
 
-    ipcMain.on('show-reminders-dialog', (event, { creatureId }) => {
+    ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
         const creature = initiativeOrder.find(c => c.id === creatureId);
-        if (creature) {
-            dialog.showMessageBox(mainWindow, {
-                type: 'info',
-                title: 'Turn Reminders',
-                message: `Reminders for ${creature.name}`,
-                detail: 'This feature (setting start/end of turn reminders) is not yet fully implemented.',
-                buttons: ['OK']
-            });
+        if (!creature) return;
+
+        let modifier = 0;
+        if (type === 'check') {
+            const score = creature.scores ? (creature.scores[stat] || 10) : 10;
+            modifier = Math.floor((score - 10) / 2);
+        } else { // 'save'
+            modifier = creature.saves ? (parseInt(creature.saves[stat], 10) || 0) : 0;
+        }
+
+        let rollNotation = '1d20';
+        if (rollType === 'adv') rollNotation = '2d20kh1';
+        if (rollType === 'dis') rollNotation = '2d20kl1';
+
+        const roll = new DiceRoller().roll(rollNotation);
+        const total = roll.total + modifier;
+
+        const rollDetails = roll.rolls[0].rolls.map(r => r.value).join(', ');
+        const message = `${creature.name} rolled a ${stat.toUpperCase()} ${type} (${rollType})
+Result: ${total} ([${rollDetails}] + ${modifier})`;
+
+        logToRenderer(message);
+        mainWindow.webContents.send('dice-log', message);
+
+        const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+        if (channel) {
+            channel.send(message);
         }
     });
 
