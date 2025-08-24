@@ -936,38 +936,6 @@ client.once('ready', async () => {
         }
     });
 
-    ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
-        const creature = initiativeOrder.find(c => c.id === creatureId);
-        if (creature) {
-            creature.reminders = reminders;
-            saveState();
-            // No need to send a full update, as this doesn't change the main display
-        }
-    });
-
-    ipcMain.on('next-turn', () => {
-        if (initiativeOrder.length > 0) {
-            const endingTurnCreature = initiativeOrder[currentTurnIndex];
-            if (endingTurnCreature && endingTurnCreature.reminders && endingTurnCreature.reminders.end) {
-                dialog.showMessageBox(mainWindow, { title: `End of Turn: ${endingTurnCreature.name}`, message: endingTurnCreature.reminders.end });
-            }
-
-            currentTurnIndex = (currentTurnIndex + 1) % initiativeOrder.length;
-
-            const startingTurnCreature = initiativeOrder[currentTurnIndex];
-            if (startingTurnCreature && startingTurnCreature.reminders && startingTurnCreature.reminders.start) {
-                dialog.showMessageBox(mainWindow, { title: `Start of Turn: ${startingTurnCreature.name}`, message: startingTurnCreature.reminders.start });
-            }
-
-            if (endingTurnCreature && endingTurnCreature.isFriendly) {
-                dialog.showMessageBox(mainWindow, { type: 'question', title: 'Legendary Action', message: `End of ${endingTurnCreature.name}'s turn. Do you take a legendary action?`, buttons: ['Yes', 'No']});
-            }
-
-            sendInitiativeUpdate();
-            saveState();
-        }
-    });
-
     ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
         const creature = initiativeOrder.find(c => c.id === creatureId);
         if (!creature) return;
@@ -1001,8 +969,11 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
     });
 
     ipcMain.on('window-ready', () => {
-        loadState();
-        sendInitiativeUpdate();
+        loadState(); // Load state into memory
+    });
+
+    ipcMain.on('request-initial-load', () => {
+        sendInitiativeUpdate(); // Now send the loaded data to the UI
     });
 
     ipcMain.on('reset-encounter', () => {
