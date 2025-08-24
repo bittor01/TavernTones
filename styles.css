@@ -111,6 +111,57 @@ button:disabled {
 
 #initiative-list-container {
     flex-grow: 1;
+    display: flex; /* Add flex to make list itself grow */
+    flex-direction: column;
+}
+#initiative-list {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+.initiative-entry {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.initiative-entry.active-turn {
+    background-color: #4f5b66;
+    font-weight: bold;
+}
+.active-chevron {
+    margin-right: 8px;
+    color: #a0c8ff;
+}
+.initiative-score {
+    margin-right: 10px;
+    font-weight: bold;
+    color: #ccc;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #444;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+.panel-header h2 {
+    margin: 0;
+    border: none;
+    padding: 0;
+}
+.panel-header-controls {
+    display: flex;
+    gap: 5px;
+}
+.small-btn {
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 2px;
 }
 
 /* --- Add Creature Form --- */
@@ -206,9 +257,31 @@ button:disabled {
     padding-bottom: 8px;
     margin-bottom: 8px;
 }
+.combatant-header {
+    display: grid;
+    grid-template-columns: 1fr auto auto; /* Name | Controls | Stats */
+    align-items: center;
+    gap: 10px;
+}
 .combatant-header h4 {
     margin: 0;
     font-size: 1.2em;
+    grid-column: 1;
+}
+.card-controls {
+    grid-column: 2;
+    display: flex;
+    gap: 5px;
+}
+.card-controls button {
+    background: none;
+    border: none;
+    font-size: 1.1em;
+    padding: 2px;
+    cursor: pointer;
+}
+.header-stats {
+    grid-column: 3;
 }
 .header-stats {
     display: flex;
@@ -240,11 +313,11 @@ button:disabled {
     flex-wrap: wrap;
 }
 .condition-tag {
-    background-color: #a0522d;
     color: white;
     padding: 3px 8px;
     border-radius: 12px;
     font-size: 0.9em;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
 }
 .remove-condition-btn {
     background: #793d22;
@@ -280,6 +353,40 @@ button:disabled {
     font-size: 0.85em;
     text-align: center;
     border-radius: 4px;
+}
+
+/* HP Bar Styles */
+.hp-bar-container {
+    flex-grow: 1;
+    height: 24px;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+.hp-bar-current, .hp-bar-temp {
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out;
+}
+.hp-bar-temp {
+    background-color: rgba(108, 117, 125, 0.7); /* A semi-transparent grey for temp hp */
+    z-index: 2;
+}
+.hp-bar-current {
+    z-index: 1;
+}
+.hp-bar-text {
+    position: relative;
+    z-index: 3;
+    margin-left: 10px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 2px black;
 }
 
 /* --- Popup Styles --- */

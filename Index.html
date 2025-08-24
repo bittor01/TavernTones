@@ -39,7 +39,13 @@
     <!-- -------------------- MIDDLE COLUMN -------------------- -->
     <div class="column column-middle">
       <div id="turn-controls-container" class="box">
-          <h2>Controls</h2>
+          <div class="panel-header">
+            <h2>Controls</h2>
+            <div class="panel-header-controls">
+                <button id="reset-encounter-mid" class="small-btn" title="Reset Encounter">🔄</button>
+                <button id="clear-encounter-mid" class="small-btn" title="Clear Encounter">🗑️</button>
+            </div>
+          </div>
           <div class="controls">
             <button id="previous-turn-button">Prev Turn</button>
             <button id="next-turn-button">Next Turn</button>
@@ -59,7 +65,13 @@
 
     <!-- -------------------- RIGHT COLUMN -------------------- -->
     <div class="column column-right box">
-      <h2>Combatants</h2>
+      <div class="panel-header">
+        <h2>Combatants</h2>
+        <div class="panel-header-controls">
+            <button id="reset-encounter-right" class="small-btn" title="Reset Encounter">🔄</button>
+            <button id="clear-encounter-right" class="small-btn" title="Clear Encounter">🗑️</button>
+        </div>
+      </div>
       <div id="combatant-details-list">
         <!-- Full interactive list of all combatants rendered here -->
       </div>

@@ -644,6 +644,16 @@ client.once('ready', async () => {
         }
     });
 
+    ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            creature.initiative = parseFloat(initiative) || 0;
+            initiativeOrder.sort((a, b) => b.initiative - a.initiative);
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
     //Begin IPC Handling
     function logToRenderer(message) {
         mainWindow.webContents.send('log-message', message);
@@ -881,6 +891,63 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
         }
     });
 
+    ipcMain.on('reset-encounter', () => {
+        initiativeOrder.forEach(c => {
+            c.hp = c.maxHp;
+            c.tempHp = 0;
+            c.conditions = [];
+        });
+        currentTurnIndex = 0;
+        sendInitiativeUpdate();
+        saveState();
+    });
+
+    ipcMain.on('clear-encounter', async () => {
+        const result = await dialog.showMessageBox(mainWindow, {
+            type: 'warning',
+            title: 'Confirm Clear',
+            message: 'Are you sure you want to clear the entire encounter? This cannot be undone.',
+            detail: 'You may want to save the encounter first.',
+            buttons: ['Clear Encounter', 'Cancel'],
+            defaultId: 1,
+            cancelId: 1
+        });
+        if (result.response === 0) { // 'Clear Encounter' button
+            initiativeOrder = [];
+            currentTurnIndex = 0;
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
+    ipcMain.on('edit-creature', (event, { creatureId }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            mainWindow.webContents.send('populate-edit-form', creature);
+            // Remove the creature after sending its data to the form
+            initiativeOrder = initiativeOrder.filter(c => c.id !== creatureId);
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
+    ipcMain.on('remove-creature', (event, { creatureId }) => {
+        initiativeOrder = initiativeOrder.filter(c => c.id !== creatureId);
+        sendInitiativeUpdate();
+        saveState();
+    });
+
+    ipcMain.on('move-creature-bottom', (event, { creatureId }) => {
+        const creatureIndex = initiativeOrder.findIndex(c => c.id === creatureId);
+        if (creatureIndex > -1) {
+            const [creature] = initiativeOrder.splice(creatureIndex, 1);
+            creature.initiative = (initiativeOrder.length > 0 ? initiativeOrder[initiativeOrder.length - 1].initiative : 0) - 1;
+            initiativeOrder.push(creature);
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
     ipcMain.on('previous-turn', () => {
         if (initiativeOrder.length > 0) {
             currentTurnIndex = (currentTurnIndex - 1 + initiativeOrder.length) % initiativeOrder.length;
@@ -889,13 +956,35 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
         }
     });
 
+    ipcMain.on('add-temp-hp', (event, { creatureId, amount }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            creature.tempHp = (creature.tempHp || 0) + amount;
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
     ipcMain.on('update-hp', (event, { creatureId, amount }) => {
         const creature = initiativeOrder.find(c => c.id === creatureId);
         if (creature) {
-            creature.hp += amount;
-            if (creature.isConcentrating && amount < 0) {
-                const dc = Math.max(10, Math.floor(-amount / 2));
-                dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${creature.name} must make a DC ${dc} Constitution saving throw.`, buttons: ['OK']});
+            if (amount < 0) { // Damage
+                let damage = -amount;
+
+                // Subtract from temp HP first
+                const tempHpDamage = Math.min(creature.tempHp || 0, damage);
+                creature.tempHp -= tempHpDamage;
+                damage -= tempHpDamage;
+
+                // Subtract remaining damage from main HP
+                creature.hp -= damage;
+
+                if (creature.isConcentrating) {
+                    const dc = Math.max(10, Math.floor(-amount / 2)); // DC is based on total damage
+                    dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${creature.name} must make a DC ${dc} Constitution saving throw.`, buttons: ['OK']});
+                }
+            } else { // Healing
+                creature.hp += amount;
             }
             sendInitiativeUpdate();
             saveState();

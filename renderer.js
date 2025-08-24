@@ -18,11 +18,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const previousTurnButton = document.getElementById('previous-turn-button');
     const maxLogEntries = 50;
 
-    const DND_CONDITIONS = [
-        "Blinded", "Charmed", "Deafened", "Exhaustion", "Frightened",
-        "Grappled", "Incapacitated", "Invisible", "Paralyzed", "Petrified",
-        "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious"
-    ];
+    const DND_CONDITIONS = {
+        "Blinded": { emoji: "🙈", color: "#6c757d", text: "You can't see and automatically fail any ability check that requires sight. Attack rolls against you have Advantage, and your attack rolls have Disadvantage." },
+        "Burning": { emoji: "🔥", color: "#e74c3c", text: "A burning creature takes 1d4 Fire damage at the start of each of its turns. A creature can end this damage by using its action to make a DC 10 Dexterity check to extinguish the flames." },
+        "Charmed": { emoji: "😍", color: "#e83e8c", text: "You can't attack the charmer or target the charmer with harmful abilities or magical effects. The charmer has Advantage on any ability check to interact socially with you." },
+        "Deafened": { emoji: "🙉", color: "#adb5bd", text: "You can't hear and automatically fail any ability check that requires hearing." },
+        "Exhaustion": { emoji: "😩", color: "#fd7e14", text: "Cumulative levels of exhaustion with various penalties. See PHB for details." },
+        "Frightened": { emoji: "😨", color: "#6f42c1", text: "You have Disadvantage on ability checks and attack rolls while the source of your fear is within line of sight. You can't willingly move closer to the source of your fear." },
+        "Grappled": { emoji: "🤼", color: "#fd7e14", text: "Your speed becomes 0, and you can't benefit from any bonus to your speed. The condition ends if the grappler is incapacitated. The condition also ends if an effect removes the grappled creature from the reach of the grappler." },
+        "Incapacitated": { emoji: "😵", color: "#6c757d", text: "You can't take actions or reactions." },
+        "Invisible": { emoji: "👻", color: "#f8f9fa", text: "You are impossible to see without the aid of magic or a special sense. For the purpose of hiding, you are heavily obscured. Your location can be detected by any noise you make or any tracks you leave. Attack rolls against you have Disadvantage, and your attack rolls have Advantage." },
+        "Paralyzed": { emoji: "🥶", color: "#007bff", text: "You are Incapacitated and can't move or speak. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack that hits you is a critical hit if the attacker is within 5 feet of you." },
+        "Petrified": { emoji: "🗿", color: "#343a40", text: "You are transformed, along with any nonmagical object you are wearing or carrying, into a solid inanimate substance (such as stone). Your weight increases by a factor of ten, and you cease aging. You are Incapacitated, can't move or speak, and are unaware of your surroundings. Attack rolls against you have Advantage. You automatically fail Strength and Dexterity saving throws. You have resistance to all damage. You are immune to poison and disease." },
+        "Poisoned": { emoji: "🤢", color: "#28a745", text: "You have Disadvantage on attack rolls and ability checks." },
+        "Prone": { emoji: "🙇", color: "#ffc107", text: "Your only movement option is to crawl, unless you stand up and thereby end the condition. You have Disadvantage on attack rolls. An attack roll against you has Advantage if the attacker is within 5 feet of you. Otherwise, the attack roll has Disadvantage." },
+        "Restrained": { emoji: "⛓️", color: "#6c757d", text: "Your speed becomes 0, and you can't benefit from any bonus to your speed. Attack rolls against you have Advantage, and your attack rolls have Disadvantage. You have Disadvantage on Dexterity saving throws." },
+        "Stunned": { emoji: "🤯", color: "#ffc107", text: "You are Incapacitated, can't move, and can speak only falteringly. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage." },
+        "Unconscious": { emoji: "😴", color: "#343a40", text: "You are Incapacitated, can't move or speak, and are unaware of your surroundings. You drop whatever you're holding and fall prone. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack that hits you is a critical hit if the attacker is within 5 feet of you." }
+    };
 
     // --- Initial UI Setup ---
     addCreatureForm.innerHTML = `
@@ -84,6 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners ---
+    document.getElementById('reset-encounter-mid').addEventListener('click', () => window.electron.ipcRenderer.send('reset-encounter'));
+    document.getElementById('clear-encounter-mid').addEventListener('click', () => window.electron.ipcRenderer.send('clear-encounter'));
+    document.getElementById('reset-encounter-right').addEventListener('click', () => window.electron.ipcRenderer.send('reset-encounter'));
+    document.getElementById('clear-encounter-right').addEventListener('click', () => window.electron.ipcRenderer.send('clear-encounter'));
     saveButton.addEventListener('click', () => window.electron.ipcRenderer.send('save-encounter'));
     loadButton.addEventListener('click', () => window.electron.ipcRenderer.send('load-encounter'));
     nextTurnButton.addEventListener('click', () => window.electron.ipcRenderer.send('next-turn'));
@@ -107,6 +124,8 @@ document.addEventListener('DOMContentLoaded', () => {
             name: getVal('creature-name'),
             initiative: getVal('creature-initiative'),
             hp: getInt('creature-hp') || 0,
+            maxHp: getInt('creature-hp') || 0, // Set maxHp from the same field
+            tempHp: 0, // Initialize tempHp to 0
             ac: getInt('creature-ac'),
             speed: getVal('creature-speed'),
             attackMod: getVal('attack-modifier'),
@@ -168,6 +187,33 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCombatantDetailsList(data.initiativeOrder, data.currentTurnIndex);
     });
 
+    window.electron.ipcRenderer.on('populate-edit-form', (event, creature) => {
+        if (!creature) return;
+        document.getElementById('creature-name').value = creature.name || '';
+        document.getElementById('creature-initiative').value = creature.initiative || '';
+        document.getElementById('creature-hp').value = creature.maxHp || '';
+        document.getElementById('creature-ac').value = creature.ac || '';
+        document.getElementById('creature-speed').value = creature.speed || '';
+        document.getElementById('attack-modifier').value = creature.attackMod || '';
+        document.getElementById('save-dc').value = creature.saveDc || '';
+
+        const scores = creature.scores || {};
+        document.getElementById('str-score').value = scores.str || '';
+        document.getElementById('dex-score').value = scores.dex || '';
+        document.getElementById('con-score').value = scores.con || '';
+        document.getElementById('int-score').value = scores.int || '';
+        document.getElementById('wis-score').value = scores.wis || '';
+        document.getElementById('cha-score').value = scores.cha || '';
+
+        const saves = creature.saves || {};
+        document.getElementById('str-save').value = saves.str || '';
+        document.getElementById('dex-save').value = saves.dex || '';
+        document.getElementById('con-save').value = saves.con || '';
+        document.getElementById('int-save').value = saves.int || '';
+        document.getElementById('wis-save').value = saves.wis || '';
+        document.getElementById('cha-save').value = saves.cha || '';
+    });
+
     // --- Render Functions ---
     function renderInitiativeList(initiativeOrder, currentTurnIndex) {
         initiativeListDiv.innerHTML = '';
@@ -177,9 +223,41 @@ document.addEventListener('DOMContentLoaded', () => {
         displayOrder.forEach((creature, displayIndex) => {
             const creatureDiv = document.createElement('div');
             creatureDiv.className = 'initiative-entry' + (displayIndex === 0 ? ' active-turn' : '');
-            creatureDiv.innerHTML = `<span class="initiative-score">${creature.initiative}</span> <span class="creature-name">${creature.name}</span>`;
+            creatureDiv.dataset.id = creature.id; // Add id for scrolling
+
+            let content = '';
+            if (displayIndex === 0) {
+                content += '<span class="active-chevron">></span>';
+            }
+            const scoreSpan = `<span class="initiative-score" data-id="${creature.id}">${creature.initiative}</span>`;
+            content += `${scoreSpan} <span class="creature-name">${creature.name}</span>`;
+            creatureDiv.innerHTML = content;
+
+            creatureDiv.querySelector('.initiative-score').addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent the scroll-to-view click
+                createPopup('edit-initiative', creature.id, e.target);
+            });
+
+            creatureDiv.addEventListener('click', () => {
+                const targetPanel = document.querySelector(`.combatant-details-entry[data-id='${creature.id}']`);
+                if (targetPanel) {
+                    targetPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+
             initiativeListDiv.appendChild(creatureDiv);
         });
+    }
+
+    function getHpColor(current, max) {
+        if (current <= 0) return '#6c757d'; // Grey
+        if (current > max) return '#8a2be2'; // Purple
+
+        const percentage = (current / max) * 100;
+        if (percentage <= 25) return '#dc3545'; // Red
+        if (percentage <= 50) return '#ffc107'; // Yellow
+        if (percentage <= 75) return '#28a745'; // Green
+        return '#007bff'; // Blue
     }
 
     function renderCombatantDetailsList(initiativeOrder, currentTurnIndex) {
@@ -189,6 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initiativeOrder.forEach((creature, index) => {
             const creatureDiv = document.createElement('div');
             creatureDiv.className = 'combatant-details-entry' + (index === currentTurnIndex ? ' active-turn' : '');
+            creatureDiv.dataset.id = creature.id; // Add id for scrolling
 
             const saves = creature.saves || {};
             const scores = creature.scores || {};
@@ -213,9 +292,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
 
+            const hp = creature.hp || 0;
+            const maxHp = creature.maxHp || 1;
+            const tempHp = creature.tempHp || 0;
+            const hpPercentage = Math.min(100, (hp / maxHp) * 100);
+            const tempHpPercentage = (tempHp / maxHp) * 100;
+            const hpColor = getHpColor(hp, maxHp);
+
             creatureDiv.innerHTML = `
                 <div class="combatant-header">
                     <h4>${creature.name}</h4>
+                    <div class="card-controls">
+                        <button class="edit-btn" title="Edit" data-id="${creature.id}">📝</button>
+                        <button class="move-to-bottom-btn" title="Move to Bottom" data-id="${creature.id}">🔽</button>
+                        <button class="remove-btn" title="Remove" data-id="${creature.id}">❌</button>
+                    </div>
                     <div class="header-stats">
                         <span>AC: ${creature.ac ?? '?'}</span>
                         <span>Speed: ${creature.speed || '?'}</span>
@@ -224,17 +315,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="combatant-body">
                     <div class="main-controls">
-                        <span class="hp-display">HP: ${creature.hp ?? '?'}</span>
+                        <div class="hp-bar-container">
+                            <div class="hp-bar-temp" style="width: ${tempHpPercentage}%;"></div>
+                            <div class="hp-bar-current" style="width: ${hpPercentage}%; background-color: ${hpColor};"></div>
+                            <span class="hp-bar-text">${hp} / ${maxHp} ${tempHp > 0 ? `(+${tempHp})` : ''}</span>
+                        </div>
                         <button class="hp-change-btn" data-id="${creature.id}">+/- HP</button>
+                        <button class="temp-hp-btn" data-id="${creature.id}">+ Temp HP</button>
                         <button class="add-condition-btn" data-id="${creature.id}">+ Condition</button>
                         <button class="reminders-btn" data-id="${creature.id}">Reminders</button>
                     </div>
                     <div class="secondary-controls">
                         <label><input type="checkbox" class="concentration-cb" data-id="${creature.id}" ${creature.isConcentrating ? 'checked' : ''}> Conc.</label>
                         <label><input type="checkbox" class="friendly-cb" data-id="${creature.id}" ${creature.isFriendly ? 'checked' : ''}> Legendary reminder</label>
-                        <div class="condition-tags">${(creature.conditions || []).map(c => `
-                            <span class="condition-tag">${c} <button class="remove-condition-btn" data-id="${creature.id}" data-condition="${c}">x</button></span>
-                        `).join('')}</div>
+                        <div class="condition-tags">${(creature.conditions || []).map(conditionName => {
+                            const condition = DND_CONDITIONS[conditionName];
+                            if (!condition) return '';
+                            return `
+                                <span class="condition-tag" style="background-color: ${condition.color};" title="${condition.text}">
+                                    ${condition.emoji} ${conditionName}
+                                    <button class="remove-condition-btn" data-id="${creature.id}" data-condition="${conditionName}">x</button>
+                                </span>`;
+                        }).join('')}</div>
                     </div>
                     <div class="stats-footer">
                         ${scoresHTML}
@@ -262,6 +364,11 @@ document.addEventListener('DOMContentLoaded', () => {
             createPopup('condition', id, e.target);
         }));
 
+        document.querySelectorAll('.temp-hp-btn').forEach(b => b.addEventListener('click', e => {
+            const id = e.target.dataset.id;
+            createPopup('temp-hp', id, e.target);
+        }));
+
         document.querySelectorAll('.remove-condition-btn').forEach(b => b.addEventListener('click', e => {
             const { id, condition } = e.target.dataset;
             window.electron.ipcRenderer.send('remove-condition', { creatureId: parseInt(id), condition });
@@ -277,6 +384,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.reminders-btn').forEach(b => b.addEventListener('click', e => {
             const id = e.target.dataset.id;
             createPopup('reminders', id, e.target);
+        }));
+
+        document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', e => {
+            window.electron.ipcRenderer.send('edit-creature', { creatureId: parseInt(e.target.dataset.id) });
+        }));
+        document.querySelectorAll('.remove-btn').forEach(b => b.addEventListener('click', e => {
+            window.electron.ipcRenderer.send('remove-creature', { creatureId: parseInt(e.target.dataset.id) });
+        }));
+        document.querySelectorAll('.move-to-bottom-btn').forEach(b => b.addEventListener('click', e => {
+            window.electron.ipcRenderer.send('move-creature-bottom', { creatureId: parseInt(e.target.dataset.id) });
         }));
     }
 
@@ -296,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (type === 'condition') {
             contentHTML = `
                 <select id="popup-condition-select">
-                    ${DND_CONDITIONS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    ${Object.keys(DND_CONDITIONS).map(c => `<option value="${c}">${c}</option>`).join('')}
                 </select>
                 <button id="popup-condition-add">Add</button>
             `;
@@ -305,6 +422,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button class="roll-type-btn" data-roll="adv">Advantage</button>
                 <button class="roll-type-btn" data-roll="flat">Flat</button>
                 <button class="roll-type-btn" data-roll="dis">Disadvantage</button>
+            `;
+        } else if (type === 'temp-hp') {
+            contentHTML = `
+                <input type="number" id="popup-temp-hp-input" placeholder="Amount" autofocus>
+                <button id="popup-temp-hp-ok">Ok</button>
+            `;
+        } else if (type === 'edit-initiative') {
+            const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
+            contentHTML = `
+                <input type="text" id="popup-initiative-input" value="${creature.initiative}" autofocus>
+                <button id="popup-initiative-ok">Ok</button>
             `;
         } else if (type === 'reminders') {
             const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
@@ -350,6 +478,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.electron.ipcRenderer.send('add-condition', { creatureId: parseInt(creatureId), condition });
                 popup.remove();
             });
+        } else if (type === 'temp-hp') {
+            const input = document.getElementById('popup-temp-hp-input');
+            document.getElementById('popup-temp-hp-ok').addEventListener('click', () => {
+                const amount = parseInt(input.value, 10);
+                if (!isNaN(amount)) {
+                    window.electron.ipcRenderer.send('add-temp-hp', { creatureId: parseInt(creatureId), amount: amount });
+                }
+                popup.remove();
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('popup-temp-hp-ok').click();
+                }
+            });
         } else if (type === 'stat-roll') {
             document.querySelectorAll('.roll-type-btn').forEach(button => {
                 button.addEventListener('click', () => {
@@ -362,6 +504,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     popup.remove();
                 });
+            });
+        } else if (type === 'edit-initiative') {
+            const input = document.getElementById('popup-initiative-input');
+            document.getElementById('popup-initiative-ok').addEventListener('click', () => {
+                const newInitiative = input.value;
+                window.electron.ipcRenderer.send('update-initiative', { creatureId: parseInt(creatureId), initiative: newInitiative });
+                popup.remove();
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('popup-initiative-ok').click();
+                }
             });
         } else if (type === 'reminders') {
             document.getElementById('popup-reminders-save').addEventListener('click', () => {
