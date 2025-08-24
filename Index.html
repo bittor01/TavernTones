@@ -16,13 +16,15 @@
           <!-- Form fields will be added here via JS or next step -->
         </form>
       </div>
-      <div id="log-container" class="box">
-        <h2>Log</h2>
+      <div id="log-wrapper" class="box">
+        <div class="panel-header">
+            <h2 id="log-title">Log</h2>
+            <div class="panel-header-controls">
+                <button id="log-toggle-btn" class="small-btn" title="Toggle Dice Log">🎲</button>
+            </div>
+        </div>
         <div class="log-area" id="logArea"></div>
-      </div>
-      <div id="dice-log-container" class="box">
-        <h2>Dice Log</h2>
-        <div class="log-area" id="diceLog"></div>
+        <div class="log-area" id="diceLog" style="display: none;"></div>
       </div>
       <div id="music-controls-container" class="box">
         <h2>Music</h2>
@@ -59,6 +61,18 @@
         <h2>Initiative Order</h2>
         <div id="initiative-list">
           <!-- Simple initiative list will be rendered here -->
+        </div>
+      </div>
+      <div id="soundboard-container" class="box">
+        <div class="panel-header">
+            <h2>Soundboard</h2>
+            <div class="panel-header-controls">
+                <label for="soundboard-volume">Volume:</label>
+                <input type="range" id="soundboard-volume" min="0" max="1" step="0.05" value="0.5">
+            </div>
+        </div>
+        <div id="soundboard-grid">
+            <!-- 3x3 grid of soundboard controls will be rendered here -->
         </div>
       </div>
     </div>
