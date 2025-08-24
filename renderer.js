@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
     let isPlaying = false;
+    let initiativeOrder = [];
 
     // --- Element Refs ---
     const logArea = document.getElementById('logArea');
@@ -25,41 +26,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initial UI Setup ---
     addCreatureForm.innerHTML = `
-        <div class="form-grid">
-            <div class="form-group span-2">
-                <label for="creature-name">Name:</label>
-                <input type="text" id="creature-name" required>
-            </div>
-            <div class="form-group">
-                <label for="creature-initiative">Initiative:</label>
-                <input type="text" id="creature-initiative" placeholder="+3 or 15">
-            </div>
-            <div class="form-group">
-                <label for="creature-hp">HP:</label>
-                <input type="number" id="creature-hp">
-            </div>
-            <div class="form-group">
-                <label for="creature-ac">AC:</label>
-                <input type="number" id="creature-ac">
-            </div>
-            <div class="form-group">
-                <label for="creature-speed">Speed:</label>
-                <input type="text" id="creature-speed" placeholder="30ft">
-            </div>
-            <div class="form-group">
-                <label for="attack-modifier">Attack Mod:</label>
-                <input type="text" id="attack-modifier" placeholder="+5">
-            </div>
-            <div class="form-group">
-                <label for="save-dc">Save DC:</label>
-                <input type="number" id="save-dc" placeholder="13">
-            </div>
-            <div class="form-group save-input"><label>STR</label><input type="text" id="str-save" placeholder="+2"></div>
-            <div class="form-group save-input"><label>DEX</label><input type="text" id="dex-save" placeholder="+2"></div>
-            <div class="form-group save-input"><label>CON</label><input type="text" id="con-save" placeholder="+2"></div>
-            <div class="form-group save-input"><label>INT</label><input type="text" id="int-save" placeholder="+2"></div>
-            <div class="form-group save-input"><label>WIS</label><input type="text" id="wis-save" placeholder="+2"></div>
-            <div class="form-group save-input"><label>CHA</label><input type="text" id="cha-save" placeholder="+2"></div>
+        <div class="form-row"><label for="creature-name">Name:</label><input type="text" id="creature-name" required></div>
+        <div class="form-row-multi">
+            <div class="form-group"><label for="creature-initiative">Initiative:</label><input type="text" id="creature-initiative" placeholder="+3 or 15"></div>
+            <div class="form-group"><label for="creature-hp">HP:</label><input type="number" id="creature-hp" placeholder="30"></div>
+            <div class="form-group"><label for="creature-ac">AC:</label><input type="number" id="creature-ac" placeholder="15"></div>
+        </div>
+        <div class="form-row-multi">
+            <div class="form-group"><label for="creature-speed">Speed:</label><input type="text" id="creature-speed" placeholder="30ft"></div>
+            <div class="form-group"><label for="attack-modifier">Atk Mod:</label><input type="text" id="attack-modifier" placeholder="+5"></div>
+            <div class="form-group"><label for="save-dc">Save DC:</label><input type="number" id="save-dc" placeholder="13"></div>
+        </div>
+        <hr>
+        <div class="form-row-multi ability-scores">
+            <div class="form-group"><label>STR</label><input type="number" id="str-score" placeholder="10"></div>
+            <div class="form-group"><label>DEX</label><input type="number" id="dex-score" placeholder="10"></div>
+            <div class="form-group"><label>CON</label><input type="number" id="con-score" placeholder="10"></div>
+            <div class="form-group"><label>INT</label><input type="number" id="int-score" placeholder="10"></div>
+            <div class="form-group"><label>WIS</label><input type="number" id="wis-score" placeholder="10"></div>
+            <div class="form-group"><label>CHA</label><input type="number" id="cha-score" placeholder="10"></div>
+        </div>
+        <div class="form-row-multi save-mods">
+            <div class="form-group"><label>Saves</label><input type="text" id="str-save" placeholder="+0"></div>
+            <div class="form-group"><input type="text" id="dex-save" placeholder="+0"></div>
+            <div class="form-group"><input type="text" id="con-save" placeholder="+0"></div>
+            <div class="form-group"><input type="text" id="int-save" placeholder="+0"></div>
+            <div class="form-group"><input type="text" id="wis-save" placeholder="+0"></div>
+            <div class="form-group"><input type="text" id="cha-save" placeholder="+0"></div>
         </div>
         <button type="submit" class="add-creature-button">Add Creature</button>
     `;
@@ -92,26 +85,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     addCreatureForm.addEventListener('submit', (event) => {
         event.preventDefault();
+        const getVal = (id) => document.getElementById(id).value;
+        const getInt = (id) => getVal(id) ? parseInt(getVal(id), 10) : null;
+
         const creature = {
             id: Date.now(),
-            name: document.getElementById('creature-name').value,
-            initiative: document.getElementById('creature-initiative').value, // Send as string
-            hp: document.getElementById('creature-hp').value ? parseInt(document.getElementById('creature-hp').value, 10) : 0,
-            ac: document.getElementById('creature-ac').value ? parseInt(document.getElementById('creature-ac').value, 10) : null,
-            speed: document.getElementById('creature-speed').value,
-            attackMod: document.getElementById('attack-modifier').value,
-            saveDc: document.getElementById('save-dc').value ? parseInt(document.getElementById('save-dc').value, 10) : null,
+            name: getVal('creature-name'),
+            initiative: getVal('creature-initiative'),
+            hp: getInt('creature-hp') || 0,
+            ac: getInt('creature-ac'),
+            speed: getVal('creature-speed'),
+            attackMod: getVal('attack-modifier'),
+            saveDc: getInt('save-dc'),
+            scores: {
+                str: getInt('str-score'),
+                dex: getInt('dex-score'),
+                con: getInt('con-score'),
+                int: getInt('int-score'),
+                wis: getInt('wis-score'),
+                cha: getInt('cha-score'),
+            },
             saves: {
-                str: document.getElementById('str-save').value,
-                dex: document.getElementById('dex-save').value,
-                con: document.getElementById('con-save').value,
-                int: document.getElementById('int-save').value,
-                wis: document.getElementById('wis-save').value,
-                cha: document.getElementById('cha-save').value,
+                str: getVal('str-save'),
+                dex: getVal('dex-save'),
+                con: getVal('con-save'),
+                int: getVal('int-save'),
+                wis: getVal('wis-save'),
+                cha: getVal('cha-save'),
             },
             conditions: [],
             isConcentrating: false,
-            isFriendly: false
+            isFriendly: false,
+            reminders: { start: '', end: '' }
         };
         window.electron.ipcRenderer.send('add-creature', creature);
         addCreatureForm.reset();
@@ -143,9 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    window.electron.ipcRenderer.on('update-initiative-list', (event, { initiativeOrder, currentTurnIndex }) => {
-        renderInitiativeList(initiativeOrder, currentTurnIndex);
-        renderCombatantDetailsList(initiativeOrder, currentTurnIndex);
+    window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {
+        initiativeOrder = data.initiativeOrder; // Store globally
+        renderInitiativeList(data.initiativeOrder, data.currentTurnIndex);
+        renderCombatantDetailsList(data.initiativeOrder, data.currentTurnIndex);
     });
 
     // --- Render Functions ---
@@ -171,10 +177,25 @@ document.addEventListener('DOMContentLoaded', () => {
             creatureDiv.className = 'combatant-details-entry' + (index === currentTurnIndex ? ' active-turn' : '');
 
             const saves = creature.saves || {};
+            const scores = creature.scores || {};
             const savesHTML = `
                 <div class="saves-grid">
-                    <span>STR: ${saves.str || 'N/A'}</span><span>DEX: ${saves.dex || 'N/A'}</span><span>CON: ${saves.con || 'N/A'}</span>
-                    <span>INT: ${saves.int || 'N/A'}</span><span>WIS: ${saves.wis || 'N/A'}</span><span>CHA: ${saves.cha || 'N/A'}</span>
+                    <button class="stat-roll-btn" data-id="${creature.id}" data-type="save" data-stat="str">STR: ${saves.str || '+0'}</button>
+                    <button class="stat-roll-btn" data-id="${creature.id}" data-type="save" data-stat="dex">DEX: ${saves.dex || '+0'}</button>
+                    <button class="stat-roll-btn" data-id="${creature.id}" data-type="save" data-stat="con">CON: ${saves.con || '+0'}</button>
+                    <button class="stat-roll-btn" data-id="${creature.id}" data-type="save" data-stat="int">INT: ${saves.int || '+0'}</button>
+                    <button class="stat-roll-btn" data-id="${creature.id}" data-type="save" data-stat="wis">WIS: ${saves.wis || '+0'}</button>
+                    <button class="stat-roll-btn" data-id="${creature.id}" data-type="save" data-stat="cha">CHA: ${saves.cha || '+0'}</button>
+                </div>
+            `;
+            const scoresHTML = `
+                <div class="scores-grid">
+                    <button class="stat-roll-btn" data-id="${creature.id}" data-type="check" data-stat="str">STR: ${scores.str || '10'}</button>
+                    <button class="stat-roll-btn" data-id="${creature.id}" data-type="check" data-stat="dex">DEX: ${scores.dex || '10'}</button>
+                    <button class="stat-roll-btn" data-id="${creature.id}" data-type="check" data-stat="con">CON: ${scores.con || '10'}</button>
+                    <button class="stat-roll-btn" data-id="${creature.id}" data-type="check" data-stat="int">INT: ${scores.int || '10'}</button>
+                    <button class="stat-roll-btn" data-id="${creature.id}" data-type="check" data-stat="wis">WIS: ${scores.wis || '10'}</button>
+                    <button class="stat-roll-btn" data-id="${creature.id}" data-type="check" data-stat="cha">CHA: ${scores.cha || '10'}</button>
                 </div>
             `;
 
@@ -196,12 +217,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="secondary-controls">
                         <label><input type="checkbox" class="concentration-cb" data-id="${creature.id}" ${creature.isConcentrating ? 'checked' : ''}> Conc.</label>
-                        <label><input type="checkbox" class="friendly-cb" data-id="${creature.id}" ${creature.isFriendly ? 'checked' : ''}> Friendly</label>
+                        <label><input type="checkbox" class="friendly-cb" data-id="${creature.id}" ${creature.isFriendly ? 'checked' : ''}> Legendary reminder</label>
                         <div class="condition-tags">${(creature.conditions || []).map(c => `
                             <span class="condition-tag">${c} <button class="remove-condition-btn" data-id="${creature.id}" data-condition="${c}">x</button></span>
                         `).join('')}</div>
                     </div>
                     <div class="stats-footer">
+                        ${scoresHTML}
                         ${savesHTML}
                     </div>
                 </div>
@@ -210,6 +232,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Add event listeners for all the new dynamic buttons
+        document.querySelectorAll('.stat-roll-btn').forEach(b => b.addEventListener('click', e => {
+            const id = e.target.dataset.id;
+            const type = e.target.dataset.type;
+            const stat = e.target.dataset.stat;
+            createPopup('stat-roll', id, e.target, { type, stat });
+        }));
+
         document.querySelectorAll('.hp-change-btn').forEach(b => b.addEventListener('click', e => {
             const id = e.target.dataset.id;
             createPopup('hp', id, e.target);
@@ -233,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
         document.querySelectorAll('.reminders-btn').forEach(b => b.addEventListener('click', e => {
             const id = e.target.dataset.id;
-            window.electron.ipcRenderer.send('show-reminders-dialog', { creatureId: parseInt(id) });
+            createPopup('reminders', id, e.target);
         }));
     }
 
@@ -256,6 +285,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${DND_CONDITIONS.map(c => `<option value="${c}">${c}</option>`).join('')}
                 </select>
                 <button id="popup-condition-add">Add</button>
+            `;
+        } else if (type === 'stat-roll') {
+            contentHTML = `
+                <button class="roll-type-btn" data-roll="adv">Advantage</button>
+                <button class="roll-type-btn" data-roll="flat">Flat</button>
+                <button class="roll-type-btn" data-roll="dis">Disadvantage</button>
+            `;
+        } else if (type === 'reminders') {
+            const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
+            const startReminder = creature.reminders ? creature.reminders.start : '';
+            const endReminder = creature.reminders ? creature.reminders.end : '';
+            contentHTML = `
+                <div class="reminders-popup">
+                    <label>Beginning of Turn:</label>
+                    <textarea id="start-turn-reminder">${startReminder}</textarea>
+                    <label>End of Turn:</label>
+                    <textarea id="end-turn-reminder">${endReminder}</textarea>
+                    <button id="popup-reminders-save">Save</button>
+                </div>
             `;
         }
 
@@ -286,6 +334,26 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('popup-condition-add').addEventListener('click', () => {
                 const condition = document.getElementById('popup-condition-select').value;
                 window.electron.ipcRenderer.send('add-condition', { creatureId: parseInt(creatureId), condition });
+                popup.remove();
+            });
+        } else if (type === 'stat-roll') {
+            document.querySelectorAll('.roll-type-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const rollType = button.dataset.roll;
+                    window.electron.ipcRenderer.send('roll-stat', {
+                        creatureId: parseInt(creatureId),
+                        rollType: rollType,
+                        stat: targetElement.dataset.stat,
+                        type: targetElement.dataset.type
+                    });
+                    popup.remove();
+                });
+            });
+        } else if (type === 'reminders') {
+            document.getElementById('popup-reminders-save').addEventListener('click', () => {
+                const start = document.getElementById('start-turn-reminder').value;
+                const end = document.getElementById('end-turn-reminder').value;
+                window.electron.ipcRenderer.send('update-reminders', { creatureId: parseInt(creatureId), reminders: { start, end } });
                 popup.remove();
             });
         }

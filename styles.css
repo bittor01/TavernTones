@@ -114,25 +114,50 @@ button:disabled {
 }
 
 /* --- Add Creature Form --- */
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 10px;
+#add-creature-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
-.form-group {
+.form-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.form-row label {
+    flex-basis: 50px;
+    flex-shrink: 0;
+    font-size: 0.9em;
+}
+.form-row input {
+    flex-grow: 1;
+}
+.form-row-multi {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+.form-row-multi .form-group {
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
 }
-.form-group.span-2 {
-    grid-column: span 2;
-}
-.form-group label {
+.form-row-multi .form-group label {
     font-size: 0.8em;
     margin-bottom: 4px;
     color: #aaa;
+    text-align: center;
 }
-.form-group input {
+.ability-scores input, .save-mods input {
+    text-align: center;
+}
+.save-mods .form-group:first-child {
+    text-align: left;
+}
+.save-mods .form-group:first-child label {
+    text-align: left;
+}
+#add-creature-form input {
     width: 100%;
     padding: 6px;
     background-color: #1e1e1e;
@@ -140,12 +165,14 @@ button:disabled {
     color: #d4d4d4;
     border-radius: 4px;
 }
-.save-input {
-    text-align: center;
-}
 .add-creature-button {
     width: 100%;
     padding: 10px;
+    margin-top: 8px;
+}
+#add-creature-form hr {
+    border-color: #444;
+    margin: 5px 0;
 }
 
 
@@ -235,10 +262,21 @@ button:disabled {
     font-size: 0.85em;
     color: #bbb;
 }
-.saves-grid {
+.saves-grid, .scores-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 5px;
+}
+.scores-grid {
+    margin-bottom: 10px;
+}
+.stat-roll-btn {
+    background-color: #3c3c3c;
+    border: 1px solid #555;
+    padding: 5px;
+    font-size: 0.85em;
+    text-align: center;
+    border-radius: 4px;
 }
 
 /* --- Popup Styles --- */
@@ -253,6 +291,19 @@ button:disabled {
     gap: 8px;
 }
 .popup-dialog input, .popup-dialog select {
+    background-color: #2a2a2a;
+    color: #fff;
+    border: 1px solid #666;
+}
+
+.reminders-popup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.reminders-popup textarea {
+    width: 250px;
+    height: 60px;
     background-color: #2a2a2a;
     color: #fff;
     border: 1px solid #666;
