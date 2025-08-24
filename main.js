@@ -146,6 +146,7 @@ client.once('ready', async () => {
     logToRenderer('TavernTones is online!');
     logToRenderer(`Logged in as ${client.user.tag}`);
     // startup message
+    /*
     const textChannel = client.channels.cache.get(TEXT_CHANNEL_ID);
     if (textChannel) {
         try {
@@ -164,8 +165,7 @@ client.once('ready', async () => {
     else {
         logToRenderer('Text channel not found!');
     }
-
-    // This is now handled by the 'window-ready' IPC event
+    */
 
     //Connect to the voice channel
 
