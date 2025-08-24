@@ -819,6 +819,19 @@ client.once('ready', async () => {
         }
     });
 
+    ipcMain.on('show-reminders-dialog', (event, { creatureId }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'Turn Reminders',
+                message: `Reminders for ${creature.name}`,
+                detail: 'This feature (setting start/end of turn reminders) is not yet fully implemented.',
+                buttons: ['OK']
+            });
+        }
+    });
+
     ipcMain.on('previous-turn', () => {
         if (initiativeOrder.length > 0) {
             currentTurnIndex = (currentTurnIndex - 1 + initiativeOrder.length) % initiativeOrder.length;
