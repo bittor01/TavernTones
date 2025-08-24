@@ -127,15 +127,15 @@ client.once('ready', async () => {
             connection.removeAllListeners();
             app.removeAllListeners();
             ipcMain.removeAllListeners();
-            
+
             // Close any other resources, e.g., voice connections
             if (connection) {
                 connection.destroy();
             }
-    
+
             // Optionally logout
             await client.destroy();
-    
+
             app.quit();
         }
         catch (error) {
@@ -237,13 +237,13 @@ client.once('ready', async () => {
             logToRenderer('Ignoring my own message.');
             return;
         }
-    
+
         logToRenderer(`Message received: ${message.content}`); // Log received messages
-    
+
         if (message.mentions.has(client.user) || message.mentions.roles.has(BOT_ROLE_ID)) { // Check if the bot is mentioned
             const userId = message.author.id;
             const content = message.content.toLowerCase();
-    
+
             try {
                 let typingInterval;
                 switch (true) {
@@ -252,9 +252,9 @@ client.once('ready', async () => {
                         await message.reply('Pong!');
                         logToRenderer('Ping successfully ponged.');
                         break;
-                        
 
-    
+
+
                     case content.includes('!su'):
                         const surgeFilePath = path.join(__dirname, 'randomtables/surge.json');
                         const surgeData = JSON.parse(fs.readFileSync(surgeFilePath, 'utf8'));
@@ -263,7 +263,7 @@ client.once('ready', async () => {
                             const evaluatedText = evaluateDiceRolls(surgeEffect.text);
                             logToRenderer(evaluatedText + (surgeEffect.unique ? '  - Unique!' : ''));
                             await message.reply(evaluatedText + (surgeEffect.unique ? '  - 🥳Unique!🎊' : ''));
-                            
+
                             if (surgeEffect.unique) {
                                 if (!Array.isArray(surgeEffect.used)) {
                                     surgeEffect.used = [];
@@ -277,7 +277,7 @@ client.once('ready', async () => {
                             await message.reply('No available effects for you.');
                         }
                         break;
-    
+
                     case content.includes('!sh'):
                         const shieldFilePath = path.join(__dirname, 'randomtables/shield.json');
                         const shieldData = JSON.parse(fs.readFileSync(shieldFilePath, 'utf8'));
@@ -286,7 +286,7 @@ client.once('ready', async () => {
                             const evaluatedText = evaluateDiceRolls(shieldEffect.text);
                             logToRenderer(evaluatedText + (shieldEffect.unique ? '  - Unique!' : ''));
                             await message.reply(evaluatedText + (shieldEffect.unique ? '  - 🥳Unique!🎊' : ''));
-    
+
                             // Mark the effect as used by the user if it's unique
                             if (shieldEffect.unique) {
                                 if (!Array.isArray(shieldEffect.used)) {
@@ -313,7 +313,7 @@ client.once('ready', async () => {
                             args = match[1]
                                 .replace(invalidCharsRegex, "")    // Remove invalid characters
                                 .trim()                            // Remove extra spaces at the ends
-                                .split(/\s+/); 
+                                .split(/\s+/);
                         } else {
                             await message.reply('Invalid format. Please use the command like this: @TT !en 80 clear 30 calmweather 15 choppyweather 5 specialweather');
                             break;
@@ -337,9 +337,9 @@ client.once('ready', async () => {
                         if (!validArgs) { // Check flag before proceeding
                             break; // Exit case if arguments were invalid
                         }
-                        
+
                         if (tableEntries.length === 0 && args.length > 0) {
-                            // This case implies that parsing failed to produce entries, 
+                            // This case implies that parsing failed to produce entries,
                             // possibly due to an odd number of arguments or other unhandled parsing issues,
                             // though the loop's `!tableName` check should catch most.
                             // However, if the loop was broken due to invalid format, the message is already sent.
@@ -349,7 +349,7 @@ client.once('ready', async () => {
                             }
                             break;
                         }
-                        
+
                         if (tableEntries.length === 0 && args.length === 0) {
                              await message.reply('No table arguments provided. Please specify weights and table names.');
                              break;
@@ -389,7 +389,7 @@ client.once('ready', async () => {
                         const tableArgs = roArgs.slice(2);
 
                         // Validate folderName
-                        const validFolders = getValidTableFolders(); 
+                        const validFolders = getValidTableFolders();
                         if (!validFolders.includes(folderName)) {
                             await message.reply(`Folder '${folderName}' not found. Valid folders are: ${validFolders.join(', ')}.`);
                             break;
@@ -424,14 +424,14 @@ client.once('ready', async () => {
                         }
 
                         if (!validRoTableArgs) {
-                            break; 
+                            break;
                         }
 
                         if (roTableEntries.length === 0) {
                             await message.reply('You must specify at least one valid table and weight.');
                             break;
                         }
-                        
+
                         await message.reply(`Starting ${iterationCount} rolls from folder '${folderName}' in a new thread...`);
                         const thread = await message.startThread({
                             name: `Rolls from ${folderName} (${iterationCount} times)`,
@@ -446,7 +446,7 @@ client.once('ready', async () => {
                                 await thread.send(`Roll ${i + 1} Error: ${result.message}`);
                             }
                             // Delay to prevent flooding and potential rate limits
-                            await new Promise(resolve => setTimeout(resolve, 100)); 
+                            await new Promise(resolve => setTimeout(resolve, 100));
                         }
                         await thread.send(`Completed ${iterationCount} rolls from ${folderName}.`);
                         break;
@@ -492,7 +492,7 @@ client.once('ready', async () => {
                             await message.reply('Invalid format. Please use the command like this: @TT !ll your prompt here');
                         }
                         break;
-    
+
                     case content.includes('!re'):
                         logToRenderer('RE command detected');
                         const reCommandRegex = /!re\w*\s+(.*)/;
@@ -510,7 +510,7 @@ client.once('ready', async () => {
                                         name: `Response to ${reMatch[1]}`,
                                         autoArchiveDuration: 15,
                                         reason: `Response to ${reMatch[1]}`
-                                    });                             
+                                    });
                                     const parts = response.match(/[\s\S]{1,1940}/g) || [];
                                     response += ` (${parts.length} total messages)`;
                                     for (const part of parts) {
@@ -534,7 +534,7 @@ client.once('ready', async () => {
                             await message.reply('Invalid format. Please use the command like this: @TT !re your prompt here');
                         }
                         break;
-                        
+
                     case content.includes('!in'):
                         logToRenderer('IN command detected');
                         if (lastResponse && lastResponse.choices && lastResponse.choices[0].references) {
@@ -605,7 +605,7 @@ client.once('ready', async () => {
                             await message.reply("Sorry, I couldn't find the music you were looking for.");
                         }
                         break;
-                    
+
                     case content.includes('!pa'):
                         logToRenderer('!pa command detected');
                         if (audioState.isPlaying) {
@@ -651,6 +651,14 @@ client.once('ready', async () => {
             initiativeOrder.sort((a, b) => b.initiative - a.initiative);
             sendInitiativeUpdate();
             saveState();
+        }
+    });
+
+    ipcMain.on('copy-creature', (event, { creatureId }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            // Send a copy of the creature data, but don't remove the original
+            mainWindow.webContents.send('populate-edit-form', creature);
         }
     });
 

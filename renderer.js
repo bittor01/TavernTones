@@ -303,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="combatant-header">
                     <h4>${creature.name}</h4>
                     <div class="card-controls">
+                        <button class="copy-btn" title="Copy" data-id="${creature.id}">📋</button>
                         <button class="edit-btn" title="Edit" data-id="${creature.id}">📝</button>
                         <button class="move-to-bottom-btn" title="Move to Bottom" data-id="${creature.id}">🔽</button>
                         <button class="remove-btn" title="Remove" data-id="${creature.id}">❌</button>
@@ -386,6 +387,9 @@ document.addEventListener('DOMContentLoaded', () => {
             createPopup('reminders', id, e.target);
         }));
 
+        document.querySelectorAll('.copy-btn').forEach(b => b.addEventListener('click', e => {
+            window.electron.ipcRenderer.send('copy-creature', { creatureId: parseInt(e.target.dataset.id) });
+        }));
         document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', e => {
             window.electron.ipcRenderer.send('edit-creature', { creatureId: parseInt(e.target.dataset.id) });
         }));
