@@ -1,136 +1,119 @@
-/* Basic reset for consistency across browsers */
-* {
+/* --- Global Styles --- */
+html, body {
+  height: 100%;
   margin: 0;
-  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #1a1a1a;
+  color: #d4d4d4;
+  overflow: hidden;
+}
+
+* {
   box-sizing: border-box;
 }
 
-body {
-  background-color: #2E2E2E;
-  color: #D3D3D3;
-  font-family: 'Palatino Linotype', Palatino, serif;
-}
-
-.container {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  margin-top: 50px;
-  padding-left: 20px;
-}
-
-/* Ensure controls are in a column layout */
-.controls {
-  display: flex;
-  flex-direction: column;
-  margin-right: 20px;
-  margin-left: 20px;
-}
-
-.exitButton {
-  font-family: inherit;
-}
-
-.playPauseButton {
-  font-family: inherit;
-}
-
-.selectFileButton {
-  font-family: inherit;
-}
-
-/* Styles for the log area */
-.logArea {
-  width: 300px; /* Adjust width as needed */
-  height: 200px; /* Adjust height as needed */
-  border: 2px solid #444; /* Slightly darker border to match button color */
-  overflow-y: auto; /* Scroll if content overflows */
-  background-color: #3E3E3E; /* Slightly lighter background to distinguish it */
-  padding: 10px;
-  box-sizing: border-box;
-  color: #D3D3D3; /* Match text color */
-  margin-right: 50px;
-}
-
-/* Styles for the selected file label */
-.fileLabel {
-  margin-top: 10px; /* Space above the label */
-  margin-right: 20px;
-  margin-left: 20px;
-}
-
-/* Optional: Styling for individual log entries */
-.logArea div {
-  margin-top: 2px;
-  padding-inline: 5px;
-  padding-block-start: 5px;
+h2 {
+  margin-top: 0;
+  border-bottom: 1px solid #444;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  font-size: 1.1em;
+  color: #cccccc;
 }
 
 button {
-  all: unset; /* Resets all styles to default */
-  font-family: 'Palatino Linotype', Palatino, serif;
-  /* Reapply your custom styles */
-  background-color: #444;
-  color: #D3D3D3;
-  padding: 10px 20px;
-  margin: 10px 0;
-  border: none;
-  cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 5px;
+    border: 1px solid #555;
+    background-color: #3c3c3c;
+    color: #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #4c4c4c;
 }
 
 button:disabled {
-  background-color: #555;
-  color: #888;
-  cursor: not-allowed;
+    background-color: #2a2a2a;
+    color: #666;
+    cursor: not-allowed;
 }
 
-input[type="file"] {
-  margin-top: 20px;
-  color: #D3D3D3;
+/* --- Main Layout --- */
+.main-grid {
+  display: grid;
+  grid-template-columns: 25% 25% 50%;
+  height: 100vh;
+  gap: 10px;
+  padding: 10px;
 }
 
-button:hover:enabled {
-  background-color: #555;
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
 }
 
-.initiative-list {
-    border: 1px solid #444;
-    padding: 0.5rem;
+.box {
+  background-color: #252526;
+  border-radius: 8px;
+  padding: 15px;
+  border: 1px solid #333;
 }
 
-.initiative-item {
+/* --- Left Column --- */
+.column-left {
+  justify-content: space-between;
+}
+
+#creature-entry-container {
+  flex-shrink: 0;
+}
+
+#log-container, #dice-log-container {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100px;
+}
+
+.log-area {
+  flex-grow: 1;
+  overflow-y: auto;
+  background-color: #1e1e1e;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  line-height: 1.4;
+  white-space: pre-wrap; /* Ensures text wraps */
+  word-wrap: break-word;
+}
+
+#music-controls-container {
+  flex-shrink: 0;
+}
+
+/* --- Middle Column --- */
+#turn-controls-container .controls {
     display: flex;
     justify-content: space-between;
-    padding: 0.25rem;
+    gap: 10px;
+}
+#turn-controls-container .controls:not(:last-child) {
+    margin-bottom: 10px;
+}
+#turn-controls-container button {
+    flex-grow: 1;
 }
 
-.initiative-item.active {
-    background-color: #555;
+#initiative-list-container {
+    flex-grow: 1;
 }
 
-.creature-list {
-    border: 1px solid #444;
-    padding: 0.5rem;
-}
-
-.creature-item {
-    border: 1px solid #444;
-    padding: 0.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.creature-item.bloodied {
-    background-color: #800;
-}
-
-.dice-log-container {
-    margin-top: 1rem;
-}
-
-.dice-log {
-    height: 100px;
-    overflow-y: scroll;
-    border: 1px solid #444;
-    padding: 0.5rem;
-    background-color: #3E3E3E;
+/* --- Right Column --- */
+.column-right {
+    overflow-y: auto;
 }

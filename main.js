@@ -1,13 +1,21 @@
 require('dotenv').config({ path: 'environmentvars.env' }); // Load environment variables from .env file
+console.log('Main.js script started');
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+console.log('Electron loaded.');
 const fs = require('fs');
 const path = require('path');
+console.log('FS and Path loaded.');
 const { PassThrough, Readable } = require('stream'); // Updated stream import
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
+console.log('DiceRoller loaded.');
 const { Client, GatewayIntentBits } = require('discord.js');
+console.log('Discord.js Client loaded.');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
+console.log('Discord.js Voice loaded.');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates] });
+console.log('Discord client instantiated.');
 const axios = require('axios');
+console.log('Axios loaded.');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
 const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
@@ -17,33 +25,45 @@ let connection;
 let lastResponse = null; // Variable to store the last response
 //adding a comment so i can flipping commit this
 
+// --- State Management ---
+let initiativeOrder = [];
+let currentTurnIndex = 0;
+const autosavePath = path.join(app.getPath('userData'), 'autosave.json');
+
+function saveState() {
+    try {
+        const state = {
+            initiativeOrder,
+            currentTurnIndex
+        };
+        fs.writeFileSync(autosavePath, JSON.stringify(state, null, 2));
+        logToRenderer('Encounter state autosaved.');
+    } catch (error) {
+        logToRenderer(`Error autosaving state: ${error.message}`);
+    }
+}
+
+function loadState() {
+    try {
+        if (fs.existsSync(autosavePath)) {
+            const savedState = JSON.parse(fs.readFileSync(autosavePath, 'utf8'));
+            initiativeOrder = savedState.initiativeOrder || [];
+            currentTurnIndex = savedState.currentTurnIndex || 0;
+            logToRenderer('Autosaved encounter state loaded.');
+        }
+    } catch (error) {
+        logToRenderer(`Error loading state: ${error.message}`);
+        initiativeOrder = [];
+        currentTurnIndex = 0;
+    }
+}
+
 class AudioState {
     constructor() {
         this.activeFile = null;
         this.pendingFile = null;
         this.playerStatus = AudioPlayerStatus.Idle;
-        this.isPlaying = false;
-    }
-
-    setActiveFile(filePath) {
-        this.activeFile = filePath;
-    }
-
-    setPendingFile(filePath) {
-        this.pendingFile = filePath;
-    }
-
-    setPlayerStatus(status) {
-        this.playerStatus = status;
-        this.isPlaying = status === AudioPlayerStatus.Playing;
-    }
-
-    clearPendingFile() {
-        this.pendingFile = null;
-    }
-
-    clearActiveFile() {
-        this.activeFile = null;
+        this.isCaching = false;
     }
 }
 
@@ -57,9 +77,9 @@ function sleep(ms) {
 // Electron Setup
 let mainWindow;
 async function createWindow() {
+    console.log('createWindow() called.');
     mainWindow = new BrowserWindow({
-        width: 500,
-        height: 400,
+        show: false, // Do not show the window until it's ready and maximized
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -67,11 +87,16 @@ async function createWindow() {
             nodeIntegration: true
         }
     });
+    mainWindow.maximize();
+    mainWindow.show();
+    console.log('Window created and shown.');
     await mainWindow.loadFile('index.html');
+    console.log('index.html loaded.');
 }
 
 async function apploader() {
     await app.whenReady().then(() => {
+        console.log('App is ready.');
         createWindow();
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length == 0) createWindow();
@@ -139,6 +164,15 @@ client.once('ready', async () => {
         logToRenderer('Text channel not found!');
     }
     */
+
+    // --- Load initial state and send to UI ---
+    loadState();
+    // Small delay to ensure window is ready before sending
+    setTimeout(() => {
+        if (mainWindow) {
+            sendInitiativeUpdate();
+        }
+    }, 1000);
 
     //Connect to the voice channel
 
@@ -614,36 +648,76 @@ client.once('ready', async () => {
         mainWindow.webContents.send('log-message', message);
     }
 
-    ipcMain.on('play-music', async (event, filePathFromRenderer) => {
-    logToRenderer(`Play command received. pendingFile: ${audioState.pendingFile}, filePathFromRenderer: ${filePathFromRenderer}, playerStatus: ${audioState.playerStatus}`);
+    // --- Music System ---
+    function sendGuiUpdate() {
+        if (mainWindow) {
+            mainWindow.webContents.send('update-gui-state', {
+                isPlaying: audioState.playerStatus === AudioPlayerStatus.Playing,
+                isCaching: audioState.isCaching,
+                filePath: audioState.activeFile || audioState.pendingFile
+            });
+        }
+    }
 
-    if (audioState.pendingFile) {
-        logToRenderer(`Play command received for pending file: ${audioState.pendingFile}`);
-        await play(audioState.pendingFile);
-        audioState.clearPendingFile();
-    } else if (audioState.playerStatus === AudioPlayerStatus.Paused) {
-        logToRenderer('Resuming current track: ' + audioState.activeFile);
-        resumeAudio();
-    } else if (filePathFromRenderer) {
-            logToRenderer('Play command: Direct play from renderer path: ' + filePathFromRenderer);
-        await play(filePathFromRenderer);
-    } else {
-            logToRenderer('Play command: Nothing to play.');
-            if (mainWindow && mainWindow.webContents) { // Ensure GUI reflects non-playing state if nothing happens
-                mainWindow.webContents.send('update-gui-state', {
-                    isPlaying: false,
-                filePath: audioState.activeFile, // Keep showing current file if paused or idle
-                isPending: !!audioState.pendingFile
-                });
+    const player = createAudioPlayer();
+    if(connection) {
+        connection.subscribe(player);
+    }
+
+    player.on('error', (error) => {
+        logToRenderer(`Player Error: ${error.message}`);
+        audioState.activeFile = null;
+        audioState.playerStatus = AudioPlayerStatus.Idle;
+        sendGuiUpdate();
+    });
+
+    player.on(AudioPlayerStatus.Idle, () => {
+        audioState.playerStatus = AudioPlayerStatus.Idle;
+        if (audioState.activeFile) {
+            logToRenderer(`Looping: ${audioState.activeFile}`);
+            try {
+                const resource = createAudioResource(fs.createReadStream(audioState.activeFile));
+                player.play(resource);
+            } catch (error) {
+                logToRenderer(`Error creating resource for loop: ${error}`);
+                audioState.activeFile = null;
+                sendGuiUpdate();
+            }
+        } else {
+            sendGuiUpdate();
+        }
+    });
+
+    player.on(AudioPlayerStatus.Playing, () => {
+        audioState.playerStatus = AudioPlayerStatus.Playing;
+        sendGuiUpdate();
+    });
+
+    player.on(AudioPlayerStatus.Paused, () => {
+        audioState.playerStatus = AudioPlayerStatus.Paused;
+        sendGuiUpdate();
+    });
+
+    ipcMain.on('play-music', () => {
+        if (audioState.isCaching) return;
+        if (audioState.playerStatus === AudioPlayerStatus.Paused) {
+            player.unpause();
+        } else if (audioState.playerStatus === AudioPlayerStatus.Idle && audioState.activeFile) {
+            try {
+                const resource = createAudioResource(fs.createReadStream(audioState.activeFile));
+                player.play(resource);
+            } catch (error) {
+                logToRenderer(`Error creating resource for play: ${error}`);
+                audioState.activeFile = null;
+                sendGuiUpdate();
             }
         }
     });
 
     ipcMain.on('pause-music', () => {
-        logToRenderer('Pause command received. Current player status: ' + player.state.status + ', isPlaying: ' + audioState.isPlaying);
-    if (audioState.isPlaying) {
-        pauseAudio();
-    }
+        if (audioState.playerStatus === AudioPlayerStatus.Playing) {
+            player.pause();
+        }
     });
 
     ipcMain.on('exit-app', async () => {
@@ -658,57 +732,6 @@ client.once('ready', async () => {
         return DEFAULT_LOCAL_FOLDER;
     });
 
-    ipcMain.on('open-initiative-tracker', () => {
-        const initiativeWindow = new BrowserWindow({
-            width: 400,
-            height: 600,
-            webPreferences: {
-                preload: path.join(__dirname, 'preload.js'),
-                contextIsolation: true,
-                enableRemoteModule: false,
-            }
-        });
-        initiativeWindow.loadFile('initiative.html');
-    });
-
-    ipcMain.handle('get-initiative-data', () => {
-        try {
-            const data = fs.readFileSync('initiative.json', 'utf8');
-            return JSON.parse(data);
-        } catch (error) {
-            return [];
-        }
-    });
-
-    ipcMain.on('save-initiative-data', (event, data) => {
-        fs.writeFileSync('initiative.json', JSON.stringify(data, null, 2));
-    });
-
-    ipcMain.on('open-hp-tracker', () => {
-        const hpWindow = new BrowserWindow({
-            width: 400,
-            height: 600,
-            webPreferences: {
-                preload: path.join(__dirname, 'preload.js'),
-                contextIsolation: true,
-                enableRemoteModule: false,
-            }
-        });
-        hpWindow.loadFile('hp.html');
-    });
-
-    ipcMain.handle('get-hp-data', () => {
-        try {
-            const data = fs.readFileSync('hp.json', 'utf8');
-            return JSON.parse(data);
-        } catch (error) {
-            return [];
-        }
-    });
-
-    ipcMain.on('save-hp-data', (event, data) => {
-        fs.writeFileSync('hp.json', JSON.stringify(data, null, 2));
-    });
 
     ipcMain.on('roll-dice', (event, { name, type, bonus }) => {
         const roller = new DiceRoller();
@@ -719,276 +742,195 @@ client.once('ready', async () => {
         mainWindow.webContents.send('dice-log', message);
     });
 
-    ipcMain.handle('open-file-dialog', async () => {
-        const defaultFolder = process.env.DEFAULT_LOCAL_FOLDER
-        const result = await dialog.showOpenDialog({
-        properties: ['openFile'],
-        defaultPath: defaultFolder,
-        filters: [
-            { name: 'Audio Files', extensions: ['wav', 'wav.lnk', 'wav - Shortcut.lnk'] },
-            { name: 'All Files', extensions: ['*'] }
-        ]
-        });
-
-        let selectedPath = result.filePaths[0] || null;
-        let resolvedPathAfterLinkCheck = selectedPath; // Assume it's the same unless it's a link
-
-        if (resolvedPathAfterLinkCheck) {
-            if (path.extname(resolvedPathAfterLinkCheck).toLowerCase() === '.lnk') {
-                try {
-                    const shortcut = shell.readShortcutLink(resolvedPathAfterLinkCheck);
-                    const targetPath = shortcut.target || null;
-
-                    if (targetPath && fs.existsSync(targetPath)) {
-                        resolvedPathAfterLinkCheck = targetPath;
-                        logToRenderer('Resolved .lnk to: ' + resolvedPathAfterLinkCheck);
-                    } else {
-                        logToRenderer('Resolved shortcut target does not exist or is invalid: ' + targetPath);
-                    resolvedPathAfterLinkCheck = null;
-                    }
-                }
-                catch (error) {
-                    logToRenderer('Error resolving shortcut: ' + error);
-                resolvedPathAfterLinkCheck = null;
-                }
-            }
-
-            // Simplified logic: only validate path and set pendingFilePath.
-            // Stream and resource creation moved to 'play-music' handler.
-            if (resolvedPathAfterLinkCheck && fs.existsSync(resolvedPathAfterLinkCheck) && fs.statSync(resolvedPathAfterLinkCheck).isFile()) {
-            audioState.setPendingFile(resolvedPathAfterLinkCheck);
-            logToRenderer(`File selected and pending: ${audioState.pendingFile}`);
-            createReadableStream(resolvedPathAfterLinkCheck, false); // Pre-load the file
-            } else {
-                if (resolvedPathAfterLinkCheck) { // Only log if there was a path to check
-                    logToRenderer(`Invalid file or file does not exist: ${resolvedPathAfterLinkCheck}`);
-                } else {
-                    logToRenderer('No file selected or link resolution failed.');
-                }
-            audioState.clearPendingFile();
-                resolvedPathAfterLinkCheck = null; // Ensure this is null if no valid file
-            }
-    } else {
-        audioState.clearPendingFile();
-            logToRenderer('No file selected from dialog.');
-        }
-
-        // Send GUI update after file dialog processing
-        if (mainWindow && mainWindow.webContents) {
-            // Update GUI based on whether a file is pending
-            mainWindow.webContents.send('update-gui-state', {
-            isPlaying: audioState.isPlaying, // Reflect current playing state
-            filePath: audioState.pendingFile || audioState.activeFile, // Show pending if available, else current
-            isPending: !!audioState.pendingFile  // True if a file is pending, false otherwise
-            });
-        }
-        return resolvedPathAfterLinkCheck; // Return the path that was processed (or null)
-    });
-
-
-    //Begin audio processing
-async function createReadableStream(filePath, useCache = true) {
-        if (!filePath) { // Ensure filePath is not null or undefined
-            logToRenderer('createReadableStream: filePath is null or undefined.');
-            return null;
-        }
-        const ext = path.extname(filePath).toLowerCase();
-
-        if (ext === '.wav') {
-            try {
-                // Create a readable stream from the WAV file
-                const wavStream = fs.createReadStream(filePath);
-                logToRenderer('Successfully created readable stream from WAV file.');
-                return wavStream;
-            } catch (error) {
-                logToRenderer('Error processing WAV file in createReadableStream: ' + error.message);
-                return null;
-            }
-        } else {
-            logToRenderer('Unsupported file type in createReadableStream: ' + ext);
-            return null;
-        }
-    }
-
-    //player status enums
-    //AudioPlayerStatus.Buffering
-    //AudioPlayerStatus.Playing
-    //AudioPlayerStatus.Paused
-    //AudioPlayerStatus.Idle
-    //AudioPlayerStatus.AutoPaused
-
-    let player = createAudioPlayer(); // This is the main player
-    connection.subscribe(player);
-
-    // Setup main player's event listeners once
-    player.on(AudioPlayerStatus.Idle, async () => {
-    logToRenderer('Main player entered Idle state. Current track: ' + audioState.activeFile + '. Pending track: ' + audioState.pendingFile);
-    audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-        // This Idle handler is primarily for looping non-OGG files or playing the next track if a queue system were implemented.
-        // OGG files are handled by a temporary player and should not trigger this main player's looping logic for themselves.
-
-    if (audioState.pendingFile) {
-        logToRenderer('Main player Idle: Pending resource found. Starting playback for: ' + audioState.pendingFile);
-        const stream = await createReadableStream(audioState.pendingFile);
-        if (stream) {
-            const resourceToPlay = createAudioResource(stream);
-            await startPlaybackFromResource(resourceToPlay, audioState.pendingFile);
-            audioState.clearPendingFile();
-        } else {
-            logToRenderer('Main player Idle: Failed to create stream for pending file: ' + audioState.pendingFile);
-            audioState.clearPendingFile();
-        }
-    } else if (audioState.activeFile) {
-        const isOggLoop = path.extname(audioState.activeFile).toLowerCase() === '.ogg';
-            if (isOggLoop) {
-                logToRenderer('Main player Idle: OGG file finished (expected to be played by temporary player), not looping with main player.');
-            audioState.clearActiveFile();
-                if (mainWindow && mainWindow.webContents) {
-                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
-                }
-                // Ensure main player remains subscribed if no other pending actions
-                if (connection && connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player !== player) {
-                connection.subscribe(player);
-                }
-            } else {
-                // Existing loop logic for non-OGG files:
-                logToRenderer('Main player Idle (Looping non-OGG): Forcing player.stop(true) before re-creating resource for loop.');
-                player.stop(true);
-            logToRenderer('Main player Idle: No pending resource. Attempting to loop current (non-OGG) track: ' + audioState.activeFile);
-            const newReadableStream = await createReadableStream(audioState.activeFile);
-                if (newReadableStream) {
-                    const newAudioResourceForLoop = createAudioResource(newReadableStream);
-                    // currentAudioResource is already set for non-OGG, startPlaybackFromResource will use it.
-                await startPlaybackFromResource(newAudioResourceForLoop, audioState.activeFile);
-                } else {
-                logToRenderer('Main player Idle: Failed to create stream for looping non-OGG: ' + audioState.activeFile);
-                audioState.clearActiveFile();
-                    if (mainWindow && mainWindow.webContents) {
-                        mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
-                    }
-                }
-            }
-        } else {
-        logToRenderer('Main player Idle and no activeFile or pendingFile, so not looping or starting new track.');
-            if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
-            }
-        }
-    });
-
-    player.on(AudioPlayerStatus.AutoPaused, () => {
-        if (currentPlayingFilePath) { // Check if a track was supposed to be playing
-            logToRenderer('Main player Autopaused, check connection... Track: ' + currentPlayingFilePath);
-        }
-    });
-
-    player.on('error', (error) => {
-    logToRenderer(`Error in main player for ${audioState.activeFile}: ${error.message}`);
-    audioState.clearActiveFile();
-    audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-        if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null, error: true });
-        }
-    });
-
-
-    async function startPlaybackFromResource(audioResourceToPlay, filePathOfResource) {
-        logToRenderer('Using main player for: ' + filePathOfResource);
-        if (connection && connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player !== player) {
-            logToRenderer('Main player was not subscribed. Re-subscribing.');
-            connection.subscribe(player);
-        } else if (!connection || connection.state.status !== VoiceConnectionStatus.Ready) {
-            logToRenderer('ERROR: Voice connection not ready to subscribe main player.');
-            if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
-            }
-            return;
-        }
-
-    audioState.setActiveFile(filePathOfResource);
-
-        // Crucially, ensure main player's listeners are set up (they are, once, above)
-        // player.removeAllListeners(AudioPlayerStatus.Idle); // This was here before, but listeners are now set once globally
-        // player.removeAllListeners(AudioPlayerStatus.AutoPaused);
-        // player.removeAllListeners('error');
-        // Re-attaching listeners like this on every play can lead to multiple listeners.
-        // They are now set once when the main `player` is created.
-
-        player.play(audioResourceToPlay);
-        logToRenderer('Main player.play called for: ' + filePathOfResource);
-
+    ipcMain.on('save-encounter', async () => {
         try {
-            await entersState(player, AudioPlayerStatus.Playing, 5000);
-        audioState.setPlayerStatus(AudioPlayerStatus.Playing);
-        logToRenderer('Main player is now Playing: ' + audioState.activeFile);
-            if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: audioState.activeFile });
+            const { filePath } = await dialog.showSaveDialog(mainWindow, {
+                title: 'Save Encounter',
+                defaultPath: 'encounter.json',
+                filters: [{ name: 'JSON Files', extensions: ['json'] }]
+            });
+
+            if (filePath) {
+                const state = { initiativeOrder, currentTurnIndex };
+                fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
+                logToRenderer(`Encounter saved to ${filePath}`);
             }
         } catch (error) {
-        logToRenderer(`Main player did not enter Playing state for ${audioState.activeFile}: ${error.message}. Current state: ${player.state.status}`);
-        audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-            if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: audioState.activeFile, error: true });
-            }
-            // Don't nullify currentPlayingFilePath here if we want Idle handler to potentially retry/log
+            logToRenderer(`Error saving encounter: ${error.message}`);
         }
-    }
-
-    function pauseAudio() {
-        if (player && player.state.status === AudioPlayerStatus.Playing) {
-            player.pause(true); // Pass true to pause even if resource is still buffering
-        audioState.setPlayerStatus(AudioPlayerStatus.Paused);
-            logToRenderer('Audio paused. Player state: ' + player.state.status);
-            if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: audioState.activeFile });
-            }
-        } else {
-            logToRenderer('Audio is not playing or player unavailable. Player state: ' + player.state.status);
-        }
-    }
-
-async function play(filePath) {
-    if (!filePath) {
-        logToRenderer('play: filePath is null or undefined.');
-        return;
-    }
-
-    const stream = await createReadableStream(filePath);
-    if (stream) {
-        const resource = createAudioResource(stream);
-        await startPlaybackFromResource(resource, filePath);
-    } else {
-        logToRenderer(`Failed to create stream for: ${filePath}`);
-    }
-}
-
-function queue(filePath) {
-    if (!filePath) {
-        logToRenderer('queue: filePath is null or undefined.');
-        return;
-    }
-
-    audioState.setPendingFile(filePath);
-    logToRenderer(`Queued file: ${filePath}`);
-    mainWindow.webContents.send('update-gui-state', {
-        isPlaying: audioState.isPlaying,
-        filePath: audioState.pendingFile || audioState.activeFile,
-        isPending: !!audioState.pendingFile
     });
-}
 
-    function resumeAudio() {
-        if (player && player.state.status === AudioPlayerStatus.Paused) {
-            player.unpause();
-        audioState.setPlayerStatus(AudioPlayerStatus.Playing);
-            logToRenderer('Audio resumed. Player state: ' + player.state.status);
-            if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: audioState.activeFile });
+    ipcMain.on('load-encounter', async () => {
+        try {
+            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+                title: 'Load Encounter',
+                properties: ['openFile'],
+                filters: [{ name: 'JSON Files', extensions: ['json'] }]
+            });
+
+            if (filePaths && filePaths.length > 0) {
+                const savedState = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'));
+                initiativeOrder = savedState.initiativeOrder || [];
+                currentTurnIndex = savedState.currentTurnIndex || 0;
+                logToRenderer(`Encounter loaded from ${filePaths[0]}`);
+                saveState(); // Autosave the newly loaded state
+                sendInitiativeUpdate();
             }
-        } else {
-            logToRenderer('Audio is not paused or player unavailable. Player state: ' + player.state.status);
+        } catch (error) {
+            logToRenderer(`Error loading encounter: ${error.message}`);
+        }
+    });
+
+    // --- Initiative Tracker Handlers ---
+    function sendInitiativeUpdate() {
+        if (mainWindow) {
+            mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex });
         }
     }
+
+    ipcMain.on('add-creature', (event, creature) => {
+        if (creature.initiative === null && creature.initMod !== null) {
+            const roll = new DiceRoller().roll('1d20').total;
+            creature.initiative = roll + creature.initMod;
+            const message = `${creature.name} rolled initiative: ${roll} + ${creature.initMod} = ${creature.initiative}`;
+            logToRenderer(message);
+            mainWindow.webContents.send('dice-log', message);
+        } else if (creature.initiative === null) {
+            creature.initiative = 0;
+        }
+        initiativeOrder.push(creature);
+        initiativeOrder.sort((a, b) => b.initiative - a.initiative);
+        sendInitiativeUpdate();
+        saveState();
+    });
+
+    ipcMain.on('next-turn', () => {
+        if (initiativeOrder.length > 0) {
+            const endingTurnCreature = initiativeOrder[currentTurnIndex];
+            if (endingTurnCreature && endingTurnCreature.isFriendly) {
+                dialog.showMessageBox(mainWindow, { type: 'question', title: 'Legendary Action', message: `End of ${endingTurnCreature.name}'s turn. Do you take a legendary action?`, buttons: ['Yes', 'No']});
+            }
+            currentTurnIndex = (currentTurnIndex + 1) % initiativeOrder.length;
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
+    ipcMain.on('previous-turn', () => {
+        if (initiativeOrder.length > 0) {
+            currentTurnIndex = (currentTurnIndex - 1 + initiativeOrder.length) % initiativeOrder.length;
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
+    ipcMain.on('update-hp', (event, { creatureId, amount }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            creature.hp += amount;
+            if (creature.isConcentrating && amount < 0) {
+                const dc = Math.max(10, Math.floor(-amount / 2));
+                dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${creature.name} must make a DC ${dc} Constitution saving throw.`, buttons: ['OK']});
+            }
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
+    ipcMain.on('add-condition', (event, { creatureId, condition }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            if (!creature.conditions) creature.conditions = [];
+            if (!creature.conditions.includes(condition)) {
+                creature.conditions.push(condition);
+                sendInitiativeUpdate();
+                saveState();
+            }
+        }
+    });
+
+    ipcMain.on('remove-condition', (event, { creatureId, condition }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature && creature.conditions) {
+            creature.conditions = creature.conditions.filter(c => c !== condition);
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
+    ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            creature[flag] = value;
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
+    ipcMain.handle('open-file-dialog', async () => {
+        const defaultFolder = process.env.DEFAULT_LOCAL_FOLDER;
+        const result = await dialog.showOpenDialog({
+            properties: ['openFile'],
+            defaultPath: defaultFolder,
+            filters: [
+                { name: 'Audio Files', extensions: ['wav', 'lnk'] },
+                { name: 'All Files', extensions: ['*'] }
+            ]
+        });
+
+        if (result.canceled || result.filePaths.length === 0) {
+            logToRenderer('File selection cancelled.');
+            return null;
+        }
+
+        let selectedPath = result.filePaths[0];
+        let resolvedPath = selectedPath;
+
+        if (path.extname(resolvedPath).toLowerCase() === '.lnk') {
+            try {
+                const shortcut = shell.readShortcutLink(resolvedPath);
+                if (shortcut.target && fs.existsSync(shortcut.target)) {
+                    resolvedPath = shortcut.target;
+                    logToRenderer(`Resolved .lnk to: ${resolvedPath}`);
+                } else {
+                    logToRenderer(`Resolved shortcut target does not exist: ${shortcut.target}`);
+                    return null;
+                }
+            } catch (error) {
+                logToRenderer(`Error resolving shortcut: ${error}`);
+                return null;
+            }
+        }
+
+        if (!fs.existsSync(resolvedPath) || !fs.statSync(resolvedPath).isFile()) {
+            logToRenderer(`Invalid file or file does not exist: ${resolvedPath}`);
+            return null;
+        }
+
+        audioState.pendingFile = resolvedPath;
+        audioState.isCaching = true;
+        logToRenderer(`File selected, caching: ${audioState.pendingFile}`);
+        sendGuiUpdate();
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        audioState.isCaching = false;
+        logToRenderer(`Caching complete for: ${audioState.pendingFile}`);
+
+        if (audioState.playerStatus === AudioPlayerStatus.Idle) {
+            player.stop();
+            audioState.activeFile = audioState.pendingFile;
+            audioState.pendingFile = null;
+            logToRenderer(`Set new active file: ${audioState.activeFile}`);
+        } else {
+            player.stop();
+            audioState.activeFile = audioState.pendingFile;
+            audioState.pendingFile = null;
+        }
+
+        sendGuiUpdate();
+        return audioState.activeFile;
+    });
 });
 
 client.login(DISCORD_TOKEN);
