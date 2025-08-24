@@ -789,15 +789,18 @@ client.once('ready', async () => {
     }
 
     ipcMain.on('add-creature', (event, creature) => {
-        if (creature.initiative === null && creature.initMod !== null) {
+        const initiativeInput = creature.initiative.toString(); // Ensure it's a string
+        if (initiativeInput.startsWith('+') || initiativeInput.startsWith('-')) {
+            const modifier = parseInt(initiativeInput, 10);
             const roll = new DiceRoller().roll('1d20').total;
-            creature.initiative = roll + creature.initMod;
-            const message = `${creature.name} rolled initiative: ${roll} + ${creature.initMod} = ${creature.initiative}`;
+            creature.initiative = roll + modifier;
+            const message = `${creature.name} rolled initiative: ${roll} ${modifier < 0 ? '-' : '+'} ${Math.abs(modifier)} = ${creature.initiative}`;
             logToRenderer(message);
             mainWindow.webContents.send('dice-log', message);
-        } else if (creature.initiative === null) {
-            creature.initiative = 0;
+        } else {
+            creature.initiative = parseFloat(initiativeInput) || 0;
         }
+
         initiativeOrder.push(creature);
         initiativeOrder.sort((a, b) => b.initiative - a.initiative);
         sendInitiativeUpdate();
