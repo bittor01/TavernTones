@@ -7,22 +7,63 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
-    <div class="controls">
-      <button id="exitButton">Exit</button>
-      <button id="playPauseButton" disabled>Play</button>
-      <button id="selectFileButton">Select File</button>
-      <button id="initiativeTrackerButton">Initiative Tracker</button>
-      <button id="hpTrackerButton">HP Tracker</button>
+  <div class="main-grid">
+    <!-- -------------------- LEFT COLUMN -------------------- -->
+    <div class="column column-left">
+      <div id="creature-entry-container" class="box">
+        <h2>Add Creature</h2>
+        <form id="add-creature-form">
+          <!-- Form fields will be added here via JS or next step -->
+        </form>
+      </div>
+      <div id="log-container" class="box">
+        <h2>Log</h2>
+        <div class="log-area" id="logArea"></div>
+      </div>
+      <div id="dice-log-container" class="box">
+        <h2>Dice Log</h2>
+        <div class="log-area" id="diceLog"></div>
+      </div>
+      <div id="music-controls-container" class="box">
+        <h2>Music</h2>
+        <div class="controls">
+          <button id="playPauseButton" disabled>Play</button>
+          <button id="selectFileButton">Select File</button>
+        </div>
+        <div class="fileLabel">
+          <span id="selectedFileLabel">No file selected</span>
+        </div>
+      </div>
     </div>
-    <div class="logArea" id="logArea"></div>
-  </div>
-  <div class="dice-log-container">
-    <h2>Dice Log</h2>
-    <div id="diceLog" class="dice-log"></div>
-  </div>
-  <div class="fileLabel">
-    <span id="selectedFileLabel">No file selected</span>
+
+    <!-- -------------------- MIDDLE COLUMN -------------------- -->
+    <div class="column column-middle">
+      <div id="turn-controls-container" class="box">
+          <h2>Controls</h2>
+          <div class="controls">
+            <button id="previous-turn-button">Prev Turn</button>
+            <button id="next-turn-button">Next Turn</button>
+          </div>
+          <div class="controls">
+            <button id="save-button">Save Encounter</button>
+            <button id="load-button">Load Encounter</button>
+          </div>
+      </div>
+      <div id="initiative-list-container" class="box">
+        <h2>Initiative Order</h2>
+        <div id="initiative-list">
+          <!-- Simple initiative list will be rendered here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- -------------------- RIGHT COLUMN -------------------- -->
+    <div class="column column-right box">
+      <h2>Combatants</h2>
+      <div id="combatant-details-list">
+        <!-- Full interactive list of all combatants rendered here -->
+      </div>
+    </div>
   </div>
   <script src="renderer.js"></script>
 </body>

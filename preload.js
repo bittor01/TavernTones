@@ -1,21 +1,31 @@
 const { contextBridge, ipcRenderer } = require('electron');
+const path = require('path');
 
 contextBridge.exposeInMainWorld('electron', {
+  path: {
+    basename: path.basename
+  },
   ipcRenderer: {
     send: (channel, data) => {
-      let validChannels = ['play-music', 'pause-music', 'exit-app', 'open-initiative-tracker', 'save-initiative-data', 'open-hp-tracker', 'save-hp-data', 'roll-dice'];
+      const validChannels = [
+        'play-music', 'pause-music', 'roll-dice',
+        'add-creature', 'next-turn', 'previous-turn',
+        'update-hp', 'add-condition', 'remove-condition',
+        'update-creature-flag', 'show-reminders-dialog',
+        'save-encounter', 'load-encounter'
+      ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);
       }
     },
     invoke: (channel, data) => {
-      let validChannels = ['open-file-dialog', 'get-default-local-folder', 'get-initiative-data', 'get-hp-data'];
+      const validChannels = ['open-file-dialog', 'get-default-local-folder'];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);
       }
     },
     on: (channel, func) => {
-      let validChannels = ['log-message', 'update-gui-state', 'dice-log'];
+      const validChannels = ['log-message', 'update-gui-state', 'dice-log', 'update-initiative-list'];
       if (validChannels.includes(channel)) {
         const subscription = (event, ...args) => func(event, ...args);
         ipcRenderer.on(channel, subscription);
@@ -25,13 +35,13 @@ contextBridge.exposeInMainWorld('electron', {
       }
     },
     off: (channel, callback) => {
-        let validChannels = ['log-message', 'update-gui-state', 'dice-log'];
-        if (validChannels.includes(channel)) {
-            ipcRenderer.off(channel, callback);
-        }
+      const validChannels = ['log-message', 'update-gui-state', 'dice-log', 'update-initiative-list'];
+      if (validChannels.includes(channel)) {
+          ipcRenderer.off(channel, callback);
+      }
     },
     once: (channel, callback) => {
-        let validChannels = [];
+        const validChannels = [];
         if (validChannels.includes(channel)) {
             ipcRenderer.once(channel, callback);
         }
