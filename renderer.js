@@ -26,13 +26,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initial UI Setup ---
     addCreatureForm.innerHTML = `
-        <div class="form-row"><label for="creature-name">Name:</label><input type="text" id="creature-name" required></div>
-        <div class="form-row-multi">
+        <div class="form-row">
+            <div class="form-group name-group">
+                <label for="creature-name">Name:</label>
+                <input type="text" id="creature-name" required>
+            </div>
+        </div>
+        <div class="form-row">
             <div class="form-group"><label for="creature-initiative">Initiative:</label><input type="text" id="creature-initiative" placeholder="+3 or 15"></div>
             <div class="form-group"><label for="creature-hp">HP:</label><input type="number" id="creature-hp" placeholder="30"></div>
             <div class="form-group"><label for="creature-ac">AC:</label><input type="number" id="creature-ac" placeholder="15"></div>
         </div>
-        <div class="form-row-multi">
+        <div class="form-row">
             <div class="form-group"><label for="creature-speed">Speed:</label><input type="text" id="creature-speed" placeholder="30ft"></div>
             <div class="form-group"><label for="attack-modifier">Atk Mod:</label><input type="text" id="attack-modifier" placeholder="+5"></div>
             <div class="form-group"><label for="save-dc">Save DC:</label><input type="number" id="save-dc" placeholder="13"></div>

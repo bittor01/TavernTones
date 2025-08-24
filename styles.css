@@ -121,16 +121,24 @@ button:disabled {
 }
 .form-row {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    justify-content: space-between;
+    gap: 10px;
 }
-.form-row label {
-    flex-basis: 50px;
-    flex-shrink: 0;
+.form-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: 1 1 0; /* Allow groups to grow and shrink */
+}
+.form-group label {
+    white-space: nowrap;
     font-size: 0.9em;
 }
-.form-row input {
-    flex-grow: 1;
+.form-group input {
+    width: 100%; /* Make input fill the group */
+}
+.name-group {
+    flex-grow: 1; /* Allow name to take full width */
 }
 .stats-grid {
     display: grid;
