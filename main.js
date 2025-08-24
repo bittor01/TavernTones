@@ -38,7 +38,7 @@ function saveState() {
             currentTurnIndex
         };
         fs.writeFileSync(autosavePath, JSON.stringify(state, null, 2));
-        logToRenderer('Encounter state autosaved.');
+        logToRenderer(`Encounter state autosaved with ${initiativeOrder.length} creatures.`);
     } catch (error) {
         logToRenderer(`Error autosaving state: ${error.message}`);
     }
@@ -166,14 +166,7 @@ client.once('ready', async () => {
     }
     */
 
-    // --- Load initial state and send to UI ---
-    loadState();
-    // Small delay to ensure window is ready before sending
-    setTimeout(() => {
-        if (mainWindow) {
-            sendInitiativeUpdate();
-        }
-    }, 1000);
+    // This is now handled by the 'window-ready' IPC event
 
     //Connect to the voice channel
 
@@ -654,6 +647,114 @@ client.once('ready', async () => {
         }
     });
 
+    // --- Soundboard Backend ---
+    const SOUNDBOARD_SIZE = 9;
+    let soundboardSlots = [];
+    for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
+        soundboardSlots.push({ id: i, file: null, emoji: '➕', loop: false });
+    }
+    const activeSoundboardPlayers = new Map();
+    let soundboardVolume = 0.5;
+
+    ipcMain.handle('load-sound', async (event, { slotId }) => {
+        const result = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openFile'],
+            defaultPath: DEFAULT_LOCAL_FOLDER,
+            filters: [{ name: 'Audio Files', extensions: ['wav', 'mp3', 'ogg'] }]
+        });
+
+        if (result.canceled || result.filePaths.length === 0) return null;
+        const filePath = result.filePaths[0];
+
+        // Electron's dialog module doesn't support simple text input,
+        // so we'll use a placeholder emoji for now.
+        const emoji = '🔊';
+
+        soundboardSlots[slotId].file = filePath;
+        soundboardSlots[slotId].emoji = emoji;
+
+        // In a real app, we'd save this state. For now, it's session-only.
+        return { file: filePath, emoji: emoji };
+    });
+
+    ipcMain.on('play-sound', async (event, { slotId }) => {
+        const slot = soundboardSlots[slotId];
+        if (!slot || !slot.file) return;
+
+        // If this slot is already playing, stop it first
+        if (activeSoundboardPlayers.has(slotId)) {
+            const { player, connection } = activeSoundboardPlayers.get(slotId);
+            player.stop();
+            connection.destroy();
+            activeSoundboardPlayers.delete(slotId);
+        }
+
+        const resource = createAudioResource(fs.createReadStream(slot.file), { inlineVolume: true });
+        resource.volume.setVolume(soundboardVolume);
+
+        const player = createAudioPlayer();
+        const voiceChannel = client.channels.cache.get(VOICE_CHANNEL_ID);
+        if (!voiceChannel || !voiceChannel.isVoiceBased()) return;
+
+        const connection = joinVoiceChannel({
+            channelId: voiceChannel.id,
+            guildId: voiceChannel.guild.id,
+            adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+        });
+
+        connection.subscribe(player);
+        player.play(resource);
+        activeSoundboardPlayers.set(slotId, { player, connection, resource });
+
+        mainWindow.webContents.send('soundboard-state-change', { slotId, isPlaying: true });
+
+        player.on(AudioPlayerStatus.Idle, () => {
+            if (soundboardSlots[slotId].loop) {
+                // Re-create resource to loop
+                const newResource = createAudioResource(fs.createReadStream(slot.file), { inlineVolume: true });
+                newResource.volume.setVolume(soundboardVolume);
+                player.play(newResource);
+            } else {
+                connection.destroy();
+                activeSoundboardPlayers.delete(slotId);
+                mainWindow.webContents.send('soundboard-state-change', { slotId, isPlaying: false });
+            }
+        });
+    });
+    ipcMain.on('stop-sound', (event, { slotId }) => {
+        if (activeSoundboardPlayers.has(slotId)) {
+            const { player, connection } = activeSoundboardPlayers.get(slotId);
+            player.stop();
+            connection.destroy();
+            activeSoundboardPlayers.delete(slotId);
+            mainWindow.webContents.send('soundboard-state-change', { slotId, isPlaying: false });
+        }
+    });
+    ipcMain.on('unload-sound', (event, { slotId }) => {
+        if (activeSoundboardPlayers.has(slotId)) {
+            const { player, connection } = activeSoundboardPlayers.get(slotId);
+            player.stop();
+            connection.destroy();
+            activeSoundboardPlayers.delete(slotId);
+        }
+        soundboardSlots[slotId] = { id: slotId, file: null, emoji: '➕', loop: false };
+        mainWindow.webContents.send('soundboard-state-change', { slotId, isPlaying: false, file: null, emoji: '➕' });
+    });
+    ipcMain.on('set-loop', (event, { slotId, loop }) => {
+        const slot = soundboardSlots[slotId];
+        if (slot) {
+            slot.loop = loop;
+        }
+    });
+    ipcMain.on('set-soundboard-volume', (event, volume) => {
+        soundboardVolume = parseFloat(volume);
+        activeSoundboardPlayers.forEach(({ resource }) => {
+            if (resource && resource.volume) {
+                resource.volume.setVolume(soundboardVolume);
+            }
+        });
+    });
+
     ipcMain.on('copy-creature', (event, { creatureId }) => {
         const creature = initiativeOrder.find(c => c.id === creatureId);
         if (creature) {
@@ -897,6 +998,11 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
         if (channel) {
             channel.send(message);
         }
+    });
+
+    ipcMain.on('window-ready', () => {
+        loadState();
+        sendInitiativeUpdate();
     });
 
     ipcMain.on('reset-encounter', () => {

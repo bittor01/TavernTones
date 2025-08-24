@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    window.electron.ipcRenderer.send('window-ready');
     // --- State ---
     let isPlaying = false;
     let initiativeOrder = [];
@@ -97,10 +98,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners ---
+    document.getElementById('log-toggle-btn').addEventListener('click', () => {
+        const logArea = document.getElementById('logArea');
+        const diceLog = document.getElementById('diceLog');
+        const logTitle = document.getElementById('log-title');
+
+        if (logArea.style.display === 'none') {
+            logArea.style.display = 'block';
+            diceLog.style.display = 'none';
+            logTitle.textContent = 'Log';
+        } else {
+            logArea.style.display = 'none';
+            diceLog.style.display = 'block';
+            logTitle.textContent = 'Dice Log';
+        }
+    });
     document.getElementById('reset-encounter-mid').addEventListener('click', () => window.electron.ipcRenderer.send('reset-encounter'));
     document.getElementById('clear-encounter-mid').addEventListener('click', () => window.electron.ipcRenderer.send('clear-encounter'));
     document.getElementById('reset-encounter-right').addEventListener('click', () => window.electron.ipcRenderer.send('reset-encounter'));
     document.getElementById('clear-encounter-right').addEventListener('click', () => window.electron.ipcRenderer.send('clear-encounter'));
+
+    // --- Soundboard Listeners (placeholders for now) ---
+    document.getElementById('soundboard-volume').addEventListener('input', (e) => {
+        console.log("Soundboard volume changed to:", e.target.value);
+        // This will later send an IPC message, e.g., window.electron.ipcRenderer.send('set-soundboard-volume', e.target.value);
+    });
+
     saveButton.addEventListener('click', () => window.electron.ipcRenderer.send('save-encounter'));
     loadButton.addEventListener('click', () => window.electron.ipcRenderer.send('load-encounter'));
     nextTurnButton.addEventListener('click', () => window.electron.ipcRenderer.send('next-turn'));
@@ -187,6 +210,16 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCombatantDetailsList(data.initiativeOrder, data.currentTurnIndex);
     });
 
+    window.electron.ipcRenderer.on('soundboard-state-change', (event, { slotId, isPlaying, file, emoji }) => {
+        const slot = soundboardState[slotId];
+        if (slot) {
+            slot.isPlaying = isPlaying;
+            if (file !== undefined) slot.file = file;
+            if (emoji !== undefined) slot.emoji = emoji;
+            renderSoundboard();
+        }
+    });
+
     window.electron.ipcRenderer.on('populate-edit-form', (event, creature) => {
         if (!creature) return;
         document.getElementById('creature-name').value = creature.name || '';
@@ -214,7 +247,70 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('cha-save').value = saves.cha || '';
     });
 
+    renderSoundboard();
+
+    // --- Soundboard State ---
+    let soundboardState = [];
+    const SOUNDBOARD_SIZE = 9;
+
+    for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
+        soundboardState.push({ id: i, file: null, emoji: '➕', loop: false, isPlaying: false });
+    }
+
     // --- Render Functions ---
+    function renderSoundboard() {
+        const grid = document.getElementById('soundboard-grid');
+        grid.innerHTML = '';
+        soundboardState.forEach(slot => {
+            const controlSet = document.createElement('div');
+            controlSet.className = 'soundboard-slot';
+            controlSet.innerHTML = `
+                <button class="soundboard-play-btn" data-id="${slot.id}">${slot.isPlaying ? '⏹️' : slot.emoji}</button>
+                <div class="soundboard-slot-controls">
+                    <input type="checkbox" id="loop-${slot.id}" data-id="${slot.id}" class="soundboard-loop-cb" ${slot.loop ? 'checked' : ''}>
+                    <label for="loop-${slot.id}">Loop</label>
+                    <button class="soundboard-unload-btn" data-id="${slot.id}" ${!slot.file ? 'disabled' : ''}>🗑️</button>
+                </div>
+            `;
+            grid.appendChild(controlSet);
+        });
+
+        // Add listeners after rendering
+        document.querySelectorAll('.soundboard-play-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const slotId = parseInt(e.target.dataset.id, 10);
+                const slot = soundboardState[slotId];
+                if (slot.isPlaying) {
+                    window.electron.ipcRenderer.send('stop-sound', { slotId });
+                } else if (slot.file) {
+                    window.electron.ipcRenderer.send('play-sound', { slotId });
+                } else {
+                    window.electron.ipcRenderer.invoke('load-sound', { slotId }).then(result => {
+                        if (result) {
+                            soundboardState[slotId].file = result.file;
+                            soundboardState[slotId].emoji = result.emoji;
+                            renderSoundboard();
+                        }
+                    });
+                }
+            });
+        });
+        document.querySelectorAll('.soundboard-loop-cb').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                const slotId = parseInt(e.target.dataset.id, 10);
+                const loop = e.target.checked;
+                soundboardState[slotId].loop = loop;
+                window.electron.ipcRenderer.send('set-loop', { slotId, loop });
+            });
+        });
+        document.querySelectorAll('.soundboard-unload-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const slotId = parseInt(e.target.dataset.id, 10);
+                window.electron.ipcRenderer.send('unload-sound', { slotId });
+            });
+        });
+    }
+
     function renderInitiativeList(initiativeOrder, currentTurnIndex) {
         initiativeListDiv.innerHTML = '';
         if (!initiativeOrder || initiativeOrder.length === 0) return;

@@ -16,7 +16,9 @@ contextBridge.exposeInMainWorld('electron', {
         'roll-stat', 'add-temp-hp', 'edit-creature',
         'remove-creature', 'move-creature-bottom',
         'reset-encounter', 'clear-encounter', 'update-initiative',
-        'copy-creature'
+        'copy-creature', 'window-ready',
+        'load-sound', 'play-sound', 'stop-sound', 'unload-sound',
+        'set-loop', 'set-soundboard-volume'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);
@@ -29,7 +31,7 @@ contextBridge.exposeInMainWorld('electron', {
       }
     },
     on: (channel, func) => {
-      const validChannels = ['log-message', 'update-gui-state', 'dice-log', 'update-initiative-list', 'populate-edit-form'];
+      const validChannels = ['log-message', 'update-gui-state', 'dice-log', 'update-initiative-list', 'populate-edit-form', 'soundboard-state-change'];
       if (validChannels.includes(channel)) {
         const subscription = (event, ...args) => func(event, ...args);
         ipcRenderer.on(channel, subscription);
