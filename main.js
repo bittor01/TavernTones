@@ -37,6 +37,7 @@ function saveState() {
             initiativeOrder,
             currentTurnIndex
         };
+        logToRenderer(`saveState: Writing ${initiativeOrder.length} creatures to autosave.json.`);
         fs.writeFileSync(autosavePath, JSON.stringify(state, null, 2));
         logToRenderer('Encounter state autosaved.');
     } catch (error) {
@@ -231,9 +232,13 @@ ipcMain.on('move-creature-to-bottom', (event, { creatureId }) => {
 });
 
 ipcMain.on('remove-creature', (event, { creatureId }) => {
+    logToRenderer(`ipc: remove-creature received for id: ${creatureId}`);
+    logToRenderer(`State before removal: ${initiativeOrder.length} creatures.`);
     const index = initiativeOrder.findIndex(c => c.id === creatureId);
+    logToRenderer(`Found creature at index: ${index}`);
     if (index > -1) {
         initiativeOrder.splice(index, 1);
+        logToRenderer(`State after removal: ${initiativeOrder.length} creatures.`);
         if (index < currentTurnIndex) {
             currentTurnIndex--;
         } else if (index === currentTurnIndex && currentTurnIndex === initiativeOrder.length) {
@@ -351,6 +356,7 @@ ipcMain.on('remove-condition', (event, { creatureId, condition }) => {
 });
 
 ipcMain.on('clear-encounter', async (event) => {
+    logToRenderer('ipc: clear-encounter received.');
     const result = await dialog.showMessageBox(mainWindow, {
         type: 'question',
         buttons: ['Save and Clear', 'Clear Without Saving', 'Cancel'],
@@ -358,7 +364,11 @@ ipcMain.on('clear-encounter', async (event) => {
         title: 'Clear Encounter',
         message: 'Do you want to save the current encounter before clearing it?'
     });
-    if (result.response === 0) {
+
+    logToRenderer(`Clear dialog response: ${result.response}`);
+
+    if (result.response === 0) { // Save and Clear
+        logToRenderer('Clear: User chose to save.');
         const { filePath } = await dialog.showSaveDialog(mainWindow, {
             title: 'Save Encounter',
             defaultPath: 'encounter.json',
@@ -369,13 +379,18 @@ ipcMain.on('clear-encounter', async (event) => {
             fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
             logToRenderer(`Encounter saved to ${filePath}`);
         } else {
-            return;
+            logToRenderer('Clear: Save dialog cancelled. Aborting clear.');
+            return; // User cancelled save dialog
         }
-    } else if (result.response === 2) {
+    } else if (result.response === 2) { // Cancel
+        logToRenderer('Clear: User cancelled.');
         return;
     }
+
+    logToRenderer(`State before clear: ${initiativeOrder.length} creatures.`);
     initiativeOrder = [];
     currentTurnIndex = 0;
+    logToRenderer(`State after clear: ${initiativeOrder.length} creatures.`);
     sendInitiativeUpdate();
     saveState();
 });
