@@ -46,11 +46,13 @@ function saveState() {
 
 function loadState() {
     try {
-        if (fs.existsSync(autosavePath)) {
+        if (autosavePath) {
             const savedState = JSON.parse(fs.readFileSync(autosavePath, 'utf8'));
             initiativeOrder = savedState.initiativeOrder || [];
             currentTurnIndex = savedState.currentTurnIndex || 0;
             logToRenderer('Autosaved encounter state loaded.');
+            saveState();
+            sendInitiativeUpdate();
         }
     } catch (error) {
         logToRenderer(`Error loading state: ${error.message}`);
@@ -93,13 +95,8 @@ async function createWindow() {
     console.log('Window created and shown.');
     await mainWindow.loadFile('index.html');
     console.log('index.html loaded.');
+    loadState();
 
-    // Load state after a delay
-    setTimeout(() => {
-        console.log('Attempting to load autosave...');
-        loadState();
-        sendInitiativeUpdate();
-    }, 2000);
 }
 
 async function apploader() {
