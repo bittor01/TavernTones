@@ -132,30 +132,25 @@ button:disabled {
 .form-row input {
     flex-grow: 1;
 }
-.form-row-multi {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
+.stats-grid {
+    display: grid;
+    grid-template-columns: 50px repeat(6, 1fr);
+    gap: 5px;
+    align-items: center;
 }
-.form-row-multi .form-group {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
-.form-row-multi .form-group label {
+.stats-grid .grid-header {
     font-size: 0.8em;
-    margin-bottom: 4px;
+    text-align: center;
     color: #aaa;
+    margin-bottom: 4px;
+}
+.stats-grid .grid-label {
+    font-size: 0.9em;
+    text-align: right;
+    padding-right: 5px;
+}
+.stats-grid input {
     text-align: center;
-}
-.ability-scores input, .save-mods input {
-    text-align: center;
-}
-.save-mods .form-group:first-child {
-    text-align: left;
-}
-.save-mods .form-group:first-child label {
-    text-align: left;
 }
 #add-creature-form input {
     width: 100%;

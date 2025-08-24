@@ -38,21 +38,30 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="form-group"><label for="save-dc">Save DC:</label><input type="number" id="save-dc" placeholder="13"></div>
         </div>
         <hr>
-        <div class="form-row-multi ability-scores">
-            <div class="form-group"><label>STR</label><input type="number" id="str-score" placeholder="10"></div>
-            <div class="form-group"><label>DEX</label><input type="number" id="dex-score" placeholder="10"></div>
-            <div class="form-group"><label>CON</label><input type="number" id="con-score" placeholder="10"></div>
-            <div class="form-group"><label>INT</label><input type="number" id="int-score" placeholder="10"></div>
-            <div class="form-group"><label>WIS</label><input type="number" id="wis-score" placeholder="10"></div>
-            <div class="form-group"><label>CHA</label><input type="number" id="cha-score" placeholder="10"></div>
-        </div>
-        <div class="form-row-multi save-mods">
-            <div class="form-group"><label>Saves</label><input type="text" id="str-save" placeholder="+0"></div>
-            <div class="form-group"><input type="text" id="dex-save" placeholder="+0"></div>
-            <div class="form-group"><input type="text" id="con-save" placeholder="+0"></div>
-            <div class="form-group"><input type="text" id="int-save" placeholder="+0"></div>
-            <div class="form-group"><input type="text" id="wis-save" placeholder="+0"></div>
-            <div class="form-group"><input type="text" id="cha-save" placeholder="+0"></div>
+        <div class="stats-grid">
+            <div class="grid-header"></div>
+            <div class="grid-header">STR</div>
+            <div class="grid-header">DEX</div>
+            <div class="grid-header">CON</div>
+            <div class="grid-header">INT</div>
+            <div class="grid-header">WIS</div>
+            <div class="grid-header">CHA</div>
+
+            <div class="grid-label">Score</div>
+            <input type="number" id="str-score" placeholder="12">
+            <input type="number" id="dex-score" placeholder="12">
+            <input type="number" id="con-score" placeholder="12">
+            <input type="number" id="int-score" placeholder="12">
+            <input type="number" id="wis-score" placeholder="12">
+            <input type="number" id="cha-score" placeholder="12">
+
+            <div class="grid-label">Save</div>
+            <input type="text" id="str-save" placeholder="+1">
+            <input type="text" id="dex-save" placeholder="+1">
+            <input type="text" id="con-save" placeholder="+1">
+            <input type="text" id="int-save" placeholder="+1">
+            <input type="text" id="wis-save" placeholder="+1">
+            <input type="text" id="cha-save" placeholder="+1">
         </div>
         <button type="submit" class="add-creature-button">Add Creature</button>
     `;
