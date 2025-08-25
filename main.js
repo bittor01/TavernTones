@@ -185,6 +185,7 @@ client.once('ready', async () => {
     };
 
     logToRenderer('TavernTones is online!');
+    mainWindow.webContents.send('discord-bot-ready');
     logToRenderer(`Logged in as ${client.user.tag}`);
     // startup message
     /*
@@ -689,17 +690,20 @@ client.once('ready', async () => {
     });
 
     ipcMain.on('push-creature-to-chat', async (event, { creatureId }) => {
+        logToRenderer(`'push-creature-to-chat' invoked for ID: ${creatureId}`);
         const creature = initiativeOrder.find(c => c.id === creatureId);
         if (!creature) {
-            logToRenderer(`Could not find creature with ID ${creatureId} to push to chat.`);
+            logToRenderer(`[push-creature] Creature with ID ${creatureId} not found.`);
             return;
         }
+        logToRenderer(`[push-creature] Found creature: ${creature.name}`);
 
         const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
         if (!channel) {
-            logToRenderer(`Cannot find text channel with ID: ${TEXT_CHANNEL_ID}`);
+            logToRenderer(`[push-creature] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
             return;
         }
+        logToRenderer(`[push-creature] Found channel: ${channel.name}`);
 
         try {
             const embed = new EmbedBuilder()
@@ -727,10 +731,11 @@ client.once('ready', async () => {
                 { name: 'Saving Throws', value: savesString }
             );
 
+            logToRenderer(`[push-creature] Attempting to send embed for ${creature.name}...`);
             await channel.send({ embeds: [embed] });
-            logToRenderer(`Successfully pushed ${creature.name} to chat.`);
+            logToRenderer(`[push-creature] Successfully pushed ${creature.name} to chat.`);
         } catch (error) {
-            logToRenderer(`Error sending creature embed to chat: ${error}`);
+            logToRenderer(`[push-creature] FAILED to send embed: ${error}`);
         }
     });
 
@@ -738,17 +743,47 @@ client.once('ready', async () => {
         return DND_CONDITIONS;
     });
 
+    const hpBarEmojiMap = {
+        '#007bff': ':blue_square:',      // Blue
+        '#28a745': ':green_square:',     // Green
+        '#ffc107': ':yellow_square:',    // Yellow
+        '#dc3545': ':red_square:',       // Red
+        '#8a2be2': ':purple_square:',    // Purple
+        '#6c757d': ':x:',               // Grey (Dead)
+        'empty': ':black_large_square:'
+    };
+
+    function createEmojiHpBar(creature) {
+        const hp = creature.hp || 0;
+        const maxHp = creature.maxHp || 1;
+
+        if (hp <= 0) {
+            return hpBarEmojiMap['#6c757d'].repeat(8);
+        }
+
+        const color = getHpColor(hp, maxHp);
+        const emoji = hpBarEmojiMap[color] || hpBarEmojiMap['#007bff'];
+        const percentage = Math.max(0, (hp / maxHp));
+
+        const filledBlocks = Math.round(percentage * 8);
+        const emptyBlocks = 8 - filledBlocks;
+
+        return emoji.repeat(filledBlocks) + hpBarEmojiMap['empty'].repeat(emptyBlocks);
+    }
+
     ipcMain.on('push-initiative-to-chat', async () => {
+        logToRenderer(`'push-initiative-to-chat' invoked.`);
         if (initiativeOrder.length === 0) {
-            logToRenderer('Cannot push to chat, initiative is empty.');
+            logToRenderer('[push-initiative] Cannot push, initiative is empty.');
             return;
         }
 
         const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
         if (!channel) {
-            logToRenderer(`Cannot find text channel with ID: ${TEXT_CHANNEL_ID}`);
+            logToRenderer(`[push-initiative] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
             return;
         }
+        logToRenderer(`[push-initiative] Found channel: ${channel.name}`);
 
         try {
             const embed = new EmbedBuilder()
@@ -758,28 +793,22 @@ client.once('ready', async () => {
 
             let description = '';
             initiativeOrder.forEach((creature, index) => {
-                const hp = creature.hp || 0;
-                const maxHp = creature.maxHp || 1;
-                const percentage = Math.max(0, (hp / maxHp));
-
-                const filledBlocks = Math.round(percentage * 10);
-                const emptyBlocks = 10 - filledBlocks;
-                const hpBar = '█'.repeat(filledBlocks) + '░'.repeat(emptyBlocks);
-
+                const hpBar = createEmojiHpBar(creature);
                 const conditions = (creature.conditions || [])
                     .map(c => DND_CONDITIONS[c]?.emoji || c)
                     .join(' ');
 
                 const activeMarker = index === currentTurnIndex ? '➤ ' : '';
-                description += `${activeMarker}**${creature.initiative}** - ${creature.name}  |  \`${hpBar}\`  |  ${conditions}\n`;
+                description += `${activeMarker}**${creature.initiative}** - ${creature.name}  |  ${hpBar}  |  ${conditions}\n`;
             });
 
             embed.setDescription(description);
 
+            logToRenderer(`[push-initiative] Attempting to send embed...`);
             await channel.send({ embeds: [embed] });
-            logToRenderer('Successfully pushed initiative to chat.');
+            logToRenderer('[push-initiative] Successfully pushed initiative to chat.');
         } catch (error) {
-            logToRenderer(`Error sending initiative embed to chat: ${error}`);
+            logToRenderer(`[push-initiative] FAILED to send embed: ${error}`);
         }
     });
 
@@ -1301,6 +1330,17 @@ setInterval(() => {
     memoryUsage = process.memoryUsage().rss;
     logToRenderer(`Memory usage is ${((memoryUsage - startingMemUse) / 1024 / 1024).toFixed(2)} MB higher than at launch (${(memoryUsage / 1024 / 1024).toFixed(2)} MB total)`);
 }, 60000);
+
+function getHpColor(current, max) {
+    if (current <= 0) return '#6c757d'; // Grey
+    if (current > max) return '#8a2be2'; // Purple
+
+    const percentage = (current / max) * 100;
+    if (percentage <= 25) return '#dc3545'; // Red
+    if (percentage <= 50) return '#ffc107'; // Yellow
+    if (percentage <= 75) return '#28a745'; // Green
+    return '#007bff'; // Blue
+}
 
 function getValidTableFolders() {
     const randomTablesPath = path.join(__dirname, 'randomtables');
