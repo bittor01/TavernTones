@@ -98,7 +98,28 @@ class AudioState {
         this.activeFile = null;
         this.pendingFile = null;
         this.playerStatus = AudioPlayerStatus.Idle;
-        this.isCaching = false;
+        this.isPlaying = false;
+    }
+
+    setActiveFile(filePath) {
+        this.activeFile = filePath;
+    }
+
+    setPendingFile(filePath) {
+        this.pendingFile = filePath;
+    }
+
+    setPlayerStatus(status) {
+        this.playerStatus = status;
+        this.isPlaying = status === AudioPlayerStatus.Playing;
+    }
+
+    clearPendingFile() {
+        this.pendingFile = null;
+    }
+
+    clearActiveFile() {
+        this.activeFile = null;
     }
 }
 
@@ -278,11 +299,11 @@ async function ipcloader() {
 
         ipcMain.on('save-encounter', async () => {
             try {
-                const { filePath } = await dialog.showSaveDialog(mainWindow, {
-                    title: 'Save Encounter',
-                    defaultPath: 'encounter.json',
-                    filters: [{ name: 'JSON Files', extensions: ['json'] }]
-                });
+                const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+                title: 'Load Encounter',
+                defaultPath: app.getPath('userData'),
+                filters: [{ name: 'JSON Files', extensions: ['json'] }]
+            });
 
                 if (filePath) {
                     const state = { initiativeOrder, currentTurnIndex };
