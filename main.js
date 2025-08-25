@@ -24,7 +24,7 @@ const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
 const TEXT_CHANNEL_ID = process.env.TEXT_CHANNEL_ID;
 let connection;
 let lastResponse = null; // Variable to store the last response
-//adding a comment so i can flipping commit this
+
 
 // --- State Management ---
 let initiativeOrder = [];
