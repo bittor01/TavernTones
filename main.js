@@ -14,8 +14,6 @@ console.log('Discord.js Voice loaded.');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates] });
 console.log('Discord client instantiated.');
 const axios = require('axios');
-const { send } = require('process');
-const { log } = require('console');
 console.log('Axios loaded.');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
@@ -23,6 +21,7 @@ const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
 const BOT_ROLE_ID = process.env.BOT_ROLE_ID;
 const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
 const TEXT_CHANNEL_ID = process.env.TEXT_CHANNEL_ID;
+let player;
 let connection;
 let lastResponse = null; // Variable to store the last response
 let isAppReady = false; // Flag to indicate if the app is ready
@@ -516,9 +515,11 @@ async function logToRenderer(message) {
     }
 }
 
+/*
 client.on('error', error => {
     logToRenderer('An error occurred: ', error);
 });
+*/
 
 client.once('ready', async () => {
     const shutdown = async () => {
@@ -546,7 +547,75 @@ client.once('ready', async () => {
         }
     };
     app.on('before-quit', shutdown);
+
     logToRenderer('TavernTones is online!');
+
+    //Connect to the voice channel
+
+    //connection status enums
+    //VoiceConnectionStatus.Signalling
+    //VoiceConnectionStatus.Connecting
+    //VoiceConnectionStatus.Ready
+    //VoiceConnectionStatus.Disconnected
+    //VoiceConnectionStatus.Destroyed
+
+    //player status enums
+    //AudioPlayerStatus.Buffering
+    //AudioPlayerStatus.Playing
+    //AudioPlayerStatus.Paused
+    //AudioPlayerStatus.Idle
+    //AudioPlayerStatus.AutoPaused
+
+    const voiceChannel = client.channels.cache.get(VOICE_CHANNEL_ID);
+    if (voiceChannel && voiceChannel.isVoiceBased()) {
+        try {
+            connection = joinVoiceChannel({
+                channelId: voiceChannel.id,
+                guildId: voiceChannel.guild.id,
+                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+            });
+
+            // Listen for connection status changes
+            connection.on(VoiceConnectionStatus.Ready, () => {
+                logToRenderer('The bot has connected to the channel!');
+            });
+
+            connection.on(VoiceConnectionStatus.Disconnected, () => {
+                logToRenderer('The bot has been disconnected. Attempting to reconnect...');
+                // Optionally, try to reconnect or handle disconnection
+                setTimeout(() => {
+                    joinVoiceChannel({
+                        channelId: voiceChannel.id,
+                        guildId: voiceChannel.guild.id,
+                        adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+                    });
+                }, 5000); // Delay before attempting to reconnect
+            });
+
+            connection.on(VoiceConnectionStatus.Signalling, () => {
+                logToRenderer('The bot is attempting to establish a connection.');
+            });
+
+            connection.on(VoiceConnectionStatus.Destroyed, () => {
+                logToRenderer('The connection has been destroyed.');
+            });
+
+            logToRenderer(`Joined voice channel: ${voiceChannel.name}: ${connection.state.status}`);
+
+            await entersState(connection, VoiceConnectionStatus.Ready, 60000);
+            logToRenderer('Connection is ready!');
+            sendInitiativeUpdate();
+        }
+        catch (error) {
+            logToRenderer('Error joining voice channel: ', error);
+        }
+    }
+    else {
+        logToRenderer('Voice channel not found or is not a voice channel!');
+    }
+
+    player = createAudioPlayer(); // This is the main player
+    connection.subscribe(player);
 
     ipcMain.on('play-music', async (event, filePathFromRenderer) => {
     logToRenderer(`Play command received. pendingFile: ${audioState.pendingFile}, filePathFromRenderer: ${filePathFromRenderer}, playerStatus: ${audioState.playerStatus}`);
@@ -603,16 +672,6 @@ client.once('ready', async () => {
             return null;
         }
     }
-
-    //player status enums
-    //AudioPlayerStatus.Buffering
-    //AudioPlayerStatus.Playing
-    //AudioPlayerStatus.Paused
-    //AudioPlayerStatus.Idle
-    //AudioPlayerStatus.AutoPaused
-
-    let player = createAudioPlayer(); // This is the main player
-    connection.subscribe(player);
 
     // Setup main player's event listeners once
     player.on(AudioPlayerStatus.Idle, async () => {
@@ -807,63 +866,6 @@ client.once('ready', async () => {
         logToRenderer('Text channel not found!');
     }
     */
-
-    //Connect to the voice channel
-
-    //connection status enums
-    //VoiceConnectionStatus.Signalling
-    //VoiceConnectionStatus.Connecting
-    //VoiceConnectionStatus.Ready
-    //VoiceConnectionStatus.Disconnected
-    //VoiceConnectionStatus.Destroyed
-
-    const voiceChannel = client.channels.cache.get(VOICE_CHANNEL_ID);
-    if (voiceChannel && voiceChannel.isVoiceBased()) {
-        try {
-            connection = joinVoiceChannel({
-                channelId: voiceChannel.id,
-                guildId: voiceChannel.guild.id,
-                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-            });
-
-            // Listen for connection status changes
-            connection.on(VoiceConnectionStatus.Ready, () => {
-                logToRenderer('The bot has connected to the channel!');
-            });
-
-            connection.on(VoiceConnectionStatus.Disconnected, () => {
-                logToRenderer('The bot has been disconnected. Attempting to reconnect...');
-                // Optionally, try to reconnect or handle disconnection
-                setTimeout(() => {
-                    joinVoiceChannel({
-                        channelId: voiceChannel.id,
-                        guildId: voiceChannel.guild.id,
-                        adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-                    });
-                }, 5000); // Delay before attempting to reconnect
-            });
-
-            connection.on(VoiceConnectionStatus.Signalling, () => {
-                logToRenderer('The bot is attempting to establish a connection.');
-            });
-
-            connection.on(VoiceConnectionStatus.Destroyed, () => {
-                logToRenderer('The connection has been destroyed.');
-            });
-
-            logToRenderer(`Joined voice channel: ${voiceChannel.name}: ${connection.state.status}`);
-
-            await entersState(connection, VoiceConnectionStatus.Ready, 60000);
-            logToRenderer('Connection is ready!');
-            sendInitiativeUpdate();
-        }
-        catch (error) {
-            logToRenderer('Error joining voice channel: ', error);
-        }
-    }
-    else {
-        logToRenderer('Voice channel not found or is not a voice channel!');
-    }
 
     client.on('messageCreate', async message => {
         // Ignore messages from the bot itself
