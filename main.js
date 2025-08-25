@@ -137,6 +137,295 @@ async function apploader() {
             if (BrowserWindow.getAllWindows().length == 0) createWindow();
         });
         isAppReady = true;
+
+        // --- All core IPC listeners should be registered after the app is ready ---
+        ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+            if (creature) {
+                creature.initiative = parseFloat(initiative) || 0;
+                initiativeOrder.sort((a, b) => b.initiative - a.initiative);
+                sendInitiativeUpdate();
+                saveState();
+            }
+        });
+
+        ipcMain.handle('get-dnd-conditions', async () => {
+            return DND_CONDITIONS;
+        });
+
+        ipcMain.on('push-initiative-to-chat', async () => {
+            logToRenderer(`'push-initiative-to-chat' invoked.`);
+            if (initiativeOrder.length === 0) {
+                logToRenderer('[push-initiative] Cannot push, initiative is empty.');
+                return;
+            }
+
+            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+            if (!channel) {
+                logToRenderer(`[push-initiative] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
+                return;
+            }
+            logToRenderer(`[push-initiative] Found channel: ${channel.name}`);
+
+            try {
+                const embed = new EmbedBuilder()
+                    .setColor(0x0099FF)
+                    .setTitle('Initiative Order')
+                    .setTimestamp();
+
+                let description = '';
+                initiativeOrder.forEach((creature, index) => {
+                    const hpBar = createEmojiHpBar(creature);
+                    const conditions = (creature.conditions || [])
+                        .map(c => DND_CONDITIONS[c]?.emoji || c)
+                        .join(' ');
+
+                    const activeMarker = index === currentTurnIndex ? '➤ ' : '';
+                    description += `${activeMarker}**${creature.initiative}** - ${creature.name}  |  ${hpBar}  |  ${conditions}\n`;
+                });
+
+                embed.setDescription(description);
+
+                logToRenderer(`[push-initiative] Attempting to send embed...`);
+                await channel.send({ embeds: [embed] });
+                logToRenderer('[push-initiative] Successfully pushed initiative to chat.');
+            } catch (error) {
+                logToRenderer(`[push-initiative] FAILED to send embed: ${error}`);
+            }
+        });
+
+        ipcMain.on('next-turn', () => {
+            if (initiativeOrder.length > 0) {
+                currentTurnIndex = (currentTurnIndex + 1) % initiativeOrder.length;
+                sendInitiativeUpdate();
+                saveState();
+            }
+        });
+
+        ipcMain.on('copy-creature', (event, { creatureId }) => {
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+            if (creature) {
+                // Send a copy of the creature data, but don't remove the original
+                mainWindow.webContents.send('populate-edit-form', creature);
+            }
+        });
+
+        ipcMain.on('save-encounter', async () => {
+            try {
+                const { filePath } = await dialog.showSaveDialog(mainWindow, {
+                    title: 'Save Encounter',
+                    defaultPath: 'encounter.json',
+                    filters: [{ name: 'JSON Files', extensions: ['json'] }]
+                });
+
+                if (filePath) {
+                    const state = { initiativeOrder, currentTurnIndex };
+                    fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
+                    logToRenderer(`Encounter saved to ${filePath}`);
+                }
+            } catch (error) {
+                logToRenderer(`Error saving encounter: ${error.message}`);
+            }
+        });
+
+        ipcMain.on('load-encounter', async () => {
+            try {
+                const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+                    title: 'Load Encounter',
+                    properties: ['openFile'],
+                    filters: [{ name: 'JSON Files', extensions: ['json'] }]
+                });
+
+                if (filePaths && filePaths.length > 0) {
+                    const savedState = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'));
+                    initiativeOrder = savedState.initiativeOrder || [];
+                    currentTurnIndex = savedState.currentTurnIndex || 0;
+                    logToRenderer(`Encounter loaded from ${filePaths[0]}`);
+                    saveState(); // Autosave the newly loaded state
+                    sendInitiativeUpdate();
+                }
+            } catch (error) {
+                logToRenderer(`Error loading encounter: ${error.message}`);
+            }
+        });
+
+        ipcMain.on('add-creature', (event, creature) => {
+            const initiativeInput = creature.initiative.toString(); // Ensure it's a string
+            if (initiativeInput.startsWith('+') || initiativeInput.startsWith('-')) {
+                const modifier = parseInt(initiativeInput, 10);
+                const roll = new DiceRoller().roll('1d20').total;
+                creature.initiative = roll + modifier;
+                const message = `${creature.name} rolled initiative: ${roll} ${modifier < 0 ? '-' : '+'} ${Math.abs(modifier)} = ${creature.initiative}`;
+                logToRenderer(message);
+                mainWindow.webContents.send('dice-log', message);
+            } else {
+                creature.initiative = parseFloat(initiativeInput) || 0;
+            }
+
+            initiativeOrder.push(creature);
+            initiativeOrder.sort((a, b) => b.initiative - a.initiative);
+            sendInitiativeUpdate();
+            saveState();
+        });
+
+        ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+            if (creature) {
+                creature.reminders = reminders;
+                saveState();
+            }
+        });
+
+        ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+            if (!creature) return;
+
+            let modifier = 0;
+            if (type === 'check') {
+                const score = creature.scores ? (creature.scores[stat] || 10) : 10;
+                modifier = Math.floor((score - 10) / 2);
+            } else { // 'save'
+                modifier = creature.saves ? (parseInt(creature.saves[stat], 10) || 0) : 0;
+            }
+
+            let rollNotation = '1d20';
+            if (rollType === 'adv') rollNotation = '2d20kh1';
+            if (rollType === 'dis') rollNotation = '2d20kl1';
+
+            const roll = new DiceRoller().roll(rollNotation);
+            const total = roll.total + modifier;
+
+            const rollDetails = roll.rolls[0].rolls.map(r => r.value).join(', ');
+            const message = `${creature.name} rolled a ${stat.toUpperCase()} ${type} (${rollType})
+Result: ${total} ([${rollDetails}] + ${modifier})`;
+
+            logToRenderer(message);
+            mainWindow.webContents.send('dice-log', message);
+
+            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+            if (channel) {
+                channel.send(message);
+            }
+        });
+
+        ipcMain.on('reset-encounter', () => {
+            initiativeOrder.forEach(c => {
+                c.hp = c.maxHp;
+                c.tempHp = 0;
+                c.conditions = [];
+            });
+            currentTurnIndex = 0;
+            sendInitiativeUpdate();
+            saveState();
+        });
+
+        ipcMain.on('clear-encounter', async () => {
+            const result = await dialog.showMessageBox(mainWindow, {
+                type: 'warning',
+                title: 'Confirm Clear',
+                message: 'Are you sure you want to clear the entire encounter? This cannot be undone.',
+                detail: 'You may want to save the encounter first.',
+                buttons: ['Clear Encounter', 'Cancel'],
+                defaultId: 1,
+                cancelId: 1
+            });
+            if (result.response === 0) { // 'Clear Encounter' button
+                initiativeOrder = [];
+                currentTurnIndex = 0;
+                sendInitiativeUpdate();
+                saveState();
+            }
+        });
+
+        ipcMain.on('edit-creature', (event, { creatureId }) => {
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+            if (creature) {
+                mainWindow.webContents.send('populate-edit-form', creature);
+                // Remove the creature after sending its data to the form
+                initiativeOrder = initiativeOrder.filter(c => c.id !== creatureId);
+                sendInitiativeUpdate();
+                saveState();
+            }
+        });
+
+        ipcMain.on('remove-creature', (event, { creatureId }) => {
+            initiativeOrder = initiativeOrder.filter(c => c.id !== creatureId);
+            sendInitiativeUpdate();
+            saveState();
+        });
+
+        ipcMain.on('previous-turn', () => {
+            if (initiativeOrder.length > 0) {
+                currentTurnIndex = (currentTurnIndex - 1 + initiativeOrder.length) % initiativeOrder.length;
+                sendInitiativeUpdate();
+                saveState();
+            }
+        });
+
+        ipcMain.on('add-temp-hp', (event, { creatureId, amount }) => {
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+            if (creature) {
+                creature.tempHp = (creature.tempHp || 0) + amount;
+                sendInitiativeUpdate();
+                saveState();
+            }
+        });
+
+        ipcMain.on('update-hp', (event, { creatureId, amount }) => {
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+            if (creature) {
+                if (amount < 0) { // Damage
+                    let damage = -amount;
+
+                    // Subtract from temp HP first
+                    const tempHpDamage = Math.min(creature.tempHp || 0, damage);
+                    creature.tempHp -= tempHpDamage;
+                    damage -= tempHpDamage;
+
+                    // Subtract remaining damage from main HP
+                    creature.hp -= damage;
+
+                    if (creature.isConcentrating) {
+                        const dc = Math.max(10, Math.floor(-amount / 2)); // DC is based on total damage
+                        dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${creature.name} must make a DC ${dc} Constitution saving throw.`, buttons: ['OK']});
+                    }
+                } else { // Healing
+                    creature.hp += amount;
+                }
+                sendInitiativeUpdate();
+                saveState();
+            }
+        });
+
+        ipcMain.on('add-condition', (event, { creatureId, condition }) => {
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+            if (creature) {
+                if (!creature.conditions) creature.conditions = [];
+                if (!creature.conditions.includes(condition)) {
+                    creature.conditions.push(condition);
+                    sendInitiativeUpdate();
+                    saveState();
+                }
+            }
+        });
+
+        ipcMain.on('remove-condition', (event, { creatureId, condition }) => {
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+            if (creature && creature.conditions) {
+                creature.conditions = creature.conditions.filter(c => c !== condition);
+                sendInitiativeUpdate();
+                saveState();
+            }
+        });
+
+        ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+            if (creature) {
+                creature[flag] = value;
+                sendInitiativeUpdate();
+                saveState();
+            }
+        });
     });
 }
 
