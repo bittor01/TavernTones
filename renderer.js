@@ -209,6 +209,16 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCombatantDetailsList(data.initiativeOrder, data.currentTurnIndex);
     });
 
+    // --- Soundboard State ---
+    const SOUNDBOARD_SIZE = 10;
+    let soundboardState = Array.from({ length: SOUNDBOARD_SIZE }, (_, i) => ({
+        id: i,
+        file: null,
+        emoji: '➕',
+        loop: false,
+        isPlaying: false
+    }));
+
     window.electron.ipcRenderer.on('soundboard-state-change', (event, { slotId, isPlaying, file, emoji }) => {
         const slot = soundboardState[slotId];
         if (slot) {
@@ -245,16 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('wis-save').value = saves.wis || '';
         document.getElementById('cha-save').value = saves.cha || '';
     });
-
-    renderSoundboard();
-
-    // --- Soundboard State ---
-    let soundboardState = [];
-    const SOUNDBOARD_SIZE = 9;
-
-    for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
-        soundboardState.push({ id: i, file: null, emoji: '➕', loop: false, isPlaying: false });
-    }
 
     // --- Render Functions ---
     function renderSoundboard() {
@@ -495,8 +495,6 @@ document.addEventListener('DOMContentLoaded', () => {
             window.electron.ipcRenderer.send('move-creature-bottom', { creatureId: parseInt(e.target.dataset.id) });
         }));
     }
-
-    renderSoundboard();
 
     function createPopup(type, creatureId, targetElement) {
         // Close any existing popups
