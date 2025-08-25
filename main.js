@@ -729,56 +729,6 @@ client.once('ready', async () => {
         }
     });
 
-    ipcMain.on('push-creature-to-chat', async (event, { creatureId }) => {
-        logToRenderer(`'push-creature-to-chat' invoked for ID: ${creatureId}`);
-        const creature = initiativeOrder.find(c => c.id === creatureId);
-        if (!creature) {
-            logToRenderer(`[push-creature] Creature with ID ${creatureId} not found.`);
-            return;
-        }
-        logToRenderer(`[push-creature] Found creature: ${creature.name}`);
-
-        const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
-        if (!channel) {
-            logToRenderer(`[push-creature] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
-            return;
-        }
-        logToRenderer(`[push-creature] Found channel: ${channel.name}`);
-
-        try {
-            const embed = new EmbedBuilder()
-                .setColor(0x5865F2) // Discord Blurple
-                .setTitle(creature.name)
-                .addFields(
-                    { name: 'HP', value: `${creature.hp} / ${creature.maxHp} ${creature.tempHp > 0 ? `(+${creature.tempHp} Temp)` : ''}`, inline: true },
-                    { name: 'AC', value: `${creature.ac ?? '?'}`, inline: true },
-                    { name: 'Speed', value: `${creature.speed || '?'}`, inline: true }
-                )
-                .setTimestamp();
-
-            const conditions = (creature.conditions || []);
-            if (conditions.length > 0) {
-                embed.addFields({ name: 'Conditions', value: conditions.join(', ') });
-            }
-
-            const scores = creature.scores || {};
-            const saves = creature.saves || {};
-            const scoresString = `STR: ${scores.str ?? '10'} | DEX: ${scores.dex ?? '10'} | CON: ${scores.con ?? '10'} | INT: ${scores.int ?? '10'} | WIS: ${scores.wis ?? '10'} | CHA: ${scores.cha ?? '10'}`;
-            const savesString = `STR: ${saves.str ?? '+0'} | DEX: ${saves.dex ?? '+0'} | CON: ${saves.con ?? '+0'} | INT: ${saves.int ?? '+0'} | WIS: ${saves.wis ?? '+0'} | CHA: ${saves.cha ?? '+0'}`;
-
-            embed.addFields(
-                { name: 'Ability Scores', value: scoresString },
-                { name: 'Saving Throws', value: savesString }
-            );
-
-            logToRenderer(`[push-creature] Attempting to send embed for ${creature.name}...`);
-            await channel.send({ embeds: [embed] });
-            logToRenderer(`[push-creature] Successfully pushed ${creature.name} to chat.`);
-        } catch (error) {
-            logToRenderer(`[push-creature] FAILED to send embed: ${error}`);
-        }
-    });
-
     ipcMain.handle('get-dnd-conditions', async () => {
         return DND_CONDITIONS;
     });
