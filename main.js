@@ -144,6 +144,35 @@ async function apploader() {
 }
 
 apploader();
+
+const hpBarEmojiMap = {
+    '#007bff': ':blue_square:',      // Blue
+    '#28a745': ':green_square:',     // Green
+    '#ffc107': ':yellow_square:',    // Yellow
+    '#dc3545': ':red_square:',       // Red
+    '#8a2be2': ':purple_square:',    // Purple
+    '#6c757d': ':x:',               // Grey (Dead)
+    'empty': ':black_large_square:'
+};
+
+function createEmojiHpBar(creature) {
+    const hp = creature.hp || 0;
+    const maxHp = creature.maxHp || 1;
+
+    if (hp <= 0) {
+        return hpBarEmojiMap['#6c757d'].repeat(8);
+    }
+
+    const color = getHpColor(hp, maxHp);
+    const emoji = hpBarEmojiMap[color] || hpBarEmojiMap['#007bff'];
+    const percentage = Math.max(0, (hp / maxHp));
+
+    const filledBlocks = Math.round(percentage * 8);
+    const emptyBlocks = 8 - filledBlocks;
+
+    return emoji.repeat(filledBlocks) + hpBarEmojiMap['empty'].repeat(emptyBlocks);
+}
+
 async function ipcloader() {
     if (windowloaded) {
         logToRenderer('ipcloader() called.');
