@@ -140,6 +140,7 @@ async function apploader() {
             if (BrowserWindow.getAllWindows().length == 0) createWindow();
         });
         isAppReady = true;
+        ipcloader();
     });
 }
 
@@ -178,6 +179,9 @@ function createEmojiHpBar(creature) {
 }
 
 async function ipcloader() {
+    ipcMain.handle('get-dnd-conditions', async () => {
+        return DND_CONDITIONS;
+    });
     if (windowloaded) {
         logToRenderer('ipcloader() called.');
         // --- All core IPC listeners should be registered after the app is ready ---
@@ -189,10 +193,6 @@ async function ipcloader() {
                 sendInitiativeUpdate();
                 saveState();
             }
-        });
-
-        ipcMain.handle('get-dnd-conditions', async () => {
-            return DND_CONDITIONS;
         });
 
         ipcMain.on('push-initiative', async () => {
