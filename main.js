@@ -5,7 +5,6 @@ console.log('Electron loaded.');
 const fs = require('fs');
 const path = require('path');
 console.log('FS and Path loaded.');
-const { PassThrough, Readable } = require('stream'); // Updated stream import
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 console.log('DiceRoller loaded.');
 const { Client, GatewayIntentBits } = require('discord.js');
@@ -15,6 +14,7 @@ console.log('Discord.js Voice loaded.');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates] });
 console.log('Discord client instantiated.');
 const axios = require('axios');
+const { send } = require('process');
 console.log('Axios loaded.');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
@@ -24,7 +24,7 @@ const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
 const TEXT_CHANNEL_ID = process.env.TEXT_CHANNEL_ID;
 let connection;
 let lastResponse = null; // Variable to store the last response
-
+let isAppReady = false; // Flag to indicate if the app is ready
 
 // --- State Management ---
 let initiativeOrder = [];
@@ -44,7 +44,17 @@ function saveState() {
     }
 }
 
-function loadState() {
+async function sendInitiativeUpdate() {
+    if (isAppReady && mainWindow.webContents) {   
+        mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex });
+    }
+    else {
+        await sleep(100);
+        sendInitiativeUpdate();
+    }
+}
+
+async function loadState() {
     try {
         if (fs.existsSync(autosavePath)) {
             const savedState = JSON.parse(fs.readFileSync(autosavePath, 'utf8'));
@@ -56,8 +66,13 @@ function loadState() {
         logToRenderer(`Error loading state: ${error.message}`);
         initiativeOrder = [];
         currentTurnIndex = 0;
+        await sleep(100);
+        loadState();
     }
+    sendInitiativeUpdate();
 }
+
+loadState();
 
 class AudioState {
     constructor() {
@@ -102,14 +117,21 @@ async function apploader() {
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length == 0) createWindow();
         });
+        isAppReady = true;
     });
 }
 
 apploader();
 
 // Function to send log messages to the renderer
-function logToRenderer(message) {
-    mainWindow.webContents.send('log-message', message);
+async function logToRenderer(message) {
+    if (isAppReady) {
+        mainWindow.webContents.send('log-message', message);
+    }
+    else {
+        await sleep(100);
+        logToRenderer(message);
+    }
 }
 
 client.on('error', error => {
@@ -214,6 +236,7 @@ client.once('ready', async () => {
 
             await entersState(connection, VoiceConnectionStatus.Ready, 60000);
             logToRenderer('Connection is ready!');
+            sendInitiativeUpdate();
         }
         catch (error) {
             logToRenderer('Error joining voice channel: ', error);
@@ -901,11 +924,7 @@ client.once('ready', async () => {
     });
 
     // --- Initiative Tracker Handlers ---
-    function sendInitiativeUpdate() {
-        if (mainWindow) {
-            mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex });
-        }
-    }
+
 
     ipcMain.on('add-creature', (event, creature) => {
         const initiativeInput = creature.initiative.toString(); // Ensure it's a string
@@ -965,14 +984,6 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
         if (channel) {
             channel.send(message);
         }
-    });
-
-    ipcMain.on('window-ready', () => {
-        loadState(); // Load state into memory
-    });
-
-    ipcMain.on('request-initial-load', () => {
-        sendInitiativeUpdate(); // Now send the loaded data to the UI
     });
 
     ipcMain.on('reset-encounter', () => {
