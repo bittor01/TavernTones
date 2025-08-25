@@ -142,19 +142,15 @@ async function apploader() {
 
 apploader();
 
-// Generic function to send a message to the renderer, with a retry mechanism
-async function sendToRenderer(channel, ...args) {
-    if (isAppReady && mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(channel, ...args);
-    } else {
-        await sleep(100);
-        sendToRenderer(channel, ...args);
-    }
-}
-
 // Function to send log messages to the renderer
 async function logToRenderer(message) {
-    sendToRenderer('log-message', message);
+    if (isAppReady) {
+        mainWindow.webContents.send('log-message', message);
+    }
+    else {
+        await sleep(100);
+        logToRenderer(message);
+    }
 }
 
 client.on('error', error => {
@@ -189,7 +185,6 @@ client.once('ready', async () => {
     };
 
     logToRenderer('TavernTones is online!');
-    sendToRenderer('discord-bot-ready');
     logToRenderer(`Logged in as ${client.user.tag}`);
     // startup message
     /*
@@ -690,6 +685,47 @@ client.once('ready', async () => {
             initiativeOrder.sort((a, b) => b.initiative - a.initiative);
             sendInitiativeUpdate();
             saveState();
+        }
+    });
+
+    ipcMain.on('push-initiative-to-chat', async () => {
+        logToRenderer(`'push-initiative-to-chat' invoked.`);
+        if (initiativeOrder.length === 0) {
+            logToRenderer('[push-initiative] Cannot push, initiative is empty.');
+            return;
+        }
+
+        const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+        if (!channel) {
+            logToRenderer(`[push-initiative] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
+            return;
+        }
+        logToRenderer(`[push-initiative] Found channel: ${channel.name}`);
+
+        try {
+            const embed = new EmbedBuilder()
+                .setColor(0x0099FF)
+                .setTitle('Initiative Order')
+                .setTimestamp();
+
+            let description = '';
+            initiativeOrder.forEach((creature, index) => {
+                const hpBar = createEmojiHpBar(creature);
+                const conditions = (creature.conditions || [])
+                    .map(c => DND_CONDITIONS[c]?.emoji || c)
+                    .join(' ');
+
+                const activeMarker = index === currentTurnIndex ? '➤ ' : '';
+                description += `${activeMarker}**${creature.initiative}** - ${creature.name}  |  ${hpBar}  |  ${conditions}\n`;
+            });
+
+            embed.setDescription(description);
+
+            logToRenderer(`[push-initiative] Attempting to send embed...`);
+            await channel.send({ embeds: [embed] });
+            logToRenderer('[push-initiative] Successfully pushed initiative to chat.');
+        } catch (error) {
+            logToRenderer(`[push-initiative] FAILED to send embed: ${error}`);
         }
     });
 

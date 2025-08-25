@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let combatantPanelOrder = []; // For custom sorting of the right-hand panel
     let currentTurnIndex = 0;
     let DND_CONDITIONS = {};
-    let isBotReady = false;
 
     // --- Element Refs ---
     const logArea = document.getElementById('logArea');
@@ -216,13 +215,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         combatantPanelOrder = [...syncedPanelOrder, ...newCreatures];
 
         renderInitiativeList(initiativeOrder, currentTurnIndex);
-        renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
-    });
-
-    window.electron.ipcRenderer.on('discord-bot-ready', () => {
-        logMessage('Discord bot is ready. Enabling chat features.');
-        isBotReady = true;
-        document.getElementById('push-initiative-btn').disabled = false;
         renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
     });
 
@@ -448,7 +440,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="card-controls">
                         <button class="copy-btn" title="Copy" data-id="${creature.id}">📋</button>
                         <button class="edit-btn" title="Edit" data-id="${creature.id}">📝</button>
-                        <button class="push-combatant-btn" title="Push to Chat" data-id="${creature.id}" ${!isBotReady ? 'disabled' : ''}>💬</button>
+                        <button class="push-combatant-btn" title="Push to Chat" data-id="${creature.id}">💬</button>
                         <button class="move-to-bottom-btn" title="Move to Bottom" data-id="${creature.id}">🔽</button>
                         <button class="remove-btn" title="Remove" data-id="${creature.id}">❌</button>
                     </div>
