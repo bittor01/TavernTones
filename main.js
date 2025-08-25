@@ -140,8 +140,13 @@ async function apploader() {
             if (BrowserWindow.getAllWindows().length == 0) createWindow();
         });
         isAppReady = true;
+        ipcloader();
     });
 }
+
+ipcMain.handle('get-dnd-conditions', async () => {
+    return DND_CONDITIONS;
+});
 
 apploader();
 
@@ -189,10 +194,6 @@ async function ipcloader() {
                 sendInitiativeUpdate();
                 saveState();
             }
-        });
-
-        ipcMain.handle('get-dnd-conditions', async () => {
-            return DND_CONDITIONS;
         });
 
         ipcMain.on('push-initiative', async () => {
@@ -440,6 +441,7 @@ async function ipcloader() {
         });
 
         ipcMain.on('add-condition', (event, { creatureId, condition }) => {
+            logToRenderer(`Adding condition ${condition} to creature ${creatureId}`);
             const creature = initiativeOrder.find(c => c.id === creatureId);
             if (creature) {
                 if (!creature.conditions) creature.conditions = [];
