@@ -186,6 +186,38 @@ async function ipcloader() {
     if (windowloaded) {
         logToRenderer('ipcloader() called.');
         // --- All core IPC listeners should be registered after the app is ready ---
+        ipcMain.handle('open-file-dialog', async () => {
+            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+                title: 'Select Music File',
+                defaultPath: DEFAULT_LOCAL_FOLDER,
+                properties: ['openFile'],
+                filters: [
+                    { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
+                ]
+            });
+
+            if (filePaths && filePaths.length > 0) {
+                // Here, you would typically do something with the selected file path,
+                // like sending it back to the renderer process or loading the music.
+                // For now, we'll just return it.
+                return filePaths[0];
+            }
+            return null;
+        });
+
+        ipcMain.on('play-music', (event, filePath) => {
+            if (filePath) {
+                logToRenderer(`Playing music from: ${filePath}`);
+                queue(filePath);
+                if (audioState.isPlaying) {
+                    player.stop(true);
+                } else if (audioState.playerStatus === AudioPlayerStatus.Idle) {
+                    play(audioState.pendingFile);
+                    audioState.clearPendingFile();
+                }
+            }
+        });
+
         ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
             const creature = initiativeOrder.find(c => c.id === creatureId);
             if (creature) {

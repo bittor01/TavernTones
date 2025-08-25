@@ -132,8 +132,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('push-initiative');
                 break;
             case 'selectFileButton':
-                 window.electron.ipcRenderer.invoke('open-file-dialog');
-                 break;
+                window.electron.ipcRenderer.invoke('open-file-dialog').then(filePath => {
+                    if (filePath) {
+                        window.electron.ipcRenderer.send('play-music', filePath);
+                    }
+                });
+                break;
             case 'playPauseButton':
                 if (isPlaying) {
                     window.electron.ipcRenderer.send('pause-music');
