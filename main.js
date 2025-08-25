@@ -163,16 +163,21 @@ const hpBarEmojiMap = {
 function createEmojiHpBar(creature) {
     let hp = creature.hp || 0;
     let maxHp = creature.maxHp || 1;
+    let temphp = creature.tempHp || 0;
 
     if (hp <= 0) {
         return hpBarEmojiMap['#6c757d'].repeat(8);
+    }
+
+    let color = getHpColor(hp, maxHp);
+    if (temphp > 0 || hp > maxHp) {
+        color = '#8a2be2'; // Purple for temp HP
     }
 
     if (hp > maxHp) {
         hp = maxHp;
     }
 
-    const color = getHpColor(hp, maxHp);
     const emoji = hpBarEmojiMap[color] || hpBarEmojiMap['#007bff'];
     const percentage = Math.max(0, (hp / maxHp));
 
@@ -181,7 +186,6 @@ function createEmojiHpBar(creature) {
 
     return emoji.repeat(filledBlocks) + hpBarEmojiMap['empty'].repeat(emptyBlocks);
 }
-
 async function ipcloader() {
     if (windowloaded) {
         logToRenderer('ipcloader() called.');
