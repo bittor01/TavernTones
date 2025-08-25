@@ -511,8 +511,6 @@ async function ipcloader() {
     }  
 }
 
-ipcloader();
-
 // Function to send log messages to the renderer
 async function logToRenderer(message) {
     if (isAppReady) {
