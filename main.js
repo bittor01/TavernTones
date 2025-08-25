@@ -835,6 +835,7 @@ client.once('ready', async () => {
     logToRenderer(`Logged in as ${client.user.tag}`);
 
     // Send a startup embed to test permissions
+    /*
     try {
         const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
         if (channel) {
@@ -848,6 +849,7 @@ client.once('ready', async () => {
     } catch (error) {
         logToRenderer(`[Startup Test] FAILED to send startup embed: ${error}`);
     }
+    */
 
     // startup message
     /*
