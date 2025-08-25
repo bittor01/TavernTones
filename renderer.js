@@ -128,7 +128,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('previous-turn');
                 break;
             case 'push-initiative-btn':
-                logMessage("UI: 'Push Initiative' button clicked.");
                 window.electron.ipcRenderer.send('push-initiative-to-chat');
                 break;
             case 'selectFileButton':

@@ -111,6 +111,7 @@ function sleep(ms) {
 //Begin UI
 // Electron Setup
 let mainWindow;
+let windowloaded = false;
 async function createWindow() {
     console.log('createWindow() called.');
     mainWindow = new BrowserWindow({
@@ -127,6 +128,7 @@ async function createWindow() {
     console.log('Window created and shown.');
     await mainWindow.loadFile('index.html');
     console.log('index.html loaded.');
+    windowloaded = true;
 }
 
 async function apploader() {
@@ -137,7 +139,13 @@ async function apploader() {
             if (BrowserWindow.getAllWindows().length == 0) createWindow();
         });
         isAppReady = true;
+    });
+}
 
+apploader();
+async function ipcloader() {
+    if (windowloaded) {
+        ipcloader(); 
         // --- All core IPC listeners should be registered after the app is ready ---
         ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
             const creature = initiativeOrder.find(c => c.id === creatureId);
@@ -297,7 +305,7 @@ async function apploader() {
 
             const rollDetails = roll.rolls[0].rolls.map(r => r.value).join(', ');
             const message = `${creature.name} rolled a ${stat.toUpperCase()} ${type} (${rollType})
-Result: ${total} ([${rollDetails}] + ${modifier})`;
+    Result: ${total} ([${rollDetails}] + ${modifier})`;
 
             logToRenderer(message);
             mainWindow.webContents.send('dice-log', message);
@@ -426,10 +434,14 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
                 saveState();
             }
         });
-    });
+    }
+    else {
+        await sleep(100);
+        ipcloader();
+    }  
 }
 
-apploader();
+ipcloader();
 
 // Function to send log messages to the renderer
 async function logToRenderer(message) {
@@ -447,7 +459,6 @@ client.on('error', error => {
 });
 
 client.once('ready', async () => {
-    //Define a nice clean shutdown function
     const shutdown = async () => {
         try {
             console.log('Cleaning up and exiting.');
@@ -472,7 +483,7 @@ client.once('ready', async () => {
             console.log('Error during shutdown:', error);
         }
     };
-
+    app.on('before-quit', shutdown);
     logToRenderer('TavernTones is online!');
     logToRenderer(`Logged in as ${client.user.tag}`);
 
