@@ -142,15 +142,19 @@ async function apploader() {
 
 apploader();
 
+// Generic function to send a message to the renderer, with a retry mechanism
+async function sendToRenderer(channel, ...args) {
+    if (isAppReady && mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send(channel, ...args);
+    } else {
+        await sleep(100);
+        sendToRenderer(channel, ...args);
+    }
+}
+
 // Function to send log messages to the renderer
 async function logToRenderer(message) {
-    if (isAppReady) {
-        mainWindow.webContents.send('log-message', message);
-    }
-    else {
-        await sleep(100);
-        logToRenderer(message);
-    }
+    sendToRenderer('log-message', message);
 }
 
 client.on('error', error => {
@@ -185,7 +189,7 @@ client.once('ready', async () => {
     };
 
     logToRenderer('TavernTones is online!');
-    mainWindow.webContents.send('discord-bot-ready');
+    sendToRenderer('discord-bot-ready');
     logToRenderer(`Logged in as ${client.user.tag}`);
     // startup message
     /*
