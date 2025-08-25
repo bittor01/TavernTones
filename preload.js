@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
     send: (channel, data) => {
       const validChannels = [
+        'push-initiative',
         'play-music', 'pause-music', 'roll-dice',
         'add-creature', 'next-turn', 'previous-turn',
         'update-hp', 'add-condition', 'remove-condition',
