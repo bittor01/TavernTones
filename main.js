@@ -207,14 +207,8 @@ async function ipcloader() {
 
         ipcMain.on('play-music', (event, filePath) => {
             if (filePath) {
-                logToRenderer(`Playing music from: ${filePath}`);
+                logToRenderer(`Queuing music from: ${filePath}`);
                 queue(filePath);
-                if (audioState.isPlaying) {
-                    player.stop(true);
-                } else if (audioState.playerStatus === AudioPlayerStatus.Idle) {
-                    play(audioState.pendingFile);
-                    audioState.clearPendingFile();
-                }
             }
         });
 
@@ -303,19 +297,26 @@ async function ipcloader() {
             }
         });
 
-        ipcMain.on('load-encounter', async () => {
-            try {
-                const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-                    title: 'Load Encounter',
-                    properties: ['openFile'],
-                    filters: [{ name: 'JSON Files', extensions: ['json'] }]
-                });
+        ipcMain.handle('load-encounter-dialog', async () => {
+            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+                title: 'Load Encounter',
+                defaultPath: app.getPath('userData'),
+                properties: ['openFile'],
+                filters: [{ name: 'JSON Files', extensions: ['json'] }]
+            });
 
-                if (filePaths && filePaths.length > 0) {
-                    const savedState = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'));
+            if (filePaths && filePaths.length > 0) {
+                mainWindow.webContents.send('load-encounter', filePaths[0]);
+            }
+        });
+
+        ipcMain.on('load-encounter', async (event, filePath) => {
+            try {
+                if (filePath) {
+                    const savedState = JSON.parse(fs.readFileSync(filePath, 'utf8'));
                     initiativeOrder = savedState.initiativeOrder || [];
                     currentTurnIndex = savedState.currentTurnIndex || 0;
-                    logToRenderer(`Encounter loaded from ${filePaths[0]}`);
+                    logToRenderer(`Encounter loaded from ${filePath}`);
                     saveState(); // Autosave the newly loaded state
                     sendInitiativeUpdate();
                 }
