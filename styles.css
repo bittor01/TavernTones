@@ -409,14 +409,12 @@ button:disabled {
 /* --- Soundboard Styles --- */
 #soundboard-container {
     flex-shrink: 0;
-    flex-basis: 33%;
+    flex-basis: 40%;
     display: flex;
     flex-direction: column;
 }
 #soundboard-grid {
-    flex-grow: 1; /* Make grid fill the container */
-}
-#soundboard-grid {
+    flex-grow: 1;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;

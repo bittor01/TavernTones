@@ -496,6 +496,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     }
 
+    renderSoundboard();
+
     function createPopup(type, creatureId, targetElement) {
         // Close any existing popups
         document.querySelectorAll('.popup-dialog').forEach(p => p.remove());
