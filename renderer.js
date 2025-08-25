@@ -97,14 +97,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const diceLog = document.getElementById('diceLog');
                 const logTitle = document.getElementById('log-title');
                 if (logArea.style.display === 'none') {
-                    logArea.style.display = 'none';
-                    diceLog.style.display = 'block';
-                    logTitle.textContent = 'Dice Log';
-                    
-                } else {
                     logArea.style.display = 'block';
                     diceLog.style.display = 'none';
                     logTitle.textContent = 'Log';
+                } else {
+                    logArea.style.display = 'none';
+                    diceLog.style.display = 'block';
+                    logTitle.textContent = 'Dice Log';
                 }
                 break;
             }

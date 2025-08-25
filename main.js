@@ -440,6 +440,7 @@ async function ipcloader() {
         });
 
         ipcMain.on('add-condition', (event, { creatureId, condition }) => {
+            logToRenderer(`Adding condition ${condition} to creature ${creatureId}`);
             const creature = initiativeOrder.find(c => c.id === creatureId);
             if (creature) {
                 if (!creature.conditions) creature.conditions = [];
