@@ -46,11 +46,13 @@ function saveState() {
 
 function loadState() {
     try {
-        if (fs.existsSync(autosavePath)) {
+        if (autosavePath) {
             const savedState = JSON.parse(fs.readFileSync(autosavePath, 'utf8'));
             initiativeOrder = savedState.initiativeOrder || [];
             currentTurnIndex = savedState.currentTurnIndex || 0;
             logToRenderer('Autosaved encounter state loaded.');
+            saveState();
+            sendInitiativeUpdate();
         }
     } catch (error) {
         logToRenderer(`Error loading state: ${error.message}`);
@@ -93,6 +95,7 @@ async function createWindow() {
     console.log('Window created and shown.');
     await mainWindow.loadFile('index.html');
     console.log('index.html loaded.');
+    loadState();
 
     // Load state after a delay
     loadState();
@@ -549,6 +552,7 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
         sendGuiUpdate();
         return audioState.activeFile;
     });
+
 }
 
 
@@ -602,7 +606,8 @@ client.once('ready', async () => {
 
     logToRenderer('TavernTones is online!');
     logToRenderer(`Logged in as ${client.user.tag}`);
-    /* startup message
+    // startup message
+    /*
     const textChannel = client.channels.cache.get(TEXT_CHANNEL_ID);
     if (textChannel) {
         try {
@@ -622,8 +627,6 @@ client.once('ready', async () => {
         logToRenderer('Text channel not found!');
     }
     */
-
-    // This is now handled by the 'window-ready' IPC event
 
     //Connect to the voice channel
 
