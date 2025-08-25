@@ -630,7 +630,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Position popup near the button that was clicked
         const rect = targetElement.getBoundingClientRect();
         popup.style.top = `${rect.bottom + window.scrollY}px`;
-        popup.style.left = `${rect.left + window.scrollX}px`;
+        const popupWidth = popup.offsetWidth;
+        popup.style.left = `${rect.left + window.scrollX - popupWidth}px`;
 
         // Add listeners for popup actions
         if (type === 'hp') {

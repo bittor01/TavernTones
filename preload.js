@@ -26,7 +26,7 @@ contextBridge.exposeInMainWorld('electron', {
       }
     },
     invoke: (channel, data) => {
-      const validChannels = ['open-file-dialog', 'get-default-local-folder'];
+      const validChannels = ['open-file-dialog', 'get-default-local-folder', 'get-dnd-conditions'];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);
       }
