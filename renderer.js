@@ -88,25 +88,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Event Listeners ---
-    document.getElementById('log-toggle-btn').addEventListener('click', () => {
-        const logArea = document.getElementById('logArea');
-        const diceLog = document.getElementById('diceLog');
-        const logTitle = document.getElementById('log-title');
+    document.addEventListener('click', (event) => {
+        const targetId = event.target.id;
 
-        if (logArea.style.display === 'none') {
-            logArea.style.display = 'block';
-            diceLog.style.display = 'none';
-            logTitle.textContent = 'Log';
-        } else {
-            logArea.style.display = 'none';
-            diceLog.style.display = 'block';
-            logTitle.textContent = 'Dice Log';
+        switch (targetId) {
+            case 'log-toggle-btn': {
+                const logArea = document.getElementById('logArea');
+                const diceLog = document.getElementById('diceLog');
+                const logTitle = document.getElementById('log-title');
+                if (logArea.style.display === 'none') {
+                    logArea.style.display = 'block';
+                    diceLog.style.display = 'none';
+                    logTitle.textContent = 'Log';
+                } else {
+                    logArea.style.display = 'none';
+                    diceLog.style.display = 'block';
+                    logTitle.textContent = 'Dice Log';
+                }
+                break;
+            }
+            case 'reset-encounter-mid':
+            case 'reset-encounter-right':
+                window.electron.ipcRenderer.send('reset-encounter');
+                break;
+            case 'clear-encounter-mid':
+            case 'clear-encounter-right':
+                window.electron.ipcRenderer.send('clear-encounter');
+                break;
+            case 'save-button':
+                window.electron.ipcRenderer.send('save-encounter');
+                break;
+            case 'load-button':
+                window.electron.ipcRenderer.send('load-encounter');
+                break;
+            case 'next-turn-button':
+                window.electron.ipcRenderer.send('next-turn');
+                break;
+            case 'previous-turn-button':
+                window.electron.ipcRenderer.send('previous-turn');
+                break;
+            case 'push-initiative-btn':
+                logMessage("UI: 'Push Initiative' button clicked.");
+                window.electron.ipcRenderer.send('push-initiative-to-chat');
+                break;
+            case 'selectFileButton':
+                 window.electron.ipcRenderer.invoke('open-file-dialog');
+                 break;
+            case 'playPauseButton':
+                if (isPlaying) {
+                    window.electron.ipcRenderer.send('pause-music');
+                } else {
+                    window.electron.ipcRenderer.send('play-music');
+                }
+                break;
         }
     });
-    document.getElementById('reset-encounter-mid').addEventListener('click', () => window.electron.ipcRenderer.send('reset-encounter'));
-    document.getElementById('clear-encounter-mid').addEventListener('click', () => window.electron.ipcRenderer.send('clear-encounter'));
-    document.getElementById('reset-encounter-right').addEventListener('click', () => window.electron.ipcRenderer.send('reset-encounter'));
-    document.getElementById('clear-encounter-right').addEventListener('click', () => window.electron.ipcRenderer.send('clear-encounter'));
 
     // --- Soundboard Listeners (placeholders for now) ---
     document.getElementById('soundboard-volume').addEventListener('input', (e) => {
@@ -114,15 +150,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // This will later send an IPC message, e.g., window.electron.ipcRenderer.send('set-soundboard-volume', e.target.value);
     });
 
-    saveButton.addEventListener('click', () => window.electron.ipcRenderer.send('save-encounter'));
-    loadButton.addEventListener('click', () => window.electron.ipcRenderer.send('load-encounter'));
-    nextTurnButton.addEventListener('click', () => window.electron.ipcRenderer.send('next-turn'));
-    previousTurnButton.addEventListener('click', () => window.electron.ipcRenderer.send('previous-turn'));
-    document.getElementById('push-initiative-btn').addEventListener('click', () => {
-        logMessage("UI: 'Push Initiative' button clicked.");
-        window.electron.ipcRenderer.send('push-initiative-to-chat');
-    });
-    selectFileButton.addEventListener('click', () => window.electron.ipcRenderer.invoke('open-file-dialog'));
     playPauseButton.addEventListener('click', () => {
         if (isPlaying) {
             window.electron.ipcRenderer.send('pause-music');
