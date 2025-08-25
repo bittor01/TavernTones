@@ -196,7 +196,7 @@ async function apploader() {
 
         ipcMain.on('next-turn', () => {
             if (initiativeOrder.length > 0) {
-                currentTurnIndex = (currentTurnIndex + 1) % initiativeOrder.length;
+                currentTurnIndex = (currentTurnIndex - 1 + initiativeOrder.length) % initiativeOrder.length;
                 sendInitiativeUpdate();
                 saveState();
             }
@@ -356,7 +356,7 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
 
         ipcMain.on('previous-turn', () => {
             if (initiativeOrder.length > 0) {
-                currentTurnIndex = (currentTurnIndex - 1 + initiativeOrder.length) % initiativeOrder.length;
+                currentTurnIndex = (currentTurnIndex + 1) % initiativeOrder.length;
                 sendInitiativeUpdate();
                 saveState();
             }
@@ -475,6 +475,22 @@ client.once('ready', async () => {
 
     logToRenderer('TavernTones is online!');
     logToRenderer(`Logged in as ${client.user.tag}`);
+
+    // Send a startup embed to test permissions
+    try {
+        const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+        if (channel) {
+            const startupEmbed = new EmbedBuilder()
+                .setColor(0x57F287)
+                .setTitle('TavernTones is Ready!')
+                .setDescription('The bot has successfully connected and is ready for commands.')
+                .setTimestamp();
+            await channel.send({ embeds: [startupEmbed] });
+        }
+    } catch (error) {
+        logToRenderer(`[Startup Test] FAILED to send startup embed: ${error}`);
+    }
+
     // startup message
     /*
     const textChannel = client.channels.cache.get(TEXT_CHANNEL_ID);
