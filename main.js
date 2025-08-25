@@ -15,6 +15,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 console.log('Discord client instantiated.');
 const axios = require('axios');
 const { send } = require('process');
+const { log } = require('console');
 console.log('Axios loaded.');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
@@ -145,7 +146,7 @@ async function apploader() {
 apploader();
 async function ipcloader() {
     if (windowloaded) {
-        ipcloader(); 
+        logToRenderer('ipcloader() called.');
         // --- All core IPC listeners should be registered after the app is ready ---
         ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
             const creature = initiativeOrder.find(c => c.id === creatureId);
@@ -161,7 +162,7 @@ async function ipcloader() {
             return DND_CONDITIONS;
         });
 
-        ipcMain.on('push-initiative-to-chat', async () => {
+        ipcMain.on('push-initiative', async () => {
             logToRenderer(`'push-initiative-to-chat' invoked.`);
             if (initiativeOrder.length === 0) {
                 logToRenderer('[push-initiative] Cannot push, initiative is empty.');
@@ -436,6 +437,7 @@ async function ipcloader() {
         });
     }
     else {
+        logToRenderer('ipcloader() waiting for window to load...');
         await sleep(100);
         ipcloader();
     }  
