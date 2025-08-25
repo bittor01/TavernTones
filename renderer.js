@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('save-encounter');
                 break;
             case 'load-button':
-                window.electron.ipcRenderer.send('load-encounter');
+                window.electron.ipcRenderer.invoke('load-encounter-dialog');
                 break;
             case 'next-turn-button':
                 window.electron.ipcRenderer.send('next-turn');
@@ -132,8 +132,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('push-initiative');
                 break;
             case 'selectFileButton':
-                 window.electron.ipcRenderer.invoke('open-file-dialog');
-                 break;
+                window.electron.ipcRenderer.invoke('open-file-dialog').then(filePath => {
+                    if (filePath) {
+                        window.electron.ipcRenderer.send('play-music', filePath);
+                    }
+                });
+                break;
             case 'playPauseButton':
                 if (isPlaying) {
                     window.electron.ipcRenderer.send('pause-music');
@@ -148,14 +152,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('soundboard-volume').addEventListener('input', (e) => {
         console.log("Soundboard volume changed to:", e.target.value);
         // This will later send an IPC message, e.g., window.electron.ipcRenderer.send('set-soundboard-volume', e.target.value);
-    });
-
-    playPauseButton.addEventListener('click', () => {
-        if (isPlaying) {
-            window.electron.ipcRenderer.send('pause-music');
-        } else {
-            window.electron.ipcRenderer.send('play-music');
-        }
     });
 
     addCreatureForm.addEventListener('submit', (event) => {
