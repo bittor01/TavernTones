@@ -669,6 +669,14 @@ client.once('ready', async () => {
         }
     });
 
+    ipcMain.on('next-turn', () => {
+        if (initiativeOrder.length > 0) {
+            currentTurnIndex = (currentTurnIndex + 1) % initiativeOrder.length;
+            sendInitiativeUpdate();
+            saveState();
+        }
+    });
+
     // --- Soundboard Backend ---
     const SOUNDBOARD_SIZE = 9;
     let soundboardSlots = [];
@@ -1030,17 +1038,6 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
         initiativeOrder = initiativeOrder.filter(c => c.id !== creatureId);
         sendInitiativeUpdate();
         saveState();
-    });
-
-    ipcMain.on('move-creature-bottom', (event, { creatureId }) => {
-        const creatureIndex = initiativeOrder.findIndex(c => c.id === creatureId);
-        if (creatureIndex > -1) {
-            const [creature] = initiativeOrder.splice(creatureIndex, 1);
-            creature.initiative = (initiativeOrder.length > 0 ? initiativeOrder[initiativeOrder.length - 1].initiative : 0) - 1;
-            initiativeOrder.push(creature);
-            sendInitiativeUpdate();
-            saveState();
-        }
     });
 
     ipcMain.on('previous-turn', () => {

@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
     let isPlaying = false;
     let initiativeOrder = [];
+    let combatantPanelOrder = []; // For custom sorting of the right-hand panel
 
     // --- Element Refs ---
     const logArea = document.getElementById('logArea');
@@ -209,8 +210,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {
         initiativeOrder = data.initiativeOrder; // Store globally
+
+        // Sync combatantPanelOrder with initiativeOrder
+        const newCreatureIds = new Set(initiativeOrder.map(c => c.id));
+        // Filter out creatures that no longer exist
+        combatantPanelOrder = combatantPanelOrder.filter(c => newCreatureIds.has(c.id));
+        // Add new creatures that aren't in the panel order yet
+        const panelOrderIds = new Set(combatantPanelOrder.map(c => c.id));
+        const newCreatures = initiativeOrder.filter(c => !panelOrderIds.has(c.id));
+        combatantPanelOrder.push(...newCreatures);
+
         renderInitiativeList(data.initiativeOrder, data.currentTurnIndex);
-        renderCombatantDetailsList(data.initiativeOrder, data.currentTurnIndex);
+        renderCombatantDetailsList(combatantPanelOrder, data.currentTurnIndex);
     });
 
     window.electron.ipcRenderer.on('soundboard-state-change', (event, { slotId, isPlaying, file, emoji }) => {
@@ -359,13 +370,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return '#007bff'; // Blue
     }
 
-    function renderCombatantDetailsList(initiativeOrder, currentTurnIndex) {
+    function renderCombatantDetailsList(orderToRender, currentTurnIndex) {
         combatantDetailsListDiv.innerHTML = '';
-        if (!initiativeOrder || initiativeOrder.length === 0) return;
+        if (!orderToRender || orderToRender.length === 0) return;
 
-        initiativeOrder.forEach((creature, index) => {
+        // Find the ID of the creature whose turn it is, for highlighting
+        const activeCreatureId = initiativeOrder.length > 0 ? initiativeOrder[currentTurnIndex]?.id : null;
+
+        orderToRender.forEach((creature) => {
             const creatureDiv = document.createElement('div');
-            creatureDiv.className = 'combatant-details-entry' + (index === currentTurnIndex ? ' active-turn' : '');
+            // Highlight based on the actual turn index from the main initiativeOrder
+            const isActive = activeCreatureId === creature.id;
+            creatureDiv.className = 'combatant-details-entry' + (isActive ? ' active-turn' : '');
             creatureDiv.dataset.id = creature.id; // Add id for scrolling
 
             const saves = creature.saves || {};
@@ -496,7 +512,14 @@ document.addEventListener('DOMContentLoaded', () => {
             window.electron.ipcRenderer.send('remove-creature', { creatureId: parseInt(e.target.dataset.id) });
         }));
         document.querySelectorAll('.move-to-bottom-btn').forEach(b => b.addEventListener('click', e => {
-            window.electron.ipcRenderer.send('move-creature-bottom', { creatureId: parseInt(e.target.dataset.id) });
+            const creatureId = parseInt(e.target.dataset.id);
+            const creatureIndex = combatantPanelOrder.findIndex(c => c.id === creatureId);
+            if (creatureIndex > -1) {
+                const [creature] = combatantPanelOrder.splice(creatureIndex, 1);
+                combatantPanelOrder.push(creature);
+                // Re-render the list with the new order
+                renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
+            }
         }));
     }
 
