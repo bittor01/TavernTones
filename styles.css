@@ -137,6 +137,30 @@ button:disabled {
     margin-right: 10px;
     font-weight: bold;
     color: #ccc;
+    flex-shrink: 0; /* Prevent score from shrinking */
+}
+
+.initiative-details {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    margin: 0 10px;
+    min-width: 0; /* Allow flex children to shrink */
+}
+
+.initiative-hp-bar-container {
+    width: 100%;
+    height: 8px;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.initiative-conditions {
+    flex-shrink: 0; /* Prevent emojis from shrinking */
+    font-size: 0.9em;
 }
 
 .panel-header {

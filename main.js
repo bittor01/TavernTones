@@ -7,7 +7,7 @@ const path = require('path');
 console.log('FS and Path loaded.');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 console.log('DiceRoller loaded.');
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 console.log('Discord.js Client loaded.');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 console.log('Discord.js Voice loaded.');
@@ -30,6 +30,25 @@ let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeOrder = [];
 let currentTurnIndex = 0;
 const autosavePath = path.join(app.getPath('userData'), 'autosave.json');
+
+const DND_CONDITIONS = {
+    "Blinded": { emoji: "🙈", color: "#6c757d", text: "You can't see and automatically fail any ability check that requires sight. Attack rolls against you have Advantage, and your attack rolls have Disadvantage." },
+    "Burning": { emoji: "🔥", color: "#e74c3c", text: "A burning creature takes 1d4 Fire damage at the start of each of its turns. A creature can end this damage by using its action to make a DC 10 Dexterity check to extinguish the flames." },
+    "Charmed": { emoji: "😍", color: "#e83e8c", text: "You can't attack the charmer or target the charmer with harmful abilities or magical effects. The charmer has Advantage on any ability check to interact socially with you." },
+    "Deafened": { emoji: "🙉", color: "#adb5bd", text: "You can't hear and automatically fail any ability check that requires hearing." },
+    "Exhaustion": { emoji: "😩", color: "#fd7e14", text: "Cumulative levels of exhaustion with various penalties. See PHB for details." },
+    "Frightened": { emoji: "😨", color: "#6f42c1", text: "You have Disadvantage on ability checks and attack rolls while the source of your fear is within line of sight. You can't willingly move closer to the source of your fear." },
+    "Grappled": { emoji: "🤼", color: "#fd7e14", text: "Your speed becomes 0, and you can't benefit from any bonus to your speed. The condition ends if the grappler is incapacitated. The condition also ends if an effect removes the grappled creature from the reach of the grappler." },
+    "Incapacitated": { emoji: "😵", color: "#6c757d", text: "You can't take actions or reactions." },
+    "Invisible": { emoji: "👻", color: "#f8f9fa", text: "You are impossible to see without the aid of magic or a special sense. For the purpose of hiding, you are heavily obscured. Your location can be detected by any noise you make or any tracks you leave. Attack rolls against you have Disadvantage, and your attack rolls have Advantage." },
+    "Paralyzed": { emoji: "🥶", color: "#007bff", text: "You are Incapacitated and can't move or speak. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack that hits you is a critical hit if the attacker is within 5 feet of you." },
+    "Petrified": { emoji: "🗿", color: "#343a40", text: "You are transformed, along with any nonmagical object you are wearing or carrying, into a solid inanimate substance (such as stone). Your weight increases by a factor of ten, and you cease aging. You are Incapacitated, can't move or speak, and are unaware of your surroundings. Attack rolls against you have Advantage. You automatically fail Strength and Dexterity saving throws. You have resistance to all damage. You are immune to poison and disease." },
+    "Poisoned": { emoji: "🤢", color: "#28a745", text: "You have Disadvantage on attack rolls and ability checks." },
+    "Prone": { emoji: "🙇", color: "#ffc107", text: "Your only movement option is to crawl, unless you stand up and thereby end the condition. You have Disadvantage on attack rolls. An attack roll against you has Advantage if the attacker is within 5 feet of you. Otherwise, the attack roll has Disadvantage." },
+    "Restrained": { emoji: "⛓️", color: "#6c757d", text: "Your speed becomes 0, and you can't benefit from any bonus to your speed. Attack rolls against you have Advantage, and your attack rolls have Disadvantage. You have Disadvantage on Dexterity saving throws." },
+    "Stunned": { emoji: "🤯", color: "#ffc107", text: "You are Incapacitated, can't move, and can speak only falteringly. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage." },
+    "Unconscious": { emoji: "😴", color: "#343a40", text: "You are Incapacitated, can't move or speak, and are unaware of your surroundings. You drop whatever you're holding and fall prone. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack that hits you is a critical hit if the attacker is within 5 feet of you." }
+};
 
 function saveState() {
     try {
@@ -666,6 +685,101 @@ client.once('ready', async () => {
             initiativeOrder.sort((a, b) => b.initiative - a.initiative);
             sendInitiativeUpdate();
             saveState();
+        }
+    });
+
+    ipcMain.on('push-creature-to-chat', async (event, { creatureId }) => {
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (!creature) {
+            logToRenderer(`Could not find creature with ID ${creatureId} to push to chat.`);
+            return;
+        }
+
+        const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+        if (!channel) {
+            logToRenderer(`Cannot find text channel with ID: ${TEXT_CHANNEL_ID}`);
+            return;
+        }
+
+        try {
+            const embed = new EmbedBuilder()
+                .setColor(0x5865F2) // Discord Blurple
+                .setTitle(creature.name)
+                .addFields(
+                    { name: 'HP', value: `${creature.hp} / ${creature.maxHp} ${creature.tempHp > 0 ? `(+${creature.tempHp} Temp)` : ''}`, inline: true },
+                    { name: 'AC', value: `${creature.ac ?? '?'}`, inline: true },
+                    { name: 'Speed', value: `${creature.speed || '?'}`, inline: true }
+                )
+                .setTimestamp();
+
+            const conditions = (creature.conditions || []);
+            if (conditions.length > 0) {
+                embed.addFields({ name: 'Conditions', value: conditions.join(', ') });
+            }
+
+            const scores = creature.scores || {};
+            const saves = creature.saves || {};
+            const scoresString = `STR: ${scores.str ?? '10'} | DEX: ${scores.dex ?? '10'} | CON: ${scores.con ?? '10'} | INT: ${scores.int ?? '10'} | WIS: ${scores.wis ?? '10'} | CHA: ${scores.cha ?? '10'}`;
+            const savesString = `STR: ${saves.str ?? '+0'} | DEX: ${saves.dex ?? '+0'} | CON: ${saves.con ?? '+0'} | INT: ${saves.int ?? '+0'} | WIS: ${saves.wis ?? '+0'} | CHA: ${saves.cha ?? '+0'}`;
+
+            embed.addFields(
+                { name: 'Ability Scores', value: scoresString },
+                { name: 'Saving Throws', value: savesString }
+            );
+
+            await channel.send({ embeds: [embed] });
+            logToRenderer(`Successfully pushed ${creature.name} to chat.`);
+        } catch (error) {
+            logToRenderer(`Error sending creature embed to chat: ${error}`);
+        }
+    });
+
+    ipcMain.handle('get-dnd-conditions', async () => {
+        return DND_CONDITIONS;
+    });
+
+    ipcMain.on('push-initiative-to-chat', async () => {
+        if (initiativeOrder.length === 0) {
+            logToRenderer('Cannot push to chat, initiative is empty.');
+            return;
+        }
+
+        const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+        if (!channel) {
+            logToRenderer(`Cannot find text channel with ID: ${TEXT_CHANNEL_ID}`);
+            return;
+        }
+
+        try {
+            const embed = new EmbedBuilder()
+                .setColor(0x0099FF)
+                .setTitle('Initiative Order')
+                .setTimestamp();
+
+            let description = '';
+            initiativeOrder.forEach((creature, index) => {
+                const hp = creature.hp || 0;
+                const maxHp = creature.maxHp || 1;
+                const percentage = Math.max(0, (hp / maxHp));
+
+                const filledBlocks = Math.round(percentage * 10);
+                const emptyBlocks = 10 - filledBlocks;
+                const hpBar = '█'.repeat(filledBlocks) + '░'.repeat(emptyBlocks);
+
+                const conditions = (creature.conditions || [])
+                    .map(c => DND_CONDITIONS[c]?.emoji || c)
+                    .join(' ');
+
+                const activeMarker = index === currentTurnIndex ? '➤ ' : '';
+                description += `${activeMarker}**${creature.initiative}** - ${creature.name}  |  \`${hpBar}\`  |  ${conditions}\n`;
+            });
+
+            embed.setDescription(description);
+
+            await channel.send({ embeds: [embed] });
+            logToRenderer('Successfully pushed initiative to chat.');
+        } catch (error) {
+            logToRenderer(`Error sending initiative embed to chat: ${error}`);
         }
     });
 
