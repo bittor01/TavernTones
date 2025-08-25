@@ -144,6 +144,10 @@ async function apploader() {
     });
 }
 
+ipcMain.handle('get-dnd-conditions', async () => {
+    return DND_CONDITIONS;
+});
+
 apploader();
 
 const hpBarEmojiMap = {
@@ -179,9 +183,6 @@ function createEmojiHpBar(creature) {
 }
 
 async function ipcloader() {
-    ipcMain.handle('get-dnd-conditions', async () => {
-        return DND_CONDITIONS;
-    });
     if (windowloaded) {
         logToRenderer('ipcloader() called.');
         // --- All core IPC listeners should be registered after the app is ready ---
