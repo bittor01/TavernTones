@@ -156,11 +156,15 @@ const hpBarEmojiMap = {
 };
 
 function createEmojiHpBar(creature) {
-    const hp = creature.hp || 0;
-    const maxHp = creature.maxHp || 1;
+    let hp = creature.hp || 0;
+    let maxHp = creature.maxHp || 1;
 
     if (hp <= 0) {
         return hpBarEmojiMap['#6c757d'].repeat(8);
+    }
+
+    if (hp > maxHp) {
+        hp = maxHp;
     }
 
     const color = getHpColor(hp, maxHp);
