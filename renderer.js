@@ -118,7 +118,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadButton.addEventListener('click', () => window.electron.ipcRenderer.send('load-encounter'));
     nextTurnButton.addEventListener('click', () => window.electron.ipcRenderer.send('next-turn'));
     previousTurnButton.addEventListener('click', () => window.electron.ipcRenderer.send('previous-turn'));
-    document.getElementById('push-initiative-btn').addEventListener('click', () => window.electron.ipcRenderer.send('push-initiative-to-chat'));
+    document.getElementById('push-initiative-btn').addEventListener('click', () => {
+        logMessage("UI: 'Push Initiative' button clicked.");
+        window.electron.ipcRenderer.send('push-initiative-to-chat');
+    });
     selectFileButton.addEventListener('click', () => window.electron.ipcRenderer.invoke('open-file-dialog'));
     playPauseButton.addEventListener('click', () => {
         if (isPlaying) {
@@ -440,7 +443,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="card-controls">
                         <button class="copy-btn" title="Copy" data-id="${creature.id}">📋</button>
                         <button class="edit-btn" title="Edit" data-id="${creature.id}">📝</button>
-                        <button class="push-combatant-btn" title="Push to Chat" data-id="${creature.id}">💬</button>
                         <button class="move-to-bottom-btn" title="Move to Bottom" data-id="${creature.id}">🔽</button>
                         <button class="remove-btn" title="Remove" data-id="${creature.id}">❌</button>
                     </div>
@@ -531,9 +533,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }));
         document.querySelectorAll('.remove-btn').forEach(b => b.addEventListener('click', e => {
             window.electron.ipcRenderer.send('remove-creature', { creatureId: parseInt(e.target.dataset.id) });
-        }));
-        document.querySelectorAll('.push-combatant-btn').forEach(b => b.addEventListener('click', e => {
-            window.electron.ipcRenderer.send('push-creature-to-chat', { creatureId: parseInt(e.target.dataset.id) });
         }));
         document.querySelectorAll('.move-to-bottom-btn').forEach(b => b.addEventListener('click', e => {
             const creatureId = parseInt(e.target.dataset.id);
