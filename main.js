@@ -163,20 +163,20 @@ async function ipcloader() {
         });
 
         ipcMain.on('push-initiative', async () => {
+            logToRenderer(`'push-initiative-to-chat' invoked.`);
+            if (initiativeOrder.length === 0) {
+                logToRenderer('[push-initiative] Cannot push, initiative is empty.');
+                return;
+            }
+
+            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+            if (!channel) {
+                logToRenderer(`[push-initiative] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
+                return;
+            }
+            logToRenderer(`[push-initiative] Found channel: ${channel.name}`);
+
             try {
-                logToRenderer(`'push-initiative' invoked in main.js.`);
-                if (initiativeOrder.length === 0) {
-                    logToRenderer('[push-initiative] Cannot push, initiative is empty.');
-                    return;
-                }
-
-                const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
-                if (!channel) {
-                    logToRenderer(`[push-initiative] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
-                    return;
-                }
-                logToRenderer(`[push-initiative] Found channel: ${channel.name}`);
-
                 const embed = new EmbedBuilder()
                     .setColor(0x0099FF)
                     .setTitle('Initiative Order')
@@ -199,7 +199,7 @@ async function ipcloader() {
                 await channel.send({ embeds: [embed] });
                 logToRenderer('[push-initiative] Successfully pushed initiative to chat.');
             } catch (error) {
-                logToRenderer(`[push-initiative] FATAL ERROR in handler: ${error.message}\n${error.stack}`);
+                logToRenderer(`[push-initiative] FAILED to send embed: ${error}`);
             }
         });
 
@@ -1016,34 +1016,6 @@ function getHpColor(current, max) {
     if (percentage <= 50) return '#ffc107'; // Yellow
     if (percentage <= 75) return '#28a745'; // Green
     return '#007bff'; // Blue
-}
-
-const hpBarEmojiMap = {
-    '#007bff': ':blue_square:',      // Blue
-    '#28a745': ':green_square:',     // Green
-    '#ffc107': ':yellow_square:',    // Yellow
-    '#dc3545': ':red_square:',       // Red
-    '#8a2be2': ':purple_square:',    // Purple
-    '#6c757d': ':x:',               // Grey (Dead)
-    'empty': ':black_large_square:'
-};
-
-function createEmojiHpBar(creature) {
-    const hp = creature.hp || 0;
-    const maxHp = creature.maxHp || 1;
-
-    if (hp <= 0) {
-        return hpBarEmojiMap['#6c757d'].repeat(8);
-    }
-
-    const color = getHpColor(hp, maxHp);
-    const emoji = hpBarEmojiMap[color] || hpBarEmojiMap['#007bff'];
-    const percentage = Math.max(0, (hp / maxHp));
-
-    const filledBlocks = Math.round(percentage * 8);
-    const emptyBlocks = 8 - filledBlocks;
-
-    return emoji.repeat(filledBlocks) + hpBarEmojiMap['empty'].repeat(emptyBlocks);
 }
 
 function getValidTableFolders() {
