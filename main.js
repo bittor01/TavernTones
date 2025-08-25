@@ -26,6 +26,10 @@ let connection;
 let lastResponse = null; // Variable to store the last response
 //adding a comment so i can flipping commit this
 
+// --- Initialization State ---
+let isDiscordReady = false;
+let isWindowReady = false;
+
 // --- State Management ---
 let initiativeOrder = [];
 let currentTurnIndex = 0;
@@ -46,13 +50,11 @@ function saveState() {
 
 function loadState() {
     try {
-        if (autosavePath) {
+        if (fs.existsSync(autosavePath)) {
             const savedState = JSON.parse(fs.readFileSync(autosavePath, 'utf8'));
             initiativeOrder = savedState.initiativeOrder || [];
             currentTurnIndex = savedState.currentTurnIndex || 0;
             logToRenderer('Autosaved encounter state loaded.');
-            saveState();
-            sendInitiativeUpdate();
         }
     } catch (error) {
         logToRenderer(`Error loading state: ${error.message}`);
@@ -95,15 +97,26 @@ async function createWindow() {
     console.log('Window created and shown.');
     await mainWindow.loadFile('index.html');
     console.log('index.html loaded.');
-    loadState();
 
-    // Load state after a delay
-    loadState();
-    registerIpcHandlers();
-    sendInitiativeUpdate();
+    // Handlers are now registered in runFinalSetup
+}
+
+function runFinalSetup() {
+    if (isDiscordReady && isWindowReady) {
+        console.log('Both Discord and Window are ready. Running final setup.');
+        registerIpcHandlers();
+        loadState();
+        sendInitiativeUpdate();
+    }
 }
 
 function registerIpcHandlers() {
+    ipcMain.on('window-ready', () => {
+        console.log('IPC: Window is ready.');
+        isWindowReady = true;
+        runFinalSetup();
+    });
+
     ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
         const creature = initiativeOrder.find(c => c.id === creatureId);
         if (creature) {
@@ -552,7 +565,6 @@ Result: ${total} ([${rollDetails}] + ${modifier})`;
         sendGuiUpdate();
         return audioState.activeFile;
     });
-
 }
 
 
@@ -606,8 +618,12 @@ client.once('ready', async () => {
 
     logToRenderer('TavernTones is online!');
     logToRenderer(`Logged in as ${client.user.tag}`);
-    // startup message
-    /*
+
+    console.log('Discord is ready.');
+    isDiscordReady = true;
+    runFinalSetup();
+
+    /* startup message
     const textChannel = client.channels.cache.get(TEXT_CHANNEL_ID);
     if (textChannel) {
         try {
@@ -627,6 +643,8 @@ client.once('ready', async () => {
         logToRenderer('Text channel not found!');
     }
     */
+
+    // This is now handled by the 'window-ready' IPC event
 
     //Connect to the voice channel
 
