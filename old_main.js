@@ -1,105 +1,49 @@
 require('dotenv').config({ path: 'environmentvars.env' }); // Load environment variables from .env file
-console.log('Main.js script started');
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
-console.log('Electron loaded.');
 const fs = require('fs');
 const path = require('path');
-console.log('FS and Path loaded.');
+const { PassThrough, Readable } = require('stream'); // Updated stream import
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
-console.log('DiceRoller loaded.');
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
-console.log('Discord.js Client loaded.');
+const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
-console.log('Discord.js Voice loaded.');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates] });
-console.log('Discord client instantiated.');
 const axios = require('axios');
-const { send } = require('process');
-const { log } = require('console');
-console.log('Axios loaded.');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
 const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
 const BOT_ROLE_ID = process.env.BOT_ROLE_ID;
 const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
-const TEXT_CHANNEL_ID = process.env.TEXT_CHANNEL_ID;
 let connection;
 let lastResponse = null; // Variable to store the last response
-let isAppReady = false; // Flag to indicate if the app is ready
-
-// --- State Management ---
-let initiativeOrder = [];
-let currentTurnIndex = 0;
-const autosavePath = path.join(app.getPath('userData'), 'autosave.json');
-
-const DND_CONDITIONS = {
-    "Blinded": { emoji: "🙈", color: "#6c757d", text: "You can't see and automatically fail any ability check that requires sight. Attack rolls against you have Advantage, and your attack rolls have Disadvantage." },
-    "Burning": { emoji: "🔥", color: "#e74c3c", text: "A burning creature takes 1d4 Fire damage at the start of each of its turns. A creature can end this damage by using its action to make a DC 10 Dexterity check to extinguish the flames." },
-    "Charmed": { emoji: "😍", color: "#e83e8c", text: "You can't attack the charmer or target the charmer with harmful abilities or magical effects. The charmer has Advantage on any ability check to interact socially with you." },
-    "Deafened": { emoji: "🙉", color: "#adb5bd", text: "You can't hear and automatically fail any ability check that requires hearing." },
-    "Exhaustion": { emoji: "😩", color: "#fd7e14", text: "This condition is cumulative. Each time you receive it, you gain 1 Exhaustion level. You die if your Exhaustion level is 6. When you make a D20 Test the roll is reduced by 2 times your Exhaustion level. Your Speed is reduced by a number of feet equal to 5 times your Exhaustion level." },
-    "Frightened": { emoji: "😨", color: "#6f42c1", text: "You have Disadvantage on ability checks and attack rolls while the source of your fear is within line of sight. You can't willingly move closer to the source of your fear." },
-    "Grappled": { emoji: "🤼", color: "#fd7e14", text: "Your speed becomes 0, and you can't benefit from any bonus to your speed. The condition ends if the grappler is incapacitated. The condition also ends if an effect removes the grappled creature from the reach of the grappler." },
-    "Incapacitated": { emoji: "😵", color: "#6c757d", text: "You can't take actions or reactions. Your Concentration in broken. You can't speak." },
-    "Invisible": { emoji: "👻", color: "#f8f9fa", text: "You are Concealed. You aren't affected by any effect that requires its target to be seen unless the effect's creator can somehow see you. Any equipment you are wearing or carrying is also concealed. Attack rolls against you have Disadvantage, and your attack rolls have Advantage. If a creature can somehow see you, you don't gain this benefit against that creature." },
-    "Paralyzed": { emoji: "🥶", color: "#007bff", text: "You are Incapacitated and can't move or speak. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack that hits you is a critical hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.)" },
-    "Petrified": { emoji: "🗿", color: "#343a40", text: "You have the Incapacitated condition. Your Speed is 0 and can't increase. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack roll that hits you is a Critical Hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.)" },
-    "Poisoned": { emoji: "🤢", color: "#28a745", text: "You have Disadvantage on attack rolls and ability checks." },
-    "Prone": { emoji: "🙇", color: "#ffc107", text: "Your only movement option is to crawl, unless you stand up and thereby end the condition. You have Disadvantage on attack rolls. An attack roll against you has Advantage if the attacker is within 5 feet of you. Otherwise, the attack roll has Disadvantage." },
-    "Restrained": { emoji: "⛓️", color: "#6c757d", text: "Your speed becomes 0, and you can't benefit from any bonus to your speed. Attack rolls against you have Advantage, and your attack rolls have Disadvantage. You have Disadvantage on Dexterity saving throws." },
-    "Stunned": { emoji: "🤯", color: "#ffc107", text: "You are Incapacitated, can't move, and can speak only falteringly. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack roll that hits you is a Critical Hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.)" },
-    "Unconscious": { emoji: "😴", color: "#343a40", text: "You are Incapacitated, can't move or speak, and are unaware of your surroundings. You drop whatever you're holding and fall prone. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack that hits you is a critical hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.) (Prone: Your only movement option is to crawl, unless you stand up and thereby end the condition. You have Disadvantage on attack rolls. An attack roll against you has Advantage if the attacker is within 5 feet of you. Otherwise, the attack roll has Disadvantage.)" }
-};
-
-function saveState() {
-    try {
-        const state = {
-            initiativeOrder,
-            currentTurnIndex
-        };
-        fs.writeFileSync(autosavePath, JSON.stringify(state, null, 2));
-        logToRenderer(`Encounter state autosaved with ${initiativeOrder.length} creatures.`);
-    } catch (error) {
-        logToRenderer(`Error autosaving state: ${error.message}`);
-    }
-}
-
-async function sendInitiativeUpdate() {
-    if (isAppReady && mainWindow.webContents) {   
-        mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex });
-    }
-    else {
-        await sleep(100);
-        sendInitiativeUpdate();
-    }
-}
-
-async function loadState() {
-    try {
-        if (fs.existsSync(autosavePath)) {
-            const savedState = JSON.parse(fs.readFileSync(autosavePath, 'utf8'));
-            initiativeOrder = savedState.initiativeOrder || [];
-            currentTurnIndex = savedState.currentTurnIndex || 0;
-            logToRenderer('Autosaved encounter state loaded.');
-        }
-    } catch (error) {
-        logToRenderer(`Error loading state: ${error.message}`);
-        initiativeOrder = [];
-        currentTurnIndex = 0;
-        await sleep(100);
-        loadState();
-    }
-    sendInitiativeUpdate();
-}
-
-loadState();
+//adding a comment so i can flipping commit this
 
 class AudioState {
     constructor() {
         this.activeFile = null;
         this.pendingFile = null;
         this.playerStatus = AudioPlayerStatus.Idle;
-        this.isCaching = false;
+        this.isPlaying = false;
+    }
+
+    setActiveFile(filePath) {
+        this.activeFile = filePath;
+    }
+
+    setPendingFile(filePath) {
+        this.pendingFile = filePath;
+    }
+
+    setPlayerStatus(status) {
+        this.playerStatus = status;
+        this.isPlaying = status === AudioPlayerStatus.Playing;
+    }
+
+    clearPendingFile() {
+        this.pendingFile = null;
+    }
+
+    clearActiveFile() {
+        this.activeFile = null;
     }
 }
 
@@ -112,11 +56,10 @@ function sleep(ms) {
 //Begin UI
 // Electron Setup
 let mainWindow;
-let windowloaded = false;
 async function createWindow() {
-    console.log('createWindow() called.');
     mainWindow = new BrowserWindow({
-        show: false, // Do not show the window until it's ready and maximized
+        width: 500,
+        height: 400,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -124,396 +67,23 @@ async function createWindow() {
             nodeIntegration: true
         }
     });
-    mainWindow.maximize();
-    mainWindow.show();
-    console.log('Window created and shown.');
     await mainWindow.loadFile('index.html');
-    console.log('index.html loaded.');
-    windowloaded = true;
 }
 
 async function apploader() {
     await app.whenReady().then(() => {
-        console.log('App is ready.');
         createWindow();
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length == 0) createWindow();
         });
-        isAppReady = true;
-        ipcloader();
     });
 }
 
-ipcMain.handle('get-dnd-conditions', async () => {
-    return DND_CONDITIONS;
-});
-
 apploader();
 
-const hpBarEmojiMap = {
-    '#007bff': ':blue_square:',      // Blue
-    '#28a745': ':green_square:',     // Green
-    '#ffc107': ':yellow_square:',    // Yellow
-    '#dc3545': ':red_square:',       // Red
-    '#8a2be2': ':purple_square:',    // Purple
-    '#6c757d': ':x:',               // Grey (Dead)
-    'empty': ':black_large_square:'
-};
-
-function createEmojiHpBar(creature) {
-    let hp = creature.hp || 0;
-    let maxHp = creature.maxHp || 1;
-
-    if (hp <= 0) {
-        return hpBarEmojiMap['#6c757d'].repeat(8);
-    }
-
-    if (hp > maxHp) {
-        hp = maxHp;
-    }
-
-    const color = getHpColor(hp, maxHp);
-    const emoji = hpBarEmojiMap[color] || hpBarEmojiMap['#007bff'];
-    const percentage = Math.max(0, (hp / maxHp));
-
-    const filledBlocks = Math.round(percentage * 8);
-    const emptyBlocks = 8 - filledBlocks;
-
-    return emoji.repeat(filledBlocks) + hpBarEmojiMap['empty'].repeat(emptyBlocks);
-}
-
-async function ipcloader() {
-    if (windowloaded) {
-        logToRenderer('ipcloader() called.');
-        // --- All core IPC listeners should be registered after the app is ready ---
-        ipcMain.handle('open-file-dialog', async () => {
-            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-                title: 'Select Music File',
-                defaultPath: DEFAULT_LOCAL_FOLDER,
-                properties: ['openFile'],
-                filters: [
-                    { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
-                ]
-            });
-
-            if (filePaths && filePaths.length > 0) {
-                // Here, you would typically do something with the selected file path,
-                // like sending it back to the renderer process or loading the music.
-                // For now, we'll just return it.
-                return filePaths[0];
-            }
-            return null;
-        });
-
-
-        ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-            if (creature) {
-                creature.initiative = parseFloat(initiative) || 0;
-                initiativeOrder.sort((a, b) => b.initiative - a.initiative);
-                sendInitiativeUpdate();
-                saveState();
-            }
-        });
-
-        ipcMain.on('push-initiative', async () => {
-            logToRenderer(`'push-initiative-to-chat' invoked.`);
-            if (initiativeOrder.length === 0) {
-                logToRenderer('[push-initiative] Cannot push, initiative is empty.');
-                return;
-            }
-
-            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
-            if (!channel) {
-                logToRenderer(`[push-initiative] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
-                return;
-            }
-            logToRenderer(`[push-initiative] Found channel: ${channel.name}`);
-
-            try {
-                const embed = new EmbedBuilder()
-                    .setColor(0x0099FF)
-                    .setTitle('Initiative Order')
-                    .setTimestamp();
-
-                let description = '';
-                initiativeOrder.forEach((creature, index) => {
-                    const hpBar = createEmojiHpBar(creature);
-                    const conditions = (creature.conditions || [])
-                        .map(c => DND_CONDITIONS[c]?.emoji || c)
-                        .join(' ');
-
-                    const activeMarker = index === currentTurnIndex ? '➤ ' : '';
-                    description += `${activeMarker}**${creature.initiative}** - ${creature.name}  |  ${hpBar}  |  ${conditions}\n`;
-                });
-
-                embed.setDescription(description);
-
-                logToRenderer(`[push-initiative] Attempting to send embed...`);
-                await channel.send({ embeds: [embed] });
-                logToRenderer('[push-initiative] Successfully pushed initiative to chat.');
-            } catch (error) {
-                logToRenderer(`[push-initiative] FAILED to send embed: ${error}`);
-            }
-        });
-
-        ipcMain.on('next-turn', () => {
-            if (initiativeOrder.length > 0) {
-                currentTurnIndex = (currentTurnIndex + 1) % initiativeOrder.length;
-                sendInitiativeUpdate();
-                saveState();
-            }
-        });
-
-        ipcMain.on('copy-creature', (event, { creatureId }) => {
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-            if (creature) {
-                // Send a copy of the creature data, but don't remove the original
-                mainWindow.webContents.send('populate-edit-form', creature);
-            }
-        });
-
-        ipcMain.on('save-encounter', async () => {
-            try {
-                const { filePath } = await dialog.showSaveDialog(mainWindow, {
-                    title: 'Save Encounter',
-                    defaultPath: 'encounter.json',
-                    filters: [{ name: 'JSON Files', extensions: ['json'] }]
-                });
-
-                if (filePath) {
-                    const state = { initiativeOrder, currentTurnIndex };
-                    fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
-                    logToRenderer(`Encounter saved to ${filePath}`);
-                }
-            } catch (error) {
-                logToRenderer(`Error saving encounter: ${error.message}`);
-            }
-        });
-
-        ipcMain.handle('load-encounter-dialog', async () => {
-            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-                title: 'Load Encounter',
-                defaultPath: app.getPath('userData'),
-                properties: ['openFile'],
-                filters: [{ name: 'JSON Files', extensions: ['json'] }]
-            });
-
-            if (filePaths && filePaths.length > 0) {
-                mainWindow.webContents.send('load-encounter', filePaths[0]);
-            }
-        });
-
-        ipcMain.on('load-encounter', async (event, filePath) => {
-            try {
-                if (filePath) {
-                    const savedState = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-                    initiativeOrder = savedState.initiativeOrder || [];
-                    currentTurnIndex = savedState.currentTurnIndex || 0;
-                    logToRenderer(`Encounter loaded from ${filePath}`);
-                    saveState(); // Autosave the newly loaded state
-                    sendInitiativeUpdate();
-                }
-            } catch (error) {
-                logToRenderer(`Error loading encounter: ${error.message}`);
-            }
-        });
-
-        ipcMain.on('add-creature', (event, creature) => {
-            const initiativeInput = creature.initiative.toString(); // Ensure it's a string
-            if (initiativeInput.startsWith('+') || initiativeInput.startsWith('-')) {
-                const modifier = parseInt(initiativeInput, 10);
-                const roll = new DiceRoller().roll('1d20').total;
-                creature.initiative = roll + modifier;
-                const message = `${creature.name} rolled initiative: ${roll} ${modifier < 0 ? '-' : '+'} ${Math.abs(modifier)} = ${creature.initiative}`;
-                logToRenderer(message);
-                mainWindow.webContents.send('dice-log', message);
-            } else {
-                creature.initiative = parseFloat(initiativeInput) || 0;
-            }
-
-            initiativeOrder.push(creature);
-            initiativeOrder.sort((a, b) => b.initiative - a.initiative);
-            sendInitiativeUpdate();
-            saveState();
-        });
-
-        ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-            if (creature) {
-                creature.reminders = reminders;
-                saveState();
-            }
-        });
-
-        ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-            if (!creature) return;
-
-            let modifier = 0;
-            if (type === 'check') {
-                const score = creature.scores ? (creature.scores[stat] || 10) : 10;
-                modifier = Math.floor((score - 10) / 2);
-            } else { // 'save'
-                modifier = creature.saves ? (parseInt(creature.saves[stat], 10) || 0) : 0;
-            }
-
-            let rollNotation = '1d20';
-            if (rollType === 'adv') rollNotation = '2d20kh1';
-            if (rollType === 'dis') rollNotation = '2d20kl1';
-
-            const roll = new DiceRoller().roll(rollNotation);
-            const total = roll.total + modifier;
-
-            const rollDetails = roll.rolls[0].rolls.map(r => r.value).join(', ');
-            const message = `${creature.name} rolled a ${stat.toUpperCase()} ${type} (${rollType})
-    Result: ${total} ([${rollDetails}] + ${modifier})`;
-
-            logToRenderer(message);
-            mainWindow.webContents.send('dice-log', message);
-
-            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
-            if (channel) {
-                channel.send(message);
-            }
-        });
-
-        ipcMain.on('reset-encounter', () => {
-            initiativeOrder.forEach(c => {
-                c.hp = c.maxHp;
-                c.tempHp = 0;
-                c.conditions = [];
-            });
-            currentTurnIndex = 0;
-            sendInitiativeUpdate();
-            saveState();
-        });
-
-        ipcMain.on('clear-encounter', async () => {
-            const result = await dialog.showMessageBox(mainWindow, {
-                type: 'warning',
-                title: 'Confirm Clear',
-                message: 'Are you sure you want to clear the entire encounter? This cannot be undone.',
-                detail: 'You may want to save the encounter first.',
-                buttons: ['Clear Encounter', 'Cancel'],
-                defaultId: 1,
-                cancelId: 1
-            });
-            if (result.response === 0) { // 'Clear Encounter' button
-                initiativeOrder = [];
-                currentTurnIndex = 0;
-                sendInitiativeUpdate();
-                saveState();
-            }
-        });
-
-        ipcMain.on('edit-creature', (event, { creatureId }) => {
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-            if (creature) {
-                mainWindow.webContents.send('populate-edit-form', creature);
-                // Remove the creature after sending its data to the form
-                initiativeOrder = initiativeOrder.filter(c => c.id !== creatureId);
-                sendInitiativeUpdate();
-                saveState();
-            }
-        });
-
-        ipcMain.on('remove-creature', (event, { creatureId }) => {
-            initiativeOrder = initiativeOrder.filter(c => c.id !== creatureId);
-            sendInitiativeUpdate();
-            saveState();
-        });
-
-        ipcMain.on('previous-turn', () => {
-            if (initiativeOrder.length > 0) {
-                currentTurnIndex = (currentTurnIndex - 1 + initiativeOrder.length) % initiativeOrder.length;
-                sendInitiativeUpdate();
-                saveState();
-            }
-        });
-
-        ipcMain.on('add-temp-hp', (event, { creatureId, amount }) => {
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-            if (creature) {
-                creature.tempHp = (creature.tempHp || 0) + amount;
-                sendInitiativeUpdate();
-                saveState();
-            }
-        });
-
-        ipcMain.on('update-hp', (event, { creatureId, amount }) => {
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-            if (creature) {
-                if (amount < 0) { // Damage
-                    let damage = -amount;
-
-                    // Subtract from temp HP first
-                    const tempHpDamage = Math.min(creature.tempHp || 0, damage);
-                    creature.tempHp -= tempHpDamage;
-                    damage -= tempHpDamage;
-
-                    // Subtract remaining damage from main HP
-                    creature.hp -= damage;
-
-                    if (creature.isConcentrating) {
-                        const dc = Math.max(10, Math.floor(-amount / 2)); // DC is based on total damage
-                        dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${creature.name} must make a DC ${dc} Constitution saving throw.`, buttons: ['OK']});
-                    }
-                } else { // Healing
-                    creature.hp += amount;
-                }
-                sendInitiativeUpdate();
-                saveState();
-            }
-        });
-
-        ipcMain.on('add-condition', (event, { creatureId, condition }) => {
-            logToRenderer(`Adding condition ${condition} to creature ${creatureId}`);
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-            if (creature) {
-                if (!creature.conditions) creature.conditions = [];
-                if (!creature.conditions.includes(condition)) {
-                    creature.conditions.push(condition);
-                    sendInitiativeUpdate();
-                    saveState();
-                }
-            }
-        });
-
-        ipcMain.on('remove-condition', (event, { creatureId, condition }) => {
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-            if (creature && creature.conditions) {
-                creature.conditions = creature.conditions.filter(c => c !== condition);
-                sendInitiativeUpdate();
-                saveState();
-            }
-        });
-
-        ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-            if (creature) {
-                creature[flag] = value;
-                sendInitiativeUpdate();
-                saveState();
-            }
-        });
-    }
-    else {
-        logToRenderer('ipcloader() waiting for window to load...');
-        await sleep(100);
-        ipcloader();
-    }  
-}
-
 // Function to send log messages to the renderer
-async function logToRenderer(message) {
-    if (isAppReady) {
-        mainWindow.webContents.send('log-message', message);
-    }
-    else {
-        await sleep(100);
-        logToRenderer(message);
-    }
+function logToRenderer(message) {
+    mainWindow.webContents.send('log-message', message);
 }
 
 client.on('error', error => {
@@ -521,6 +91,7 @@ client.on('error', error => {
 });
 
 client.once('ready', async () => {
+    //Define a nice clean shutdown function
     const shutdown = async () => {
         try {
             console.log('Cleaning up and exiting.');
@@ -545,249 +116,10 @@ client.once('ready', async () => {
             console.log('Error during shutdown:', error);
         }
     };
-    app.on('before-quit', shutdown);
+
     logToRenderer('TavernTones is online!');
-
-    ipcMain.on('play-music', async (event, filePathFromRenderer) => {
-    logToRenderer(`Play command received. pendingFile: ${audioState.pendingFile}, filePathFromRenderer: ${filePathFromRenderer}, playerStatus: ${audioState.playerStatus}`);
-
-    if (audioState.pendingFile) {
-        logToRenderer(`Play command received for pending file: ${audioState.pendingFile}`);
-        await play(audioState.pendingFile);
-        audioState.clearPendingFile();
-    } else if (audioState.playerStatus === AudioPlayerStatus.Paused) {
-        logToRenderer('Resuming current track: ' + audioState.activeFile);
-        resumeAudio();
-    } else if (filePathFromRenderer) {
-            logToRenderer('Play command: Direct play from renderer path: ' + filePathFromRenderer);
-        await play(filePathFromRenderer);
-    } else {
-            logToRenderer('Play command: Nothing to play.');
-            if (mainWindow && mainWindow.webContents) { // Ensure GUI reflects non-playing state if nothing happens
-                mainWindow.webContents.send('update-gui-state', {
-                    isPlaying: false,
-                filePath: audioState.activeFile, // Keep showing current file if paused or idle
-                isPending: !!audioState.pendingFile
-                });
-            }
-        }
-    });
-
-    ipcMain.on('pause-music', () => {
-        logToRenderer('Pause command received. Current player status: ' + player.state.status + ', isPlaying: ' + audioState.isPlaying);
-    if (audioState.isPlaying) {
-        pauseAudio();
-    }
-    });
-
-    //Begin audio processing
-    async function createReadableStream(filePath, useCache = true) {
-        if (!filePath) { // Ensure filePath is not null or undefined
-            logToRenderer('createReadableStream: filePath is null or undefined.');
-            return null;
-        }
-        const ext = path.extname(filePath).toLowerCase();
-
-        if (ext === '.wav') {
-            try {
-                // Create a readable stream from the WAV file
-                const wavStream = fs.createReadStream(filePath);
-                logToRenderer('Successfully created readable stream from WAV file.');
-                return wavStream;
-            } catch (error) {
-                logToRenderer('Error processing WAV file in createReadableStream: ' + error.message);
-                return null;
-            }
-        } else {
-            logToRenderer('Unsupported file type in createReadableStream: ' + ext);
-            return null;
-        }
-    }
-
-    //player status enums
-    //AudioPlayerStatus.Buffering
-    //AudioPlayerStatus.Playing
-    //AudioPlayerStatus.Paused
-    //AudioPlayerStatus.Idle
-    //AudioPlayerStatus.AutoPaused
-
-    let player = createAudioPlayer(); // This is the main player
-    connection.subscribe(player);
-
-    // Setup main player's event listeners once
-    player.on(AudioPlayerStatus.Idle, async () => {
-    logToRenderer('Main player entered Idle state. Current track: ' + audioState.activeFile + '. Pending track: ' + audioState.pendingFile);
-    audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-        // This Idle handler is primarily for looping non-OGG files or playing the next track if a queue system were implemented.
-        // OGG files are handled by a temporary player and should not trigger this main player's looping logic for themselves.
-
-    if (audioState.pendingFile) {
-        logToRenderer('Main player Idle: Pending resource found. Starting playback for: ' + audioState.pendingFile);
-        const stream = await createReadableStream(audioState.pendingFile);
-        if (stream) {
-            const resourceToPlay = createAudioResource(stream);
-            await startPlaybackFromResource(resourceToPlay, audioState.pendingFile);
-            audioState.clearPendingFile();
-        } else {
-            logToRenderer('Main player Idle: Failed to create stream for pending file: ' + audioState.pendingFile);
-            audioState.clearPendingFile();
-        }
-    } else if (audioState.activeFile) {
-        const isOggLoop = path.extname(audioState.activeFile).toLowerCase() === '.ogg';
-            if (isOggLoop) {
-                logToRenderer('Main player Idle: OGG file finished (expected to be played by temporary player), not looping with main player.');
-            audioState.clearActiveFile();
-                if (mainWindow && mainWindow.webContents) {
-                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
-                }
-                // Ensure main player remains subscribed if no other pending actions
-                if (connection && connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player !== player) {
-                connection.subscribe(player);
-                }
-            } else {
-                // Existing loop logic for non-OGG files:
-                logToRenderer('Main player Idle (Looping non-OGG): Forcing player.stop(true) before re-creating resource for loop.');
-                player.stop(true);
-            logToRenderer('Main player Idle: No pending resource. Attempting to loop current (non-OGG) track: ' + audioState.activeFile);
-            const newReadableStream = await createReadableStream(audioState.activeFile);
-                if (newReadableStream) {
-                    const newAudioResourceForLoop = createAudioResource(newReadableStream);
-                    // currentAudioResource is already set for non-OGG, startPlaybackFromResource will use it.
-                await startPlaybackFromResource(newAudioResourceForLoop, audioState.activeFile);
-                } else {
-                logToRenderer('Main player Idle: Failed to create stream for looping non-OGG: ' + audioState.activeFile);
-                audioState.clearActiveFile();
-                    if (mainWindow && mainWindow.webContents) {
-                        mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
-                    }
-                }
-            }
-        } else {
-        logToRenderer('Main player Idle and no activeFile or pendingFile, so not looping or starting new track.');
-            if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
-            }
-        }
-    });
-
-    player.on(AudioPlayerStatus.AutoPaused, () => {
-        if (currentPlayingFilePath) { // Check if a track was supposed to be playing
-            logToRenderer('Main player Autopaused, check connection... Track: ' + currentPlayingFilePath);
-        }
-    });
-
-    player.on('error', (error) => {
-    logToRenderer(`Error in main player for ${audioState.activeFile}: ${error.message}`);
-    audioState.clearActiveFile();
-    audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-        if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null, error: true });
-        }
-    });
-
-
-    async function startPlaybackFromResource(audioResourceToPlay, filePathOfResource) {
-        logToRenderer('Using main player for: ' + filePathOfResource);
-        if (connection && connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player !== player) {
-            logToRenderer('Main player was not subscribed. Re-subscribing.');
-            connection.subscribe(player);
-        } else if (!connection || connection.state.status !== VoiceConnectionStatus.Ready) {
-            logToRenderer('ERROR: Voice connection not ready to subscribe main player.');
-            if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
-            }
-            return;
-        }
-
-    audioState.setActiveFile(filePathOfResource);
-
-        // Crucially, ensure main player's listeners are set up (they are, once, above)
-        // player.removeAllListeners(AudioPlayerStatus.Idle); // This was here before, but listeners are now set once globally
-        // player.removeAllListeners(AudioPlayerStatus.AutoPaused);
-        // player.removeAllListeners('error');
-        // Re-attaching listeners like this on every play can lead to multiple listeners.
-        // They are now set once when the main `player` is created.
-
-        player.play(audioResourceToPlay);
-        logToRenderer('Main player.play called for: ' + filePathOfResource);
-
-        try {
-            await entersState(player, AudioPlayerStatus.Playing, 5000);
-        audioState.setPlayerStatus(AudioPlayerStatus.Playing);
-        logToRenderer('Main player is now Playing: ' + audioState.activeFile);
-            if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: audioState.activeFile });
-            }
-        } catch (error) {
-        logToRenderer(`Main player did not enter Playing state for ${audioState.activeFile}: ${error.message}. Current state: ${player.state.status}`);
-        audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-            if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: audioState.activeFile, error: true });
-            }
-            // Don't nullify currentPlayingFilePath here if we want to potentially retry/log
-        }
-    }
-
-    function pauseAudio() {
-        if (player && player.state.status === AudioPlayerStatus.Playing) {
-            player.pause(true); // Pass true to pause even if resource is still buffering
-        audioState.setPlayerStatus(AudioPlayerStatus.Paused);
-            logToRenderer('Audio paused. Player state: ' + player.state.status);
-            if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: audioState.activeFile });
-            }
-        } else {
-            logToRenderer('Audio is not playing or player unavailable. Player state: ' + player.state.status);
-        }
-    }
-
-    async function play(filePath) {
-        if (!filePath) {
-            logToRenderer('play: filePath is null or undefined.');
-            return;
-        }
-
-        const stream = await createReadableStream(filePath);
-        if (stream) {
-            const resource = createAudioResource(stream);
-            await startPlaybackFromResource(resource, filePath);
-        } else {
-            logToRenderer(`Failed to create stream for: ${filePath}`);
-        }
-    }
-
-
-    function resumeAudio() {
-        if (player && player.state.status === AudioPlayerStatus.Paused) {
-            player.unpause();
-        audioState.setPlayerStatus(AudioPlayerStatus.Playing);
-            logToRenderer('Audio resumed. Player state: ' + player.state.status);
-            if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: audioState.activeFile });
-            }
-        } else {
-            logToRenderer('Audio is not paused or player unavailable. Player state: ' + player.state.status);
-        }
-    }
     logToRenderer(`Logged in as ${client.user.tag}`);
-
-    // Send a startup embed to test permissions
-    try {
-        const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
-        if (channel) {
-            const startupEmbed = new EmbedBuilder()
-                .setColor(0x57F287)
-                .setTitle('TavernTones is Ready!')
-                .setDescription('The bot has successfully connected and is ready for commands.')
-                .setTimestamp();
-            await channel.send({ embeds: [startupEmbed] });
-        }
-    } catch (error) {
-        logToRenderer(`[Startup Test] FAILED to send startup embed: ${error}`);
-    }
-
-    // startup message
-    /*
+    /* startup message
     const textChannel = client.channels.cache.get(TEXT_CHANNEL_ID);
     if (textChannel) {
         try {
@@ -855,7 +187,6 @@ client.once('ready', async () => {
 
             await entersState(connection, VoiceConnectionStatus.Ready, 60000);
             logToRenderer('Connection is ready!');
-            sendInitiativeUpdate();
         }
         catch (error) {
             logToRenderer('Error joining voice channel: ', error);
@@ -896,7 +227,7 @@ client.once('ready', async () => {
                         if (surgeEffect) {
                             const evaluatedText = evaluateDiceRolls(surgeEffect.text);
                             logToRenderer(evaluatedText + (surgeEffect.unique ? '  - Unique!' : ''));
-                            await message.reply(evaluatedText + (surgeEffect.unique ? '  - 🥳Unique!🎊' : ''));
+                            await message.reply(evaluatedText + (surgeEffect.unique ? '  - �Unique!�' : ''));
 
                             if (surgeEffect.unique) {
                                 if (!Array.isArray(surgeEffect.used)) {
@@ -919,7 +250,7 @@ client.once('ready', async () => {
                         if (shieldEffect) {
                             const evaluatedText = evaluateDiceRolls(shieldEffect.text);
                             logToRenderer(evaluatedText + (shieldEffect.unique ? '  - Unique!' : ''));
-                            await message.reply(evaluatedText + (shieldEffect.unique ? '  - 🥳Unique!🎊' : ''));
+                            await message.reply(evaluatedText + (shieldEffect.unique ? '  - �Unique!�' : ''));
 
                             // Mark the effect as used by the user if it's unique
                             if (shieldEffect.unique) {
@@ -1278,6 +609,325 @@ client.once('ready', async () => {
         }
     });
 
+    //Begin IPC Handling
+    function logToRenderer(message) {
+        mainWindow.webContents.send('log-message', message);
+    }
+
+    ipcMain.on('play-music', async (event, filePathFromRenderer) => {
+    logToRenderer(`Play command received. pendingFile: ${audioState.pendingFile}, filePathFromRenderer: ${filePathFromRenderer}, playerStatus: ${audioState.playerStatus}`);
+
+    if (audioState.pendingFile) {
+        logToRenderer(`Play command received for pending file: ${audioState.pendingFile}`);
+        await play(audioState.pendingFile);
+        audioState.clearPendingFile();
+    } else if (audioState.playerStatus === AudioPlayerStatus.Paused) {
+        logToRenderer('Resuming current track: ' + audioState.activeFile);
+        resumeAudio();
+    } else if (filePathFromRenderer) {
+            logToRenderer('Play command: Direct play from renderer path: ' + filePathFromRenderer);
+        await play(filePathFromRenderer);
+    } else {
+            logToRenderer('Play command: Nothing to play.');
+            if (mainWindow && mainWindow.webContents) { // Ensure GUI reflects non-playing state if nothing happens
+                mainWindow.webContents.send('update-gui-state', {
+                    isPlaying: false,
+                filePath: audioState.activeFile, // Keep showing current file if paused or idle
+                isPending: !!audioState.pendingFile
+                });
+            }
+        }
+    });
+
+    ipcMain.on('pause-music', () => {
+        logToRenderer('Pause command received. Current player status: ' + player.state.status + ', isPlaying: ' + audioState.isPlaying);
+    if (audioState.isPlaying) {
+        pauseAudio();
+    }
+    });
+
+    ipcMain.on('exit-app', async () => {
+        await shutdown();
+    });
+
+    app.on('window-all-closed', async () => {
+        await shutdown();
+    });
+
+    ipcMain.handle('get-default-local-folder', () => {
+        return DEFAULT_LOCAL_FOLDER;
+    });
+
+    ipcMain.handle('open-file-dialog', async () => {
+        const defaultFolder = process.env.DEFAULT_LOCAL_FOLDER
+        const result = await dialog.showOpenDialog({
+        properties: ['openFile'],
+        defaultPath: defaultFolder,
+        filters: [
+            { name: 'Audio Files', extensions: ['wav', 'wav.lnk', 'wav - Shortcut.lnk'] },
+            { name: 'All Files', extensions: ['*'] }
+        ]
+        });
+
+        let selectedPath = result.filePaths[0] || null;
+        let resolvedPathAfterLinkCheck = selectedPath; // Assume it's the same unless it's a link
+
+        if (resolvedPathAfterLinkCheck) {
+            if (path.extname(resolvedPathAfterLinkCheck).toLowerCase() === '.lnk') {
+                try {
+                    const shortcut = shell.readShortcutLink(resolvedPathAfterLinkCheck);
+                    const targetPath = shortcut.target || null;
+
+                    if (targetPath && fs.existsSync(targetPath)) {
+                        resolvedPathAfterLinkCheck = targetPath;
+                        logToRenderer('Resolved .lnk to: ' + resolvedPathAfterLinkCheck);
+                    } else {
+                        logToRenderer('Resolved shortcut target does not exist or is invalid: ' + targetPath);
+                    resolvedPathAfterLinkCheck = null;
+                    }
+                }
+                catch (error) {
+                    logToRenderer('Error resolving shortcut: ' + error);
+                resolvedPathAfterLinkCheck = null;
+                }
+            }
+
+            // Simplified logic: only validate path and set pendingFilePath.
+            // Stream and resource creation moved to 'play-music' handler.
+            if (resolvedPathAfterLinkCheck && fs.existsSync(resolvedPathAfterLinkCheck) && fs.statSync(resolvedPathAfterLinkCheck).isFile()) {
+            audioState.setPendingFile(resolvedPathAfterLinkCheck);
+            logToRenderer(`File selected and pending: ${audioState.pendingFile}`);
+            createReadableStream(resolvedPathAfterLinkCheck, false); // Pre-load the file
+            } else {
+                if (resolvedPathAfterLinkCheck) { // Only log if there was a path to check
+                    logToRenderer(`Invalid file or file does not exist: ${resolvedPathAfterLinkCheck}`);
+                } else {
+                    logToRenderer('No file selected or link resolution failed.');
+                }
+            audioState.clearPendingFile();
+                resolvedPathAfterLinkCheck = null; // Ensure this is null if no valid file
+            }
+    } else {
+        audioState.clearPendingFile();
+            logToRenderer('No file selected from dialog.');
+        }
+
+        // Send GUI update after file dialog processing
+        if (mainWindow && mainWindow.webContents) {
+            // Update GUI based on whether a file is pending
+            mainWindow.webContents.send('update-gui-state', {
+            isPlaying: audioState.isPlaying, // Reflect current playing state
+            filePath: audioState.pendingFile || audioState.activeFile, // Show pending if available, else current
+            isPending: !!audioState.pendingFile  // True if a file is pending, false otherwise
+            });
+        }
+        return resolvedPathAfterLinkCheck; // Return the path that was processed (or null)
+    });
+
+
+    //Begin audio processing
+async function createReadableStream(filePath, useCache = true) {
+        if (!filePath) { // Ensure filePath is not null or undefined
+            logToRenderer('createReadableStream: filePath is null or undefined.');
+            return null;
+        }
+        const ext = path.extname(filePath).toLowerCase();
+
+        if (ext === '.wav') {
+            try {
+                // Create a readable stream from the WAV file
+                const wavStream = fs.createReadStream(filePath);
+                logToRenderer('Successfully created readable stream from WAV file.');
+                return wavStream;
+            } catch (error) {
+                logToRenderer('Error processing WAV file in createReadableStream: ' + error.message);
+                return null;
+            }
+        } else {
+            logToRenderer('Unsupported file type in createReadableStream: ' + ext);
+            return null;
+        }
+    }
+
+    //player status enums
+    //AudioPlayerStatus.Buffering
+    //AudioPlayerStatus.Playing
+    //AudioPlayerStatus.Paused
+    //AudioPlayerStatus.Idle
+    //AudioPlayerStatus.AutoPaused
+
+    let player = createAudioPlayer(); // This is the main player
+    connection.subscribe(player);
+
+    // Setup main player's event listeners once
+    player.on(AudioPlayerStatus.Idle, async () => {
+    logToRenderer('Main player entered Idle state. Current track: ' + audioState.activeFile + '. Pending track: ' + audioState.pendingFile);
+    audioState.setPlayerStatus(AudioPlayerStatus.Idle);
+        // This Idle handler is primarily for looping non-OGG files or playing the next track if a queue system were implemented.
+        // OGG files are handled by a temporary player and should not trigger this main player's looping logic for themselves.
+
+    if (audioState.pendingFile) {
+        logToRenderer('Main player Idle: Pending resource found. Starting playback for: ' + audioState.pendingFile);
+        const stream = await createReadableStream(audioState.pendingFile);
+        if (stream) {
+            const resourceToPlay = createAudioResource(stream);
+            await startPlaybackFromResource(resourceToPlay, audioState.pendingFile);
+            audioState.clearPendingFile();
+        } else {
+            logToRenderer('Main player Idle: Failed to create stream for pending file: ' + audioState.pendingFile);
+            audioState.clearPendingFile();
+        }
+    } else if (audioState.activeFile) {
+        const isOggLoop = path.extname(audioState.activeFile).toLowerCase() === '.ogg';
+            if (isOggLoop) {
+                logToRenderer('Main player Idle: OGG file finished (expected to be played by temporary player), not looping with main player.');
+            audioState.clearActiveFile();
+                if (mainWindow && mainWindow.webContents) {
+                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
+                }
+                // Ensure main player remains subscribed if no other pending actions
+                if (connection && connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player !== player) {
+                connection.subscribe(player);
+                }
+            } else {
+                // Existing loop logic for non-OGG files:
+                logToRenderer('Main player Idle (Looping non-OGG): Forcing player.stop(true) before re-creating resource for loop.');
+                player.stop(true);
+            logToRenderer('Main player Idle: No pending resource. Attempting to loop current (non-OGG) track: ' + audioState.activeFile);
+            const newReadableStream = await createReadableStream(audioState.activeFile);
+                if (newReadableStream) {
+                    const newAudioResourceForLoop = createAudioResource(newReadableStream);
+                    // currentAudioResource is already set for non-OGG, startPlaybackFromResource will use it.
+                await startPlaybackFromResource(newAudioResourceForLoop, audioState.activeFile);
+                } else {
+                logToRenderer('Main player Idle: Failed to create stream for looping non-OGG: ' + audioState.activeFile);
+                audioState.clearActiveFile();
+                    if (mainWindow && mainWindow.webContents) {
+                        mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
+                    }
+                }
+            }
+        } else {
+        logToRenderer('Main player Idle and no activeFile or pendingFile, so not looping or starting new track.');
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
+            }
+        }
+    });
+
+    player.on(AudioPlayerStatus.AutoPaused, () => {
+        if (currentPlayingFilePath) { // Check if a track was supposed to be playing
+            logToRenderer('Main player Autopaused, check connection... Track: ' + currentPlayingFilePath);
+        }
+    });
+
+    player.on('error', (error) => {
+    logToRenderer(`Error in main player for ${audioState.activeFile}: ${error.message}`);
+    audioState.clearActiveFile();
+    audioState.setPlayerStatus(AudioPlayerStatus.Idle);
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null, error: true });
+        }
+    });
+
+
+    async function startPlaybackFromResource(audioResourceToPlay, filePathOfResource) {
+        logToRenderer('Using main player for: ' + filePathOfResource);
+        if (connection && connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player !== player) {
+            logToRenderer('Main player was not subscribed. Re-subscribing.');
+            connection.subscribe(player);
+        } else if (!connection || connection.state.status !== VoiceConnectionStatus.Ready) {
+            logToRenderer('ERROR: Voice connection not ready to subscribe main player.');
+            if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
+            }
+            return;
+        }
+
+    audioState.setActiveFile(filePathOfResource);
+
+        // Crucially, ensure main player's listeners are set up (they are, once, above)
+        // player.removeAllListeners(AudioPlayerStatus.Idle); // This was here before, but listeners are now set once globally
+        // player.removeAllListeners(AudioPlayerStatus.AutoPaused);
+        // player.removeAllListeners('error');
+        // Re-attaching listeners like this on every play can lead to multiple listeners.
+        // They are now set once when the main `player` is created.
+
+        player.play(audioResourceToPlay);
+        logToRenderer('Main player.play called for: ' + filePathOfResource);
+
+        try {
+            await entersState(player, AudioPlayerStatus.Playing, 5000);
+        audioState.setPlayerStatus(AudioPlayerStatus.Playing);
+        logToRenderer('Main player is now Playing: ' + audioState.activeFile);
+            if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: audioState.activeFile });
+            }
+        } catch (error) {
+        logToRenderer(`Main player did not enter Playing state for ${audioState.activeFile}: ${error.message}. Current state: ${player.state.status}`);
+        audioState.setPlayerStatus(AudioPlayerStatus.Idle);
+            if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: audioState.activeFile, error: true });
+            }
+            // Don't nullify currentPlayingFilePath here if we want to potentially retry/log
+        }
+    }
+
+    function pauseAudio() {
+        if (player && player.state.status === AudioPlayerStatus.Playing) {
+            player.pause(true); // Pass true to pause even if resource is still buffering
+        audioState.setPlayerStatus(AudioPlayerStatus.Paused);
+            logToRenderer('Audio paused. Player state: ' + player.state.status);
+            if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: audioState.activeFile });
+            }
+        } else {
+            logToRenderer('Audio is not playing or player unavailable. Player state: ' + player.state.status);
+        }
+    }
+
+async function play(filePath) {
+    if (!filePath) {
+        logToRenderer('play: filePath is null or undefined.');
+        return;
+    }
+
+    const stream = await createReadableStream(filePath);
+    if (stream) {
+        const resource = createAudioResource(stream);
+        await startPlaybackFromResource(resource, filePath);
+    } else {
+        logToRenderer(`Failed to create stream for: ${filePath}`);
+    }
+}
+
+function queue(filePath) {
+    if (!filePath) {
+        logToRenderer('queue: filePath is null or undefined.');
+        return;
+    }
+
+    audioState.setPendingFile(filePath);
+    logToRenderer(`Queued file: ${filePath}`);
+    mainWindow.webContents.send('update-gui-state', {
+        isPlaying: audioState.isPlaying,
+        filePath: audioState.pendingFile || audioState.activeFile,
+        isPending: !!audioState.pendingFile
+    });
+}
+
+    function resumeAudio() {
+        if (player && player.state.status === AudioPlayerStatus.Paused) {
+            player.unpause();
+        audioState.setPlayerStatus(AudioPlayerStatus.Playing);
+            logToRenderer('Audio resumed. Player state: ' + player.state.status);
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: audioState.activeFile });
+            }
+        } else {
+            logToRenderer('Audio is not paused or player unavailable. Player state: ' + player.state.status);
+        }
+    }
 });
 
 client.login(DISCORD_TOKEN);
@@ -1288,17 +938,6 @@ setInterval(() => {
     memoryUsage = process.memoryUsage().rss;
     logToRenderer(`Memory usage is ${((memoryUsage - startingMemUse) / 1024 / 1024).toFixed(2)} MB higher than at launch (${(memoryUsage / 1024 / 1024).toFixed(2)} MB total)`);
 }, 60000);
-
-function getHpColor(current, max) {
-    if (current <= 0) return '#6c757d'; // Grey
-    if (current > max) return '#8a2be2'; // Purple
-
-    const percentage = (current / max) * 100;
-    if (percentage <= 25) return '#dc3545'; // Red
-    if (percentage <= 50) return '#ffc107'; // Yellow
-    if (percentage <= 75) return '#28a745'; // Green
-    return '#007bff'; // Blue
-}
 
 function getValidTableFolders() {
     const randomTablesPath = path.join(__dirname, 'randomtables');
@@ -1343,7 +982,7 @@ async function rollFromTable(folderName, tablesConfig, channelId) {
             // Log the error and potentially return a specific error for this table
             logToRenderer(`Error loading table ${entry.tableName}: ${error.message}`);
             // Depending on desired strictness, you could either throw here or mark this table as invalid
-            return { ...entry, data: null, filePath: filePath, error: true }; 
+            return { ...entry, data: null, filePath: filePath, error: true };
         }
     });
 
@@ -1387,7 +1026,7 @@ async function rollFromTable(folderName, tablesConfig, channelId) {
         logToRenderer(`Selected table ${selectedTableEntry.tableName} does not contain an array of effects.`);
         return { success: false, message: `Data format error in table ${selectedTableEntry.tableName}.` };
     }
-    
+
     const availableEffects = selectedTableEntry.data.filter(effect => {
         return !effect.unique || !Array.isArray(effect.used) || !effect.used.includes(channelId);
     });
@@ -1605,7 +1244,7 @@ async function findMusic(folderSearchTerm, songSearchTerm) {
             songFilePath = path.join(actualFolderPath, randomSongName);
             logToRenderer(`findMusic: No songSearchTerm provided. Selected random song: '${randomSongName}' from folder '${foundFolderOriginalName}'. Full path: '${songFilePath}'.`);
         }
-        
+
         return songFilePath; // Return the full path to the song, or null if errors occurred
 
     } catch (error) {
