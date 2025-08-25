@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isPlaying = false;
     let initiativeOrder = [];
     let combatantPanelOrder = []; // For custom sorting of the right-hand panel
+    let currentTurnIndex = 0;
 
     // --- Element Refs ---
     const logArea = document.getElementById('logArea');
@@ -209,19 +210,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {
-        initiativeOrder = data.initiativeOrder; // Store globally
+        initiativeOrder = data.initiativeOrder;
+        currentTurnIndex = data.currentTurnIndex;
 
-        // Sync combatantPanelOrder with initiativeOrder
-        const newCreatureIds = new Set(initiativeOrder.map(c => c.id));
-        // Filter out creatures that no longer exist
-        combatantPanelOrder = combatantPanelOrder.filter(c => newCreatureIds.has(c.id));
-        // Add new creatures that aren't in the panel order yet
-        const panelOrderIds = new Set(combatantPanelOrder.map(c => c.id));
-        const newCreatures = initiativeOrder.filter(c => !panelOrderIds.has(c.id));
-        combatantPanelOrder.push(...newCreatures);
+        // Create a map of the latest creature data for efficient lookup
+        const newCreatureMap = new Map(initiativeOrder.map(c => [c.id, c]));
 
-        renderInitiativeList(data.initiativeOrder, data.currentTurnIndex);
-        renderCombatantDetailsList(combatantPanelOrder, data.currentTurnIndex);
+        // Get the updated data for creatures already in the panel, preserving their order
+        const syncedPanelOrder = combatantPanelOrder
+            .map(oldCreature => newCreatureMap.get(oldCreature.id))
+            .filter(Boolean); // Filter out any creatures that may have been deleted
+
+        // Identify any brand-new creatures that are not yet in our panel order
+        const syncedPanelIds = new Set(syncedPanelOrder.map(c => c.id));
+        const newCreatures = initiativeOrder.filter(c => !syncedPanelIds.has(c.id));
+
+        // Update the panel order with the synced and new creatures
+        combatantPanelOrder = [...syncedPanelOrder, ...newCreatures];
+
+        renderInitiativeList(initiativeOrder, currentTurnIndex);
+        renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
     });
 
     window.electron.ipcRenderer.on('soundboard-state-change', (event, { slotId, isPlaying, file, emoji }) => {
