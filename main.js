@@ -299,17 +299,19 @@ async function ipcloader() {
 
         ipcMain.on('save-encounter', async () => {
             try {
-                const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-                title: 'Load Encounter',
+                const { filePaths } = await dialog.showSaveDialog(mainWindow, {
+                title: 'Save Encounter',
                 defaultPath: app.getPath('userData'),
+                properties: ['saveFile'],
                 filters: [{ name: 'JSON Files', extensions: ['json'] }]
             });
 
-                if (filePath) {
-                    const state = { initiativeOrder, currentTurnIndex };
-                    fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
-                    logToRenderer(`Encounter saved to ${filePath}`);
-                }
+            if (filePaths[0]) {
+                const state = { initiativeOrder, currentTurnIndex };
+                fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
+                logToRenderer(`Encounter saved to ${filePath}`);
+            }
+            
             } catch (error) {
                 logToRenderer(`Error saving encounter: ${error.message}`);
             }
