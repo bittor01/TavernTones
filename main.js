@@ -206,6 +206,33 @@ function createEmojiHpBar(creature) {
 
     return emoji.repeat(filledBlocks) + hpBarEmojiMap['empty'].repeat(emptyBlocks);
 }
+async function checkAndShowReminders(creature, turnEvent) {
+    if (!creature) return;
+
+    let reminderMessages = [];
+    // Check for text reminders
+    const reminderText = creature.reminders ? creature.reminders[turnEvent] : '';
+    if (reminderText) {
+        reminderMessages.push(reminderText);
+    }
+
+    // Check for legendary action reminder on turn end
+    if (turnEvent === 'end' && creature.isFriendly) {
+        reminderMessages.push(`Legendary Action Reminder: End of ${creature.name}'s turn.`);
+    }
+
+    if (reminderMessages.length > 0) {
+        const message = reminderMessages.join('\n\n');
+        await dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: `Reminder for ${creature.name}`,
+            message: `${turnEvent.charAt(0).toUpperCase() + turnEvent.slice(1)} of Turn`,
+            detail: message,
+            buttons: ['OK']
+        });
+    }
+}
+
 async function ipcloader() {
     if (windowloaded) {
         logToRenderer('ipcloader() called.');
@@ -281,9 +308,16 @@ async function ipcloader() {
             }
         });
 
-        ipcMain.on('next-turn', () => {
+        ipcMain.on('next-turn', async () => {
             if (initiativeOrder.length > 0) {
+                const oldCreature = initiativeOrder[currentTurnIndex];
+
                 currentTurnIndex = (currentTurnIndex + 1) % initiativeOrder.length;
+                const newCreature = initiativeOrder[currentTurnIndex];
+
+                await checkAndShowReminders(oldCreature, 'end');
+                await checkAndShowReminders(newCreature, 'start');
+
                 sendInitiativeUpdate();
                 saveState();
             }
@@ -299,53 +333,74 @@ async function ipcloader() {
 
         ipcMain.on('save-encounter', async () => {
             try {
-                const { filePaths } = await dialog.showSaveDialog(mainWindow, {
-                title: 'Save Encounter',
-                defaultPath: app.getPath('userData'),
-                properties: ['saveFile'],
-                filters: [{ name: 'JSON Files', extensions: ['json'] }]
-            });
+                const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+                    title: 'Save Encounter',
+                    defaultPath: app.getPath('userData'),
+                    filters: [{ name: 'JSON Files', extensions: ['json'] }]
+                });
 
-            if (filePaths[0]) {
-                const state = { initiativeOrder, currentTurnIndex };
-                fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
-                logToRenderer(`Encounter saved to ${filePath}`);
-            }
-            
+                if (!canceled && filePath) {
+                    const state = { initiativeOrder, currentTurnIndex };
+                    fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
+                    logToRenderer(`Encounter saved to ${filePath}`);
+                }
             } catch (error) {
                 logToRenderer(`Error saving encounter: ${error.message}`);
             }
         });
 
         ipcMain.handle('load-encounter-dialog', async () => {
-            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+            const confirmResult = await dialog.showMessageBox(mainWindow, {
+                type: 'warning',
+                title: 'Confirm Load',
+                message: 'Are you sure you want to load a new encounter?',
+                detail: 'This will overwrite the current encounter. You may want to save your current progress first.',
+                buttons: ['Load Encounter', 'Cancel'],
+                defaultId: 0,
+                cancelId: 1
+            });
+
+            if (confirmResult.response === 1) { // User clicked 'Cancel'
+                return;
+            }
+
+            const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
                 title: 'Load Encounter',
                 defaultPath: app.getPath('userData'),
                 properties: ['openFile'],
                 filters: [{ name: 'JSON Files', extensions: ['json'] }]
             });
 
-            if (filePaths && filePaths.length > 0) {
-                mainWindow.webContents.send('load-encounter', filePaths[0]);
-            }
-        });
-
-        ipcMain.on('load-encounter', async (event, filePath) => {
-            try {
-                if (filePath) {
+            if (!canceled && filePaths && filePaths.length > 0) {
+                const filePath = filePaths[0];
+                try {
                     const savedState = JSON.parse(fs.readFileSync(filePath, 'utf8'));
                     initiativeOrder = savedState.initiativeOrder || [];
                     currentTurnIndex = savedState.currentTurnIndex || 0;
                     logToRenderer(`Encounter loaded from ${filePath}`);
                     saveState(); // Autosave the newly loaded state
                     sendInitiativeUpdate();
+                } catch (error) {
+                    logToRenderer(`Error loading encounter: ${error.message}`);
                 }
-            } catch (error) {
-                logToRenderer(`Error loading encounter: ${error.message}`);
             }
         });
 
         ipcMain.on('add-creature', (event, creature) => {
+            // Calculate saves from scores if not provided
+            const stats = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+            stats.forEach(stat => {
+                if (!creature.saves[stat] || creature.saves[stat].trim() === '') {
+                    const score = creature.scores[stat];
+                    if (score) {
+                        const modifier = Math.floor((score - 10) / 2);
+                        creature.saves[stat] = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+                    } else {
+                        creature.saves[stat] = '+0';
+                    }
+                }
+            });
+
             const initiativeInput = creature.initiative.toString(); // Ensure it's a string
             if (initiativeInput.startsWith('+') || initiativeInput.startsWith('-')) {
                 const modifier = parseInt(initiativeInput, 10);
@@ -404,6 +459,32 @@ async function ipcloader() {
             }
         });
 
+        ipcMain.on('roll-attack', (event, { creatureId, rollType }) => {
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+            if (!creature) return;
+
+            const modifier = parseInt(creature.attackMod, 10) || 0;
+
+            let rollNotation = '1d20';
+            if (rollType === 'adv') rollNotation = '2d20kh1';
+            if (rollType === 'dis') rollNotation = '2d20kl1';
+
+            const roll = new DiceRoller().roll(rollNotation);
+            const total = roll.total + modifier;
+
+            const rollDetails = roll.rolls[0].rolls.map(r => r.value).join(', ');
+            const message = `${creature.name} rolled an Attack (${rollType})
+    Result: ${total} ([${rollDetails}] + ${modifier})`;
+
+            logToRenderer(message);
+            mainWindow.webContents.send('dice-log', message);
+
+            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+            if (channel) {
+                channel.send(message);
+            }
+        });
+
         ipcMain.on('reset-encounter', () => {
             initiativeOrder.forEach(c => {
                 c.hp = c.maxHp;
@@ -450,9 +531,16 @@ async function ipcloader() {
             saveState();
         });
 
-        ipcMain.on('previous-turn', () => {
+        ipcMain.on('previous-turn', async () => {
             if (initiativeOrder.length > 0) {
+                const oldCreature = initiativeOrder[currentTurnIndex];
+
                 currentTurnIndex = (currentTurnIndex - 1 + initiativeOrder.length) % initiativeOrder.length;
+                const newCreature = initiativeOrder[currentTurnIndex];
+
+                await checkAndShowReminders(oldCreature, 'end');
+                await checkAndShowReminders(newCreature, 'start');
+
                 sendInitiativeUpdate();
                 saveState();
             }
