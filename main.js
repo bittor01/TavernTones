@@ -15,46 +15,15 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 console.log('Discord client instantiated.');
 const axios = require('axios');
 console.log('Axios loaded.');
-
-class AudioState {
-    constructor() {
-        this.activeFile = null;
-        this.pendingFile = null;
-        this.playerStatus = AudioPlayerStatus.Idle;
-        this.isPlaying = false;
-    }
-
-    setActiveFile(filePath) {
-        this.activeFile = filePath;
-    }
-
-    setPendingFile(filePath) {
-        this.pendingFile = filePath;
-    }
-
-    setPlayerStatus(status) {
-        this.playerStatus = status;
-        this.isPlaying = status === AudioPlayerStatus.Playing;
-    }
-
-    clearPendingFile() {
-        this.pendingFile = null;
-    }
-
-    clearActiveFile() {
-        this.activeFile = null;
-    }
-}
-
-const audioState = new AudioState();
+const BackendAudioPlayer = require('./BackendAudioPlayer.js');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
 const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
 const BOT_ROLE_ID = process.env.BOT_ROLE_ID;
 const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
 const TEXT_CHANNEL_ID = process.env.TEXT_CHANNEL_ID;
-let player;
 let connection;
+let musicPlayer;
 let lastResponse = null; // Variable to store the last response
 let isAppReady = false; // Flag to indicate if the app is ready
 
@@ -630,6 +599,7 @@ async function logToRenderer(message) {
         logToRenderer(message);
     }
 }
+musicPlayer = new BackendAudioPlayer(logToRenderer);
 
 /*
 client.on('error', error => {
@@ -643,8 +613,12 @@ client.once('ready', async () => {
             console.log('Cleaning up and exiting.');
             // Remove all event listeners
             client.removeAllListeners();
-            player.removeAllListeners();
-            connection.removeAllListeners();
+            if (musicPlayer && musicPlayer.player) {
+                musicPlayer.player.removeAllListeners();
+            }
+            if (connection) {
+                connection.removeAllListeners();
+            }
             app.removeAllListeners();
             ipcMain.removeAllListeners();
 
@@ -667,21 +641,6 @@ client.once('ready', async () => {
     logToRenderer('TavernTones is online!');
 
     //Connect to the voice channel
-
-    //connection status enums
-    //VoiceConnectionStatus.Signalling
-    //VoiceConnectionStatus.Connecting
-    //VoiceConnectionStatus.Ready
-    //VoiceConnectionStatus.Disconnected
-    //VoiceConnectionStatus.Destroyed
-
-    //player status enums
-    //AudioPlayerStatus.Buffering
-    //AudioPlayerStatus.Playing
-    //AudioPlayerStatus.Paused
-    //AudioPlayerStatus.Idle
-    //AudioPlayerStatus.AutoPaused
-
     const voiceChannel = client.channels.cache.get(VOICE_CHANNEL_ID);
     if (voiceChannel && voiceChannel.isVoiceBased()) {
         try {
@@ -694,18 +653,18 @@ client.once('ready', async () => {
             // Listen for connection status changes
             connection.on(VoiceConnectionStatus.Ready, () => {
                 logToRenderer('The bot has connected to the channel!');
+                musicPlayer.setConnection(connection); // Pass connection to the player
             });
 
             connection.on(VoiceConnectionStatus.Disconnected, () => {
                 logToRenderer('The bot has been disconnected. Attempting to reconnect...');
-                // Optionally, try to reconnect or handle disconnection
                 setTimeout(() => {
                     joinVoiceChannel({
                         channelId: voiceChannel.id,
                         guildId: voiceChannel.guild.id,
                         adapterCreator: voiceChannel.guild.voiceAdapterCreator,
                     });
-                }, 5000); // Delay before attempting to reconnect
+                }, 5000);
             });
 
             connection.on(VoiceConnectionStatus.Signalling, () => {
@@ -730,220 +689,17 @@ client.once('ready', async () => {
         logToRenderer('Voice channel not found or is not a voice channel!');
     }
 
-    player = createAudioPlayer(); // This is the main player
-    connection.subscribe(player);
-
-    ipcMain.on('play-music', async (event, filePathFromRenderer) => {
-    logToRenderer(`Play command received. pendingFile: ${audioState.pendingFile}, filePathFromRenderer: ${filePathFromRenderer}, playerStatus: ${audioState.playerStatus}`);
-
-    if (audioState.pendingFile) {
-        logToRenderer(`Play command received for pending file: ${audioState.pendingFile}`);
-        await play(audioState.pendingFile);
-        audioState.clearPendingFile();
-    } else if (audioState.playerStatus === AudioPlayerStatus.Paused) {
-        logToRenderer('Resuming current track: ' + audioState.activeFile);
-        resumeAudio();
-    } else if (filePathFromRenderer) {
-            logToRenderer('Play command: Direct play from renderer path: ' + filePathFromRenderer);
-        await play(filePathFromRenderer);
-    } else {
-            logToRenderer('Play command: Nothing to play.');
-            if (mainWindow && mainWindow.webContents) { // Ensure GUI reflects non-playing state if nothing happens
-                mainWindow.webContents.send('update-gui-state', {
-                    isPlaying: false,
-                filePath: audioState.activeFile, // Keep showing current file if paused or idle
-                isPending: !!audioState.pendingFile
-                });
-            }
-        }
+    // Simplified IPC Handlers
+    ipcMain.on('play-music', (event, filePathFromRenderer) => {
+        logToRenderer(`IPC 'play-music' received for: ${filePathFromRenderer || 'current track'}`);
+        musicPlayer.playFile(filePathFromRenderer);
     });
 
     ipcMain.on('pause-music', () => {
-        logToRenderer('Pause command received. Current player status: ' + player.state.status + ', isPlaying: ' + audioState.isPlaying);
-    if (audioState.isPlaying) {
-        pauseAudio();
-    }
+        logToRenderer(`IPC 'pause-music' received.`);
+        musicPlayer.pause();
     });
 
-    //Begin audio processing
-    async function createReadableStream(filePath, useCache = true) {
-        if (!filePath) { // Ensure filePath is not null or undefined
-            logToRenderer('createReadableStream: filePath is null or undefined.');
-            return null;
-        }
-        const ext = path.extname(filePath).toLowerCase();
-
-        if (ext === '.wav') {
-            try {
-                // Create a readable stream from the WAV file
-                const wavStream = fs.createReadStream(filePath);
-                logToRenderer('Successfully created readable stream from WAV file.');
-                return wavStream;
-            } catch (error) {
-                logToRenderer('Error processing WAV file in createReadableStream: ' + error.message);
-                return null;
-            }
-        } else {
-            logToRenderer('Unsupported file type in createReadableStream: ' + ext);
-            return null;
-        }
-    }
-
-    // Setup main player's event listeners once
-    player.on(AudioPlayerStatus.Idle, async () => {
-    logToRenderer('Main player entered Idle state. Current track: ' + audioState.activeFile + '. Pending track: ' + audioState.pendingFile);
-    audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-        // This Idle handler is primarily for looping non-OGG files or playing the next track if a queue system were implemented.
-        // OGG files are handled by a temporary player and should not trigger this main player's looping logic for themselves.
-
-    if (audioState.pendingFile) {
-        logToRenderer('Main player Idle: Pending resource found. Starting playback for: ' + audioState.pendingFile);
-        const stream = await createReadableStream(audioState.pendingFile);
-        if (stream) {
-            const resourceToPlay = createAudioResource(stream);
-            await startPlaybackFromResource(resourceToPlay, audioState.pendingFile);
-            audioState.clearPendingFile();
-        } else {
-            logToRenderer('Main player Idle: Failed to create stream for pending file: ' + audioState.pendingFile);
-            audioState.clearPendingFile();
-        }
-    } else if (audioState.activeFile) {
-        const isOggLoop = path.extname(audioState.activeFile).toLowerCase() === '.ogg';
-            if (isOggLoop) {
-                logToRenderer('Main player Idle: OGG file finished (expected to be played by temporary player), not looping with main player.');
-            audioState.clearActiveFile();
-                if (mainWindow && mainWindow.webContents) {
-                    mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
-                }
-                // Ensure main player remains subscribed if no other pending actions
-                if (connection && connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player !== player) {
-                connection.subscribe(player);
-                }
-            } else {
-                // Existing loop logic for non-OGG files:
-                logToRenderer('Main player Idle (Looping non-OGG): Forcing player.stop(true) before re-creating resource for loop.');
-                player.stop(true);
-            logToRenderer('Main player Idle: No pending resource. Attempting to loop current (non-OGG) track: ' + audioState.activeFile);
-            const newReadableStream = await createReadableStream(audioState.activeFile);
-                if (newReadableStream) {
-                    const newAudioResourceForLoop = createAudioResource(newReadableStream);
-                    // currentAudioResource is already set for non-OGG, startPlaybackFromResource will use it.
-                await startPlaybackFromResource(newAudioResourceForLoop, audioState.activeFile);
-                } else {
-                logToRenderer('Main player Idle: Failed to create stream for looping non-OGG: ' + audioState.activeFile);
-                audioState.clearActiveFile();
-                    if (mainWindow && mainWindow.webContents) {
-                        mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
-                    }
-                }
-            }
-        } else {
-        logToRenderer('Main player Idle and no activeFile or pendingFile, so not looping or starting new track.');
-            if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null });
-            }
-        }
-    });
-
-    player.on(AudioPlayerStatus.AutoPaused, () => {
-        if (currentPlayingFilePath) { // Check if a track was supposed to be playing
-            logToRenderer('Main player Autopaused, check connection... Track: ' + currentPlayingFilePath);
-        }
-    });
-
-    player.on('error', (error) => {
-    logToRenderer(`Error in main player for ${audioState.activeFile}: ${error.message}`);
-    audioState.clearActiveFile();
-    audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-        if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: null, error: true });
-        }
-    });
-
-
-    async function startPlaybackFromResource(audioResourceToPlay, filePathOfResource) {
-        logToRenderer('Using main player for: ' + filePathOfResource);
-        if (connection && connection.state.status === VoiceConnectionStatus.Ready && connection.state.subscription?.player !== player) {
-            logToRenderer('Main player was not subscribed. Re-subscribing.');
-            connection.subscribe(player);
-        } else if (!connection || connection.state.status !== VoiceConnectionStatus.Ready) {
-            logToRenderer('ERROR: Voice connection not ready to subscribe main player.');
-            if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: filePathOfResource, error: true });
-            }
-            return;
-        }
-
-    audioState.setActiveFile(filePathOfResource);
-
-        // Crucially, ensure main player's listeners are set up (they are, once, above)
-        // player.removeAllListeners(AudioPlayerStatus.Idle); // This was here before, but listeners are now set once globally
-        // player.removeAllListeners(AudioPlayerStatus.AutoPaused);
-        // player.removeAllListeners('error');
-        // Re-attaching listeners like this on every play can lead to multiple listeners.
-        // They are now set once when the main `player` is created.
-
-        player.play(audioResourceToPlay);
-        logToRenderer('Main player.play called for: ' + filePathOfResource);
-
-        try {
-            await entersState(player, AudioPlayerStatus.Playing, 5000);
-        audioState.setPlayerStatus(AudioPlayerStatus.Playing);
-        logToRenderer('Main player is now Playing: ' + audioState.activeFile);
-            if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: audioState.activeFile });
-            }
-        } catch (error) {
-        logToRenderer(`Main player did not enter Playing state for ${audioState.activeFile}: ${error.message}. Current state: ${player.state.status}`);
-        audioState.setPlayerStatus(AudioPlayerStatus.Idle);
-            if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: audioState.activeFile, error: true });
-            }
-            // Don't nullify currentPlayingFilePath here if we want to potentially retry/log
-        }
-    }
-
-    function pauseAudio() {
-        if (player && player.state.status === AudioPlayerStatus.Playing) {
-            player.pause(true); // Pass true to pause even if resource is still buffering
-        audioState.setPlayerStatus(AudioPlayerStatus.Paused);
-            logToRenderer('Audio paused. Player state: ' + player.state.status);
-            if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('update-gui-state', { isPlaying: false, filePath: audioState.activeFile });
-            }
-        } else {
-            logToRenderer('Audio is not playing or player unavailable. Player state: ' + player.state.status);
-        }
-    }
-
-    async function play(filePath) {
-        if (!filePath) {
-            logToRenderer('play: filePath is null or undefined.');
-            return;
-        }
-
-        const stream = await createReadableStream(filePath);
-        if (stream) {
-            const resource = createAudioResource(stream);
-            await startPlaybackFromResource(resource, filePath);
-        } else {
-            logToRenderer(`Failed to create stream for: ${filePath}`);
-        }
-    }
-
-
-    function resumeAudio() {
-        if (player && player.state.status === AudioPlayerStatus.Paused) {
-            player.unpause();
-        audioState.setPlayerStatus(AudioPlayerStatus.Playing);
-            logToRenderer('Audio resumed. Player state: ' + player.state.status);
-            if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('update-gui-state', { isPlaying: true, filePath: audioState.activeFile });
-            }
-        } else {
-            logToRenderer('Audio is not paused or player unavailable. Player state: ' + player.state.status);
-        }
-    }
     logToRenderer(`Logged in as ${client.user.tag}`);
 
     // Send a startup embed to test permissions
@@ -1343,15 +1099,9 @@ client.once('ready', async () => {
                             }
 
                             if (songFilePath) {
-                                queue(songFilePath);
                                 const songNameForMessage = path.parse(songFilePath).name;
-                                await message.reply(`Okay, queuing up: **${songNameForMessage}**. It will play when ready.`);
-                                if (audioState.isPlaying) {
-                                    player.stop(true);
-                                } else if (audioState.playerStatus === AudioPlayerStatus.Idle) {
-                                    await play(audioState.pendingFile);
-                                    audioState.clearPendingFile();
-                                }
+                                await message.reply(`Okay, playing: **${songNameForMessage}**.`);
+                                await musicPlayer.playFile(songFilePath);
                             } else {
                                 await message.reply("Sorry, I couldn't find the music you were looking for.");
                             }
@@ -1362,11 +1112,9 @@ client.once('ready', async () => {
 
                     case content.includes('!pa'):
                         logToRenderer('!pa command detected');
-                        if (audioState.isPlaying) {
-                            pauseAudio();
+                        if (musicPlayer.isPlaying) {
+                            musicPlayer.pause();
                             await message.reply('Playback paused.');
-                        } else if (audioState.playerStatus === AudioPlayerStatus.Paused) {
-                            await message.reply('Playback is already paused.');
                         } else {
                             await message.reply('Nothing is currently playing to pause.');
                         }
@@ -1379,10 +1127,10 @@ client.once('ready', async () => {
 
                     default:
                         logToRenderer('No recognized command found.');
-                        if (audioState.isPlaying) {
-                            if (audioState.activeFile) {
-                                const albumName = path.basename(path.dirname(audioState.activeFile));
-                                const trackName = path.basename(audioState.activeFile, path.extname(audioState.activeFile));
+                        if (musicPlayer.isPlaying) {
+                            if (musicPlayer.activeFilePath) {
+                                const albumName = path.basename(path.dirname(musicPlayer.activeFilePath));
+                                const trackName = path.basename(musicPlayer.activeFilePath, path.extname(musicPlayer.activeFilePath));
                                 await message.reply(`I'm currently playing: **${trackName}** from the album **${albumName}**`);
                             } else {
                                 await message.reply('Sorry, no track information available.');
