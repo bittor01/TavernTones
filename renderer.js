@@ -463,16 +463,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             creatureDiv.innerHTML = `
                 <div class="combatant-header">
                     <h4>${creature.name}</h4>
+                    <div class="header-controls">
+                        <button class="attack-roll-btn" data-id="${creature.id}">Attack ${creature.attackMod || '+0'}</button>
+                        <div class="header-stats">
+                            <span>AC: ${creature.ac ?? '?'}</span>
+                            <span>Speed: ${creature.speed || '?'}</span>
+                            <span>DC: ${creature.saveDc ?? '?'}</span>
+                        </div>
+                    </div>
                     <div class="card-controls">
                         <button class="copy-btn" title="Copy" data-id="${creature.id}">📋</button>
                         <button class="edit-btn" title="Edit" data-id="${creature.id}">📝</button>
                         <button class="move-to-bottom-btn" title="Move to Bottom" data-id="${creature.id}">🔽</button>
                         <button class="remove-btn" title="Remove" data-id="${creature.id}">❌</button>
-                    </div>
-                    <div class="header-stats">
-                        <span>AC: ${creature.ac ?? '?'}</span>
-                        <span>Speed: ${creature.speed || '?'}</span>
-                        <span>DC: ${creature.saveDc ?? '?'}</span>
                     </div>
                 </div>
                 <div class="combatant-body">
@@ -510,6 +513,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         // Add event listeners for all the new dynamic buttons
+        document.querySelectorAll('.attack-roll-btn').forEach(b => b.addEventListener('click', e => {
+            const id = e.target.dataset.id;
+            createPopup('attack-roll', id, e.target);
+        }));
+
         document.querySelectorAll('.stat-roll-btn').forEach(b => b.addEventListener('click', e => {
             const id = e.target.dataset.id;
             const type = e.target.dataset.type;
@@ -579,7 +587,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let contentHTML = '';
         if (type === 'hp') {
             contentHTML = `
-                <input type="number" id="popup-hp-input" placeholder="e.g. -10 or 5" autofocus>
+                <input type="number" id="popup-hp-input" placeholder="e.g. -10 or 5">
                 <button id="popup-hp-ok">Ok</button>
             `;
         } else if (type === 'condition') {
@@ -589,7 +597,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </select>
                 <button id="popup-condition-add">Add</button>
             `;
-        } else if (type === 'stat-roll') {
+        } else if (type === 'stat-roll' || type === 'attack-roll') {
             contentHTML = `
                 <button class="roll-type-btn" data-roll="adv">Advantage</button>
                 <button class="roll-type-btn" data-roll="flat">Flat</button>
@@ -597,13 +605,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         } else if (type === 'temp-hp') {
             contentHTML = `
-                <input type="number" id="popup-temp-hp-input" placeholder="Amount" autofocus>
+                <input type="number" id="popup-temp-hp-input" placeholder="Amount">
                 <button id="popup-temp-hp-ok">Ok</button>
             `;
         } else if (type === 'edit-initiative') {
             const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
             contentHTML = `
-                <input type="text" id="popup-initiative-input" value="${creature.initiative}" autofocus>
+                <input type="text" id="popup-initiative-input" value="${creature.initiative}">
                 <button id="popup-initiative-ok">Ok</button>
             `;
         } else if (type === 'reminders') {
@@ -623,6 +631,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         popup.innerHTML = contentHTML;
         document.body.appendChild(popup);
+
+        // Programmatically focus the first input or textarea in the popup
+        const inputToFocus = popup.querySelector('input[type="text"], input[type="number"], textarea');
+        if (inputToFocus) {
+            inputToFocus.focus();
+        }
 
         // Position popup near the button that was clicked
         const rect = targetElement.getBoundingClientRect();
@@ -665,16 +679,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('popup-temp-hp-ok').click();
                 }
             });
-        } else if (type === 'stat-roll') {
+        } else if (type === 'stat-roll' || type === 'attack-roll') {
             document.querySelectorAll('.roll-type-btn').forEach(button => {
                 button.addEventListener('click', () => {
                     const rollType = button.dataset.roll;
-                    window.electron.ipcRenderer.send('roll-stat', {
-                        creatureId: parseInt(creatureId),
-                        rollType: rollType,
-                        stat: targetElement.dataset.stat,
-                        type: targetElement.dataset.type
-                    });
+                    if (type === 'attack-roll') {
+                        window.electron.ipcRenderer.send('roll-attack', {
+                            creatureId: parseInt(creatureId),
+                            rollType: rollType,
+                        });
+                    } else {
+                        window.electron.ipcRenderer.send('roll-stat', {
+                            creatureId: parseInt(creatureId),
+                            rollType: rollType,
+                            stat: targetElement.dataset.stat,
+                            type: targetElement.dataset.type
+                        });
+                    }
                     popup.remove();
                 });
             });
