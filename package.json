@@ -11,6 +11,7 @@
   "description": "TavernTones is a bot designed to help CrispyChestnuts stream licensed ambient soundscapes and background music during TTRPG sessions hosted remotely on Discord.",
   "dependencies": {
     "@dice-roller/rpg-dice-roller": "^5.5.1",
+    "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.17.0",
     "axios": "^1.7.9",
     "discord.js": "^14.16.1",
