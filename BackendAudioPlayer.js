@@ -1,11 +1,13 @@
 const { createAudioPlayer, AudioPlayerStatus, entersState, VoiceConnectionStatus, createAudioResource } = require('@discordjs/voice');
 const fs = require('fs');
 const path = require('path');
+const { Readable } = require('stream');
 
 class BackendAudioPlayer {
-    constructor(logCallback) {
-        // Logging callback
+    constructor(logCallback, shell) {
+        // Dependencies
         this.log = logCallback || console.log;
+        this.shell = shell;
 
         // State merged from AudioState
         this.playerStatus = AudioPlayerStatus.Idle;
@@ -85,6 +87,10 @@ class BackendAudioPlayer {
     }
 
     _movePendingToActive() {
+        if (!this.pendingFile) {
+            this.log('Attempted to move pending to active, but no pending file exists. Aborting.');
+            return;
+        }
         this.activeFile = this.pendingFile;
         this.activeFilePath = this.pendingFilePath;
         this.pendingFile = null;
@@ -94,23 +100,34 @@ class BackendAudioPlayer {
 
     async cacheFile(filePath) {
         try {
-            const stats = fs.statSync(filePath);
-            const fileSizeInMB = stats.size / (1024 * 1024);
-            if (fileSizeInMB > 100) {
-                this.log(`Error: File size exceeds 100MB limit: ${filePath}`);
-                return false;
+            // const stats = fs.statSync(filePath);
+            // const fileSizeInMB = stats.size / (1024 * 1024);
+            // if (fileSizeInMB > 100) {
+            //     this.log(`Error: File size exceeds 100MB limit: ${filePath}`);
+            //     return false;
+            // }
+
+            let resolvedPath = filePath;
+            if (this.shell && path.extname(resolvedPath).toLowerCase() === '.lnk') {
+                try {
+                    const shortcutDetails = this.shell.readShortcutLink(resolvedPath);
+                    if (shortcutDetails.target && fs.existsSync(shortcutDetails.target)) {
+                        this.log(`Resolved .lnk shortcut from ${resolvedPath} to ${shortcutDetails.target}`);
+                        resolvedPath = shortcutDetails.target;
+                    } else {
+                        throw new Error('Shortcut target does not exist or is invalid.');
+                    }
+                } catch (error) {
+                    this.log(`Failed to resolve .lnk shortcut at ${resolvedPath}: ${error.message}`);
+                    return false;
+                }
             }
 
-            // In a real symlink scenario on Windows, shell.readShortcutLink might be needed.
-            // For now, fs.readFileSync should handle basic symlinks on POSIX.
-            const buffer = fs.readFileSync(filePath);
+            const buffer = fs.readFileSync(resolvedPath);
             this.pendingFile = buffer;
-            this.pendingFilePath = filePath;
+            this.pendingFilePath = resolvedPath;
             this.log(`Successfully cached file: ${filePath}`);
 
-            if (!this.activeFile) {
-                this._movePendingToActive();
-            }
             return true;
         } catch (error) {
             this.log(`Error caching file ${filePath}: ${error.message}`);
@@ -129,7 +146,8 @@ class BackendAudioPlayer {
         }
 
         try {
-            const resource = createAudioResource(this.activeFile, { inlineVolume: true });
+            const stream = Readable.from(this.activeFile);
+            const resource = createAudioResource(stream, { inlineVolume: true });
             resource.volume.setVolume(this.playbackVolume);
 
             this.player.play(resource);

@@ -599,7 +599,7 @@ async function logToRenderer(message) {
         logToRenderer(message);
     }
 }
-musicPlayer = new BackendAudioPlayer(logToRenderer);
+musicPlayer = new BackendAudioPlayer(logToRenderer, shell);
 
 /*
 client.on('error', error => {
