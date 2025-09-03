@@ -722,7 +722,9 @@
   {
     "text": "Do you know the muffin man?🍩 ||(a sentient baked good lurks nearby)||",
     "unique": true,
-    "used": []
+    "used": [
+      "718689667075145779"
+    ]
   },
   {
     "text": "A burst of hot steam escapes the shield, scalding the attacker for [[3d6]] fire damage and heavily obscuring a [[1d6x5]]-foot radius until your next turn!🌫️",

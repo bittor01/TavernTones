@@ -16,6 +16,38 @@ console.log('Discord client instantiated.');
 const axios = require('axios');
 console.log('Axios loaded.');
 
+class AudioState {
+    constructor() {
+        this.activeFile = null;
+        this.pendingFile = null;
+        this.playerStatus = AudioPlayerStatus.Idle;
+        this.isPlaying = false;
+    }
+
+    setActiveFile(filePath) {
+        this.activeFile = filePath;
+    }
+
+    setPendingFile(filePath) {
+        this.pendingFile = filePath;
+    }
+
+    setPlayerStatus(status) {
+        this.playerStatus = status;
+        this.isPlaying = status === AudioPlayerStatus.Playing;
+    }
+
+    clearPendingFile() {
+        this.pendingFile = null;
+    }
+
+    clearActiveFile() {
+        this.activeFile = null;
+    }
+}
+
+const audioState = new AudioState();
+
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
 const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
 const BOT_ROLE_ID = process.env.BOT_ROLE_ID;
@@ -25,6 +57,7 @@ let player;
 let connection;
 let lastResponse = null; // Variable to store the last response
 let isAppReady = false; // Flag to indicate if the app is ready
+
 
 // --- State Management ---
 let initiativeOrder = [];
@@ -41,12 +74,12 @@ const DND_CONDITIONS = {
     "Grappled": { emoji: "🤼", color: "#fd7e14", text: "Your speed becomes 0, and you can't benefit from any bonus to your speed. The condition ends if the grappler is incapacitated. The condition also ends if an effect removes the grappled creature from the reach of the grappler." },
     "Incapacitated": { emoji: "😵", color: "#6c757d", text: "You can't take actions or reactions. Your Concentration in broken. You can't speak." },
     "Invisible": { emoji: "👻", color: "#f8f9fa", text: "You are Concealed. You aren't affected by any effect that requires its target to be seen unless the effect's creator can somehow see you. Any equipment you are wearing or carrying is also concealed. Attack rolls against you have Disadvantage, and your attack rolls have Advantage. If a creature can somehow see you, you don't gain this benefit against that creature." },
-    "Paralyzed": { emoji: "🥶", color: "#007bff", text: "You are Incapacitated and can't move or speak. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack that hits you is a critical hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.)" },
-    "Petrified": { emoji: "🗿", color: "#343a40", text: "You have the Incapacitated condition. Your Speed is 0 and can't increase. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack roll that hits you is a Critical Hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.)" },
+    "Paralyzed": { emoji: "⚡", color: "#007bff", text: "You are Incapacitated and can't move or speak. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack that hits you is a critical hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.)" },
+    "Petrified": { emoji: "🪨", color: "#343a40", text: "You have the Incapacitated condition. Your Speed is 0 and can't increase. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack roll that hits you is a Critical Hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.)" },
     "Poisoned": { emoji: "🤢", color: "#28a745", text: "You have Disadvantage on attack rolls and ability checks." },
-    "Prone": { emoji: "🙇", color: "#ffc107", text: "Your only movement option is to crawl, unless you stand up and thereby end the condition. You have Disadvantage on attack rolls. An attack roll against you has Advantage if the attacker is within 5 feet of you. Otherwise, the attack roll has Disadvantage." },
+    "Prone": { emoji: "🛌", color: "#ffc107", text: "Your only movement option is to crawl, unless you stand up and thereby end the condition. You have Disadvantage on attack rolls. An attack roll against you has Advantage if the attacker is within 5 feet of you. Otherwise, the attack roll has Disadvantage." },
     "Restrained": { emoji: "⛓️", color: "#6c757d", text: "Your speed becomes 0, and you can't benefit from any bonus to your speed. Attack rolls against you have Advantage, and your attack rolls have Disadvantage. You have Disadvantage on Dexterity saving throws." },
-    "Stunned": { emoji: "🤯", color: "#ffc107", text: "You are Incapacitated, can't move, and can speak only falteringly. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack roll that hits you is a Critical Hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.)" },
+    "Stunned": { emoji: "😵‍💫", color: "#ffc107", text: "You are Incapacitated, can't move, and can speak only falteringly. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack roll that hits you is a Critical Hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.)" },
     "Unconscious": { emoji: "😴", color: "#343a40", text: "You are Incapacitated, can't move or speak, and are unaware of your surroundings. You drop whatever you're holding and fall prone. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack that hits you is a critical hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.) (Prone: Your only movement option is to crawl, unless you stand up and thereby end the condition. You have Disadvantage on attack rolls. An attack roll against you has Advantage if the attacker is within 5 feet of you. Otherwise, the attack roll has Disadvantage.)" }
 };
 
@@ -92,38 +125,6 @@ async function loadState() {
 }
 
 loadState();
-
-class AudioState {
-    constructor() {
-        this.activeFile = null;
-        this.pendingFile = null;
-        this.playerStatus = AudioPlayerStatus.Idle;
-        this.isPlaying = false;
-    }
-
-    setActiveFile(filePath) {
-        this.activeFile = filePath;
-    }
-
-    setPendingFile(filePath) {
-        this.pendingFile = filePath;
-    }
-
-    setPlayerStatus(status) {
-        this.playerStatus = status;
-        this.isPlaying = status === AudioPlayerStatus.Playing;
-    }
-
-    clearPendingFile() {
-        this.pendingFile = null;
-    }
-
-    clearActiveFile() {
-        this.activeFile = null;
-    }
-}
-
-const audioState = new AudioState();
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
