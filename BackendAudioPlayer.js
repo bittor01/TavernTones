@@ -2,39 +2,50 @@ const { createAudioPlayer, AudioPlayerStatus, entersState, VoiceConnectionStatus
 const fs = require('fs');
 const path = require('path');
 const { Readable } = require('stream');
+const { EventEmitter } = require('events');
 
-class BackendAudioPlayer {
+class BackendAudioPlayer extends EventEmitter {
     constructor(logCallback, shell) {
+        super();
         // Dependencies
         this.log = logCallback || console.log;
         this.shell = shell;
 
-        // State merged from AudioState
+        // State
         this.playerStatus = AudioPlayerStatus.Idle;
         this.isPlaying = false;
-
-        // File management
-        this.activeFile = null;
-        this.pendingFile = null;
+        this.isCaching = false;
         this.activeFilePath = null;
-        this.pendingFilePath = null;
-
-        // Playback settings
         this.loopToggle = true;
         this.playbackVolume = 1.0;
+
+        // Internal file management
+        this.activeFile = null;
+        this.pendingFile = null;
+        this.pendingFilePath = null;
 
         // Discord.js Voice components
         this.player = createAudioPlayer();
         this.connection = null;
 
         this.setupPlayerEvents();
+        this._emitStatusUpdate(); // Emit initial state
+    }
+
+    _emitStatusUpdate() {
+        const status = {
+            isPlaying: this.isPlaying,
+            isCaching: this.isCaching,
+            filePath: this.activeFilePath,
+        };
+        this.emit('status-change', status);
     }
 
     setupPlayerEvents() {
         this.player.on(AudioPlayerStatus.Idle, async () => {
-            this.log(`Player entered Idle state. Current track: ${this.activeFilePath}. Pending: ${this.pendingFilePath}`);
-            this.playerStatus = AudioPlayerStatus.Idle;
+            this.log(`Player entered Idle state. Was playing: ${this.activeFilePath}. Pending: ${this.pendingFilePath}`);
             this.isPlaying = false;
+            this.playerStatus = AudioPlayerStatus.Idle;
 
             if (this.pendingFile) {
                 this.log('Idle: Pending file found, playing it.');
@@ -47,6 +58,7 @@ class BackendAudioPlayer {
                 this.log('Idle: No pending file and looping is off. Player remains idle.');
                 this.activeFile = null;
                 this.activeFilePath = null;
+                this._emitStatusUpdate();
             }
         });
 
@@ -56,16 +68,19 @@ class BackendAudioPlayer {
             this.activeFile = null;
             this.activeFilePath = null;
             this.playerStatus = AudioPlayerStatus.Idle;
+            this._emitStatusUpdate();
         });
 
         this.player.on(AudioPlayerStatus.Playing, () => {
             this.playerStatus = AudioPlayerStatus.Playing;
             this.isPlaying = true;
+            this._emitStatusUpdate();
         });
 
         this.player.on(AudioPlayerStatus.Paused, () => {
             this.playerStatus = AudioPlayerStatus.Paused;
             this.isPlaying = false;
+            this._emitStatusUpdate();
         });
     }
 
@@ -75,7 +90,7 @@ class BackendAudioPlayer {
     }
 
     setVolume(volume) {
-        if (volume >= 0 && volume <= 2) { // Allow up to 200% volume
+        if (volume >= 0 && volume <= 2) {
             this.playbackVolume = volume;
             this.log(`Playback volume set to ${volume * 100}%`);
         }
@@ -99,14 +114,11 @@ class BackendAudioPlayer {
     }
 
     async cacheFile(filePath) {
-        try {
-            // const stats = fs.statSync(filePath);
-            // const fileSizeInMB = stats.size / (1024 * 1024);
-            // if (fileSizeInMB > 100) {
-            //     this.log(`Error: File size exceeds 100MB limit: ${filePath}`);
-            //     return false;
-            // }
+        this.isCaching = true;
+        this._emitStatusUpdate();
+        this.log(`Caching started for: ${filePath}`);
 
+        try {
             let resolvedPath = filePath;
             if (this.shell && path.extname(resolvedPath).toLowerCase() === '.lnk') {
                 try {
@@ -119,6 +131,8 @@ class BackendAudioPlayer {
                     }
                 } catch (error) {
                     this.log(`Failed to resolve .lnk shortcut at ${resolvedPath}: ${error.message}`);
+                    this.isCaching = false;
+                    this._emitStatusUpdate();
                     return false;
                 }
             }
@@ -127,10 +141,13 @@ class BackendAudioPlayer {
             this.pendingFile = buffer;
             this.pendingFilePath = resolvedPath;
             this.log(`Successfully cached file: ${filePath}`);
-
+            this.isCaching = false;
+            this._emitStatusUpdate();
             return true;
         } catch (error) {
             this.log(`Error caching file ${filePath}: ${error.message}`);
+            this.isCaching = false;
+            this._emitStatusUpdate();
             return false;
         }
     }
@@ -152,13 +169,12 @@ class BackendAudioPlayer {
 
             this.player.play(resource);
             await entersState(this.player, AudioPlayerStatus.Playing, 5000);
-            this.playerStatus = AudioPlayerStatus.Playing;
-            this.isPlaying = true;
             this.log(`Playback started for: ${this.activeFilePath}`);
         } catch (error) {
+            this.log(`Error starting playback for ${this.activeFilePath}: ${error.message}`);
             this.playerStatus = AudioPlayerStatus.Idle;
             this.isPlaying = false;
-            this.log(`Error starting playback for ${this.activeFilePath}: ${error.message}`);
+            this._emitStatusUpdate();
         }
     }
 
@@ -179,8 +195,6 @@ class BackendAudioPlayer {
         } else { // No file path provided, treat as "play/resume"
             if (this.playerStatus === AudioPlayerStatus.Paused) {
                 this.player.unpause();
-                this.playerStatus = AudioPlayerStatus.Playing;
-                this.isPlaying = true;
                 this.log('Playback resumed.');
             } else if (this.playerStatus === AudioPlayerStatus.Idle && this.activeFile) {
                 this.log('Playback starting from idle state.');
@@ -194,8 +208,6 @@ class BackendAudioPlayer {
     pause() {
         if (this.playerStatus === AudioPlayerStatus.Playing) {
             this.player.pause(true);
-            this.playerStatus = AudioPlayerStatus.Paused;
-            this.isPlaying = false;
             this.log(`Playback paused for: ${this.activeFilePath}`);
 
             if (this.pendingFile) {

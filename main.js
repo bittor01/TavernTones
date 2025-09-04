@@ -418,6 +418,11 @@ async function logToRenderer(message) {
     }
 }
 musicPlayer = new BackendAudioPlayer(logToRenderer, shell);
+musicPlayer.on('status-change', (status) => {
+    if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('music-player-status', status);
+    }
+});
 
 /*
 client.on('error', error => {
