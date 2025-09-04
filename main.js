@@ -566,7 +566,7 @@ client.once('clientReady', async () => {
                 .setCustomId('ma-partylevel-input')
                 .setLabel("Average Party Level")
                 .setStyle(TextInputStyle.Short)
-                .setValue('10')
+                .setValue('20')
                 .setRequired(true);
 
             modal.addComponents(
@@ -584,7 +584,18 @@ client.once('clientReady', async () => {
             if (prefix === 'ma' && context === 'config' && messageId) {
                 await interaction.deferReply({ ephemeral: true });
 
-                const selections = maSelections.get(messageId) || { mode: 'loot', size: 'Average' };
+                let selections = maSelections.get(messageId);
+                if (!selections) {
+                    try {
+                        const originalMessage = await interaction.channel.messages.fetch(messageId);
+                        const mode = originalMessage.components[0].components[0].options.find(o => o.default).value;
+                        const size = originalMessage.components[1].components[0].options.find(o => o.default).value;
+                        selections = { mode, size };
+                    } catch (error) {
+                        console.error("Failed to fetch original message for selections:", error);
+                        selections = { mode: 'loot', size: 'Average' }; // Fallback
+                    }
+                }
 
                 const nickname = interaction.fields.getTextInputValue('ma-nickname-input');
                 const numRolls = interaction.fields.getTextInputValue('ma-numrolls-input');
@@ -602,10 +613,21 @@ client.once('clientReady', async () => {
 
                 // Hit/Miss Grid
                 const { itemTypes } = require('./MagicItemData.js');
+                const gridLabelMap = {
+                    "Reusable Item (Gizmo)": "Giz",
+                    "Single-use Scroll/Tablet": "ScT",
+                    "Glyph/Ward/Trap": "GWT",
+                    "Enchanted Ammunition": "Amm",
+                    "Potion": "Pot",
+                    "Poison, Ingested": "Ing",
+                    "Poison, Inhaled": "Inh",
+                    "Poison, Contact": "Con",
+                    "Poison, Injury": "Inj"
+                };
                 let hitMissGrid = '## Hit/Miss Grid\n`Lvl:  0  1  2  3  4  5  6  7  8  9`\n';
                 const hitSet = new Set(results.hits.map(h => `${h.itemType}-${h.level}`));
                 itemTypes.forEach(type => {
-                    let line = `**${type.substring(0, 3)}**:`;
+                    let line = `**${gridLabelMap[type] || type.substring(0, 3)}**:`;
                     for (let i = 0; i < 10; i++) {
                         line += hitSet.has(`${type}-${i}`) ? ' ✅' : ' ❌';
                     }
@@ -615,20 +637,31 @@ client.once('clientReady', async () => {
 
                 // Generated Items
                 if (results.items.length > 0) {
-                    let itemsMessage = '## Generated Items\n';
-                    for (const item of results.items) {
-                        let line = `**${item.itemType} (Lvl ${item.level})**: ${item.spellName}`;
-                        if (item.price !== null) {
-                            line += ` - *${item.price} gp*`;
+                    const groupedItems = results.items.reduce((acc, item) => {
+                        if (!acc[item.itemType]) {
+                            acc[item.itemType] = [];
                         }
+                        acc[item.itemType].push(item);
+                        return acc;
+                    }, {});
 
-                        if ((itemsMessage + line + '\n').length > 2000) {
-                            await thread.send(itemsMessage);
-                            itemsMessage = '';
+                    let itemsMessage = '## Generated Items\n';
+                    for (const itemType in groupedItems) {
+                        itemsMessage += `### ${itemType}\n`;
+                        for (const item of groupedItems[itemType]) {
+                            let line = `**Lvl ${item.level}**: ${item.spellName}`;
+                            if (item.price !== null) {
+                                line += ` - *${item.price} gp*`;
+                            }
+
+                            if ((itemsMessage + line + '\n').length > 2000) {
+                                await thread.send(itemsMessage);
+                                itemsMessage = '';
+                            }
+                            itemsMessage += line + '\n';
                         }
-                        itemsMessage += line + '\n';
                     }
-                    if (itemsMessage.length > 0) {
+                    if (itemsMessage.length > '## Generated Items\n'.length) {
                         await thread.send(itemsMessage);
                     }
                 } else {
