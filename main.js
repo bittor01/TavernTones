@@ -7,7 +7,7 @@ const path = require('path');
 console.log('FS and Path loaded.');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 console.log('DiceRoller loaded.');
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 console.log('Discord.js Client loaded.');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 console.log('Discord.js Voice loaded.');
@@ -17,6 +17,7 @@ const axios = require('axios');
 console.log('Axios loaded.');
 const BackendAudioPlayer = require('./BackendAudioPlayer.js');
 const CommandHandler = require('./CommandHandler.js');
+const MagicItemGenerator = require('./MagicItemGenerator.js');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
 const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
@@ -28,6 +29,7 @@ let musicPlayer;
 let lastResponse = null; // Variable to store the last response
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
+const maSelections = new Map();
 
 
 // --- State Management ---
@@ -526,6 +528,118 @@ client.once('clientReady', async () => {
 
     const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER });
     client.on('messageCreate', message => commandHandler.handleMessage(message));
+
+    client.on('interactionCreate', async interaction => {
+        if (interaction.isStringSelectMenu()) {
+            const { customId, values, message } = interaction;
+            const [prefix, selectType] = customId.split('-');
+
+            if (prefix === 'ma') {
+                const selections = maSelections.get(message.id) || { mode: 'loot', size: 'Average' };
+                selections[selectType] = values[0];
+                maSelections.set(message.id, selections);
+
+                await interaction.deferUpdate();
+            }
+            return;
+        }
+
+        if (interaction.isButton() && interaction.customId === 'ma-configure-button') {
+            const modal = new ModalBuilder()
+                .setCustomId(`ma-config-modal-${interaction.message.id}`)
+                .setTitle('Configure Magic Item Generation');
+
+            const nicknameInput = new TextInputBuilder()
+                .setCustomId('ma-nickname-input')
+                .setLabel("Nickname (Optional)")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false);
+
+            const numRollsInput = new TextInputBuilder()
+                .setCustomId('ma-numrolls-input')
+                .setLabel("Number of Items (e.g., 5 or 1d4+1)")
+                .setStyle(TextInputStyle.Short)
+                .setValue('10')
+                .setRequired(true);
+
+            const partyLevelInput = new TextInputBuilder()
+                .setCustomId('ma-partylevel-input')
+                .setLabel("Average Party Level")
+                .setStyle(TextInputStyle.Short)
+                .setValue('10')
+                .setRequired(true);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(nicknameInput),
+                new ActionRowBuilder().addComponents(numRollsInput),
+                new ActionRowBuilder().addComponents(partyLevelInput)
+            );
+
+            await interaction.showModal(modal);
+        }
+
+        if (interaction.isModalSubmit()) {
+            const [prefix, context, messageId] = interaction.customId.split('-');
+
+            if (prefix === 'ma' && context === 'config' && messageId) {
+                await interaction.deferReply({ ephemeral: true });
+
+                const selections = maSelections.get(messageId) || { mode: 'loot', size: 'Average' };
+
+                const nickname = interaction.fields.getTextInputValue('ma-nickname-input');
+                const numRolls = interaction.fields.getTextInputValue('ma-numrolls-input');
+                const partyLevel = parseInt(interaction.fields.getTextInputValue('ma-partylevel-input'), 10);
+
+                const generator = new MagicItemGenerator({ ...selections, numRolls, partyLevel, nickname });
+                const results = generator.generate();
+
+                const threadName = nickname || `Magic Items - ${new Date().toLocaleString()}`;
+                const thread = await interaction.channel.threads.create({
+                    name: threadName,
+                    autoArchiveDuration: 60,
+                    startMessage: interaction.message,
+                });
+
+                // Hit/Miss Grid
+                const { itemTypes } = require('./MagicItemData.js');
+                let hitMissGrid = '## Hit/Miss Grid\n`Lvl:  0  1  2  3  4  5  6  7  8  9`\n';
+                const hitSet = new Set(results.hits.map(h => `${h.itemType}-${h.level}`));
+                itemTypes.forEach(type => {
+                    let line = `**${type.substring(0, 3)}**:`;
+                    for (let i = 0; i < 10; i++) {
+                        line += hitSet.has(`${type}-${i}`) ? ' ✅' : ' ❌';
+                    }
+                    hitMissGrid += line + '\n';
+                });
+                await thread.send(hitMissGrid);
+
+                // Generated Items
+                if (results.items.length > 0) {
+                    let itemsMessage = '## Generated Items\n';
+                    for (const item of results.items) {
+                        let line = `**${item.itemType} (Lvl ${item.level})**: ${item.spellName}`;
+                        if (item.price !== null) {
+                            line += ` - *${item.price} gp*`;
+                        }
+
+                        if ((itemsMessage + line + '\n').length > 2000) {
+                            await thread.send(itemsMessage);
+                            itemsMessage = '';
+                        }
+                        itemsMessage += line + '\n';
+                    }
+                    if (itemsMessage.length > 0) {
+                        await thread.send(itemsMessage);
+                    }
+                } else {
+                    await thread.send("No items were generated based on the rolls.");
+                }
+
+                maSelections.delete(messageId);
+                await interaction.editReply({ content: `Magic items generated in thread: <#${thread.id}>`, ephemeral: true });
+            }
+        }
+    });
 });
 
 client.login(DISCORD_TOKEN);

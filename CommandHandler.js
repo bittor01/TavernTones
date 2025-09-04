@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { shell } = require('electron');
 const axios = require('axios');
 
@@ -417,6 +417,44 @@ class CommandHandler {
                         } else {
                             await message.reply("Sorry, I couldn't find the music you were looking for.");
                         }
+                        break;
+
+                    case content.includes('!ma'):
+                        logToRenderer('Magic Item command detected');
+                        const maEmbed = new EmbedBuilder()
+                            .setColor(0x0099FF)
+                            .setTitle('Magic Item Generator')
+                            .setDescription('Configure your magic item generation using the components below.');
+
+                        const modeSelect = new StringSelectMenuBuilder()
+                            .setCustomId('ma-mode-select')
+                            .setPlaceholder('Select Mode')
+                            .addOptions([
+                                { label: 'Loot', value: 'loot', default: true },
+                                { label: 'Shop', value: 'shop' }
+                            ]);
+
+                        const sizeSelect = new StringSelectMenuBuilder()
+                            .setCustomId('ma-size-select')
+                            .setPlaceholder('Select Size')
+                            .addOptions([
+                                { label: 'Huge', value: 'Huge' },
+                                { label: 'Large', value: 'Large' },
+                                { label: 'Average', value: 'Average', default: true },
+                                { label: 'Small', value: 'Small' },
+                                { label: 'Tiny', value: 'Tiny' }
+                            ]);
+
+                        const configureButton = new ButtonBuilder()
+                            .setCustomId('ma-configure-button')
+                            .setLabel('Configure & Generate')
+                            .setStyle(ButtonStyle.Primary);
+
+                        const row1 = new ActionRowBuilder().addComponents(modeSelect);
+                        const row2 = new ActionRowBuilder().addComponents(sizeSelect);
+                        const row3 = new ActionRowBuilder().addComponents(configureButton);
+
+                        await message.reply({ embeds: [maEmbed], components: [row1, row2, row3] });
                         break;
 
                     case content.includes('!pa'):
