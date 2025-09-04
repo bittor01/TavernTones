@@ -728,7 +728,8 @@ client.once('clientReady', async () => {
 
 
 
-                    case content.includes('!su'):
+                    case content.includes('!su'):                        
+                        logToRenderer('Surge command detected');
                         const surgeFilePath = path.join(__dirname, 'randomtables/surge.json');
                         const surgeData = JSON.parse(fs.readFileSync(surgeFilePath, 'utf8'));
                         const surgeEffect = getRandomEffect(surgeData, userId);
@@ -752,6 +753,7 @@ client.once('clientReady', async () => {
                         break;
 
                     case content.includes('!sh'):
+                        logToRenderer('Shield command detected');
                         const shieldFilePath = path.join(__dirname, 'randomtables/shield.json');
                         const shieldData = JSON.parse(fs.readFileSync(shieldFilePath, 'utf8'));
                         const shieldEffect = getRandomEffect(shieldData, userId);
@@ -776,6 +778,7 @@ client.once('clientReady', async () => {
                         break;
 
                     case content.includes('!en'):
+                        logToRenderer('Encounter command detected');
                         const invalidCharsRegex = /[.,:;\/\\?*"<>|&]+/g;
                         const regex = /^!\S*\s*(.*)/;
                         const match = content.match(regex);
@@ -841,7 +844,7 @@ client.once('clientReady', async () => {
                         break;
 
                     case content.includes('!ro'):
-                        logToRenderer('!ro command detected');
+                        logToRenderer('Roll command detected');
                         // Find the index of '!ro' (case-insensitive)
                         const roIndex = message.content.toLowerCase().indexOf('!ro');
                         if (roIndex === -1) {
@@ -1009,7 +1012,7 @@ client.once('clientReady', async () => {
                         break;
 
                     case content.includes('!in'):
-                        logToRenderer('IN command detected');
+                        logToRenderer('Inspect command detected');
                         if (lastResponse && lastResponse.choices && lastResponse.choices[0].references) {
                             const thread = await message.startThread({
                                 name: 'References',
@@ -1026,7 +1029,7 @@ client.once('clientReady', async () => {
                         break;
 
                     case content.includes('!pl'):
-                        logToRenderer('!pl command detected');
+                        logToRenderer('Play command detected');
 
                         const fullCommand = message.content.substring(message.content.toLowerCase().indexOf('!pl')).trim();
                         const parts = fullCommand.split(/\s+/); // Split by one or more spaces
@@ -1074,7 +1077,7 @@ client.once('clientReady', async () => {
                         break;
 
                     case content.includes('!pa'):
-                        logToRenderer('!pa command detected');
+                        logToRenderer('Pause command detected');
                         if (musicPlayer.isPlaying) {
                             musicPlayer.pause();
                             await message.reply('Playback paused.');
