@@ -52,6 +52,16 @@ const DND_CONDITIONS = {
     "Unconscious": { emoji: "😴", color: "#343a40", text: "You are Incapacitated, can't move or speak, and are unaware of your surroundings. You drop whatever you're holding and fall prone. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack that hits you is a critical hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.) (Prone: Your only movement option is to crawl, unless you stand up and thereby end the condition. You have Disadvantage on attack rolls. An attack roll against you has Advantage if the attacker is within 5 feet of you. Otherwise, the attack roll has Disadvantage.)" }
 };
 
+const hpBarEmojiMap = {
+    '#007bff': ':blue_square:',      // Blue
+    '#28a745': ':green_square:',     // Green
+    '#ffc107': ':yellow_square:',    // Yellow
+    '#dc3545': ':red_square:',       // Red
+    '#8a2be2': ':purple_square:',    // Purple
+    '#6c757d': ':x:',               // Grey (Dead)
+    'empty': ':black_large_square:'
+};
+
 function saveState() {
     try {
         const state = {
@@ -140,15 +150,7 @@ ipcMain.handle('get-dnd-conditions', async () => {
 
 apploader();
 
-const hpBarEmojiMap = {
-    '#007bff': ':blue_square:',      // Blue
-    '#28a745': ':green_square:',     // Green
-    '#ffc107': ':yellow_square:',    // Yellow
-    '#dc3545': ':red_square:',       // Red
-    '#8a2be2': ':purple_square:',    // Purple
-    '#6c757d': ':x:',               // Grey (Dead)
-    'empty': ':black_large_square:'
-};
+
 
 function createEmojiHpBar(creature) {
     let hp = creature.hp || 0;
@@ -607,7 +609,7 @@ client.on('error', error => {
 });
 */
 
-client.once('ready', async () => {
+client.once('clientReady', async () => {
     const shutdown = async () => {
         try {
             console.log('Cleaning up and exiting.');
@@ -701,45 +703,6 @@ client.once('ready', async () => {
     });
 
     logToRenderer(`Logged in as ${client.user.tag}`);
-
-    // Send a startup embed to test permissions
-    /*
-    try {
-        const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
-        if (channel) {
-            const startupEmbed = new EmbedBuilder()
-                .setColor(0x57F287)
-                .setTitle('TavernTones is Ready!')
-                .setDescription('The bot has successfully connected and is ready for commands.')
-                .setTimestamp();
-            await channel.send({ embeds: [startupEmbed] });
-        }
-    } catch (error) {
-        logToRenderer(`[Startup Test] FAILED to send startup embed: ${error}`);
-    }
-    */
-
-    // startup message
-    /*
-    const textChannel = client.channels.cache.get(TEXT_CHANNEL_ID);
-    if (textChannel) {
-        try {
-            const message = await textChannel.send('TavernTones is now online!');
-            // Wait for 5 seconds
-            setTimeout(() => {
-                message.delete()
-                    .then(() => logToRenderer('Announcement message deleted.'))
-                    .catch(error => logToRenderer('Error deleting message: ', error));
-            }, 5000);
-        }
-        catch (error) {
-            logToRenderer('Error sending message: ', error);
-        }
-    }
-    else {
-        logToRenderer('Text channel not found!');
-    }
-    */
 
     client.on('messageCreate', async message => {
         // Ignore messages from the bot itself
