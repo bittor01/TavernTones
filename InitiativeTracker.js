@@ -9,7 +9,7 @@ class InitiativeTracker {
         this.autosavePath = autosavePath;
         this.initiativeOrder = [];
         this.currentTurnIndex = 0;
-        // The constructor no longer calls loadState directly, main.js will do it.
+        this.loadState();
     }
 
     _saveState() {
