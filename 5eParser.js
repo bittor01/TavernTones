@@ -2,7 +2,15 @@ const fs = require('fs').promises;
 const path = require('path');
 
 const dataPath = path.join(__dirname, 'reference', '5etoolsdata');
-const searchableCategories = ['spells', 'items', 'bestiary', 'feats', 'backgrounds', 'races'];
+const categorySources = {
+    'spells': { type: 'directory', path: 'spells', key: 'spell' },
+    'items': { type: 'file', path: 'items.json', key: 'item' },
+    'bestiary': { type: 'directory', path: 'bestiary', key: 'monster' },
+    'feats': { type: 'file', path: 'feats.json', key: 'feat' },
+    'backgrounds': { type: 'file', path: 'backgrounds.json', key: 'background' },
+    'races': { type: 'file', path: 'races.json', key: 'race' },
+};
+const searchableCategories = Object.keys(categorySources);
 
 class FiveEToolsParser {
     constructor(logToRenderer) {
@@ -11,8 +19,8 @@ class FiveEToolsParser {
     }
 
     /**
-     * Loads all JSON data from a specific category directory.
-     * Caches the data to avoid re-reading from disk.
+     * Loads all JSON data from a category source (file or directory).
+     * Caches the data and de-duplicates to avoid re-reading from disk.
      * @param {string} category The category to load (e.g., 'spells', 'items').
      * @returns {Promise<Array>} A promise that resolves to an array of all items in that category.
      */
@@ -21,26 +29,46 @@ class FiveEToolsParser {
             return this.cache.get(category);
         }
 
-        const categoryPath = path.join(dataPath, category);
-        let allItems = [];
+        const sourceInfo = categorySources[category];
+        if (!sourceInfo) {
+            this.logToRenderer(`[5eParser] Unknown category: ${category}`);
+            return [];
+        }
 
-        try {
-            const files = await fs.readdir(categoryPath);
-            for (const file of files) {
-                if (path.extname(file) === '.json') {
-                    const filePath = path.join(categoryPath, file);
-                    const fileContent = await fs.readFile(filePath, 'utf8');
-                    const jsonData = JSON.parse(fileContent);
+        const itemMap = new Map();
 
-                    // 5etools data often has a top-level key (e.g., "spell", "item") that holds the array.
-                    const dataKey = Object.keys(jsonData)[0];
-                    if (dataKey && Array.isArray(jsonData[dataKey])) {
-                        allItems = allItems.concat(jsonData[dataKey]);
+        const processJsonData = (jsonData) => {
+            const dataKey = sourceInfo.key;
+            if (jsonData[dataKey] && Array.isArray(jsonData[dataKey])) {
+                for (const item of jsonData[dataKey]) {
+                    if (item.name && item.source) {
+                        const uniqueKey = `${item.name}__${item.source}`;
+                        itemMap.set(uniqueKey, item);
                     }
                 }
             }
+        };
+
+        try {
+            if (sourceInfo.type === 'directory') {
+                const categoryPath = path.join(dataPath, sourceInfo.path);
+                const files = await fs.readdir(categoryPath);
+                for (const file of files) {
+                    if (path.extname(file) === '.json') {
+                        const filePath = path.join(categoryPath, file);
+                        const fileContent = await fs.readFile(filePath, 'utf8');
+                        processJsonData(JSON.parse(fileContent));
+                    }
+                }
+            } else { // type === 'file'
+                const filePath = path.join(dataPath, sourceInfo.path);
+                const fileContent = await fs.readFile(filePath, 'utf8');
+                processJsonData(JSON.parse(fileContent));
+            }
+
+            const allItems = Array.from(itemMap.values());
             this.cache.set(category, allItems);
-            this.logToRenderer(`[5eParser] Loaded and cached ${allItems.length} items for category: ${category}`);
+            this.logToRenderer(`[5eParser] Loaded and cached ${allItems.length} de-duplicated items for category: ${category}`);
             return allItems;
         } catch (error) {
             this.logToRenderer(`[5eParser] Error loading data for category ${category}: ${error.message}`);
