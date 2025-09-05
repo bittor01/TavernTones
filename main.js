@@ -7,7 +7,7 @@ const path = require('path');
 console.log('FS and Path loaded.');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 console.log('DiceRoller loaded.');
-const { Client, GatewayIntentBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, StringSelectMenuBuilder } = require('discord.js');
 console.log('Discord.js Client loaded.');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 console.log('Discord.js Voice loaded.');
@@ -535,12 +535,54 @@ client.once('clientReady', async () => {
             const [prefix, selectType] = customId.split('-');
 
             if (prefix === 'ma') {
+                // Update state
                 const selections = maSelections.get(message.id) || { mode: 'loot', size: 'Average' };
                 selections[selectType] = values[0];
                 maSelections.set(message.id, selections);
 
-                // Acknowledge the interaction without updating the message
-                await interaction.deferUpdate();
+                // Get current full state
+                const currentMode = selections.mode;
+                const currentSize = selections.size;
+
+                // Rebuild mode select menu
+                const modeSelect = new StringSelectMenuBuilder()
+                    .setCustomId('ma-mode-select')
+                    .setPlaceholder('Select Mode')
+                    .addOptions([
+                        { label: 'Loot', value: 'loot', default: currentMode === 'loot' },
+                        { label: 'Shop', value: 'shop', default: currentMode === 'shop' }
+                    ]);
+
+                // Rebuild size select menu
+                const sizeSelect = new StringSelectMenuBuilder()
+                    .setCustomId('ma-size-select')
+                    .setPlaceholder('Select Size')
+                    .addOptions([
+                        { label: 'Huge', value: 'Huge', default: currentSize === 'Huge' },
+                        { label: 'Large', value: 'Large', default: currentSize === 'Large' },
+                        { label: 'Average', value: 'Average', default: currentSize === 'Average' },
+                        { label: 'Small', value: 'Small', default: currentSize === 'Small' },
+                        { label: 'Tiny', value: 'Tiny', default: currentSize === 'Tiny' }
+                    ]);
+
+                // Rebuild button row
+                const configureButton = new ButtonBuilder()
+                    .setCustomId('ma-configure-button')
+                    .setLabel('Configure & Generate')
+                    .setStyle(ButtonStyle.Primary);
+
+                const cancelButton = new ButtonBuilder()
+                    .setCustomId('ma-cancel-button')
+                    .setLabel('Cancel')
+                    .setStyle(ButtonStyle.Secondary);
+
+                // Package into ActionRows
+                const row1 = new ActionRowBuilder().addComponents(modeSelect);
+                const row2 = new ActionRowBuilder().addComponents(sizeSelect);
+                const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
+
+                // Update the message
+                await interaction.update({ components: [row1, row2, row3] });
             }
             return;
         }
@@ -611,7 +653,7 @@ client.once('clientReady', async () => {
             const [prefix, context, messageId] = interaction.customId.split('-');
 
             if (prefix === 'ma' && context === 'config' && messageId) {
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
                 const selections = maSelections.get(messageId) || { mode: 'loot', size: 'Average' };
                 logToRenderer(`Selections for message ${messageId}: ${JSON.stringify(selections)}`);
