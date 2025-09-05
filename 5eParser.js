@@ -121,6 +121,15 @@ class FiveEToolsParser {
         }
         return allResults;
     }
+
+    async getExact(category, name, source) {
+        const items = await this._loadCategoryData(category);
+        const item = items.find(i => i.name === name && i.source === source);
+        if (item) {
+            return { ...item, category: category };
+        }
+        return null;
+    }
 }
 
 module.exports = FiveEToolsParser;
