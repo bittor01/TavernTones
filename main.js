@@ -7,7 +7,7 @@ const path = require('path');
 console.log('FS and Path loaded.');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 console.log('DiceRoller loaded.');
-const { Client, GatewayIntentBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 console.log('Discord.js Client loaded.');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 console.log('Discord.js Voice loaded.');
@@ -539,43 +539,72 @@ client.once('clientReady', async () => {
                 selections[selectType] = values[0];
                 maSelections.set(message.id, selections);
 
+                // Acknowledge the interaction without updating the message
                 await interaction.deferUpdate();
             }
             return;
         }
 
-        if (interaction.isButton() && interaction.customId === 'ma-configure-button') {
-            const modal = new ModalBuilder()
-                .setCustomId(`ma-config-modal-${interaction.message.id}`)
-                .setTitle('Configure Magic Item Generation');
+        if (interaction.isButton()) {
+            if (interaction.customId === 'ma-cancel-button') {
+                maSelections.delete(interaction.message.id);
 
-            const nicknameInput = new TextInputBuilder()
-                .setCustomId('ma-nickname-input')
-                .setLabel("Nickname (Optional)")
-                .setStyle(TextInputStyle.Short)
-                .setRequired(false);
+                const originalRows = interaction.message.components;
+                const row1 = new ActionRowBuilder().addComponents(originalRows[0].components);
+                const row2 = new ActionRowBuilder().addComponents(originalRows[1].components);
 
-            const numRollsInput = new TextInputBuilder()
-                .setCustomId('ma-numrolls-input')
-                .setLabel("Number of Items (e.g., 5 or 1d4+1)")
-                .setStyle(TextInputStyle.Short)
-                .setValue('10')
-                .setRequired(true);
+                const configureButton = new ButtonBuilder()
+                    .setCustomId('ma-configure-button')
+                    .setLabel('Configure & Generate')
+                    .setStyle(ButtonStyle.Primary)
+                    .setDisabled(true);
 
-            const partyLevelInput = new TextInputBuilder()
-                .setCustomId('ma-partylevel-input')
-                .setLabel("Average Party Level")
-                .setStyle(TextInputStyle.Short)
-                .setValue('20')
-                .setRequired(true);
+                const cancelButton = new ButtonBuilder()
+                    .setCustomId('ma-cancel-button')
+                    .setLabel('Cancelled')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(true);
 
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(nicknameInput),
-                new ActionRowBuilder().addComponents(numRollsInput),
-                new ActionRowBuilder().addComponents(partyLevelInput)
-            );
+                const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
 
-            await interaction.showModal(modal);
+                await interaction.update({ components: [row1, row2, row3] });
+                return;
+            }
+
+            if (interaction.customId === 'ma-configure-button') {
+                const modal = new ModalBuilder()
+                    .setCustomId(`ma-config-modal-${interaction.message.id}`)
+                    .setTitle('Configure Magic Item Generation');
+
+                const nicknameInput = new TextInputBuilder()
+                    .setCustomId('ma-nickname-input')
+                    .setLabel("Nickname (Optional)")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(false);
+
+                const numRollsInput = new TextInputBuilder()
+                    .setCustomId('ma-numrolls-input')
+                    .setLabel("Number of Items (e.g., 5 or 1d4+1)")
+                    .setStyle(TextInputStyle.Short)
+                    .setValue('10')
+                    .setRequired(true);
+
+                const partyLevelInput = new TextInputBuilder()
+                    .setCustomId('ma-partylevel-input')
+                    .setLabel("Average Party Level")
+                    .setStyle(TextInputStyle.Short)
+                    .setValue('20')
+                    .setRequired(true);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(nicknameInput),
+                    new ActionRowBuilder().addComponents(numRollsInput),
+                    new ActionRowBuilder().addComponents(partyLevelInput)
+                );
+
+                await interaction.showModal(modal);
+                return;
+            }
         }
 
         if (interaction.isModalSubmit()) {
@@ -584,18 +613,8 @@ client.once('clientReady', async () => {
             if (prefix === 'ma' && context === 'config' && messageId) {
                 await interaction.deferReply({ ephemeral: true });
 
-                let selections = maSelections.get(messageId);
-                if (!selections) {
-                    try {
-                        const originalMessage = await interaction.channel.messages.fetch(messageId);
-                        const mode = originalMessage.components[0].components[0].options.find(o => o.default).value;
-                        const size = originalMessage.components[1].components[0].options.find(o => o.default).value;
-                        selections = { mode, size };
-                    } catch (error) {
-                        console.error("Failed to fetch original message for selections:", error);
-                        selections = { mode: 'loot', size: 'Average' }; // Fallback
-                    }
-                }
+                const selections = maSelections.get(messageId) || { mode: 'loot', size: 'Average' };
+                logToRenderer(`Selections for message ${messageId}: ${JSON.stringify(selections)}`);
 
                 const nickname = interaction.fields.getTextInputValue('ma-nickname-input');
                 const numRolls = interaction.fields.getTextInputValue('ma-numrolls-input');
@@ -666,6 +685,29 @@ client.once('clientReady', async () => {
                     }
                 } else {
                     await thread.send("No items were generated based on the rolls.");
+                }
+
+                // Disable buttons on original message
+                const originalMessage = interaction.message;
+                if (originalMessage) {
+                    const originalRows = originalMessage.components;
+                    const row1 = new ActionRowBuilder().addComponents(originalRows[0].components);
+                    const row2 = new ActionRowBuilder().addComponents(originalRows[1].components);
+
+                    const configureButton = new ButtonBuilder()
+                        .setCustomId('ma-configure-button')
+                        .setLabel('Generated')
+                        .setStyle(ButtonStyle.Success)
+                        .setDisabled(true);
+
+                    const cancelButton = new ButtonBuilder()
+                        .setCustomId('ma-cancel-button')
+                        .setLabel('Cancel')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setDisabled(true);
+
+                    const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
+                    await originalMessage.edit({ components: [row1, row2, row3] });
                 }
 
                 maSelections.delete(messageId);

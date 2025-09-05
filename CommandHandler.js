@@ -450,9 +450,14 @@ class CommandHandler {
                             .setLabel('Configure & Generate')
                             .setStyle(ButtonStyle.Primary);
 
+                        const cancelButton = new ButtonBuilder()
+                            .setCustomId('ma-cancel-button')
+                            .setLabel('Cancel')
+                            .setStyle(ButtonStyle.Secondary);
+
                         const row1 = new ActionRowBuilder().addComponents(modeSelect);
                         const row2 = new ActionRowBuilder().addComponents(sizeSelect);
-                        const row3 = new ActionRowBuilder().addComponents(configureButton);
+                        const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
 
                         await message.reply({ embeds: [maEmbed], components: [row1, row2, row3] });
                         break;
