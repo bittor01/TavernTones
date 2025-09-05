@@ -2,456 +2,1457 @@
   {
     "text": "Animate Dead - 3rd level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Antagonize - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Ashardalon's Stride - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Aura of Vitality - 3rd level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Beacon of Hope - 3rd level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Bestow Curse - 3rd level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Bitter Wind - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Blinding Smite - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Blink - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Butterfly Storm - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Call Lightning - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Catnap - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Clairvoyance - 3rd level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Conjure Animals - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Conjure Barrage - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Conjure Ocean - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Counterspell - 3rd level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Create Food and Water - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Crusader's Mantle - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Dara Blocks - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Daylight - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Deep Roots of the Moon - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Dispel Magic - 3rd level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Elemental Weapon - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Enemies Abound - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Erupting Earth - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Faerie Toast - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Fast Friends - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Fear - 3rd level Illusion 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Feathered Reach - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Feign Death - 3rd level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Fireball - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Flame Arrows - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Fly - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Gaseous Form - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Globe of Twilight - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Glyph of Warding - 3rd level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Grim Shadows - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Haste - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Hunger of Hadar - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Hypnotic Pattern - 3rd level Illusion 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Incite Greed - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Intellect Fortress - 3rd level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Invoke the Amaranthine - 3rd level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Leomund's Tiny Hut - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Life Transference - 3rd level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Light Snare - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Lightning Arrow - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Lightning Bolt - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Lost - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Magic Circle - 3rd level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Major Image - 3rd level Illusion 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Mass Healing Word - 3rd level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Meld into Stone - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Melf's Minute Meteors - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Motivational Speech - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Nondetection - 3rd level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Orros Mark of Fate - 3rd level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Phantom Steed - 3rd level Illusion 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Plant Growth - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Plummet - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Pogmo's Pot - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Polybrachia - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Protection from Energy - 3rd level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Remove Curse - 3rd level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Revivify - 3rd level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Sending - 3rd level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Shadow Portal - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Sleet Storm - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Slow - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Speak with Dead - 3rd level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Speak with Plants - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Spirit Guardians - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Spirit Shroud - 3rd level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Stinking Cloud - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Summon Fey - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Summon Lesser Demons - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Summon Shadowspawn - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Summon Undead - 3rd level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Thunder Step - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Tidal Wave - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Tiny Servant - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Tongues - 3rd level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Vampiric Touch - 3rd level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Vegetable Blade - 3rd level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Void Strike - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Wall of Sand - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Wall of Water - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Water Breathing - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Water Walk - 3rd level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Wind Wall - 3rd level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   }
 ]

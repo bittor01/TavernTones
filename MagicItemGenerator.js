@@ -3,6 +3,18 @@ const fs = require('fs');
 const path = require('path');
 const { itemTypes, probabilities, prices, sizeModifiers } = require('./MagicItemData.js');
 
+const itemTypeShortcodeMap = {
+    "Reusable Item (Gizmo)": "Giz",
+    "Single-use Scroll/Tablet": "Scr",
+    "Glyph/Ward/Trap": "GWT",
+    "Enchanted Ammunition": "Amm",
+    "Potion": "Pot",
+    "Poison, Ingested": "Ing",
+    "Poison, Inhaled": "Inh",
+    "Poison, Contact": "Con",
+    "Poison, Injury": "Inj"
+};
+
 class MagicItemGenerator {
     constructor(options) {
         this.mode = options.mode;
@@ -50,14 +62,25 @@ class MagicItemGenerator {
             const spellFilePath = path.join(__dirname, `randomtables/spells/lvl${level}.json`);
             if (!fs.existsSync(spellFilePath)) continue;
 
-            const spells = JSON.parse(fs.readFileSync(spellFilePath, 'utf8'));
-            if (spells.length === 0) continue;
+            const allSpells = JSON.parse(fs.readFileSync(spellFilePath, 'utf8'));
+            if (allSpells.length === 0) continue;
 
-            const weightedSpells = spells.flatMap(spell => {
-                return level > partySpellCap ? [spell] : [spell, spell];
-            });
+            const itemTypeShortcode = itemTypeShortcodeMap[itemType];
+            const compatibleSpells = allSpells.filter(spell =>
+                spell.itemtypes && spell.itemtypes.includes(itemTypeShortcode)
+            );
 
-            const selectedSpell = weightedSpells[Math.floor(Math.random() * weightedSpells.length)];
+            let selectedSpellName;
+
+            if (compatibleSpells.length === 0) {
+                selectedSpellName = "No compatible spell found for this item type.";
+            } else {
+                const weightedSpells = compatibleSpells.flatMap(spell => {
+                    return level > partySpellCap ? [spell] : [spell, spell];
+                });
+                const selectedSpell = weightedSpells[Math.floor(Math.random() * weightedSpells.length)];
+                selectedSpellName = selectedSpell.text;
+            }
 
             let price = null;
             if (this.mode === 'shop') {
@@ -73,7 +96,7 @@ class MagicItemGenerator {
             this.generatedItems.push({
                 itemType: itemType,
                 level: level,
-                spellName: selectedSpell.text,
+                spellName: selectedSpellName,
                 price: price
             });
         }
