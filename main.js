@@ -651,7 +651,10 @@ client.once('clientReady', async () => {
         }
 
         if (interaction.isModalSubmit()) {
-            const [prefix, context, messageId] = interaction.customId.split('-');
+            const parts = interaction.customId.split('-');
+            const prefix = parts[0];
+            const context = parts[1];
+            const messageId = parts[3]; // ma-config-modal-messageId
 
             if (prefix === 'ma' && context === 'config' && messageId) {
                 await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -677,7 +680,7 @@ client.once('clientReady', async () => {
                 const { itemTypes } = require('./MagicItemData.js');
                 const gridLabelMap = {
                     "Reusable Item (Gizmo)": "Giz",
-                    "Single-use Scroll/Tablet": "ScT",
+                    "Single-use Scroll/Tablet": "Scr",
                     "Glyph/Ward/Trap": "GWT",
                     "Enchanted Ammunition": "Amm",
                     "Potion": "Pot",
@@ -689,7 +692,7 @@ client.once('clientReady', async () => {
                 let hitMissGrid = '## Hit/Miss Grid\n`Lvl:  0  1  2  3  4  5  6  7  8  9`\n';
                 const hitSet = new Set(results.hits.map(h => `${h.itemType}-${h.level}`));
                 itemTypes.forEach(type => {
-                    let line = `**${gridLabelMap[type] || type.substring(0, 3)}**:`;
+                    let line = `**\`${gridLabelMap[type] || type.substring(0, 3)}\`**:`;
                     for (let i = 0; i < 10; i++) {
                         line += hitSet.has(`${type}-${i}`) ? ' ✅' : ' ❌';
                     }
