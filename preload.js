@@ -32,7 +32,7 @@ contextBridge.exposeInMainWorld('electron', {
       }
     },
     on: (channel, func) => {
-      const validChannels = ['log-message', 'update-gui-state', 'dice-log', 'update-initiative-list', 'populate-edit-form', 'soundboard-state-change'];
+      const validChannels = ['log-message', 'music-player-status', 'dice-log', 'update-initiative-list', 'populate-edit-form', 'soundboard-state-change'];
       if (validChannels.includes(channel)) {
         const subscription = (event, ...args) => func(event, ...args);
         ipcRenderer.on(channel, subscription);
@@ -42,7 +42,7 @@ contextBridge.exposeInMainWorld('electron', {
       }
     },
     off: (channel, callback) => {
-      const validChannels = ['log-message', 'update-gui-state', 'dice-log', 'update-initiative-list'];
+      const validChannels = ['log-message', 'dice-log', 'update-initiative-list'];
       if (validChannels.includes(channel)) {
           ipcRenderer.off(channel, callback);
       }

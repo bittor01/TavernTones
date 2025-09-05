@@ -207,17 +207,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         diceLog.scrollTop = diceLog.scrollHeight;
     });
 
-    window.electron.ipcRenderer.on('update-gui-state', (event, state) => {
-        isPlaying = state.isPlaying;
+    window.electron.ipcRenderer.on('music-player-status', (event, status) => {
+        isPlaying = status.isPlaying;
         playPauseButton.textContent = isPlaying ? 'Pause' : 'Play';
-        if (state.filePath) {
-            selectedFileLabel.textContent = window.electron.path.basename(state.filePath);
+
+        if (status.isCaching) {
+            selectedFileLabel.textContent = `(Caching...) ${window.electron.path.basename(status.filePath)}`;
+            playPauseButton.disabled = true;
+        } else if (status.filePath) {
+            selectedFileLabel.textContent = window.electron.path.basename(status.filePath);
+            playPauseButton.disabled = false;
         } else {
             selectedFileLabel.textContent = 'No file selected';
-        }
-        playPauseButton.disabled = !state.filePath || state.isCaching;
-        if (state.isCaching) {
-            selectedFileLabel.textContent = `(Caching...) ${window.electron.path.basename(state.filePath)}`;
+            playPauseButton.disabled = true;
         }
     });
 
