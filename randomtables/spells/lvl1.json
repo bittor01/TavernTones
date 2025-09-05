@@ -2,536 +2,1713 @@
   {
     "text": "Absorb Elements - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Accelerate/Decelerate - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Alarm - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Animal Friendship - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Armament - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Armor of Agathys - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Arms of Hadar - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Bane - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Beast Bond - 1st level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Blade of Blood and Bone - 1st level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Bless - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Bubble Lift - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Burning Hands - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Catapult - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Cause Fear - 1st level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Ceremony - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Chaos Bolt - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Charm Person - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Chromatic Orb - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Cloak of Shadow - 1st level Illusion 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Clue - 1st level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Color Spray - 1st level Illusion 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Command - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Compelled Duel - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Comprehend Languages - 1st level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Create or Destroy Water - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Creeping Touch - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Cure Wounds - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Delay - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Detect Evil and Good - 1st level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Detect Magic - 1st level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Detect Poison and Disease - 1st level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Disguise Self - 1st level Illusion 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Dissonant Whispers - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Distort Value - 1st level Illusion 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Divine Favor - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Divine Smite - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Doom of Poor Fortune - 1st level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Duplicate - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Earth Tremor - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Elevated Sight - 1st level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Elf Shot - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Emerald Goblet - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Ensnaring Strike - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Entangle - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Expeditious Retreat - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Faerie Fire - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "False Life - 1st level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Feather Fall - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Find Familiar - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Fireflies - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Fog Cloud - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Forest Guard - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Frost Fingers - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Gift - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Gloaming - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Goodberry - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Grease - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Guiding Bolt - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Hail of Thorns - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Healing Word - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Hellish Rebuke - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Heroism - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Hex - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Hunter's Mark - 1st level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Ice Knife - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Identify - 1st level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Illusory Script - 1st level Illusion 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Inflict Wounds - 1st level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Jim's Magic Missile - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Jump - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Longstrider - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Mage Armor - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Magic Missile - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Memorize - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Pacify Person - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Pratfall - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Protection from Evil and Good - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Purify Food and Drink - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Ray of Sickness - 1st level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Rumor - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Sanctuary - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Sand Structure - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Searing Smite - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Shield - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Shield of Faith - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Silent Image - 1st level Illusion 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Silvery Barbs - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Sleep - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Snare - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Speak with Animals - 1st level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Spiny Shield - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Sprout Foliage - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Summon Vehicle - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Swallow Magic - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Tasha's Caustic Brew - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Tasha's Hideous Laughter - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Tenser's Floating Disk - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Thunderous Smite - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Thunderwave - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Unseen Servant - 1st level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Veil of Dusk - 1st level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Water Bullet - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Whelm Weapon - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Witch Bolt - 1st level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Wrathful Smite - 1st level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Zephyr Strike - 1st level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   }
 ]

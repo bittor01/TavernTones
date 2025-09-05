@@ -2,371 +2,1185 @@
   {
     "text": "Animal Friendship - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Animal Messenger - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Antagonize - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Antipathy/Sympathy - 8th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Bane - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Befuddlement - 8th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Bless - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Calm Emotions - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Catnap - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Charm Monster - 4th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Charm Person - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Command - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Compelled Duel - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Compulsion - 4th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Confusion - 4th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Control Animal - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Crown of Madness - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Dissonant Whispers - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Dominate Beast - 4th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Dominate Monster - 8th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Dominate Person - 5th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Doom of False Friends - 8th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Elf Shot - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Encode Thoughts - Enchantment Cantrip 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Enemies Abound - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Enthrall - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Fast Friends - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Festival King - 5th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Friends - Enchantment Cantrip 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Game of Fate - 6th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Geas - 5th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Gift of Gab - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Hangover - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Hero of Fable - 5th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Heroism - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Hex - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Hold Monster - 5th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Hold Person - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Incite Greed - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Jim's Glowing Coin - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Leiloch's Arduous Shuffle - 7th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Leiloch's Interminable Yarn - 5th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Leiloch's Irritating Kazoo - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Lost - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Lost and Wandering - 5th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Mass Suggestion - 6th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Memorize - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Mind Sliver - Enchantment Cantrip 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Modify Memory - 5th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Motivational Speech - 3rd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Ominous Winds - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Otto's Irresistible Dance - 6th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Pacify Monster - 4th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Pacify Person - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Power Word Fortify - 7th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Power Word Heal - 9th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Power Word Kill - 9th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Power Word Pain - 7th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Power Word Stun - 8th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Psychic Scream - 9th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Raulothim's Psychic Lance - 4th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Resilient Friendship - Enchantment Cantrip 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Rumor - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Silvery Barbs - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Sleep - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Staggering Smite - 4th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Suggestion - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Synaptic Static - 5th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Tasha's Hideous Laughter - 1st level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Tasha's Mind Whip - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Ugly Duckling - 2nd level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Vicious Mockery - Enchantment Cantrip 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Word of Misfortune - Enchantment Cantrip 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Yolande's Regal Presence - 5th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   }
 ]

@@ -2,126 +2,401 @@
   {
     "text": "Abi-Dalzim's Horrid Wilting - 8th level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Animal Shapes - 8th level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Antimagic Field - 8th level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Antipathy/Sympathy - 8th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Befuddlement - 8th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Child of Light and Darkness - 8th level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Clone - 8th level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Control Weather - 8th level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Demiplane - 8th level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Dominate Monster - 8th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Doom of False Friends - 8th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Earthquake - 8th level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Flense - 8th level Necromancy 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Glibness - 8th level Transmutation ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Holy Aura - 8th level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Illusory Dragon - 8th level Illusion 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Incendiary Cloud - 8th level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Maddening Darkness - 8th level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Maze - 8th level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Mighty Fortress - 8th level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Mind Blank - 8th level Abjuration 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Power Word Stun - 8th level Enchantment 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Sunburst - 8th level Evocation 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Telepathy - 8th level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Tsunami - 8th level Conjuration 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   }
 ]

@@ -2,326 +2,1003 @@
   {
     "text": "Acid Splash - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Blade Ward - Abjuration Cantrip 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Pot"
+    ]
   },
   {
     "text": "Booming Blade - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Bright Sparks - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Chill Touch - Necromancy Cantrip 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Control Flames - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Create Bonfire - Conjuration Cantrip 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Dancing Lights - Illusion Cantrip 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Douse Light - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Drayfn's Bane of Excellence - Necromancy Cantrip 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Drizzle - Conjuration Cantrip 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Druidcraft - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Pot"
+    ]
   },
   {
     "text": "Eldritch Blast - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Elementalism - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot"
+    ]
   },
   {
     "text": "Encode Thoughts - Enchantment Cantrip 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Finger Guns - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Fire Bolt - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Flowering - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Friends - Enchantment Cantrip 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Ing",
+      "Inh",
+      "Con"
+    ]
   },
   {
     "text": "Frostbite - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Green-Flame Blade - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Guidance - 0th level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot"
+    ]
   },
   {
     "text": "Gust - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot"
+    ]
   },
   {
     "text": "Gust Barrier - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot"
+    ]
   },
   {
     "text": "Holy Word - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Infestation - Conjuration Cantrip 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Jolt - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Light - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Lightning Lure - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Mage Hand - Conjuration Cantrip 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Magic Stone - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Mend Plants - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Mending - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Message - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Mind Sliver - Enchantment Cantrip 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Minor Illusion - Illusion Cantrip 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Mold Earth - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Moment to Think - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Obfuscate Object - Illusion Cantrip 🥸",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Poison Spray - Necromancy Cantrip 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Prestidigitation - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Primal Savagery - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Produce Flame - Conjuration Cantrip 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Ray of Frost - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Resilient Friendship - Enchantment Cantrip 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Resistance - Abjuration Cantrip 🛡️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Retrieve - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Root Grab - Conjuration Cantrip 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Sacred Flame - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Shape Water - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Shillelagh - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Shocking Grasp - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Sorcerous Burst - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Spare the Dying - Necromancy Cantrip 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Starry Wisp - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Sword Burst - Conjuration Cantrip 📦",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Task - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Thaumaturgy - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Thorn Whip - Transmutation Cantrip ⚗️",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Thunderclap - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Toll the Dead - Necromancy Cantrip 💀",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "True Strike - 0th level Divination 🔮",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Vicious Mockery - Enchantment Cantrip 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Word of Misfortune - Enchantment Cantrip 🤯",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Word of Radiance - Evocation Cantrip 💥",
     "unique": false,
-    "used": []
+    "used": [],
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   }
 ]
