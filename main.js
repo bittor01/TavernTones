@@ -539,6 +539,7 @@ client.once('clientReady', async () => {
                 const selections = maSelections.get(message.id) || { mode: 'loot', size: 'Average' };
                 selections[selectType] = values[0];
                 maSelections.set(message.id, selections);
+                logToRenderer(`[MA Command] Selections updated: ${JSON.stringify(selections)}`);
 
                 // Get current full state
                 const currentMode = selections.mode;
@@ -656,7 +657,7 @@ client.once('clientReady', async () => {
                 await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
                 const selections = maSelections.get(messageId) || { mode: 'loot', size: 'Average' };
-                logToRenderer(`Selections for message ${messageId}: ${JSON.stringify(selections)}`);
+                logToRenderer(`[MA Command] Passing to generator: ${JSON.stringify(selections)}`);
 
                 const nickname = interaction.fields.getTextInputValue('ma-nickname-input');
                 const numRolls = interaction.fields.getTextInputValue('ma-numrolls-input');
@@ -712,7 +713,11 @@ client.once('clientReady', async () => {
                         for (const item of groupedItems[itemType]) {
                             let line = `**Lvl ${item.level}**: ${item.spellName}`;
                             if (item.price !== null) {
-                                line += ` - *${item.price} gp*`;
+                                if (typeof item.price === 'number') {
+                                    line += ` - *${item.price} gp*`;
+                                } else {
+                                    line += ` - *${item.price}*`;
+                                }
                             }
 
                             if ((itemsMessage + line + '\n').length > 2000) {

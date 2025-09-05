@@ -63,7 +63,11 @@ class MagicItemGenerator {
             if (this.mode === 'shop') {
                 const basePrice = prices[itemType][level];
                 const sizeModifier = sizeModifiers[this.size].price;
-                price = Math.round(basePrice * sizeModifier);
+                if (basePrice !== undefined) {
+                    price = Math.round(basePrice * sizeModifier);
+                } else {
+                    price = 'Price not found';
+                }
             }
 
             this.generatedItems.push({
