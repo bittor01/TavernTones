@@ -1,0 +1,8408 @@
++1 All-Purpose Tool
+Wondrous Item
+—
+×
+Unc.
+TCE
++1 Ammunition
+Ammunition, Generic Variant
+—
+Unc.
+DMG'24
++1 Amulet of the Devout
+Wondrous Item
+1 lb.
+×
+Unc.
+TCE
++1 Arcane Grimoire
+Wondrous Item
+3 lb.
+×
+Unc.
+TCE
++1 Armor
+Generic Variant
+—
+Rare
+DMG'24
++1 Bloodwell Vial
+Wondrous Item
+—
+×
+Unc.
+TCE
++1 Dragonhide Belt
+Wondrous Item
+—
+×
+Unc.
+FTD
++1 Fate Dealer's Deck
+Wondrous Item
+—
+×
+Rare
+BMT
++1 Moon Sickle
+Simple Weapon, Melee Weapon
+2 lb.
+×
+Unc.
+TCE
++1 Rhythm-Maker's Drum
+Wondrous Item, Instrument
+3 lb.
+×
+Unc.
+TCE
++1 Rod of the Pact Keeper
+Rod
+2 lb.
+×
+Unc.
+DMG'24
++1 Shield (*)
+Generic Variant
+—
+Unc.
+DMG'24
++1 Wand of the War Mage
+Wand
+1 lb.
+×
+Unc.
+DMG'24
++1 Weapon
+Generic Variant
+—
+Unc.
+DMG'24
++1 Weapon (no damage)
+Generic Variant
+—
+Unc.
+DMG'14
++1 Wraps of Unarmed Power
+Wondrous Item
+—
+Unc.
+DMG'24
++2 All-Purpose Tool
+Wondrous Item
+—
+×
+Rare
+TCE
++2 Ammunition
+Ammunition, Generic Variant
+—
+Rare
+DMG'24
++2 Amulet of the Devout
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
++2 Arcane Grimoire
+Wondrous Item
+3 lb.
+×
+Rare
+TCE
++2 Armor
+Generic Variant
+—
+V.Rare
+DMG'24
++2 Bloodwell Vial
+Wondrous Item
+—
+×
+Rare
+TCE
++2 Dragonhide Belt
+Wondrous Item
+—
+×
+Rare
+FTD
++2 Fate Dealer's Deck
+Wondrous Item
+—
+×
+V.Rare
+BMT
++2 Moon Sickle
+Simple Weapon, Melee Weapon
+2 lb.
+×
+Rare
+TCE
++2 Rhythm-Maker's Drum
+Wondrous Item, Instrument
+3 lb.
+×
+Rare
+TCE
++2 Ring of Protection
+Ring
+—
+×
+Rare
+TDCSR
++2 Rod of the Pact Keeper
+Rod
+2 lb.
+×
+Rare
+DMG'24
++2 Shield (*)
+Generic Variant
+—
+Rare
+DMG'24
++2 Studded Leather Armor of Acid Resistance
+Light Armor
+13 lb.
+×
+Unk.
+TDCSR
++2 Studded White Dragon Leather Armor of Cold Resistance
+Light Armor
+13 lb.
+×
+Unk.
+TDCSR
++2 Wand of the War Mage
+Wand
+1 lb.
+×
+Rare
+DMG'24
++2 Weapon
+Generic Variant
+—
+Rare
+DMG'24
++2 Weapon (no damage)
+Generic Variant
+—
+Rare
+DMG'14
++2 Wraps of Unarmed Power
+Wondrous Item
+—
+Rare
+DMG'24
++3 All-Purpose Tool
+Wondrous Item
+—
+×
+V.Rare
+TCE
++3 Ammunition
+Ammunition, Generic Variant
+—
+V.Rare
+DMG'24
++3 Amulet of the Devout
+Wondrous Item
+1 lb.
+×
+V.Rare
+TCE
++3 Arcane Grimoire
+Wondrous Item
+3 lb.
+×
+V.Rare
+TCE
++3 Armor
+Generic Variant
+—
+Leg.
+DMG'24
++3 Bloodwell Vial
+Wondrous Item
+—
+×
+V.Rare
+TCE
++3 Dragonhide Belt
+Wondrous Item
+—
+×
+V.Rare
+FTD
++3 Fate Dealer's Deck
+Wondrous Item
+—
+×
+Leg.
+BMT
++3 Moon Sickle
+Simple Weapon, Melee Weapon
+2 lb.
+×
+V.Rare
+TCE
++3 Rhythm-Maker's Drum
+Wondrous Item, Instrument
+3 lb.
+×
+V.Rare
+TCE
++3 Rod of the Pact Keeper
+Rod
+2 lb.
+×
+V.Rare
+DMG'24
++3 Shield (*)
+Generic Variant
+—
+V.Rare
+DMG'24
++3 Wand of the War Mage
+Wand
+1 lb.
+×
+V.Rare
+DMG'24
++3 Weapon
+Generic Variant
+—
+V.Rare
+DMG'24
++3 Weapon (no damage)
+Generic Variant
+—
+V.Rare
+DMG'14
++3 Wraps of Unarmed Power
+Wondrous Item
+—
+V.Rare
+DMG'24
+Abracadabrus
+Wondrous Item
+25 lb.
+V.Rare
+IDRotF
+Absorbing Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Accounting and Valuation of All Things
+Wondrous Item
+—
+×
+Art.
+CoA
+Acheron Blade
+Generic Variant
+—
+×
+Rare
+EGW
+Acid Absorbing Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Adamantine Armor
+Generic Variant
+—
+Unc.
+DMG'24
+Adamantine Weapon
+Generic Variant
+—
+Unc.
+DMG'24
+Adze of Annam
+Martial Weapon, Melee Weapon
+7 lb.
+×
+Art.
+BGG
+Agony
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Leg.
+TDCSR
+Agony (Awakened)
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Leg.
+TDCSR
+Agony (Dormant)
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Leg.
+TDCSR
+Agony (Exalted)
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Leg.
+TDCSR
+Akmon, Hammer of Purphoros
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+MOT
+Alchemical Compendium
+Wondrous Item
+3 lb.
+×
+Rare
+TCE
+Alchemy Jug
+Wondrous Item
+12 lb.
+Unc.
+DMG'24
+Alchemy Jug (Blue)
+Wondrous Item
+12 lb.
+Unc.
+CM
+Alchemy Jug (Orange)
+Wondrous Item
+12 lb.
+Unc.
+CM
+Amber Runestone
+Wondrous Item
+—
+Unc.
+NRH-TLT
+Amethyst Lodestone
+Wondrous Item
+—
+×
+V.Rare
+FTD
+Ammunition of Slaying
+Ammunition, Generic Variant
+—
+V.Rare
+DMG'24
+Amulet of Appearance
+Wondrous Item
+—
+×
+Rare
+CoA
+Amulet of Betrayal
+Wondrous Item
+—
+×
+V.Rare
+CoA
+Amulet of Duplicity
+Wondrous Item
+—
+×
+V.Rare
+CoA
+Amulet of Harmony
+Wondrous Item
+—
+×
+Leg.
+NRH-AT
+Amulet of Health
+Wondrous Item
+1 lb.
+×
+Rare
+DMG'24
+Amulet of Proof against Detection and Location
+Wondrous Item
+1 lb.
+×
+Unc.
+DMG'24
+Amulet of Protection from Turning
+Wondrous Item
+1 lb.
+×
+Rare
+TftYP
+Amulet of the Black Skull
+Wondrous Item
+1 lb.
+×
+V.Rare
+ToA
+Amulet of the Drunkard
+Wondrous Item
+—
+Unc.
+EGW
+Amulet of the Inferno
+Wondrous Item
+—
+×
+Art.
+CoA
+Amulet of the Planes
+Wondrous Item
+1 lb.
+×
+V.Rare
+DMG'24
+Animated Shield
+Shield
+6 lb.
+×
+V.Rare
+DMG'24
+Antimagic Armor
+Generic Variant
+—
+×
+V.Rare
+BMT
+Apparatus of Kwalish
+Wondrous Item
+500 lb.
+Leg.
+DMG'24
+Arcanaloth's Music Box
+Other
+—
+Unk.
+ToA
+Arcane Cannon
+Wondrous Item
+—
+V.Rare
+EGW
+Arcane Propulsion Arm
+Wondrous Item
+—
+×
+V.Rare
+ERLW
+Armblade
+Generic Variant
+—
+×
+Com.
+ERLW
+Armor of Acid Resistance
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Cold Resistance
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Fire Resistance
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Force Resistance
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Fungal Spores
+Generic Variant
+—
+Unc.
+BMT
+Armor of Gleaming
+Generic Variant
+—
+Com.
+DMG'24
+Armor of Invulnerability
+Heavy Armor
+65 lb.
+×
+Leg.
+DMG'24
+Armor of Lightning Resistance
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Necrotic Resistance
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Poison Resistance
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Psychic Resistance
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Radiant Resistance
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Resistance
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Safeguarding
+Generic Variant
+—
+×
+V.Rare
+BGG
+Armor of the Fallen
+Generic Variant
+—
+×
+Unc.
+BMT
+Armor of the Valiant Soul
+Medium Armor
+45 lb.
+×
+Leg.
+TDCSR
+Armor of the Valiant Soul (Awakened)
+Medium Armor
+45 lb.
+×
+Leg.
+TDCSR
+Armor of the Valiant Soul (Dormant)
+Medium Armor
+45 lb.
+×
+Leg.
+TDCSR
+Armor of the Valiant Soul (Exalted)
+Medium Armor
+45 lb.
+×
+Leg.
+TDCSR
+Armor of Thunder Resistance
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Vulnerability
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Vulnerability (Bludgeoning)
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Vulnerability (Piercing)
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Vulnerability (Slashing)
+Generic Variant
+—
+×
+Rare
+DMG'24
+Armor of Weightlessness
+Generic Variant
+—
+×
+Unc.
+BMT
+Arrow-Catching Shield
+Shield
+6 lb.
+×
+Rare
+DMG'24
+Ascendant Dragon Vessel
+Wondrous Item
+—
+×
+Leg.
+FTD
+Ascendant Dragon's Wrath Weapon
+Generic Variant
+—
+×
+Leg.
+FTD
+Ascendant Dragon-Touched Focus
+Wondrous Item
+—
+×
+Leg.
+FTD
+Ascendant Scaled Ornament
+Wondrous Item
+—
+×
+Leg.
+FTD
+Astral Shard
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Astromancy Archive
+Wondrous Item
+3 lb.
+×
+Rare
+TCE
+Atlas of Endless Horizons
+Wondrous Item
+3 lb.
+×
+Rare
+TCE
+Axe of the Dwarvish Lords
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Art.
+DMG'24
+Azorius Guild Signet
+Ring
+—
+×
+Unc.
+GGR
+Azorius Keyrune
+Wondrous Item
+—
+×
+Rare
+GGR
+Azuredge
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+WDH
+Azuremite
+Illegal Drug
+—
+Unk.
+TDCSR
+Baba Yaga's Dancing Broom
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Baba Yaga's Mortar and Pestle
+Wondrous Item
+—
+×
+Art.
+TCE
+Baba Yaga's Pestle
+Simple Weapon, Melee Weapon
+4 lb.
+×
+Art.
+TCE
+Badge of the Watch
+Wondrous Item
+—
+×
+Rare
+WDH
+Bag of Beans
+Wondrous Item
+—
+Rare
+DMG'24
+Bag of Devouring
+Wondrous Item
+—
+V.Rare
+DMG'24
+Bag of Holding
+Wondrous Item
+5 lb.
+Unc.
+DMG'24
+Bag of Tricks
+Wondrous Item
+—
+Unc.
+DMG'24
+Bag of Tricks, Gray
+Wondrous Item
+—
+Unc.
+DMG'24
+Bag of Tricks, Rust
+Wondrous Item
+—
+Unc.
+DMG'24
+Bag of Tricks, Tan
+Wondrous Item
+—
+Unc.
+DMG'24
+Balance Card
+Wondrous Item
+—
+Leg.
+BMT
+Balance of Harmony
+Wondrous Item
+1 lb.
+Unc.
+TftYP
+Baleful Talon
+Simple Weapon, Melee Weapon
+1 lb.
+V.Rare
+BMT
+Balloon Pack
+Wondrous Item
+—
+Unc.
+PotA
+Banner of the Krig Rune
+Wondrous Item
+—
+×
+Rare
+SKT
+Barrier Tattoo (Large)
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Barrier Tattoo (Medium)
+Wondrous Item, Tattoo
+—
+×
+Rare
+TCE
+Barrier Tattoo (Small)
+Wondrous Item, Tattoo
+—
+×
+Unc.
+TCE
+Battering Shield
+Shield
+6 lb.
+×
+Rare
+EGW
+Battle Standard of Infernal Power
+Wondrous Item
+—
+×
+V.Rare
+BGDIA
+Bead of Force
+Wondrous Item
+½ lb.
+Rare
+DMG'24
+Bead of Nourishment
+Wondrous Item
+—
+Com.
+DMG'24
+Bead of Refreshment
+Wondrous Item
+—
+Com.
+DMG'24
+Belashyrra's Beholder Crown
+Wondrous Item
+—
+×
+Leg.
+ERLW
+Bell Branch
+Wondrous Item
+—
+×
+Rare
+TCE
+Belt of Cloud Giant Strength
+Wondrous Item
+—
+×
+Leg.
+DMG'24
+Belt of Dwarvenkind
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Belt of Fire Giant Strength
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Belt of Frost Giant Strength
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Belt of Giant Strength
+Wondrous Item
+—
+×
+Var.
+DMG'24
+Belt of Hill Giant Strength
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Belt of Stone Giant Strength
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Belt of Storm Giant Strength
+Wondrous Item
+—
+×
+Leg.
+DMG'24
+Berserker Axe
+Generic Variant
+—
+×
+Rare
+DMG'24
+Bigby's Beneficent Bracelet
+Wondrous Item
+—
+×
+Art.
+BGG
+Black Chromatic Rose
+Wondrous Item
+—
+Rare
+WBtW
+Black Crystal Tablet
+Wondrous Item
+—
+×
+Leg.
+WDMM
+Black Dragon Mask
+Wondrous Item
+—
+×
+Leg.
+HotDQ
+Black Dragon Scale Mail
+Medium Armor
+45 lb.
+×
+V.Rare
+DMG'24
+Blackrazor
+Martial Weapon, Melee Weapon
+6 lb.
+×
+Art.
+DMG'24
+Blackstaff
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+WDH
+Blade of Avernus
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Art.
+BGDIA
+Blade of Broken Mirrors
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Art.
+EGW
+Blade of Broken Mirrors (Awakened)
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Art.
+EGW
+Blade of Broken Mirrors (Dormant)
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Art.
+EGW
+Blade of Broken Mirrors (Exalted)
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Art.
+EGW
+Blade of the Medusa
+Generic Variant
+—
+×
+V.Rare
+LLK
+Blast Scepter
+Rod
+—
+×
+V.Rare
+WDMM
+Blasted Goggles
+Wondrous Item
+—
+×
+Unc.
+BMT
+Blod Stone
+Wondrous Item
+—
+×
+Rare
+SKT
+Blood Fury Tattoo
+Wondrous Item, Tattoo
+—
+×
+Leg.
+TCE
+Blood of the Lycanthrope Antidote
+Potion
+—
+Unc.
+IMR
+Blood Spear
+Simple Weapon, Melee Weapon
+3 lb.
+×
+Unc.
+CoS
+Bloodaxe
+Martial Weapon, Melee Weapon
+7 lb.
+×
+V.Rare
+EGW
+Bloodrage Greataxe
+Martial Weapon, Melee Weapon
+7 lb.
+Unc.
+BMT
+Bloodseeker Ammunition
+Ammunition, Generic Variant
+—
+V.Rare
+BMT
+Bloodshed Blade
+Generic Variant
+—
+×
+V.Rare
+BGG
+Blue Chromatic Rose
+Wondrous Item
+—
+Rare
+WBtW
+Blue Dragon Mask
+Wondrous Item
+—
+×
+Leg.
+RoTOS
+Blue Dragon Scale Mail
+Medium Armor
+45 lb.
+×
+V.Rare
+DMG'24
+Bob
+Martial Weapon, Melee Weapon
+4 lb.
+Unk.
+ToA
+Bobbing Lily Pad
+Wondrous Item
+—
+×
+V.Rare
+WBtW
+Bonecounter
+Simple Weapon, Melee Weapon
+4 lb.
+Rare
+SDW
+Book of Exalted Deeds
+Wondrous Item
+5 lb.
+×
+Art.
+DMG'24
+Book of Vile Darkness
+Wondrous Item
+5 lb.
+×
+Art.
+DMG'24
+Book of Vile Darkness (Variant)
+Wondrous Item
+5 lb.
+×
+Art.
+KftGV
+Bookmark
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Leg.
+ToA
+Boomerang Shield
+Shield
+6 lb.
+×
+Unc.
+BMT
+Boots of Elvenkind
+Wondrous Item
+—
+Unc.
+DMG'24
+Boots of False Tracks
+Wondrous Item
+—
+Com.
+DMG'24
+Boots of Haste
+Wondrous Item
+—
+×
+V.Rare
+TDCSR
+Boots of Levitation
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Boots of Speed
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Boots of Striding and Springing
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Boots of the Vigilant
+Wondrous Item
+—
+Unc.
+TDCSR
+Boots of the Winterlands
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Boros Guild Signet
+Ring
+—
+×
+Unc.
+GGR
+Boros Keyrune
+Wondrous Item
+—
+×
+Rare
+GGR
+Bottle of Boundless Coffee
+Wondrous Item
+—
+Com.
+SCC
+Bottled Breath
+Potion
+—
+Unc.
+PotA
+Bow of Conflagration
+Generic Variant
+—
+×
+Rare
+BMT
+Bow of Melodies
+Generic Variant
+—
+×
+V.Rare
+BMT
+Bowl of Commanding Water Elementals
+Wondrous Item
+—
+Rare
+DMG'24
+Bracelet of Rock Magic
+Wondrous Item
+1 lb.
+×
+V.Rare
+TftYP
+Bracer of Flying Daggers
+Wondrous Item
+—
+×
+Rare
+WDH
+Bracers of Archery
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Bracers of Asmodeus
+Wondrous Item
+—
+×
+Rare
+CoA
+Bracers of Celerity
+Wondrous Item
+—
+×
+Rare
+PaBTSO
+Bracers of Defense
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Brass Dragon Scale Mail
+Medium Armor
+45 lb.
+×
+V.Rare
+DMG'24
+Brazier of Commanding Fire Elementals
+Wondrous Item
+—
+Rare
+DMG'24
+Breastplate of Balance
+Medium Armor
+20 lb.
+×
+Rare
+BMT
+Breathing Bubble
+Wondrous Item
+—
+Com.
+EGW
+Bridle of Capturing
+Wondrous Item
+—
+Rare
+IMR
+Bronze Dragon Scale Mail
+Medium Armor
+45 lb.
+×
+V.Rare
+DMG'24
+Brooch of Living Essence
+Wondrous Item
+—
+×
+Unc.
+EGW
+Brooch of Shielding
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Broom of Flying
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Butcher's Bib
+Wondrous Item
+—
+×
+Rare
+EGW
+Cabal's Ruin
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Cabal's Ruin (Awakened)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Cabal's Ruin (Dormant)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Cabal's Ruin (Exalted)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Candle Mace
+Simple Weapon, Melee Weapon
+4 lb.
+Unk.
+BGDIA
+Candle of Invocation
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Candle of the Deep
+Wondrous Item
+—
+Com.
+DMG'24
+Canian Fork
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Rare
+CoA
+Cap of Water Breathing
+Wondrous Item
+—
+Unc.
+DMG'24
+Cape of Enlargement
+Wondrous Item
+—
+×
+V.Rare
+PaBTSO
+Cape of the Mountebank
+Wondrous Item
+—
+Rare
+DMG'24
+Card Sharp's Deck
+Wondrous Item
+—
+Unc.
+BMT
+Carpet of Flying
+Wondrous Item
+—
+V.Rare
+DMG'24
+Carpet of Flying, 3 ft. × 5 ft.
+Wondrous Item
+—
+V.Rare
+DMG'24
+Carpet of Flying, 4 ft. × 6 ft.
+Wondrous Item
+—
+V.Rare
+DMG'24
+Carpet of Flying, 5 ft. × 7 ft.
+Wondrous Item
+—
+V.Rare
+DMG'24
+Carpet of Flying, 6 ft. × 9 ft.
+Wondrous Item
+—
+V.Rare
+DMG'24
+Cartographer's Map Case
+Wondrous Item
+—
+Com.
+AI
+Cast-Off Armor
+Generic Variant
+—
+Com.
+DMG'24
+Cataclysm Bolts
+Ammunition
+1.2 oz.
+V.Rare
+TDCSR
+Cauldron of Plenty
+Wondrous Item
+50 lb.
+Rare
+IDRotF
+Cauldron of Rebirth
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Censer of Controlling Air Elementals
+Wondrous Item
+—
+Rare
+DMG'24
+Charlatan's Die
+Wondrous Item
+—
+×
+Com.
+DMG'24
+Charm of Plant Command
+Wondrous Item
+—
+×
+Rare
+GoS
+Charred Wand of Magic Missiles
+Wand
+1 lb.
+Unc.
+WDH
+Chest of Preserving
+Wondrous Item
+25 lb.
+Com.
+WDMM
+Chime of Exile
+Wondrous Item
+—
+V.Rare
+VEoR
+Chime of Opening
+Wondrous Item
+1 lb.
+Rare
+DMG'24
+Chip of Creation
+Wondrous Item
+—
+×
+Art.
+AitFR-AVT
+Chromatic Rose
+Wondrous Item
+—
+Rare
+WBtW
+Chronolometer
+Wondrous Item
+—
+×
+V.Rare
+AI
+Circlet of Barbed Vision
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Circlet of Barbed Vision (Awakened)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Circlet of Barbed Vision (Dormant)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Circlet of Barbed Vision (Exalted)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Circlet of Blasting
+Wondrous Item
+—
+Unc.
+DMG'24
+Circlet of Human Perfection
+Other
+—
+×
+Unc.
+WDMM
+Circlet of Wisdom
+Wondrous Item
+—
+Unk.
+TDCSR
+Claw of the Wyrm Rune
+Wondrous Item
+—
+×
+Rare
+SKT
+Claws of the Umber Hulk
+Wondrous Item
+—
+×
+Rare
+PotA
+Cleansing Stone
+Wondrous Item
+—
+Com.
+ERLW
+Cloak of Arachnida
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Cloak of Billowing
+Wondrous Item
+—
+Com.
+DMG'24
+Cloak of Displacement
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Cloak of Elvenkind
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Cloak of Invisibility
+Wondrous Item
+—
+×
+Leg.
+DMG'24
+Cloak of Many Fashions
+Wondrous Item
+—
+Com.
+DMG'24
+Cloak of Protection
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Cloak of the Bat
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Cloak of the Manta Ray
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Clockwork Amulet
+Wondrous Item
+—
+Com.
+DMG'24
+Clockwork Armor
+Generic Variant
+—
+×
+V.Rare
+BMT
+Clockwork Dog
+Other
+—
+Unk.
+SKT
+Clothes of Mending
+Wondrous Item
+—
+Com.
+DMG'24
+Coat of the Crest
+Wondrous Item
+—
+×
+Rare
+TDCSR
+Coiling Grasp Tattoo
+Wondrous Item, Tattoo
+—
+×
+Unc.
+TCE
+Coin of Decisionry
+Wondrous Item
+—
+Var.
+AI
+Coin of Delving
+Wondrous Item
+—
+Com.
+EGW
+Cold Absorbing Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Comet Card
+Wondrous Item
+—
+Leg.
+BMT
+Command Amulet
+Other
+1 lb.
+Unk.
+MM'25
+Common Glamerweave
+Wondrous Item
+—
+Com.
+ERLW
+Concertina
+Wondrous Item
+—
+Rare
+RMBRE
+Conch of Safe Rest
+Other
+2 lb.
+Unk.
+TTP
+Conch of Teleportation
+Wondrous Item
+—
+×
+V.Rare
+SKT
+Condemner
+Martial Weapon, Ranged Weapon
+18 lb.
+×
+Leg.
+TDCSR
+Condemner (Awakened)
+Martial Weapon, Ranged Weapon
+18 lb.
+×
+Leg.
+TDCSR
+Condemner (Dormant)
+Martial Weapon, Ranged Weapon
+18 lb.
+×
+Leg.
+TDCSR
+Condemner (Exalted)
+Martial Weapon, Ranged Weapon
+18 lb.
+×
+Leg.
+TDCSR
+Condensed Order
+Wondrous Item
+—
+Unc.
+CoA
+Constantori's Portrait
+Wondrous Item
+15 lb.
+×
+V.Rare
+KftGV
+Copper Dragon Scale Mail
+Medium Armor
+45 lb.
+×
+V.Rare
+DMG'24
+Corecut Dagger
+Simple Weapon, Melee Weapon
+1 lb.
+×
+V.Rare
+TDCSR
+Corpse Slayer
+Generic Variant
+—
+×
+Rare
+EGW
+Cracked Driftglobe
+Wondrous Item
+1 lb.
+Unc.
+CM
+Crook of Rao
+Wondrous Item
+—
+×
+Art.
+TCE
+Crown of Lies
+Wondrous Item
+—
+×
+Art.
+VEoR
+Crown of the Forest
+Wondrous Item
+—
+Unc.
+IMR
+Crown of the Wrath Bringer
+Wondrous Item
+—
+×
+Rare
+BGG
+Crown of Whirling Comets
+Wondrous Item
+—
+×
+V.Rare
+BMT
+Crusader's Shortsword
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Unk.
+CoS
+Crystal Ball
+Wondrous Item
+3 lb.
+×
+V.Rare
+DMG'24
+Crystal Ball (Legendary Version)
+Wondrous Item
+3 lb.
+×
+Leg.
+DMG'14
+Crystal Ball of Mind Reading
+Wondrous Item
+3 lb.
+×
+Leg.
+DMG'24
+Crystal Ball of Telepathy
+Wondrous Item
+3 lb.
+×
+Leg.
+DMG'24
+Crystal Ball of True Seeing
+Wondrous Item
+3 lb.
+×
+Leg.
+DMG'24
+Crystal Blade
+Generic Variant
+—
+×
+Rare
+FTD
+Crystalline Chronicle
+Wondrous Item
+3 lb.
+×
+V.Rare
+TCE
+Cube of Force
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Cube of Summoning
+Wondrous Item
+—
+Rare
+DMG'24
+Cubic Gate
+Wondrous Item
+—
+Leg.
+DMG'24
+Cuddly Strixhaven Mascot
+Wondrous Item
+—
+Com.
+SCC
+Cursed Luckstone
+Wondrous Item
+—
+×
+Unc.
+GoS
+Daern's Instant Fortress
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Dagger of Blindsight
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Rare
+WDMM
+Dagger of Denial
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Rare
+TDCSR
+Dagger of Guitar Solos
+Simple Weapon, Melee Weapon
+1 lb.
+Unk.
+WDMM
+Dagger of Venom
+Simple Weapon, Melee Weapon
+1 lb.
+Rare
+DMG'24
+Dancing Monkey Fruit
+Other
+—
+Unk.
+ToA
+Dancing Sword
+Generic Variant
+—
+×
+V.Rare
+DMG'24
+Danoth's Visor
+Wondrous Item
+—
+×
+Leg.
+EGW
+Danoth's Visor (Awakened)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Danoth's Visor (Dormant)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Danoth's Visor (Exalted)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Daoud's Wondrous Lanthorn
+Wondrous Item
+—
+×
+Art.
+QftIS
+Dark Shard Amulet
+Wondrous Item
+1 lb.
+×
+Com.
+DMG'24
+Dawnbringer
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+OotA
+Deathwalker's Ward
+Light Armor
+13 lb.
+×
+Leg.
+TDCSR
+Deathwalker's Ward (Awakened)
+Light Armor
+13 lb.
+×
+Leg.
+TDCSR
+Deathwalker's Ward (Dormant)
+Light Armor
+13 lb.
+×
+Leg.
+TDCSR
+Deathwalker's Ward (Exalted)
+Light Armor
+13 lb.
+×
+Leg.
+TDCSR
+Decanter of Endless Water
+Wondrous Item
+2 lb.
+Unc.
+DMG'24
+Deck of Dimensions
+Wondrous Item
+—
+×
+V.Rare
+BMT
+Deck of Illusions
+Wondrous Item
+—
+Unc.
+DMG'24
+Deck of Many More Things
+Wondrous Item
+—
+Leg.
+BMT
+Deck of Many Things
+Wondrous Item
+—
+Leg.
+DMG'24
+Deck of Miscellany
+Wondrous Item
+—
+Unc.
+BMT
+Deck of Oracles
+Wondrous Item
+—
+×
+Rare
+BMT
+Deck of Several Things
+Wondrous Item
+—
+Leg.
+LLK
+Deck of Wild Cards
+Wondrous Item
+—
+V.Rare
+BMT
+Deck of Wonder
+Wondrous Item
+—
+Unc.
+BMT
+Defender
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Dekella, Bident of Thassa
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Art.
+MOT
+Delver's Claws
+Wondrous Item
+—
+×
+Rare
+BGG
+Demon Armor
+Generic Variant
+—
+×
+V.Rare
+DMG'24
+Demon Skin
+Generic Variant
+—
+×
+Rare
+DitLCoT
+Demonbone Polearm
+Generic Variant
+—
+×
+V.Rare
+CoA
+Demonomicon of Iggwilv
+Wondrous Item
+—
+×
+Art.
+DMG'24
+Devastation Orb
+Wondrous Item
+—
+V.Rare
+PotA
+Devastation Orb of Air
+Wondrous Item
+—
+V.Rare
+PotA
+Devastation Orb of Earth
+Wondrous Item
+—
+V.Rare
+PotA
+Devastation Orb of Fire
+Wondrous Item
+—
+V.Rare
+PotA
+Devastation Orb of Water
+Wondrous Item
+—
+V.Rare
+PotA
+Devlin's Staff of Striking
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+ToA
+Devotee's Censer
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Rare
+TCE
+Dimensional Loop
+Wondrous Item
+—
+×
+V.Rare
+AI
+Dimensional Shackles
+Wondrous Item
+—
+Rare
+DMG'24
+Dimir Guild Signet
+Ring
+—
+×
+Unc.
+GGR
+Dimir Keyrune
+Wondrous Item
+—
+×
+V.Rare
+GGR
+Dispelling Stone
+Wondrous Item
+—
+V.Rare
+EGW
+Docent
+Wondrous Item
+—
+×
+Rare
+ERLW
+Documancy Satchel
+Wondrous Item
+—
+Var.
+AI
+Dodecahedron of Doom
+Wondrous Item
+—
+Rare
+WDMM
+Donjon Card
+Wondrous Item
+—
+Leg.
+BMT
+Donjon's Sundering Sphere
+Wondrous Item
+—
+×
+Rare
+BMT
+Doublet of Dramatic Demise
+Wondrous Item
+—
+Com.
+TDCSR
+Dowsing Dagger
+—
+Unk.
+XMtS
+Draakhorn
+Wondrous Item
+—
+Art.
+RoT
+Draconic Longsword
+Martial Weapon, Melee Weapon
+3 lb.
+Unk.
+ToA
+Dragon Scale Mail
+Medium Armor
+45 lb.
+×
+V.Rare
+DMG'24
+Dragon Sensing Longsword
+Martial Weapon, Melee Weapon
+3 lb.
+Unk.
+PotA
+Dragon Slayer
+Generic Variant
+—
+Rare
+DMG'24
+Dragon Thighbone Club
+Simple Weapon, Melee Weapon
+250 lb.
+×
+Unk.
+SKT
+Dragon Vessel
+Wondrous Item
+—
+×
+Var.
+FTD
+Dragon Wing Bow
+Generic Variant
+—
+×
+Rare
+FTD
+Dragon's Wrath Weapon
+Generic Variant
+—
+×
+Var.
+FTD
+Dragon-Touched Focus
+Wondrous Item
+—
+×
+Var.
+FTD
+Dragongleam
+Simple Weapon, Melee Weapon
+3 lb.
+Unk.
+HotDQ
+Dragonguard
+Medium Armor
+20 lb.
+Rare
+PaBTSO
+Dragonlance
+Generic Variant
+—
+×
+Leg.
+FTD
+Dragonstaff of Ahghairon
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+WDH
+Dragontooth Dagger
+Simple Weapon, Melee Weapon
+1 lb.
+Rare
+RoT
+Dread Helm
+Wondrous Item
+—
+Com.
+DMG'24
+Dried Leech
+Ammunition, Generic Variant
+—
+Unc.
+BMT
+Driftglobe
+Wondrous Item
+1 lb.
+Unc.
+DMG'24
+Drow +1 Armor
+Generic Variant
+—
+Unk.
+MM'14
+Drow +1 Weapon
+Generic Variant
+—
+Unk.
+MM'14
+Drow +2 Armor
+Generic Variant
+—
+Unk.
+MM'14
+Drow +2 Weapon
+Generic Variant
+—
+Unk.
+MM'14
+Drow +3 Armor
+Generic Variant
+—
+Unk.
+MM'14
+Drow +3 Weapon
+Generic Variant
+—
+Unk.
+MM'14
+Drown
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+PotA
+Duplicitous Manuscript
+Wondrous Item
+3 lb.
+×
+Rare
+TCE
+Duskcrusher
+Martial Weapon, Melee Weapon
+2 lb.
+×
+V.Rare
+EGW
+Dust of Corrosion
+Wondrous Item
+—
+Unc.
+WBtW
+Dust of Deliciousness
+Wondrous Item
+—
+Unc.
+EGW
+Dust of Disappearance
+Wondrous Item
+—
+Unc.
+DMG'24
+Dust of Dryness
+Wondrous Item
+—
+Unc.
+DMG'24
+Dust of Sneezing and Choking
+Wondrous Item
+—
+Unc.
+DMG'24
+Dwarven Plate
+Generic Variant
+—
+V.Rare
+DMG'24
+Dwarven Thrower
+Martial Weapon, Melee Weapon
+5 lb.
+×
+V.Rare
+DMG'24
+Dyrrn's Tentacle Whip
+Martial Weapon, Melee Weapon
+3 lb.
+×
+V.Rare
+ERLW
+Eagle Whistle
+Wondrous Item
+1 lb.
+Rare
+TftYP
+Ear Horn of Hearing
+Wondrous Item
+—
+Com.
+DMG'24
+Earring of Message
+Wondrous Item
+—
+Com.
+CRCotN
+Earthboard
+Wondrous Item
+40 lb.
+×
+Rare
+TDCSR
+Earworm
+Wondrous Item
+—
+×
+Unc.
+ERLW
+Echo Stone
+Wondrous Item
+—
+Unc.
+TDCSR
+Efreeti Bottle
+Wondrous Item
+—
+V.Rare
+DMG'24
+Efreeti Chain
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Elder Cartographer's Glossography
+Wondrous Item
+—
+Unc.
+AI
+Eldritch Claw Tattoo
+Wondrous Item, Tattoo
+—
+×
+Unc.
+TCE
+Eldritch Staff
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+WBtW
+Elemental Essence Shard
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Elemental Essence Shard (Air)
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Elemental Essence Shard (Earth)
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Elemental Essence Shard (Fire)
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Elemental Essence Shard (Water)
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Elemental Gem
+Wondrous Item
+—
+Unc.
+DMG'24
+Elemental Gem, Blue Sapphire
+Wondrous Item
+—
+Unc.
+DMG'24
+Elemental Gem, Emerald
+Wondrous Item
+—
+Unc.
+DMG'24
+Elemental Gem, Red Corundum
+Wondrous Item
+—
+Unc.
+DMG'24
+Elemental Gem, Yellow Diamond
+Wondrous Item
+—
+Unc.
+DMG'24
+Elixir of Health
+Potion
+½ lb.
+Rare
+DMG'24
+Elven Chain
+Generic Variant
+—
+Rare
+DMG'24
+Elven Thrower
+Simple Weapon, Melee Weapon
+3 lb.
+×
+V.Rare
+BGG
+Emerald Pen
+Wondrous Item
+—
+Unc.
+FTD
+Enduring Spellbook
+Wondrous Item
+—
+Com.
+DMG'24
+Energy Bow
+Generic Variant
+—
+×
+V.Rare
+DMG'24
+Enspelled Armor
+Generic Variant
+—
+×
+Var.
+DMG'24
+Enspelled Armor (Cantrip)
+Generic Variant
+—
+×
+Unc.
+DMG'24
+Enspelled Armor (Level 1)
+Generic Variant
+—
+×
+Unc.
+DMG'24
+Enspelled Armor (Level 2)
+Generic Variant
+—
+×
+Rare
+DMG'24
+Enspelled Armor (Level 3)
+Generic Variant
+—
+×
+Rare
+DMG'24
+Enspelled Armor (Level 4)
+Generic Variant
+—
+×
+V.Rare
+DMG'24
+Enspelled Armor (Level 5)
+Generic Variant
+—
+×
+V.Rare
+DMG'24
+Enspelled Armor (Level 6)
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Enspelled Armor (Level 7)
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Enspelled Armor (Level 8)
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Enspelled Staff
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Var.
+DMG'24
+Enspelled Staff (Cantrip)
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Unc.
+DMG'24
+Enspelled Staff (Level 1)
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Unc.
+DMG'24
+Enspelled Staff (Level 2)
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+DMG'24
+Enspelled Staff (Level 3)
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+DMG'24
+Enspelled Staff (Level 4)
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+DMG'24
+Enspelled Staff (Level 5)
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+DMG'24
+Enspelled Staff (Level 6)
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+DMG'24
+Enspelled Staff (Level 7)
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+DMG'24
+Enspelled Staff (Level 8)
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+DMG'24
+Enspelled Weapon
+Generic Variant
+—
+×
+Var.
+DMG'24
+Enspelled Weapon (Cantrip)
+Generic Variant
+—
+×
+Unc.
+DMG'24
+Enspelled Weapon (Level 1)
+Generic Variant
+—
+×
+Unc.
+DMG'24
+Enspelled Weapon (Level 2)
+Generic Variant
+—
+×
+Rare
+DMG'24
+Enspelled Weapon (Level 3)
+Generic Variant
+—
+×
+Rare
+DMG'24
+Enspelled Weapon (Level 4)
+Generic Variant
+—
+×
+V.Rare
+DMG'24
+Enspelled Weapon (Level 5)
+Generic Variant
+—
+×
+V.Rare
+DMG'24
+Enspelled Weapon (Level 6)
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Enspelled Weapon (Level 7)
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Enspelled Weapon (Level 8)
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Ephixis, Bow of Nylea
+Simple Weapon, Ranged Weapon
+2 lb.
+×
+Art.
+MOT
+Ersatz Eye
+Wondrous Item
+—
+Com.
+DMG'24
+Euryale Card
+Wondrous Item
+—
+Leg.
+BMT
+Euryale's Aegis
+Shield
+6 lb.
+×
+Leg.
+BMT
+Everbright Lantern
+Wondrous Item
+—
+Com.
+ERLW
+Eversmoking Bottle
+Wondrous Item
+—
+Unc.
+DMG'24
+Executioner's Axe
+Generic Variant
+—
+V.Rare
+DMG'24
+Eye and Hand of Vecna
+Wondrous Item
+—
+×
+Art.
+DMG'24
+Eye of Vecna
+Wondrous Item
+—
+×
+Art.
+DMG'24
+Eyes of Charming
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Eyes of Minute Seeing
+Wondrous Item
+—
+Unc.
+DMG'24
+Eyes of the Eagle
+Wondrous Item
+—
+Unc.
+DMG'24
+Fabulist Gem
+Wondrous Item
+—
+×
+Unc.
+BMT
+Faerie Dust
+Other
+—
+Unk.
+SKT
+Failed Experiment Wand
+Wand
+1 lb.
+×
+Rare
+AI
+Falkir's Helm of Pigheadedness
+Other
+—
+Unk.
+WDMM
+Fane-Eater
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+BGDIA
+Far Gear
+Wondrous Item
+—
+×
+V.Rare
+AI
+Far Realm Shard
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Fate Cutter Shears
+Simple Weapon, Melee Weapon
+1 lb.
+×
+V.Rare
+BMT
+Fates Card
+Wondrous Item
+—
+Leg.
+BMT
+Feather of Diatryma Summoning
+Wondrous Item
+—
+×
+Rare
+WDH
+Feather Token
+Wondrous Item
+—
+Com.
+ERLW
+Fenthras
+Martial Weapon, Ranged Weapon
+2 lb.
+×
+Leg.
+TDCSR
+Fenthras (Awakened)
+Martial Weapon, Ranged Weapon
+2 lb.
+×
+Leg.
+TDCSR
+Fenthras (Dormant)
+Martial Weapon, Ranged Weapon
+2 lb.
+×
+Leg.
+TDCSR
+Fenthras (Exalted)
+Martial Weapon, Ranged Weapon
+2 lb.
+×
+Leg.
+TDCSR
+Feywild Shard
+Wondrous Item
+1 lb.
+×
+Unc.
+TCE
+Feywrought Armor
+Generic Variant
+—
+×
+Rare
+BMT
+Figurine of Wondrous Power
+Wondrous Item
+—
+Var.
+DMG'24
+Figurine of Wondrous Power, Bronze Griffon
+Wondrous Item
+—
+Rare
+DMG'24
+Figurine of Wondrous Power, Ebony Fly
+Wondrous Item
+—
+Rare
+DMG'24
+Figurine of Wondrous Power, Golden Lions
+Wondrous Item
+—
+Rare
+DMG'24
+Figurine of Wondrous Power, Ivory Goats
+Wondrous Item
+—
+Rare
+DMG'24
+Figurine of Wondrous Power, Marble Elephant
+Wondrous Item
+—
+Rare
+DMG'24
+Figurine of Wondrous Power, Obsidian Steed
+Wondrous Item
+—
+V.Rare
+DMG'24
+Figurine of Wondrous Power, Onyx Dog
+Wondrous Item
+—
+Rare
+DMG'24
+Figurine of Wondrous Power, Serpentine Owl
+Wondrous Item
+—
+Rare
+DMG'24
+Figurine of Wondrous Power, Silver Raven
+Wondrous Item
+—
+Unc.
+DMG'24
+Finder's Goggles
+Wondrous Item
+—
+×
+Unc.
+ERLW
+Fire Absorbing Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Fish Suit
+Wondrous Item
+—
+V.Rare
+AAG
+Flail of Tiamat
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Leg.
+FTD
+Flame Tongue
+Generic Variant
+—
+×
+Rare
+DMG'24
+Flame Tongue Shortsword of Greed
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Unk.
+TftYP
+Flamefriend Lantern
+Wondrous Item
+—
+×
+Rare
+TDCSR
+Flames Card
+Wondrous Item
+—
+Leg.
+BMT
+Flayer Slayer
+Martial Weapon, Melee Weapon
+7 lb.
+×
+Rare
+PaBTSO
+Flying Chariot
+Wondrous Item
+—
+Rare
+MOT
+Flying Citadel Helm
+Wondrous Item
+—
+×
+V.Rare
+DSotDQ
+Folding Boat
+Wondrous Item
+4 lb.
+Rare
+DMG'24
+Fool Card
+Wondrous Item
+—
+Leg.
+BMT
+Fool's Blade
+Generic Variant
+—
+×
+V.Rare
+BMT
+Force Absorbing Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Forcebreaker Weapon
+Generic Variant
+—
+V.Rare
+BMT
+Frog Prince Statuette
+Wondrous Item
+—
+Rare
+VSS:PP
+Frost Brand
+Generic Variant
+—
+×
+V.Rare
+DMG'24
+Fulminating Treatise
+Wondrous Item
+3 lb.
+×
+Rare
+TCE
+Galder's Bubble Pipe
+Wondrous Item
+—
+×
+Rare
+LLK
+Gambler's Blade
+Generic Variant
+—
+×
+Rare
+LLK
+Gauntlets of Flaming Fury
+Wondrous Item
+—
+×
+Rare
+BGDIA
+Gauntlets of Ogre Power
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Gauntlets of Rage
+Wondrous Item
+—
+×
+Rare
+CoA
+Gavel of the Venn Rune
+Wondrous Item
+—
+×
+Rare
+SKT
+Gem Card
+Wondrous Item
+—
+Leg.
+BMT
+Gem of Brightness
+Wondrous Item
+—
+Unc.
+DMG'24
+Gem of Seeing
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Ghost Lantern
+Wondrous Item
+1 lb.
+×
+Rare
+ToA
+Ghost Step Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Giant Slayer
+Generic Variant
+—
+Rare
+DMG'24
+Glamerweave
+Wondrous Item
+—
+Var.
+ERLW
+Glamoured Studded Leather
+Light Armor
+13 lb.
+Rare
+DMG'24
+Glimmering Moonbow
+Generic Variant
+—
+×
+Rare
+BMT
+Gloomwrought Armor
+Generic Variant
+—
+×
+Rare
+BMT
+Gloves of Missile Snaring
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Gloves of Soul Catching
+Wondrous Item
+—
+×
+Leg.
+CM
+Gloves of Swimming and Climbing
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Gloves of Thievery
+Wondrous Item
+—
+Unc.
+DMG'24
+Glowrune Pigment
+Wondrous Item
+—
+Rare
+BGG
+Gnomengarde Grenade
+Wondrous Item
+—
+Var.
+DC
+Goggles of Night
+Wondrous Item
+—
+Unc.
+DMG'24
+Goggles of Object Reading
+Wondrous Item
+—
+×
+Unc.
+EGW
+Gold Canary Figurine of Wondrous Power
+Wondrous Item
+—
+Leg.
+FTD
+Gold Dragon Scale Mail
+Medium Armor
+45 lb.
+×
+V.Rare
+DMG'24
+Golgari Guild Signet
+Ring
+—
+×
+Unc.
+GGR
+Golgari Keyrune
+Wondrous Item
+—
+×
+V.Rare
+GGR
+Grasping Whip
+Martial Weapon, Melee Weapon
+3 lb.
+Rare
+BMT
+Gravenhollow Compass Ring
+Other
+—
+Unk.
+OotA
+Graz'tchar, the Decadent End
+Martial Weapon, Melee Weapon
+6 lb.
+×
+Leg.
+TDCSR
+Greater Silver Sword
+Martial Weapon, Melee Weapon
+6 lb.
+×
+Leg.
+MTF
+Green Chromatic Rose
+Wondrous Item
+—
+Rare
+WBtW
+Green Copper Ewer
+Other
+—
+Unk.
+CoS
+Green Dragon Mask
+Wondrous Item
+—
+×
+Leg.
+RoTOS
+Green Dragon Scale Mail
+Medium Armor
+45 lb.
+×
+V.Rare
+DMG'24
+Grimoire Infinitus
+Wondrous Item
+3 lb.
+×
+Leg.
+EGW
+Grimoire Infinitus (Awakened)
+Wondrous Item
+3 lb.
+×
+Leg.
+EGW
+Grimoire Infinitus (Dormant)
+Wondrous Item
+3 lb.
+×
+Leg.
+EGW
+Grimoire Infinitus (Exalted)
+Wondrous Item
+3 lb.
+×
+Leg.
+EGW
+Grovelthrash
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+EGW
+Grovelthrash (Awakened)
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+EGW
+Grovelthrash (Dormant)
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+EGW
+Grovelthrash (Exalted)
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+EGW
+Gruul Guild Signet
+Ring
+—
+×
+Unc.
+GGR
+Gruul Keyrune
+Wondrous Item
+—
+×
+Rare
+GGR
+Guardian Emblem
+Wondrous Item
+—
+×
+Unc.
+TCE
+Guild Keyrune
+Wondrous Item
+—
+×
+Var.
+GGR
+Guild Signet
+Ring
+—
+×
+Unc.
+GGR
+Gulthias Staff
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+CoS
+Gurt's Greataxe
+Martial Weapon, Melee Weapon
+325 lb.
+×
+Leg.
+SKT
+Hag Eye
+Wondrous Item
+—
+Unc.
+DMG'24
+Hammer of Runic Focus
+Martial Weapon, Melee Weapon
+2 lb.
+×
+V.Rare
+BMT
+Hammer of Thunderbolts
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Hammock of Worlds
+Wondrous Item
+—
+Leg.
+JttRC
+Hand of Vecna
+Wondrous Item
+—
+×
+Art.
+DMG'24
+Harkon's Bite
+Wondrous Item
+—
+×
+Unc.
+VRGR
+Harp of Gilded Plenty
+Wondrous Item
+—
+×
+Leg.
+BGG
+Hat of Disguise
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Hat of Many Spells
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Hat of Vermin
+Wondrous Item
+—
+Com.
+DMG'24
+Hat of Wizardry
+Wondrous Item
+—
+×
+Com.
+DMG'24
+Hazirawn
+Martial Weapon, Melee Weapon
+6 lb.
+×
+Leg.
+HotDQ
+Headband of Intellect
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Heart Weaver's Primer
+Wondrous Item
+3 lb.
+×
+Rare
+TCE
+Heartstone
+Other
+—
+V.Rare
+MM'14
+Hell Hound Cloak
+Wondrous Item
+1 lb.
+×
+Rare
+TftYP
+Hellfire Weapon
+Generic Variant
+—
+Unc.
+BGDIA
+Helm of Brilliance
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Helm of Comprehending Languages
+Wondrous Item
+—
+Unc.
+DMG'24
+Helm of Devil Command
+Wondrous Item
+—
+×
+V.Rare
+BGDIA
+Helm of Disjunction
+Wondrous Item
+—
+×
+Leg.
+HAT-LMI
+Helm of Perfect Potential
+Wondrous Item
+—
+×
+Art.
+BGG
+Helm of Telepathy
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Helm of Teleportation
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Helm of the Gods
+Wondrous Item
+—
+×
+Rare
+MOT
+Helm of the Scavenger
+Wondrous Item
+—
+×
+Leg.
+WDMM
+Helm of Underwater Action
+Wondrous Item
+—
+×
+Unc.
+GoS
+Heretic
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+QftIS
+Hew
+Martial Weapon, Melee Weapon
+4 lb.
+Unc.
+PaBTSO
+Heward's Handy Haversack
+Wondrous Item
+5 lb.
+Rare
+DMG'24
+Heward's Handy Spice Pouch
+Wondrous Item
+—
+Com.
+DMG'24
+Heward's Hireling Armor
+Light Armor
+10 lb.
+×
+V.Rare
+LLK
+Hide of the Feral Guardian
+Light Armor
+13 lb.
+×
+Leg.
+EGW
+Hide of the Feral Guardian (Awakened)
+Light Armor
+13 lb.
+×
+Leg.
+EGW
+Hide of the Feral Guardian (Dormant)
+Light Armor
+13 lb.
+×
+Leg.
+EGW
+Hide of the Feral Guardian (Exalted)
+Light Armor
+13 lb.
+×
+Leg.
+EGW
+Hither-Thither Staff
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+Leg.
+HAT-LMI
+Holy Avenger
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Holy Symbol of Ravenkind
+Wondrous Item
+—
+×
+Leg.
+CoS
+Honor's Last Stand
+Shield
+6 lb.
+×
+Leg.
+TDCSR
+Honor's Last Stand (Awakened)
+Shield
+6 lb.
+×
+Leg.
+TDCSR
+Honor's Last Stand (Dormant)
+Shield
+6 lb.
+×
+Leg.
+TDCSR
+Honor's Last Stand (Exalted)
+Shield
+6 lb.
+×
+Leg.
+TDCSR
+Hook of Fisher's Delight
+Wondrous Item
+—
+Rare
+IDRotF
+Horizon Puzzle Cube
+Wondrous Item
+—
+Unk.
+BGG
+Horn of Beckoning Death
+Wondrous Item
+—
+×
+Leg.
+HAT-LMI
+Horn of Blasting
+Wondrous Item
+—
+Rare
+DMG'24
+Horn of Silent Alarm
+Wondrous Item
+—
+Com.
+DMG'24
+Horn of the Endless Maze
+Wondrous Item
+2 lb.
+Rare
+WDMM
+Horn of Valhalla
+Wondrous Item
+—
+Var.
+DMG'24
+Horn of Valhalla, Brass
+Wondrous Item
+—
+Rare
+DMG'24
+Horn of Valhalla, Bronze
+Wondrous Item
+—
+V.Rare
+DMG'24
+Horn of Valhalla, Iron
+Wondrous Item
+—
+Leg.
+DMG'24
+Horn of Valhalla, Silver
+Wondrous Item
+—
+Rare
+DMG'24
+Horned Ring
+Ring
+—
+×
+V.Rare
+WDMM
+Horseshoes of a Zephyr
+Wondrous Item
+—
+V.Rare
+DMG'24
+Horseshoes of Speed
+Wondrous Item
+—
+Rare
+DMG'24
+House of Cards
+Wondrous Item
+—
+Unc.
+BMT
+Hunter's Coat
+Light Armor
+10 lb.
+×
+V.Rare
+EGW
+Icon of Ravenloft
+Wondrous Item
+10 lb.
+×
+Leg.
+CoS
+Iggwilv's Cauldron
+Wondrous Item
+80 lb.
+×
+Art.
+WBtW
+Iggwilv's Horn
+Wondrous Item
+—
+×
+Rare
+DitLCoT
+Illuminator's Tattoo
+Wondrous Item, Tattoo
+—
+×
+Com.
+TCE
+Illusionist's Bracers
+Wondrous Item
+—
+×
+V.Rare
+GGR
+Imbued Wood (Fernian Ash)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Imbued Wood (Irian Rosewood)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Imbued Wood (Kythrian Manchineel)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Imbued Wood (Lamannian Oak)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Imbued Wood (Mabaran Ebony)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Imbued Wood (Risian Pine)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Imbued Wood (Shavarran Birch)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Imbued Wood (Xorian Wenge)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Imbued Wood Focus
+Wondrous Item, Spellcasting Focus
+—
+×
+Com.
+ERLW
+Immovable Rod
+Rod
+2 lb.
+Unc.
+DMG'24
+Inescapable Lash
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Rare
+TDCSR
+Infernal Amulet
+Wondrous Item
+—
+×
+Rare
+CoA
+Infernal Plate Armor
+Heavy Armor
+65 lb.
+×
+V.Rare
+CoA
+Infernal Puzzle Box
+Wondrous Item
+3 lb.
+Unc.
+BGDIA
+Infernal Tack
+Wondrous Item
+—
+×
+Leg.
+MTF
+Infiltrator's Key
+Wondrous Item
+—
+×
+Leg.
+EGW
+Infiltrator's Key (Awakened)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Infiltrator's Key (Dormant)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Infiltrator's Key (Exalted)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Ingot of the Skold Rune
+Wondrous Item
+—
+×
+V.Rare
+SKT
+Insignia of Claws
+Wondrous Item
+—
+Unc.
+HotDQ
+Instrument of Illusions
+Wondrous Item
+—
+Com.
+DMG'24
+Instrument of Scribing
+Wondrous Item
+—
+Com.
+DMG'24
+Instrument of the Bards
+Wondrous Item
+—
+×
+Var.
+DMG'24
+Instrument of the Bards, Anstruth Harp
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Instrument of the Bards, Canaith Mandolin
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Instrument of the Bards, Cli Lyre
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Instrument of the Bards, Doss Lute
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Instrument of the Bards, Fochlucan Bandore
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Instrument of the Bards, Mac-Fuirmidh Cittern
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Instrument of the Bards, Ollamh Harp
+Wondrous Item
+—
+×
+Leg.
+DMG'24
+Ioun Stone
+Wondrous Item
+—
+×
+Var.
+DMG'24
+Ioun Stone of Vitality
+Wondrous Item
+—
+×
+V.Rare
+IMR
+Ioun Stone, Absorption
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Ioun Stone, Agility
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Ioun Stone, Awareness
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Ioun Stone, Fortitude
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Ioun Stone, Greater Absorption
+Wondrous Item
+—
+×
+Leg.
+DMG'24
+Ioun Stone, Historical Knowledge
+Wondrous Item
+—
+×
+Rare
+LLK
+Ioun Stone, Insight
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Ioun Stone, Intellect
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Ioun Stone, Language Knowledge
+Wondrous Item
+—
+×
+Rare
+LLK
+Ioun Stone, Leadership
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Ioun Stone, Mastery
+Wondrous Item
+—
+×
+Leg.
+DMG'24
+Ioun Stone, Natural Knowledge
+Wondrous Item
+—
+×
+Rare
+LLK
+Ioun Stone, Protection
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Ioun Stone, Regeneration
+Wondrous Item
+—
+×
+Leg.
+DMG'24
+Ioun Stone, Religious Knowledge
+Wondrous Item
+—
+×
+Rare
+LLK
+Ioun Stone, Reserve
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Ioun Stone, Self-Preservation
+Wondrous Item
+—
+×
+Rare
+LLK
+Ioun Stone, Strength
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Ioun Stone, Supreme Intellect
+Wondrous Item
+—
+×
+Rare
+LLK
+Ioun Stone, Sustenance
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Iron Bands of Bilarro
+Wondrous Item
+1 lb.
+Rare
+DMG'24
+Iron Flask
+Wondrous Item
+—
+Leg.
+DMG'24
+Ironfang
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Leg.
+PotA
+Izzet Guild Signet
+Ring
+—
+×
+Unc.
+GGR
+Izzet Keyrune
+Wondrous Item
+—
+×
+Rare
+GGR
+Jade Serpent Staff
+Other
+—
+Unk.
+WDMM
+Jakarion's Staff of Frost
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+CoS
+Javelin of Backbiting
+Simple Weapon, Melee Weapon
+2 lb.
+×
+V.Rare
+TftYP
+Javelin of Lightning
+Simple Weapon, Melee Weapon
+2 lb.
+Unc.
+DMG'24
+Jester Card
+Wondrous Item
+—
+Leg.
+BMT
+Jester's Mask
+Wondrous Item
+—
+×
+Leg.
+BMT
+Jewel of Three Prayers
+Wondrous Item
+—
+×
+Leg.
+CRCotN
+Jewel of Three Prayers (Awakened)
+Wondrous Item
+—
+×
+Leg.
+CRCotN
+Jewel of Three Prayers (Dormant)
+Wondrous Item
+—
+×
+Leg.
+CRCotN
+Jewel of Three Prayers (Exalted)
+Wondrous Item
+—
+×
+Leg.
+CRCotN
+Junky +1 Dagger
+Simple Weapon, Melee Weapon
+1 lb.
+Unk.
+TftYP
+Kagonesti Forest Shroud
+Wondrous Item
+—
+×
+Rare
+DSotDQ
+Keoghtom's Ointment
+Wondrous Item
+—
+Unc.
+DMG'24
+Key Card
+Wondrous Item
+—
+Leg.
+BMT
+Keycharm
+Wondrous Item
+—
+×
+Com.
+ERLW
+Keystone of Creation
+Wondrous Item
+—
+×
+Art.
+AitFR-AVT
+Khrusor, Spear of Heliod
+Simple Weapon, Melee Weapon
+3 lb.
+×
+Art.
+MOT
+Kiss of the Changebringer
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Kiss of the Changebringer (Awakened)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Kiss of the Changebringer (Dormant)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Kiss of the Changebringer (Exalted)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Knave's Eye Patch
+Wondrous Item
+—
+×
+Rare
+WDH
+Knife of Stolen Resistance
+Simple Weapon, Melee Weapon
+1 lb.
+Rare
+CoA
+Knight Card
+Wondrous Item
+—
+Leg.
+BMT
+Korolnor Scepter
+Simple Weapon, Melee Weapon
+2 lb.
+×
+Leg.
+SKT
+Kyrzin's Ooze
+Wondrous Item
+—
+×
+V.Rare
+ERLW
+Lantern of Revealing
+Wondrous Item
+—
+Unc.
+DMG'24
+Lantern of Tracking
+Wondrous Item
+—
+Com.
+IDRotF
+Lash of Immolation
+Martial Weapon, Melee Weapon
+3 lb.
+Rare
+BGG
+Lash of Shadows
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Art.
+EGW
+Lash of Shadows (Awakened)
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Art.
+EGW
+Lash of Shadows (Dormant)
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Art.
+EGW
+Lash of Shadows (Exalted)
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Art.
+EGW
+Last Stand Armor
+Generic Variant
+—
+V.Rare
+EGW
+Leather Golem Armor
+Light Armor
+10 lb.
+×
+Rare
+LLK
+Leonora's Throne of Indolence
+Wondrous Item
+100 lb.
+×
+V.Rare
+VSS:PP
+Lesser Hammock of Worlds
+Wondrous Item
+—
+Leg.
+JttRC
+Libram of Souls and Flesh
+Wondrous Item
+3 lb.
+×
+Rare
+TCE
+Lifewell Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Lightbringer
+Simple Weapon, Melee Weapon
+4 lb.
+Unc.
+PaBTSO
+Lightning Absorbing Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Living Armor
+Generic Variant
+—
+×
+V.Rare
+ERLW
+Living Gloves
+Wondrous Item
+—
+×
+Unc.
+ERLW
+Living Loot Satchel
+Wondrous Item
+—
+Var.
+AI
+Loadstone
+Wondrous Item
+1 lb.
+Rare
+TftYP
+Lock of Trickery
+Wondrous Item
+—
+Com.
+DMG'24
+Longbow of the Healing Hearth
+Martial Weapon, Ranged Weapon
+2 lb.
+×
+Leg.
+BGG
+Lord's Ensemble
+Wondrous Item
+—
+×
+V.Rare
+WDH
+Lorehold Primer
+Wondrous Item
+—
+×
+Unc.
+SCC
+Lost Crown of Besilmer
+Wondrous Item
+—
+×
+Leg.
+PotA
+Luba's Tarokka of Souls
+Wondrous Item
+—
+×
+Art.
+TCE
+Lucent Destroyer
+Renaissance, Martial Weapon, Ranged Weapon, Firearm
+10 lb.
+×
+V.Rare
+BGG
+Luck Blade
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Luminous War Pick
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Rare
+PaBTSO
+Lute of Thunderous Thumping
+Simple Weapon, Melee Weapon
+2 lb.
+V.Rare
+DMG'24
+Luxon Beacon
+Wondrous Item
+—
+Leg.
+EGW
+Lyre of Building
+Wondrous Item, Instrument
+2 lb.
+×
+Rare
+TCE
+Mace of Disruption
+Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+DMG'24
+Mace of Smiting
+Simple Weapon, Melee Weapon
+4 lb.
+Rare
+DMG'24
+Mace of Terror
+Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+DMG'24
+Mace of the Black Crown
+Simple Weapon, Melee Weapon
+4 lb.
+×
+Art.
+EGW
+Mace of the Black Crown (Awakened)
+Simple Weapon, Melee Weapon
+4 lb.
+×
+Art.
+EGW
+Mace of the Black Crown (Dormant)
+Simple Weapon, Melee Weapon
+4 lb.
+×
+Art.
+EGW
+Mace of the Black Crown (Exalted)
+Simple Weapon, Melee Weapon
+4 lb.
+×
+Art.
+EGW
+Macuahuitl
+Martial Weapon, Melee Weapon
+3 lb.
+Unk.
+TftYP
+Maddgoth's Helm
+Other
+—
+×
+V.Rare
+WDMM
+Magician's Judge
+Martial Weapon, Melee Weapon
+6 lb.
+Rare
+TDCSR
+Mantle of Spell Resistance
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Manual of Bodily Health
+Wondrous Item
+5 lb.
+V.Rare
+DMG'24
+Manual of Clay Golems
+Wondrous Item
+5 lb.
+V.Rare
+DMG'24
+Manual of Flesh Golems
+Wondrous Item
+5 lb.
+V.Rare
+DMG'24
+Manual of Gainful Exercise
+Wondrous Item
+5 lb.
+V.Rare
+DMG'24
+Manual of Golems
+Wondrous Item
+5 lb.
+V.Rare
+DMG'24
+Manual of Iron Golems
+Wondrous Item
+5 lb.
+V.Rare
+DMG'24
+Manual of Quickness of Action
+Wondrous Item
+5 lb.
+V.Rare
+DMG'24
+Manual of Stone Golems
+Wondrous Item
+5 lb.
+V.Rare
+DMG'24
+Mariner's Armor
+Generic Variant
+—
+Unc.
+DMG'24
+Mask of the Beast
+Wondrous Item
+1 lb.
+Unc.
+ToA
+Mask of the Dragon Queen
+Wondrous Item
+—
+×
+Art.
+RoT
+Masque Charm
+Wondrous Item
+—
+Com.
+SCC
+Masquerade Tattoo
+Wondrous Item, Tattoo
+—
+×
+Com.
+TCE
+Mastix, Whip of Erebos
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Art.
+MOT
+Matalotok
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Leg.
+BGDIA
+Medal of Muscle
+Wondrous Item
+—
+Com.
+CRCotN
+Medal of the Conch
+Wondrous Item
+—
+Com.
+CRCotN
+Medal of the Horizonback
+Wondrous Item
+—
+Com.
+CRCotN
+Medal of the Maze
+Wondrous Item
+—
+Com.
+CRCotN
+Medal of the Meat Pie
+Wondrous Item
+—
+Com.
+CRCotN
+Medal of the Wetlands
+Wondrous Item
+—
+Com.
+CRCotN
+Medal of Wit
+Wondrous Item
+—
+Com.
+CRCotN
+Medallion of Thoughts
+Wondrous Item
+1 lb.
+×
+Unc.
+DMG'24
+Memento Mori
+Wondrous Item
+—
+Rare
+VSS:PP
+Mighty Servant of Leuk-o
+Wondrous Item
+—
+×
+Art.
+TCE
+Mimir
+Wondrous Item
+5 lb.
+×
+Rare
+SatO
+Mind Blade
+Generic Variant
+—
+×
+Rare
+VGM
+Mind Carapace Armor
+Generic Variant
+—
+×
+Unc.
+VGM
+Mind Crystal
+Wondrous Item
+—
+Var.
+PaBTSO
+Mind Crystal (Careful)
+Wondrous Item
+—
+Unc.
+PaBTSO
+Mind Crystal (Distant)
+Wondrous Item
+—
+Unc.
+PaBTSO
+Mind Crystal (Empowered)
+Wondrous Item
+—
+Unc.
+PaBTSO
+Mind Crystal (Extended)
+Wondrous Item
+—
+Unc.
+PaBTSO
+Mind Crystal (Heightened)
+Wondrous Item
+—
+Rare
+PaBTSO
+Mind Crystal (Quickened)
+Wondrous Item
+—
+Rare
+PaBTSO
+Mind Crystal (Subtle)
+Wondrous Item
+—
+Com.
+PaBTSO
+Mind Flayer Skull
+Other
+—
+Unk.
+WDMM
+Mind Lash
+Melee Weapon
+3 lb.
+×
+Rare
+VGM
+Mindblasting Cap
+Wondrous Item
+—
+×
+V.Rare
+PaBTSO
+Mindguard Crown
+Wondrous Item
+—
+×
+V.Rare
+PaBTSO
+Mirror of Infinite Transpondence
+Wondrous Item
+—
+V.Rare
+TDCSR
+Mirror of Life Trapping
+Wondrous Item
+50 lb.
+V.Rare
+DMG'24
+Mirror of Reflected Pasts
+Wondrous Item
+25 lb.
+×
+V.Rare
+DSotDQ
+Mirror of the Past
+Wondrous Item
+1 lb.
+Rare
+TftYP
+Mistral Mantle
+Wondrous Item
+—
+×
+V.Rare
+BGG
+Mithral +1 Armor
+Generic Variant
+—
+Rare
+AI
+Mithral Armor
+Generic Variant
+—
+Unc.
+DMG'24
+Mizzium Apparatus
+Wondrous Item
+8 lb.
+×
+Unc.
+GGR
+Mizzium Armor
+Generic Variant
+—
+Rare
+GGR
+Mizzium Mortar
+Wondrous Item
+—
+Rare
+GGR
+Molten Bronze Skin
+Generic Variant
+—
+×
+Rare
+MOT
+Moodmark Paint
+Wondrous Item
+—
+Com.
+GGR
+Moon Card
+Wondrous Item
+—
+Leg.
+BMT
+Moon-Touched Sword
+Generic Variant
+—
+Com.
+DMG'24
+Moonblade
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Mudslick Tower
+Wondrous Item
+—
+V.Rare
+PaBTSO
+Mummy Rot Antidote
+Potion
+—
+Unc.
+IMR
+Murgaxor's Orb
+Wondrous Item
+—
+×
+Leg.
+SCC
+Mystery Key
+Wondrous Item
+—
+Com.
+DMG'24
+Mythcarver
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+TDCSR
+Mythcarver (Awakened)
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+TDCSR
+Mythcarver (Dormant)
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+TDCSR
+Mythcarver (Exalted)
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+TDCSR
+Nature's Mantle
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Navigation Orb
+Wondrous Item
+—
+×
+V.Rare
+SKT
+Necklace of Adaptation
+Wondrous Item
+1 lb.
+×
+Unc.
+DMG'24
+Necklace of Fireballs
+Wondrous Item
+1 lb.
+Rare
+DMG'24
+Necklace of Prayer Beads
+Wondrous Item
+1 lb.
+×
+Rare
+DMG'24
+Necrotic Absorbing Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Needle of Mending
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Rare
+EGW
+Nepenthe
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+VRGR
+Nether Scroll of Azumar
+Scroll
+—
+Leg.
+CM
+Netherese Ring of Protection
+Ring
+—
+×
+Rare
+PaBTSO
+Night Caller
+Wondrous Item
+1 lb.
+Unc.
+TftYP
+Nightbringer
+Simple Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+MCV2DC
+Nightfall Pearl
+Wondrous Item
+—
+×
+Leg.
+EGW
+Niko's Mace
+Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+UHftLH
+Nimbus Coronet
+Wondrous Item
+—
+×
+V.Rare
+BGG
+Nine Lives Stealer
+Generic Variant
+—
+×
+V.Rare
+DMG'24
+Nolzur's Marvelous Pigments
+Wondrous Item
+—
+V.Rare
+DMG'24
+Oathbow
+Generic Variant
+—
+×
+V.Rare
+DMG'24
+Obsidian Flint Dragon Plate
+Heavy Armor
+65 lb.
+Leg.
+BGDIA
+Obviator's Lenses
+Wondrous Item
+—
+Var.
+AI
+Occultant Abacus
+Wondrous Item
+—
+×
+Var.
+AI
+Oceanic Weapon
+Generic Variant
+—
+×
+Rare
+TDCSR
+Oil of Etherealness
+Potion
+½ lb.
+Rare
+DMG'24
+Oil of Sharpness
+Potion
+½ lb.
+V.Rare
+DMG'24
+Oil of Slipperiness
+Potion
+½ lb.
+Unc.
+DMG'24
+Opal of the Ild Rune
+Wondrous Item
+—
+×
+Rare
+SKT
+Orb of Direction
+Wondrous Item
+3 lb.
+Com.
+DMG'24
+Orb of Dragonkind
+Wondrous Item
+3 lb.
+×
+Art.
+DMG'24
+Orb of Gonging
+Wondrous Item
+5 lb.
+Com.
+WDMM
+Orb of Shielding
+Wondrous Item, Spellcasting Focus
+3 lb.
+×
+Com.
+ERLW
+Orb of Shielding (Fernian Basalt)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Orb of Shielding (Irian Quartz)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Orb of Shielding (Kythrian Skarn)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Orb of Shielding (Lamannian Flint)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Orb of Shielding (Mabaran Obsidian)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Orb of Shielding (Risian Shale)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Orb of Shielding (Shavarran Chert)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Orb of Shielding (Xorian Marble)
+Wondrous Item, Generic Variant
+—
+×
+Com.
+ERLW
+Orb of Skoraeus
+Wondrous Item
+8 lb.
+×
+Leg.
+BGG
+Orb of the Stein Rune
+Wondrous Item
+3 lb.
+×
+Rare
+SKT
+Orb of the Veil
+Wondrous Item
+3 lb.
+×
+V.Rare
+EGW
+Orb of Time
+Wondrous Item
+3 lb.
+Com.
+DMG'24
+Orc Stone
+Wondrous Item
+—
+×
+Unc.
+IDRotF
+Orcsplitter
+Martial Weapon, Melee Weapon
+7 lb.
+×
+Leg.
+PotA
+Orcus Figurine
+Wondrous Item
+—
+Unk.
+CM
+Ornithopter of Flying
+Wondrous Item
+25 lb.
+V.Rare
+WBtW
+Orrery of the Wanderer
+Wondrous Item, Other
+—
+×
+Art.
+AI
+Orzhov Guild Signet
+Ring
+—
+×
+Unc.
+GGR
+Orzhov Keyrune
+Wondrous Item
+—
+×
+Rare
+GGR
+Outer Essence Shard
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Outer Essence Shard (Chaotic)
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Outer Essence Shard (Evil)
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Outer Essence Shard (Good)
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Outer Essence Shard (Lawful)
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Paper Bird
+Wondrous Item
+—
+Unc.
+WDH
+Pariah's Shield
+Shield
+6 lb.
+×
+Rare
+GGR
+Pathfinder's Greataxe
+Martial Weapon, Melee Weapon
+7 lb.
+Unk.
+PotA
+Pearl of Power
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Pearl of Undead Detection
+Other
+—
+Unk.
+WDMM
+Pennant of the Vind Rune
+Wondrous Item
+—
+×
+V.Rare
+SKT
+Peregrine Mask
+Wondrous Item
+—
+×
+V.Rare
+GGR
+Perfume of Bewitching
+Wondrous Item
+—
+Com.
+DMG'24
+Periapt of Health
+Wondrous Item
+1 lb.
+×
+Unc.
+DMG'24
+Periapt of Proof against Poison
+Wondrous Item
+1 lb.
+×
+Rare
+DMG'24
+Periapt of Wound Closure
+Wondrous Item
+1 lb.
+×
+Unc.
+DMG'24
+Petrified Grung Egg
+Other
+—
+×
+Unk.
+ToA
+Philter of Love
+Potion
+½ lb.
+Unc.
+DMG'24
+Piercer
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Rare
+AI
+Pipe of Remembrance
+Wondrous Item
+—
+Com.
+GoS
+Pipe of Smoke Monsters
+Wondrous Item
+—
+Com.
+DMG'24
+Pipes of Haunting
+Wondrous Item
+—
+Unc.
+DMG'24
+Pipes of the Sewers
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Pirate's Cutlass
+—
+Unk.
+XMtS
+Piwafwi (Cloak of Elvenkind)
+Wondrous Item
+—
+×
+Unc.
+OotA
+Piwafwi of Fire Resistance
+Wondrous Item
+—
+×
+Rare
+OotA
+Pixie Dust
+Wondrous Item
+—
+Unc.
+WBtW
+Planar Key
+Wondrous Item
+—
+Rare
+AitFR-THP
+Planecaller's Codex
+Wondrous Item
+3 lb.
+×
+Rare
+TCE
+Plate Armor of Etherealness (*)
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Plate of Knight's Fellowship
+Heavy Armor
+65 lb.
+×
+Unc.
+BMT
+Plate of the Dawnmartyr
+Heavy Armor
+65 lb.
+×
+Leg.
+TDCSR
+Plate of the Dawnmartyr (Awakened)
+Heavy Armor
+65 lb.
+×
+Leg.
+TDCSR
+Plate of the Dawnmartyr (Dormant)
+Heavy Armor
+65 lb.
+×
+Leg.
+TDCSR
+Plate of the Dawnmartyr (Exalted)
+Heavy Armor
+65 lb.
+×
+Leg.
+TDCSR
+Platinum Scarf
+Wondrous Item
+—
+×
+Leg.
+FTD
+Poison Absorbing Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Pole of Angling
+Wondrous Item
+—
+Com.
+DMG'24
+Pole of Collapsing
+Wondrous Item
+—
+Com.
+DMG'24
+Polymorph Blade
+Generic Variant
+—
+×
+V.Rare
+LLK
+Portable Cannonballs
+Ammunition
+4 lb.
+Unc.
+VSS:PP
+Portable Hole
+Wondrous Item
+—
+Rare
+DMG'24
+Portal Compass
+Wondrous Item
+—
+Unc.
+SatO
+Portfolio Keeper
+Wondrous Item
+—
+Var.
+AI
+Pot of Awakening
+Wondrous Item
+—
+Com.
+DMG'24
+Potion of Acid Resistance
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Advantage
+Potion
+—
+Unc.
+WBtW
+Potion of Animal Friendship
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Aqueous Form
+Potion
+—
+Rare
+MOT
+Potion of Clairvoyance
+Potion
+½ lb.
+Rare
+DMG'24
+Potion of Climbing
+Potion
+½ lb.
+Com.
+DMG'24
+Potion of Cloud Giant Strength
+Potion
+½ lb.
+V.Rare
+DMG'24
+Potion of Cold Resistance
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Comprehension
+Potion
+½ lb.
+Com.
+DMG'24
+Potion of Diminution
+Potion
+½ lb.
+Rare
+DMG'24
+Potion of Dragon's Majesty
+Potion
+—
+Leg.
+FTD
+Potion of Fire Breath
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Fire Giant Strength
+Potion
+½ lb.
+Rare
+DMG'24
+Potion of Fire Resistance
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Flying
+Potion
+½ lb.
+V.Rare
+DMG'24
+Potion of Force Resistance
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Frost Giant Strength
+Potion
+½ lb.
+Rare
+DMG'24
+Potion of Gaseous Form
+Potion
+½ lb.
+Rare
+DMG'24
+Potion of Giant Size
+Potion
+—
+Leg.
+SKT
+Potion of Giant Strength
+Potion
+½ lb.
+Var.
+DMG'24
+Potion of Greater Healing
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Greater Invisibility
+Potion
+½ lb.
+V.Rare
+DMG'24
+Potion of Growth
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Healing
+Potion
+½ lb.
+Com.
+DMG'24
+Potion of Healing (*)
+Potion
+—
+Var.
+DMG'14
+Potion of Heroism
+Potion
+½ lb.
+Rare
+DMG'24
+Potion of Hill Giant Strength
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Invisibility
+Potion
+½ lb.
+Rare
+DMG'24
+Potion of Invulnerability
+Potion
+½ lb.
+Rare
+DMG'24
+Potion of Lightning Resistance
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Longevity
+Potion
+½ lb.
+V.Rare
+DMG'24
+Potion of Maximum Power
+Potion
+—
+Rare
+EGW
+Potion of Mind Control
+Potion
+—
+Var.
+TftYP
+Potion of Mind Control (beast)
+Potion
+—
+Rare
+TftYP
+Potion of Mind Control (humanoid)
+Potion
+—
+Rare
+TftYP
+Potion of Mind Control (monster)
+Potion
+—
+V.Rare
+TftYP
+Potion of Mind Reading
+Potion
+½ lb.
+Rare
+DMG'24
+Potion of Necrotic Resistance
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Poison
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Poison Resistance
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Polychromy
+Potion
+—
+Unc.
+DitLCoT
+Potion of Possibility
+Potion
+—
+V.Rare
+EGW
+Potion of Psionic Fortitude
+Potion
+—
+Unc.
+PaBTSO
+Potion of Psychic Resistance
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Pugilism
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Radiant Resistance
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Resistance
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Speed
+Potion
+½ lb.
+V.Rare
+DMG'24
+Potion of Stone Giant Strength
+Potion
+½ lb.
+Rare
+DMG'24
+Potion of Storm Giant Strength
+Potion
+½ lb.
+Leg.
+DMG'24
+Potion of Superior Healing
+Potion
+½ lb.
+Rare
+DMG'24
+Potion of Supreme Healing
+Potion
+½ lb.
+V.Rare
+DMG'24
+Potion of Thunder Resistance
+Potion
+½ lb.
+Unc.
+DMG'24
+Potion of Vitality
+Potion
+½ lb.
+V.Rare
+DMG'24
+Potion of Watchful Rest
+Potion
+—
+Com.
+WDMM
+Potion of Water Breathing
+Potion
+½ lb.
+Unc.
+DMG'24
+Potions of Healing
+Potion
+½ lb.
+Var.
+DMG'24
+Powered Armor
+Futuristic, Heavy Armor
+65 lb.
+×
+Leg.
+LLK
+Prehistoric Figurine of Wondrous Power
+Wondrous Item
+—
+Var.
+BGG
+Prehistoric Figurine of Wondrous Power, Carnelian Triceratops
+Wondrous Item
+—
+V.Rare
+BGG
+Prehistoric Figurine of Wondrous Power, Jasper Tyrannosaurus Rex
+Wondrous Item
+—
+Leg.
+BGG
+Prehistoric Figurine of Wondrous Power, Kyanite Pteranodon
+Wondrous Item
+—
+Rare
+BGG
+Prehistoric Figurine of Wondrous Power, Pyrite Plesiosaurus
+Wondrous Item
+—
+Unc.
+BGG
+Pressure Capsule
+Wondrous Item
+—
+Com.
+GoS
+Primal Amulet
+—
+Unk.
+XMtS
+Prismari Primer
+Wondrous Item
+—
+×
+Unc.
+SCC
+Prismatic Well
+Wondrous Item
+—
+Leg.
+NRH-AT
+Professor Orb
+Wondrous Item
+5 lb.
+Rare
+WDMM
+Professor Skant
+Wondrous Item
+5 lb.
+Rare
+IDRotF
+Propeller Helm
+Wondrous Item
+—
+×
+Unc.
+WDMM
+Prosthetic Limb
+Wondrous Item
+—
+Com.
+DMG'24
+Protective Verses
+Wondrous Item
+3 lb.
+×
+Rare
+TCE
+Prying Blade
+—
+Unk.
+XMtS
+Psi Crystal
+Wondrous Item
+—
+×
+Unc.
+IDRotF
+Psychic Absorbing Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Puzzle Card
+Wondrous Item
+—
+Leg.
+BMT
+Pyremaul
+Martial Weapon, Melee Weapon
+10 lb.
+×
+Leg.
+TDCSR
+Pyremaul (Awakened)
+Martial Weapon, Melee Weapon
+10 lb.
+×
+Leg.
+TDCSR
+Pyremaul (Dormant)
+Martial Weapon, Melee Weapon
+10 lb.
+×
+Leg.
+TDCSR
+Pyremaul (Exalted)
+Martial Weapon, Melee Weapon
+10 lb.
+×
+Leg.
+TDCSR
+Pyroconverger
+Wondrous Item
+—
+×
+Unc.
+GGR
+Pyxis of Pandemonium
+Wondrous Item
+—
+Leg.
+MOT
+Quaal's Feather Token
+Wondrous Item
+—
+Var.
+DMG'24
+Quaal's Feather Token, Anchor
+Wondrous Item
+—
+Unc.
+DMG'24
+Quaal's Feather Token, Bird
+Wondrous Item
+—
+Rare
+DMG'24
+Quaal's Feather Token, Fan
+Wondrous Item
+—
+Unc.
+DMG'24
+Quaal's Feather Token, Swan Boat
+Wondrous Item
+—
+Rare
+DMG'24
+Quaal's Feather Token, Tree
+Wondrous Item
+—
+Unc.
+DMG'24
+Quaal's Feather Token, Whip
+Wondrous Item
+—
+Rare
+DMG'24
+Quandrix Primer
+Wondrous Item
+—
+×
+Unc.
+SCC
+Quarterstaff of the Acrobat
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+DMG'24
+Quiver of Ehlonna
+Wondrous Item
+2 lb.
+Unc.
+DMG'24
+Radiance
+Wand
+—
+×
+Unk.
+CM
+Radiant Absorbing Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Rakdos Guild Signet
+Ring
+—
+×
+Unc.
+GGR
+Rakdos Keyrune
+Wondrous Item
+—
+×
+Unc.
+GGR
+Rakdos Riteknife
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Leg.
+GGR
+Ranseur of Torture
+Martial Weapon, Melee Weapon
+18 lb.
+×
+Art.
+CoA
+Raven's Slumber
+Wondrous Item
+—
+V.Rare
+TDCSR
+Reaper's Scream
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+BGG
+Red Chromatic Rose
+Wondrous Item
+—
+Rare
+WBtW
+Red Dragon Mask
+Wondrous Item
+—
+×
+Leg.
+RoTOS
+Red Dragon Scale Mail
+Medium Armor
+45 lb.
+×
+V.Rare
+DMG'24
+Red Wizard Blade
+Simple Weapon, Melee Weapon
+1 lb.
+Leg.
+HAT-LMI
+Reincarnation Dust
+Wondrous Item
+—
+V.Rare
+EGW
+Residuum
+Trade Good
+1 lb.
+Unk.
+TDCSR
+Residuum Enchanting Slate
+Wondrous Item, Tool
+—
+Unk.
+TDCSR
+Reszur
+Simple Weapon, Melee Weapon
+1 lb.
+Unc.
+PotA
+Reveler's Concertina
+Wondrous Item, Instrument
+—
+×
+Rare
+TCE
+Ring of Acid Resistance
+Ring
+—
+Rare
+DMG'24
+Ring of Amity
+Ring
+—
+×
+V.Rare
+BGG
+Ring of Animal Influence
+Ring
+—
+Rare
+DMG'24
+Ring of Barrels
+Ring
+—
+×
+Unc.
+VSS:PP
+Ring of Cold Resistance
+Ring
+—
+Rare
+DMG'24
+Ring of Collecting
+Ring
+—
+×
+V.Rare
+CoA
+Ring of Djinni Summoning
+Ring
+—
+×
+Leg.
+DMG'24
+Ring of Elemental Command
+Ring
+—
+×
+Leg.
+DMG'24
+Ring of Elemental Command (Air)
+Ring
+—
+×
+Leg.
+DMG'24
+Ring of Elemental Command (Earth)
+Ring
+—
+×
+Leg.
+DMG'24
+Ring of Elemental Command (Fire)
+Ring
+—
+×
+Leg.
+DMG'24
+Ring of Elemental Command (Water)
+Ring
+—
+×
+Leg.
+DMG'24
+Ring of Evasion
+Ring
+—
+×
+Rare
+DMG'24
+Ring of Feather Falling
+Ring
+—
+×
+Rare
+DMG'24
+Ring of Fire Resistance
+Ring
+—
+Rare
+DMG'24
+Ring of Force Resistance
+Ring
+—
+Rare
+DMG'24
+Ring of Free Action
+Ring
+—
+×
+Rare
+DMG'24
+Ring of Invisibility
+Ring
+—
+×
+Leg.
+DMG'24
+Ring of Jumping
+Ring
+—
+×
+Unc.
+DMG'24
+Ring of Lightning Resistance
+Ring
+—
+Rare
+DMG'24
+Ring of Mind Shielding
+Ring
+—
+×
+Unc.
+DMG'24
+Ring of Necrotic Resistance
+Ring
+—
+Rare
+DMG'24
+Ring of Obscuring
+Ring
+—
+×
+Unc.
+EGW
+Ring of Poison Resistance
+Ring
+—
+Rare
+DMG'24
+Ring of Protection
+Ring
+—
+×
+Rare
+DMG'24
+Ring of Psychic Resistance
+Ring
+—
+Rare
+DMG'24
+Ring of Puzzler's Wit
+Ring
+—
+Unc.
+BMT
+Ring of Radiant Resistance
+Ring
+—
+Rare
+DMG'24
+Ring of Red Fury
+Ring
+—
+×
+V.Rare
+CRCotN
+Ring of Regeneration
+Ring
+—
+×
+V.Rare
+DMG'24
+Ring of Resistance
+Ring
+—
+Rare
+DMG'24
+Ring of Shooting Stars
+Ring
+—
+×
+V.Rare
+DMG'24
+Ring of Spell Storing
+Ring
+—
+×
+Rare
+DMG'24
+Ring of Spell Turning
+Ring
+—
+×
+Leg.
+DMG'24
+Ring of Swimming
+Ring
+—
+Unc.
+DMG'24
+Ring of Telekinesis
+Ring
+—
+×
+V.Rare
+DMG'24
+Ring of Temporal Salvation
+Ring
+—
+×
+Rare
+EGW
+Ring of the Copycat
+Ring
+—
+×
+Leg.
+CoA
+Ring of the Orator
+Ring
+—
+×
+Unc.
+PaBTSO
+Ring of the Ram
+Ring
+—
+×
+Rare
+DMG'24
+Ring of Three Wishes
+Ring
+—
+Leg.
+DMG'24
+Ring of Thunder Resistance
+Ring
+—
+Rare
+DMG'24
+Ring of Treachery
+Ring
+—
+×
+V.Rare
+CoA
+Ring of Truth Telling
+Ring
+—
+×
+Unc.
+WDH
+Ring of Warmth
+Ring
+—
+×
+Unc.
+DMG'24
+Ring of Water Walking
+Ring
+—
+Unc.
+DMG'24
+Ring of Winter
+Ring
+1 lb.
+×
+Art.
+ToA
+Ring of X-ray Vision
+Ring
+—
+×
+Rare
+DMG'24
+Rival Coin
+Wondrous Item
+—
+Com.
+DMG'24
+Robe of Eyes
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Robe of Scintillating Colors
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Robe of Serpents
+Wondrous Item
+—
+×
+Unc.
+SKT
+Robe of Stars
+Wondrous Item
+—
+×
+V.Rare
+DMG'24
+Robe of Summer
+Wondrous Item
+1 lb.
+×
+Rare
+TftYP
+Robe of the Archmagi
+Wondrous Item
+—
+×
+Leg.
+DMG'24
+Robe of Useful Items
+Wondrous Item
+—
+Unc.
+DMG'24
+Rod of Absorption
+Rod
+2 lb.
+×
+V.Rare
+DMG'24
+Rod of Alertness
+Rod
+2 lb.
+×
+V.Rare
+DMG'24
+Rod of Hellish Flames
+Rod
+—
+×
+V.Rare
+BMT
+Rod of Lordly Might
+Rod
+2 lb.
+×
+Leg.
+DMG'24
+Rod of Mercurial Form
+Wondrous Item
+—
+Unc.
+TDCSR
+Rod of Resurrection
+Rod
+2 lb.
+×
+Leg.
+DMG'24
+Rod of Retribution
+Rod
+2 lb.
+×
+Unc.
+EGW
+Rod of Rulership
+Rod
+2 lb.
+×
+Rare
+DMG'24
+Rod of Security
+Rod
+2 lb.
+V.Rare
+DMG'24
+Rod of Seven Parts
+Simple Weapon, Rod
+4 lb.
+×
+Art.
+VEoR
+Rod of the Pact Keeper
+Rod
+2 lb.
+×
+Var.
+DMG'24
+Rod of the Vonindod
+Rod
+100 lb.
+×
+Rare
+SKT
+Rogue Card
+Wondrous Item
+—
+Leg.
+BMT
+Rogue's Mantle
+Wondrous Item
+—
+×
+Rare
+BMT
+Rope of Climbing
+Wondrous Item
+—
+Unc.
+DMG'24
+Rope of Entanglement
+Wondrous Item
+—
+Rare
+DMG'24
+Rope of Mending
+Wondrous Item
+—
+Com.
+DMG'24
+Rotor of Return
+Wondrous Item
+—
+×
+V.Rare
+AI
+Ruby of the War Mage
+Wondrous Item
+—
+×
+Com.
+DMG'24
+Ruby Rod of Asmodeus
+Rod
+—
+×
+Art.
+CoA
+Ruby Weave Gem
+Wondrous Item
+—
+×
+Leg.
+FTD
+Ruidium Armor
+Generic Variant
+—
+×
+V.Rare
+CRCotN
+Ruidium Shield
+Shield
+6 lb.
+×
+V.Rare
+CRCotN
+Ruidium Weapon
+Generic Variant
+—
+×
+V.Rare
+CRCotN
+Ruin Card
+Wondrous Item
+—
+Leg.
+BMT
+Ruin's Wake
+Simple Weapon, Melee Weapon
+3 lb.
+×
+Art.
+EGW
+Ruin's Wake (Awakened)
+Simple Weapon, Melee Weapon
+3 lb.
+×
+Art.
+EGW
+Ruin's Wake (Dormant)
+Simple Weapon, Melee Weapon
+3 lb.
+×
+Art.
+EGW
+Ruin's Wake (Exalted)
+Simple Weapon, Melee Weapon
+3 lb.
+×
+Art.
+EGW
+Ruinblade
+Martial Weapon, Melee Weapon
+6 lb.
+×
+Leg.
+IMR
+Ruinous Flail
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Rare
+BMT
+Ruinstone
+Wondrous Item
+—
+Art.
+DC
+Saddle of the Cavalier
+Wondrous Item
+—
+Unc.
+DMG'24
+Sage Card
+Wondrous Item
+—
+Leg.
+BMT
+Sage's Mirror
+Wondrous Item
+—
+Rare
+CoA
+Sage's Signet
+Ring
+—
+×
+Var.
+BMT
+Sage's Signet (Bear)
+Ring
+—
+×
+V.Rare
+BMT
+Sage's Signet (Hart)
+Ring
+—
+×
+V.Rare
+BMT
+Sage's Signet (Lion)
+Ring
+—
+×
+V.Rare
+BMT
+Sage's Signet (Serpent)
+Ring
+—
+×
+Rare
+BMT
+Sage's Signet (Songbird)
+Ring
+—
+×
+Rare
+BMT
+Sage's Signet (Wolf)
+Ring
+—
+×
+V.Rare
+BMT
+Saint Markovia's Thighbone
+Melee Weapon
+4 lb.
+×
+Rare
+CoS
+Sanctum Amulet
+Wondrous Item
+—
+×
+V.Rare
+BGG
+Sapphire Buckler
+Shield
+6 lb.
+×
+V.Rare
+FTD
+Scaled Ornament
+Wondrous Item
+—
+×
+Var.
+FTD
+Scarab of Protection
+Wondrous Item
+1 lb.
+×
+Leg.
+DMG'24
+Scimitar of Speed
+Martial Weapon, Melee Weapon
+3 lb.
+×
+V.Rare
+DMG'24
+Scissors of Shadow Snipping
+Wondrous Item
+—
+×
+Rare
+WBtW
+Scorpion Armor
+Heavy Armor
+65 lb.
+×
+Rare
+ToA
+Scourge of Shadow
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Art.
+CoA
+Scribe's Pen
+Wondrous Item
+—
+×
+Com.
+ERLW
+Scroll of Protection
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Aberrations)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Beasts)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Celestials)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Constructs)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Dragons)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Elementals)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Fey)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Fiends)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Giants)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Humanoids)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Monstrosities)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Oozes)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Plants)
+Scroll
+—
+Rare
+DMG'24
+Scroll of Protection (Undead)
+Scroll
+—
+Rare
+DMG'24
+Scroll of the Comet
+Scroll
+—
+Leg.
+IDRotF
+Scroll of Titan Summoning
+Scroll
+—
+Leg.
+DMG'24
+Scroll of Titan Summoning (Animal Lord)
+Scroll
+—
+Leg.
+DMG'24
+Scroll of Titan Summoning (Blob of Annihilation)
+Scroll
+—
+Leg.
+DMG'24
+Scroll of Titan Summoning (Colossus)
+Scroll
+—
+Leg.
+DMG'24
+Scroll of Titan Summoning (Elemental Cataclysm)
+Scroll
+—
+Leg.
+DMG'24
+Scroll of Titan Summoning (Empyrean)
+Scroll
+—
+Leg.
+DMG'24
+Scroll of Titan Summoning (Kraken)
+Scroll
+—
+Leg.
+DMG'24
+Scroll of Titan Summoning (Tarrasque)
+Scroll
+—
+Leg.
+DMG'24
+Seeker Dart
+Simple Weapon, Ranged Weapon
+¼ lb.
+Unc.
+PotA
+Sekolahian Worshiping Statuette
+Wondrous Item
+—
+Com.
+GoS
+Selesnya Guild Signet
+Ring
+—
+×
+Unc.
+GGR
+Selesnya Keyrune
+Wondrous Item
+—
+×
+Rare
+GGR
+Sending Stone
+Wondrous Item
+—
+Unc.
+AI
+Sending Stones
+Wondrous Item
+—
+Unc.
+DMG'24
+Sensory Stone
+Wondrous Item
+—
+Unc.
+SatO
+Sentinel Shield
+Shield
+6 lb.
+Unc.
+DMG'24
+Serpent Scale Armor
+Medium Armor
+45 lb.
+Unc.
+CM
+Serpent's Fang
+Martial Weapon, Melee Weapon
+3 lb.
+Rare
+CM
+Shadowfell Brand Tattoo
+Wondrous Item, Tattoo
+—
+×
+Rare
+TCE
+Shadowfell Shard
+Wondrous Item
+1 lb.
+×
+Rare
+TCE
+Shard of the Ise Rune
+Wondrous Item
+—
+×
+V.Rare
+SKT
+Shard of Xeluan
+Wondrous Item
+—
+×
+Rare
+KftGV
+Shard Solitaire
+Wondrous Item
+—
+×
+Leg.
+KftGV
+Shard Solitaire (Black Sapphire)
+Wondrous Item
+—
+×
+Leg.
+KftGV
+Shard Solitaire (Diamond)
+Wondrous Item
+—
+×
+Leg.
+KftGV
+Shard Solitaire (Jacinth)
+Wondrous Item
+—
+×
+Leg.
+KftGV
+Shard Solitaire (Rainbow Pearl)
+Wondrous Item
+—
+×
+Leg.
+KftGV
+Shard Solitaire (Ruby)
+Wondrous Item
+—
+×
+Leg.
+KftGV
+Shatterspike
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Unc.
+TftYP
+Shield Guardian Amulet
+Wondrous Item
+—
+×
+Rare
+IDRotF
+Shield of Expression
+Shield
+6 lb.
+Com.
+DMG'24
+Shield of Far Sight
+Shield
+6 lb.
+Rare
+VGM
+Shield of Missile Attraction
+Shield
+6 lb.
+×
+Rare
+DMG'24
+Shield of Shouting
+Shield
+6 lb.
+Unk.
+ToA
+Shield of the Blazing Dreadnought
+Shield
+6 lb.
+×
+Leg.
+BGG
+Shield of the Cavalier
+Shield
+6 lb.
+×
+V.Rare
+DMG'24
+Shield of the Hidden Lord
+Shield
+6 lb.
+×
+Leg.
+BGDIA
+Shield of the Silver Dragon
+Shield
+6 lb.
+Rare
+CoS
+Shield of the Tortoise
+Shield
+6 lb.
+×
+Unc.
+BMT
+Shield of the Uven Rune
+Shield
+6 lb.
+×
+V.Rare
+WDMM
+Shiftweave
+Wondrous Item
+—
+Com.
+ERLW
+Shrieking Greaves
+Wondrous Item
+—
+×
+Rare
+BMT
+Silken Spite
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+EGW
+Silken Spite (Awakened)
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+EGW
+Silken Spite (Dormant)
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+EGW
+Silken Spite (Exalted)
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+EGW
+Silver Dragon Scale Mail
+Medium Armor
+45 lb.
+×
+V.Rare
+DMG'24
+Silver Sword
+Martial Weapon, Melee Weapon
+6 lb.
+×
+Unk.
+MTF
+Silvered Weapon
+Generic Variant
+—
+Com.
+DMG'24
+Silverquill Primer
+Wondrous Item
+—
+×
+Unc.
+SCC
+Simic Guild Signet
+Ring
+—
+×
+Unc.
+GGR
+Simic Keyrune
+Wondrous Item
+—
+×
+Unc.
+GGR
+Siren Song Lyre
+Wondrous Item, Instrument
+—
+×
+Rare
+MOT
+Skull Card
+Wondrous Item
+—
+Leg.
+BMT
+Skull Helm
+Wondrous Item
+—
+×
+V.Rare
+BMT
+Skull of Selfish Knowledge
+Wondrous Item
+—
+×
+Rare
+CoA
+Skyblinder Staff
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Unc.
+GGR
+Skysail
+Wondrous Item, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+TDCSR
+Sling Bullets of Althemone
+Ammunition
+—
+V.Rare
+MOT
+Sling of Giant Felling
+Simple Weapon, Ranged Weapon
+—
+Unc.
+BMT
+Slippers of Spider Climbing
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Slumbering Dragon Vessel
+Wondrous Item
+—
+×
+Unc.
+FTD
+Slumbering Dragon's Wrath Weapon
+Generic Variant
+—
+×
+Unc.
+FTD
+Slumbering Dragon-Touched Focus
+Wondrous Item
+—
+×
+Unc.
+FTD
+Slumbering Scaled Ornament
+Wondrous Item
+—
+×
+Unc.
+FTD
+Smokepowder
+Wondrous Item
+—
+Unc.
+WDH
+Smoldering Armor
+Generic Variant
+—
+Com.
+DMG'24
+Snicker-Snack
+Martial Weapon, Melee Weapon
+6 lb.
+×
+Leg.
+WBtW
+Sorcerous Spyglass
+—
+Unk.
+XMtS
+Soul Bag
+Other
+—
+V.Rare
+MM'14
+Soul Coin
+Wondrous Item
+⅓ lb.
+Unc.
+BGDIA
+Soul Coin
+Wondrous Item
+—
+Unc.
+CoA
+Sovereign Glue
+Wondrous Item
+—
+Leg.
+DMG'24
+Speaking Stone
+Wondrous Item
+—
+V.Rare
+ERLW
+Spear of Backbiting
+Simple Weapon, Melee Weapon
+3 lb.
+×
+V.Rare
+TftYP
+Spell Bottle
+Wondrous Item
+—
+×
+Leg.
+EGW
+Spell Gem
+Wondrous Item
+—
+×
+Var.
+OotA
+Spell Gem (Amber)
+Wondrous Item
+—
+×
+V.Rare
+OotA
+Spell Gem (Bloodstone)
+Wondrous Item
+—
+×
+Rare
+OotA
+Spell Gem (Diamond)
+Wondrous Item
+—
+×
+Leg.
+OotA
+Spell Gem (Jade)
+Wondrous Item
+—
+×
+V.Rare
+OotA
+Spell Gem (Lapis lazuli)
+Wondrous Item
+—
+×
+Unc.
+OotA
+Spell Gem (Obsidian)
+Wondrous Item
+—
+×
+Unc.
+OotA
+Spell Gem (Quartz)
+Wondrous Item
+—
+×
+Rare
+OotA
+Spell Gem (Ruby)
+Wondrous Item
+—
+×
+Leg.
+OotA
+Spell Gem (Star ruby)
+Wondrous Item
+—
+×
+Leg.
+OotA
+Spell Gem (Topaz)
+Wondrous Item
+—
+×
+V.Rare
+OotA
+Spell Scroll
+Scroll
+—
+Var.
+DMG'24
+Spell Scroll (Cantrip)
+Scroll
+—
+Com.
+DMG'24
+Spell Scroll (Level 1)
+Scroll
+—
+Com.
+DMG'24
+Spell Scroll (Level 2)
+Scroll
+—
+Unc.
+DMG'24
+Spell Scroll (Level 3)
+Scroll
+—
+Unc.
+DMG'24
+Spell Scroll (Level 4)
+Scroll
+—
+Rare
+DMG'24
+Spell Scroll (Level 5)
+Scroll
+—
+Rare
+DMG'24
+Spell Scroll (Level 6)
+Scroll
+—
+V.Rare
+DMG'24
+Spell Scroll (Level 7)
+Scroll
+—
+V.Rare
+DMG'24
+Spell Scroll (Level 8)
+Scroll
+—
+V.Rare
+DMG'24
+Spell Scroll (Level 9)
+Scroll
+—
+Leg.
+DMG'24
+Spellguard Shield
+Shield
+6 lb.
+×
+V.Rare
+DMG'24
+Spelljamming Helm
+Wondrous Item
+—
+×
+Rare
+AAG
+Spellshard
+Wondrous Item
+—
+Com.
+ERLW
+Spellwrought Tattoo
+Wondrous Item, Tattoo
+—
+Var.
+TCE
+Spellwrought Tattoo (1st Level)
+Wondrous Item, Tattoo
+—
+Com.
+TCE
+Spellwrought Tattoo (2nd Level)
+Wondrous Item, Tattoo
+—
+Unc.
+TCE
+Spellwrought Tattoo (3rd Level)
+Wondrous Item, Tattoo
+—
+Unc.
+TCE
+Spellwrought Tattoo (4th Level)
+Wondrous Item, Tattoo
+—
+Rare
+TCE
+Spellwrought Tattoo (5th Level)
+Wondrous Item, Tattoo
+—
+Rare
+TCE
+Spellwrought Tattoo (Cantrip)
+Wondrous Item, Tattoo
+—
+Com.
+TCE
+Sphere of Annihilation
+Wondrous Item
+—
+Leg.
+DMG'24
+Spider Staff
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+PaBTSO
+Spies' Murmur
+Wondrous Item
+—
+×
+Unc.
+GGR
+Spindle of Fate
+Wand
+—
+×
+Leg.
+BMT
+Spire of Conflux
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+TDCSR
+Spire of Conflux (Awakened)
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+TDCSR
+Spire of Conflux (Dormant)
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+TDCSR
+Spire of Conflux (Exalted)
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+TDCSR
+Spirit Board
+Wondrous Item
+—
+V.Rare
+DMG'24
+Spyglass of Clairvoyance
+Wondrous Item
+—
+Com.
+AI
+Staff of Adornment
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+Com.
+DMG'24
+Staff of Birdcalls
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+Com.
+DMG'24
+Staff of Charming
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+DMG'24
+Staff of Defense
+Staff, Simple Weapon, Melee Weapon
+3 lb.
+×
+Rare
+PaBTSO
+Staff of Dunamancy
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+EGW
+Staff of Fate
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+CM
+Staff of Fire
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+DMG'24
+Staff of Flowers
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+Com.
+DMG'24
+Staff of Frost
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+DMG'24
+Staff of Healing
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+DMG'24
+Staff of Power
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+DMG'24
+Staff of Ruling
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+QftIS
+Staff of Striking
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+DMG'24
+Staff of Swarming Insects
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+DMG'24
+Staff of the Adder
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Unc.
+DMG'24
+Staff of the Forgotten One
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Art.
+ToA
+Staff of the Ivory Claw
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+EGW
+Staff of the Magi
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Leg.
+DMG'24
+Staff of the Python
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Unc.
+DMG'24
+Staff of the Rooted Hills
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+BGG
+Staff of the Woodlands
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+DMG'24
+Staff of Thunder and Lightning
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+DMG'24
+Staff of Withering
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+DMG'24
+Star Card
+Wondrous Item
+—
+Leg.
+BMT
+Star Razor
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+TDCSR
+Star Razor (Awakened)
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+TDCSR
+Star Razor (Dormant)
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+TDCSR
+Star Razor (Exalted)
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+TDCSR
+Starshot Crossbow
+Generic Variant
+—
+×
+Rare
+BMT
+Statuette of Augury
+Wondrous Item
+—
+Unk.
+PaBTSO
+Statuette of Saint Markovia
+Other
+—
+Unk.
+CoS
+Steel
+Martial Weapon, Melee Weapon
+3 lb.
+×
+V.Rare
+WBtW
+Stirring Dragon Vessel
+Wondrous Item
+—
+×
+Rare
+FTD
+Stirring Dragon's Wrath Weapon
+Generic Variant
+—
+×
+Rare
+FTD
+Stirring Dragon-Touched Focus
+Wondrous Item
+—
+×
+Rare
+FTD
+Stirring Scaled Ornament
+Wondrous Item
+—
+×
+Rare
+FTD
+Stone of Controlling Earth Elementals
+Wondrous Item
+—
+Rare
+DMG'24
+Stone of Creation
+Wondrous Item
+—
+×
+Art.
+AitFR-AVT
+Stone of Golorr
+Wondrous Item
+—
+×
+Art.
+WDH
+Stone of Good Luck
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Stone of Ill Luck
+Wondrous Item
+1 lb.
+×
+Unc.
+TftYP
+Stonebreaker's Breastplate
+Medium Armor
+20 lb.
+×
+Leg.
+BGG
+Stonemaker War Pick
+Martial Weapon, Melee Weapon
+2 lb.
+×
+V.Rare
+BMT
+Stonespeaker Crystal
+Wondrous Item
+—
+×
+Rare
+OotA
+Stonky's ring
+Ring
+—
+×
+Unk.
+CM
+Storm Boomerang
+Simple Weapon, Ranged Weapon
+—
+Unc.
+PotA
+Stormgirdle
+Wondrous Item
+—
+×
+Leg.
+EGW
+Stormgirdle (Awakened)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Stormgirdle (Dormant)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Stormgirdle (Exalted)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Stormrider Boots
+Wondrous Item
+—
+Rare
+TDCSR
+Strixhaven Pennant
+Wondrous Item
+—
+Com.
+SCC
+Summer's Dance
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Rare
+TDCSR
+Sun Blade
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Rare
+DMG'24
+Sun Card
+Wondrous Item
+—
+Leg.
+BMT
+Sun Staff
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Rare
+BMT
+Sunbeam Compass
+Wondrous Item, Other
+—
+Unk.
+TDCSR
+Sunforger
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Rare
+GGR
+Sunsword
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+CoS
+Suude
+Illegal Drug
+—
+Unk.
+TDCSR
+Suude (Blue)
+Illegal Drug
+—
+Unk.
+TDCSR
+Suude (Brown)
+Illegal Drug
+—
+Unk.
+TDCSR
+Suude (Red)
+Illegal Drug
+—
+Unk.
+TDCSR
+Sword of Answering
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+DMG'24
+Sword of Kas
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Art.
+DMG'24
+Sword of Life Stealing
+Generic Variant
+—
+×
+Rare
+DMG'24
+Sword of Retribution
+Generic Variant
+—
+×
+V.Rare
+CoA
+Sword of Sharpness
+Generic Variant
+—
+×
+V.Rare
+DMG'24
+Sword of the Paruns
+Martial Weapon, Melee Weapon
+3 lb.
+×
+V.Rare
+GGR
+Sword of the Planes
+Generic Variant
+—
+×
+Leg.
+BMT
+Sword of Vengeance
+Generic Variant
+—
+×
+Unc.
+DMG'24
+Sword of Wounding
+Generic Variant
+—
+×
+Rare
+DMG'24
+Sword of Zariel
+Martial Weapon, Melee Weapon
+3 lb.
+×
+Art.
+BGDIA
+Sylvan Talon
+Generic Variant
+—
+×
+Com.
+DMG'24
+Tablet of Reawakening
+Wondrous Item
+—
+Leg.
+HAT-LMI
+Talarith
+Wondrous Item
+—
+×
+Leg.
+BAM
+Talisman of Pure Good
+Wondrous Item
+1 lb.
+×
+Leg.
+DMG'24
+Talisman of the Sphere
+Wondrous Item
+1 lb.
+×
+Leg.
+DMG'24
+Talisman of Ultimate Evil
+Wondrous Item
+1 lb.
+×
+Leg.
+DMG'24
+Talking Doll
+Wondrous Item
+—
+×
+Com.
+DMG'24
+Talons Card
+Wondrous Item
+—
+Leg.
+BMT
+Tankard of Plenty
+Other
+—
+Unk.
+HotDQ
+Tankard of Sobriety
+Wondrous Item
+—
+Com.
+DMG'24
+Tasha's Creeping Keelboat
+Wondrous Item
+—
+×
+V.Rare
+DitLCoT
+Tearulai
+Martial Weapon, Melee Weapon
+3 lb.
+×
+V.Rare
+WDMM
+Teeth of Dahlver-Nar
+Wondrous Item
+—
+×
+Art.
+TCE
+Teleportation Tablet
+Wondrous Item
+—
+Rare
+CRCotN
+Teleporter Ring
+Ring
+—
+Unk.
+WDH
+Telescopic Transporter
+Wondrous Item
+—
+Leg.
+BMT
+Tentacle Rod
+Rod
+2 lb.
+×
+Rare
+DMG'24
+The Bloody End
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Art.
+EGW
+The Bloody End (Awakened)
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Art.
+EGW
+The Bloody End (Dormant)
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Art.
+EGW
+The Bloody End (Exalted)
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Art.
+EGW
+The Codicil of White
+Wondrous Item
+—
+Unk.
+IDRotF
+The Infernal Machine of Lum the Mad
+Wondrous Item
+—
+×
+Art.
+IMR
+Thermal Cube
+Wondrous Item
+—
+Com.
+IDRotF
+Thessaltoxin Antidote
+Potion
+—
+Unc.
+IMR
+Throne Card
+Wondrous Item
+—
+Leg.
+BMT
+Thunder Absorbing Tattoo
+Wondrous Item, Tattoo
+—
+×
+V.Rare
+TCE
+Thunderbuss
+Renaissance, Martial Weapon, Ranged Weapon, Firearm
+3 lb.
+V.Rare
+BGG
+Thunderous Greatclub
+Simple Weapon, Melee Weapon
+10 lb.
+×
+V.Rare
+DMG'24
+Tidecaller Trident
+Martial Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+BMT
+Timepiece of Travel
+Wondrous Item
+—
+×
+V.Rare
+AI
+Tinderstrike
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Leg.
+PotA
+Tinkertop Boltblaster 1000
+Martial Weapon, Ranged Weapon
+3 lb.
+×
+V.Rare
+TDCSR
+Titanstone Knuckles
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Titanstone Knuckles (Awakened)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Titanstone Knuckles (Dormant)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Titanstone Knuckles (Exalted)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Tome of Clear Thought
+Wondrous Item
+5 lb.
+V.Rare
+DMG'24
+Tome of Leadership and Influence
+Wondrous Item
+5 lb.
+V.Rare
+DMG'24
+Tome of the Stilled Tongue
+Wondrous Item
+5 lb.
+×
+Leg.
+DMG'24
+Tome of Understanding
+Wondrous Item
+5 lb.
+V.Rare
+DMG'24
+Topaz Annihilator
+Ranged Weapon, Firearm
+—
+×
+Leg.
+FTD
+Travel Alchemical Kit
+Wondrous Item
+—
+Unc.
+AI
+Trident of Fish Command
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Unc.
+DMG'24
+True-Ice Shards
+Melee Weapon
+—
+×
+Art.
+CoA
+True-Ice Shards (Dagger)
+Simple Weapon, Melee Weapon
+—
+×
+Art.
+CoA
+True-Ice Shards (Rapier)
+Martial Weapon, Melee Weapon
+—
+×
+Art.
+CoA
+Two-Birds Sling
+Simple Weapon, Ranged Weapon
+—
+Rare
+MOT
+Unbreakable Arrow
+Ammunition
+—
+Com.
+XGE
+Uncommon Glamerweave
+Wondrous Item
+—
+Unc.
+ERLW
+Universal Solvent
+Wondrous Item
+—
+Leg.
+DMG'24
+Vanquisher's Banner
+—
+Unk.
+XMtS
+Vanrak's Mithral Shirt
+Medium Armor
+20 lb.
+Unc.
+WDMM
+Ventilating Lungs
+Wondrous Item
+—
+×
+Rare
+ERLW
+Verminshroud
+Wondrous Item
+—
+×
+Leg.
+EGW
+Verminshroud (Awakened)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Verminshroud (Dormant)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Verminshroud (Exalted)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Veteran's Cane
+Wondrous Item
+—
+Com.
+DMG'24
+Vial of Greed
+Wondrous Item
+—
+×
+Rare
+CoA
+Vial of Thought Capture
+—
+Unk.
+AZfyT
+Vicious +1 Weapon
+Generic Variant
+—
+Unk.
+AI
+Vicious Weapon
+Generic Variant
+—
+Rare
+DMG'24
+Void Card
+Wondrous Item
+—
+Leg.
+BMT
+Voidwalker Armor
+Light Armor
+13 lb.
+×
+Rare
+BMT
+Vorpal Sword
+Generic Variant
+—
+×
+Leg.
+DMG'24
+Voting Kit
+Wondrous Item
+—
+Com.
+AI
+Vox Seeker
+Wondrous Item
+—
+Com.
+EGW
+Voyager Staff
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+V.Rare
+GGR
+Wakened Dragon Vessel
+Wondrous Item
+—
+×
+V.Rare
+FTD
+Wakened Dragon's Wrath Weapon
+Generic Variant
+—
+×
+V.Rare
+FTD
+Wakened Dragon-Touched Focus
+Wondrous Item
+—
+×
+V.Rare
+FTD
+Wakened Scaled Ornament
+Wondrous Item
+—
+×
+V.Rare
+FTD
+Walloping Ammunition
+Ammunition, Generic Variant
+—
+Com.
+DMG'24
+Wand of Binding
+Wand
+1 lb.
+×
+Rare
+DMG'24
+Wand of Conducting
+Wand
+1 lb.
+Com.
+DMG'24
+Wand of Enemy Detection
+Wand
+1 lb.
+×
+Rare
+DMG'24
+Wand of Entangle
+Wand
+1 lb.
+×
+Unc.
+TftYP
+Wand of Fear
+Wand
+1 lb.
+×
+Rare
+DMG'24
+Wand of Fireballs
+Wand
+1 lb.
+×
+Rare
+DMG'24
+Wand of Lightning Bolts
+Wand
+1 lb.
+×
+Rare
+DMG'24
+Wand of Magic Detection
+Wand
+1 lb.
+Unc.
+DMG'24
+Wand of Magic Missiles
+Wand
+1 lb.
+Unc.
+DMG'24
+Wand of Orcus
+Simple Weapon, Wand, Melee Weapon
+4 lb.
+×
+Art.
+DMG'24
+Wand of Paralysis
+Wand
+1 lb.
+×
+Rare
+DMG'24
+Wand of Polymorph
+Wand
+1 lb.
+×
+V.Rare
+DMG'24
+Wand of Pyrotechnics
+Wand
+1 lb.
+Com.
+DMG'24
+Wand of Scowls
+Wand
+1 lb.
+Com.
+XGE
+Wand of Secrets
+Wand
+1 lb.
+Unc.
+DMG'24
+Wand of Smiles
+Wand
+1 lb.
+Com.
+XGE
+Wand of the War Mage
+Wand
+1 lb.
+×
+Var.
+DMG'24
+Wand of Viscid Globs
+Wand
+1 lb.
+×
+Rare
+OotA
+Wand of Web
+Wand
+1 lb.
+×
+Unc.
+DMG'24
+Wand of Winter
+Wand
+1 lb.
+×
+Rare
+HotDQ
+Wand of Wonder
+Wand
+1 lb.
+×
+Rare
+DMG'24
+Wand Sheath
+Wondrous Item
+—
+×
+Com.
+ERLW
+War Horn of Valor
+Wondrous Item
+—
+Rare
+BGG
+Warrior's Passkey
+Wondrous Item
+—
+×
+Rare
+BMT
+Watchful Helm
+Wondrous Item
+—
+×
+V.Rare
+CM
+Wave
+Martial Weapon, Melee Weapon
+4 lb.
+×
+Art.
+DMG'24
+Wayfarer's Boots
+Wondrous Item
+—
+×
+Rare
+BGG
+Waythe
+Martial Weapon, Melee Weapon
+6 lb.
+×
+Leg.
+TftYP
+Weapon of Agonizing Paralysis
+Generic Variant
+—
+×
+V.Rare
+CoA
+Weapon of Certain Death
+Generic Variant
+—
+Rare
+EGW
+Weapon of Throne's Command
+Generic Variant
+—
+×
+V.Rare
+BMT
+Weapon of Warning
+Generic Variant
+—
+×
+Unc.
+DMG'24
+Weird Tank
+Wondrous Item
+—
+×
+Rare
+PotA
+Well of Many Worlds
+Wondrous Item
+—
+Leg.
+DMG'24
+Wheel of Stars
+Wondrous Item
+—
+×
+V.Rare
+AI
+Wheel of Wind and Water
+Wondrous Item
+—
+Unc.
+ERLW
+Whelm
+Martial Weapon, Melee Weapon
+5 lb.
+×
+Art.
+DMG'24
+Whisper
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Leg.
+TDCSR
+Whisper (Awakened)
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Leg.
+TDCSR
+Whisper (Dormant)
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Leg.
+TDCSR
+Whisper (Exalted)
+Simple Weapon, Melee Weapon
+1 lb.
+×
+Leg.
+TDCSR
+Whisper Jar
+Wondrous Item
+—
+×
+Var.
+AI
+White Chromatic Rose
+Wondrous Item
+—
+Rare
+WBtW
+White Dragon Cape
+Other
+—
+Unk.
+TftYP
+White Dragon Mask
+Wondrous Item
+—
+×
+Leg.
+RoTOS
+White Dragon Scale Mail
+Medium Armor
+45 lb.
+×
+V.Rare
+DMG'24
+Whitestone
+Trade Good
+—
+Unk.
+TDCSR
+Wildspace Orrery
+Wondrous Item
+—
+Unc.
+AAG
+Will of the Talon
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+EGW
+Will of the Talon (Awakened)
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+EGW
+Will of the Talon (Dormant)
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+EGW
+Will of the Talon (Exalted)
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+EGW
+Wind Fan
+Wondrous Item
+—
+Unc.
+DMG'24
+Windvane
+Simple Weapon, Melee Weapon
+3 lb.
+×
+Leg.
+PotA
+Winged Ammunition
+Ammunition, Generic Variant
+—
+Unc.
+BMT
+Winged Boots
+Wondrous Item
+—
+×
+Unc.
+DMG'24
+Wings of Flying
+Wondrous Item
+—
+×
+Rare
+DMG'24
+Wingwear
+Wondrous Item
+—
+×
+Unc.
+PotA
+Winter's Dark Bite
+Martial Weapon, Melee Weapon
+6 lb.
+Unc.
+HftT
+Witchlight Vane
+Melee Weapon
+3 lb.
+×
+Leg.
+WBtW
+Witchlight Watch
+Wondrous Item
+—
+×
+Leg.
+WBtW
+Witherbloom Primer
+Wondrous Item
+—
+×
+Unc.
+SCC
+Woodcutter's Axe
+Martial Weapon, Melee Weapon
+7 lb.
+Rare
+WBtW
+Wraps of Dyamak
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Wraps of Dyamak (Awakened)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Wraps of Dyamak (Dormant)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Wraps of Dyamak (Exalted)
+Wondrous Item
+—
+×
+Leg.
+TDCSR
+Wraps of Unarmed Power
+Wondrous Item
+—
+Var.
+DMG'24
+Wreath of the Prism
+Wondrous Item
+—
+×
+Leg.
+EGW
+Wreath of the Prism (Awakened)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Wreath of the Prism (Dormant)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Wreath of the Prism (Exalted)
+Wondrous Item
+—
+×
+Leg.
+EGW
+Wrought-Iron Tower
+Martial Weapon, Melee Weapon
+2 lb.
+×
+Art.
+CoA
+Wyllow's Staff of Flowers
+Staff, Simple Weapon, Melee Weapon
+4 lb.
+×
+Com.
+WDMM
+Wyrmreaver Gauntlets
+Wondrous Item
+—
+×
+V.Rare
+BGG
+Wyrmskull Throne
+Wondrous Item
+—
+Art.
+SKT
+Yester Hill Axe
+Martial Weapon, Melee Weapon
+2 lb.
+Unk.
+CoS
+Ythryn Mythallar
+Wondrous Item
+—
+×
+Leg.
+IDRotF
+Zephyr Armor
+Generic Variant
+—
+×
+Rare
+BGG

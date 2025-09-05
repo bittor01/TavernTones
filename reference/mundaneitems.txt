@@ -1,0 +1,3145 @@
+Abacus
+Adventuring Gear
+2 gp
+2 lb.
+PHB'14
+Acid
+Adventuring Gear
+25 gp
+1 lb.
+PHB'24
+Adamantine Ammunition
+Ammunition, Generic Variant
+—
+—
+XGE
+Adamantine Bar
+Trade Good
+1,000 gp
+10 lb.
+WDH
+Adjustable Stilts
+Other
+—
+8 lb.
+WDH
+Aerenal Trinket
+Adventuring Gear
+—
+—
+ERLW
+Airship
+Vehicle (Air)
+40,000 gp
+—
+PHB'24
+Alchemist's Doom
+Adventuring Gear
+—
+1 lb.
+SCC
+Alchemist's Fire
+Adventuring Gear
+50 gp
+1 lb.
+PHB'24
+Alchemist's Supplies
+Artisan's Tools
+50 gp
+8 lb.
+PHB'24
+Ale (gallon)
+Food and Drink
+2 sp
+—
+PHB'14
+Ale (mug)
+Food and Drink
+4 cp
+—
+PHB'24
+Alexandrite
+Treasure (Gemstone)
+500 gp
+—
+DMG'24
+Amber
+Treasure (Gemstone)
+100 gp
+—
+DMG'24
+Amethyst
+Treasure (Gemstone)
+100 gp
+—
+DMG'24
+Amulet
+Spellcasting Focus
+5 gp
+1 lb.
+PHB'24
+Amulet of dinosaur feathers (Sun Empire)
+Treasure (Art Object)
+25 gp
+—
+PSX
+Antigravity Belt
+Futuristic, Adventuring Gear
+—
+—
+QftIS
+Antimatter Rifle
+Futuristic, Martial Weapon, Ranged Weapon, Firearm
+—
+10 lb.
+DMG'24
+Antitoxin
+Adventuring Gear
+50 gp
+—
+PHB'24
+Aquamarine
+Treasure (Gemstone)
+500 gp
+—
+DMG'24
+Arcane Focus
+Spellcasting Focus
+—
+—
+PHB'24
+Argonnessen Trinket
+Adventuring Gear
+—
+—
+ERLW
+Arrow
+Ammunition
+5 cp
+0.8 oz.
+PHB'24
+Arrows (20)
+Ammunition
+1 gp
+1 lb.
+PHB'24
+Artisan's Tools
+Artisan's Tools
+—
+—
+PHB'24
+Assassin's Blood
+Adventuring Gear, Poison
+150 gp
+—
+DMG'24
+Assault Rifle
+Martial Weapon, Ranged Weapon, Firearm
+300 gp
+7 lb.
+GC:VSS
+Automatic Rifle
+Modern, Martial Weapon, Ranged Weapon, Firearm
+—
+8 lb.
+DMG'24
+Axe Beak
+Mount
+50 gp
+—
+IDRotF
+Azurite
+Treasure (Gemstone)
+10 gp
+—
+DMG'24
+Backpack
+Adventuring Gear
+2 gp
+5 lb.
+PHB'24
+Backpack Parachute
+Other
+—
+—
+WDH
+Bagpipes
+Instrument
+30 gp
+6 lb.
+PHB'24
+Ball Bearing
+Adventuring Gear
+0.1 cp
+0.032 oz.
+PHB'14
+Ball Bearings
+Adventuring Gear
+1 gp
+2 lb.
+PHB'24
+Banded Agate
+Treasure (Gemstone)
+10 gp
+—
+DMG'24
+Barding
+Tack and Harness
+×4
+×2
+PHB'14
+Barking Box
+Other
+—
+—
+WDH
+Barrel
+Adventuring Gear
+2 gp
+70 lb.
+PHB'24
+Barrier Peaks Trinket
+Adventuring Gear
+—
+—
+LLK
+Basic Fishing Equipment
+Adventuring Gear
+1 sp
+—
+AAG
+Basic Poison
+Adventuring Gear, Poison
+100 gp
+—
+PHB'24
+Basket
+Adventuring Gear
+4 sp
+2 lb.
+PHB'24
+Battleaxe
+Martial Weapon, Melee Weapon
+10 gp
+4 lb.
+PHB'24
+Bedroll
+Adventuring Gear
+1 gp
+7 lb.
+PHB'24
+Bejeweled gold bracelet
+Treasure (Art Object)
+250 gp
+—
+DMG'24
+Bejeweled ivory drinking horn with gold filigree
+Treasure (Art Object)
+7,500 gp
+—
+DMG'24
+Bejeweled ivory drinking horn with gold inlay (Brazen Coalition)
+Treasure (Art Object)
+7,500 gp
+—
+PSX
+Bell
+Adventuring Gear
+1 gp
+—
+PHB'24
+Birdpipes
+Instrument
+—
+—
+SCAG
+Bit and bridle
+Tack and Harness
+2 gp
+1 lb.
+PHB'14
+Biza's Breath
+Adventuring Gear, Poison
+—
+—
+JttRC
+Black Ghost Orchid Seed
+Adventuring Gear
+—
+—
+JttRC
+Black Opal
+Treasure (Gemstone)
+1,000 gp
+—
+DMG'24
+Black Pearl
+Treasure (Gemstone)
+500 gp
+—
+DMG'24
+Black Sap
+Adventuring Gear
+300 gp
+—
+EGW
+Black Sapphire
+Treasure (Gemstone)
+5,000 gp
+—
+DMG'24
+Black velvet mask stitched with silver thread
+Treasure (Art Object)
+25 gp
+—
+DMG'24
+Blanket
+Adventuring Gear
+5 sp
+3 lb.
+PHB'24
+Blasting Powder
+Adventuring Gear
+—
+—
+EGW
+Blight Ichor
+Adventuring Gear
+200 gp
+—
+EGW
+Block and Tackle
+Adventuring Gear
+1 gp
+5 lb.
+PHB'24
+Blood of the Lycanthrope
+Poison
+—
+—
+IMR
+Bloodstone
+Treasure (Gemstone)
+50 gp
+—
+DMG'24
+Blowgun
+Martial Weapon, Ranged Weapon
+10 gp
+1 lb.
+PHB'24
+Blue Quartz
+Treasure (Gemstone)
+10 gp
+—
+DMG'24
+Blue Sapphire
+Treasure (Gemstone)
+1,000 gp
+—
+DMG'24
+Blue Spinel
+Treasure (Gemstone)
+500 gp
+—
+DMG'24
+Blunderbuss
+Martial Weapon, Ranged Weapon, Firearm
+750 gp
+15 lb.
+GC:VSS
+Bolt
+Ammunition
+5 cp
+1.2 oz.
+PHB'24
+Bolts (20)
+Ammunition
+1 gp
+1½ lb.
+PHB'24
+Bomb
+Explosive
+100 gp
+1 lb.
+DMG'24
+Bombard
+Vehicle (Space)
+50,000 gp
+—
+AAG
+Book
+Adventuring Gear
+25 gp
+5 lb.
+PHB'24
+Bottle stopper cork embossed with gold leaf and set with amethysts
+Treasure (Art Object)
+750 gp
+—
+DMG'24
+Box of turquoise animal figurines
+Treasure (Art Object)
+250 gp
+—
+DMG'24
+Brass mug with jade inlay
+Treasure (Art Object)
+250 gp
+—
+DMG'24
+Bread (loaf)
+Food and Drink
+2 cp
+—
+PHB'24
+Breastplate
+Medium Armor
+400 gp
+20 lb.
+PHB'24
+Brewer's Supplies
+Artisan's Tools
+20 gp
+9 lb.
+PHB'24
+Bronze crown
+Treasure (Art Object)
+250 gp
+—
+DMG'24
+Bronze spyglass (Brazen Coalition)
+Treasure (Art Object)
+250 gp
+—
+PSX
+Bucket
+Adventuring Gear
+5 cp
+2 lb.
+PHB'24
+Bullet
+Ammunition
+3 sp
+2.4 oz.
+GC:VSS
+Bullseye Lantern
+Adventuring Gear
+10 gp
+2 lb.
+PHB'24
+Bundle of sheet music representing the lost dirges of a famous composer
+Treasure (Art Object)
+750 gp
+—
+DMG'24
+Burglar's Pack
+Adventuring Gear
+16 gp
+47½ lb.
+PHB'24
+Burnt Othur Fumes
+Adventuring Gear, Poison
+500 gp
+—
+DMG'24
+Calligrapher's Supplies
+Artisan's Tools
+10 gp
+5 lb.
+PHB'24
+Caltrop
+Adventuring Gear
+5 cp
+1.6 oz.
+PHB'14
+Caltrops
+Adventuring Gear
+1 gp
+2 lb.
+PHB'24
+Camel
+Mount
+50 gp
+—
+PHB'24
+Candle
+Adventuring Gear
+1 cp
+—
+PHB'24
+Cannon
+Martial Weapon, Ranged Weapon, Firearm
+1,500 gp
+225 lb.
+GC:VSS
+Cannonball
+Ammunition
+5 gp
+2 lb.
+GC:VSS
+Canoe
+Vehicle (Water)
+50 gp
+100 lb.
+ToA
+Canvas (1 sq. yd.)
+Trade Good
+1 sp
+—
+DMG'24
+Carnelian
+Treasure (Gemstone)
+50 gp
+—
+DMG'24
+Carpenter's Tools
+Artisan's Tools
+8 gp
+6 lb.
+PHB'24
+Carriage
+Vehicle (Land)
+100 gp
+600 lb.
+PHB'24
+Carrion Crawler Mucus
+Adventuring Gear, Poison
+200 gp
+—
+DMG'24
+Cart
+Vehicle (Land)
+15 gp
+200 lb.
+PHB'24
+Cartographer's Tools
+Artisan's Tools
+15 gp
+6 lb.
+PHB'24
+Carved bone statuette
+Treasure (Art Object)
+25 gp
+—
+DMG'24
+Carved ivory statuette
+Treasure (Art Object)
+250 gp
+—
+DMG'24
+Carved jade statuette (River Heralds)
+Treasure (Art Object)
+250 gp
+—
+PSX
+Carved wooden harp with ivory inlay and zircon gems
+Treasure (Art Object)
+750 gp
+—
+DMG'24
+Catapult Munition
+Adventuring Gear
+—
+—
+SCC
+Ceremonial gold armor with black pearls
+Treasure (Art Object)
+7,500 gp
+—
+DMG'24
+Ceremonial silver dagger with gold pommel and black pearl (Legion of Dusk)
+Treasure (Art Object)
+750 gp
+—
+PSX
+Chain
+Adventuring Gear
+5 gp
+10 lb.
+PHB'24
+Chain Mail
+Heavy Armor
+75 gp
+55 lb.
+PHB'24
+Chain Shirt
+Medium Armor
+50 gp
+20 lb.
+PHB'24
+Chalcedony
+Treasure (Gemstone)
+50 gp
+—
+DMG'24
+Chalk (1 piece)
+Adventuring Gear
+1 cp
+—
+PHB'14
+Chariot
+Vehicle (Land)
+250 gp
+100 lb.
+PHB'24
+Cheese (wedge)
+Food and Drink
+1 sp
+—
+PHB'24
+Chest
+Adventuring Gear
+5 gp
+25 lb.
+PHB'24
+Chicken
+Trade Good
+2 cp
+—
+DMG'24
+Chrysoberyl
+Treasure (Gemstone)
+100 gp
+—
+DMG'24
+Chrysoprase
+Treasure (Gemstone)
+50 gp
+—
+DMG'24
+Chunk of Meat
+Food and Drink
+3 sp
+—
+PHB'14
+Cinnamon
+Trade Good
+2 gp
+1 lb.
+DMG'24
+Citrine
+Treasure (Gemstone)
+50 gp
+—
+DMG'24
+Climber's Kit
+Adventuring Gear
+25 gp
+12 lb.
+PHB'24
+Cloth-of-gold vestments
+Treasure (Art Object)
+25 gp
+—
+DMG'24
+Cloth-of-gold vestments (Legion of Dusk)
+Treasure (Art Object)
+25 gp
+—
+PSX
+Clothing, cold weather
+Adventuring Gear
+10 gp
+5 lb.
+IDRotF
+Cloves
+Trade Good
+3 gp
+1 lb.
+DMG'24
+Club
+Simple Weapon, Melee Weapon
+1 sp
+2 lb.
+PHB'24
+Cobbler's Tools
+Artisan's Tools
+5 gp
+5 lb.
+PHB'24
+Common Clothes
+Adventuring Gear
+5 sp
+3 lb.
+PHB'14
+Common Wine (bottle)
+Food and Drink
+2 sp
+—
+PHB'24
+Component Pouch
+Adventuring Gear
+25 gp
+2 lb.
+PHB'24
+Concussion Grenade
+Explosive
+—
+—
+QftIS
+Cook's Utensils
+Artisan's Tools
+1 gp
+8 lb.
+PHB'24
+Copper
+Trade Good
+5 sp
+1 lb.
+DMG'24
+Copper chalice with silver filigree
+Treasure (Art Object)
+25 gp
+—
+DMG'24
+Copper stein with silver filigree (Brazen Coalition)
+Treasure (Art Object)
+25 gp
+—
+PSX
+Coral
+Treasure (Gemstone)
+100 gp
+—
+DMG'24
+Costume
+Adventuring Gear
+5 gp
+4 lb.
+PHB'24
+Cotton Cloth (1 sq. yd.)
+Trade Good
+5 sp
+—
+DMG'24
+Cow
+Trade Good
+10 gp
+—
+DMG'24
+Crampons
+Adventuring Gear
+2 gp
+¼ lb.
+IDRotF
+Crossbow Bolt Case
+Adventuring Gear
+1 gp
+1 lb.
+PHB'24
+Crowbar
+Adventuring Gear
+2 gp
+5 lb.
+PHB'24
+Crystal
+Spellcasting Focus
+10 gp
+1 lb.
+PHB'24
+Dagger
+Simple Weapon, Melee Weapon
+2 gp
+1 lb.
+PHB'24
+Damselfly Ship
+Vehicle (Space)
+20,000 gp
+—
+AAG
+Dart
+Simple Weapon, Ranged Weapon
+5 cp
+¼ lb.
+PHB'24
+Detailed, life-sized dragonborn skull cast in electrum
+Treasure (Art Object)
+750 gp
+—
+DMG'24
+Diamond
+Treasure (Gemstone)
+5,000 gp
+—
+DMG'24
+Dice Set
+Gaming Set
+1 sp
+—
+PHB'24
+Diplomat's Pack
+Adventuring Gear
+39 gp
+39 lb.
+PHB'24
+Disguise Kit
+Tool
+25 gp
+3 lb.
+PHB'24
+Dogsled
+Vehicle (Land)
+20 gp
+300 lb.
+IDRotF
+Donkey
+Mount
+8 gp
+—
+PHB'14
+Double-Barrel Shotgun
+Simple Weapon, Ranged Weapon, Firearm
+175 gp
+8 lb.
+GC:VSS
+Double-Bladed Scimitar
+Martial Weapon, Melee Weapon
+100 gp
+6 lb.
+ERLW
+Draft Horse
+Mount
+50 gp
+—
+PHB'24
+Dragon's Blood
+Other
+—
+—
+ERLW
+Dragonchess Set
+Gaming Set
+1 gp
+—
+PHB'24
+Dreamlily
+Other
+—
+—
+ERLW
+Druidic Focus
+Spellcasting Focus
+—
+—
+PHB'24
+Drum
+Instrument
+6 gp
+3 lb.
+PHB'24
+Dulcimer
+Instrument
+25 gp
+10 lb.
+PHB'24
+Dungeoneer's Pack
+Adventuring Gear
+12 gp
+55 lb.
+PHB'24
+Dust of the Mummy
+Poison
+—
+—
+IMR
+Dynamite
+Explosive
+100 gp
+—
+TDCSR
+Dynamite Stick
+Modern, Explosive
+—
+1 lb.
+DMG'24
+Elephant
+Mount
+200 gp
+—
+PHB'24
+Elven Trinket
+Adventuring Gear
+—
+—
+MTF
+Emblem
+Spellcasting Focus
+5 gp
+—
+PHB'24
+Embroidered glove set with jewel chips
+Treasure (Art Object)
+2,500 gp
+—
+DMG'24
+Embroidered silk and velvet mantle set with numerous moonstones
+Treasure (Art Object)
+2,500 gp
+—
+DMG'24
+Embroidered silk handkerchief
+Treasure (Art Object)
+25 gp
+—
+DMG'24
+Emerald
+Treasure (Gemstone)
+1,000 gp
+—
+DMG'24
+Enchanted Three-Dragon Ante Set
+Gaming Set
+—
+—
+LLK
+Energy Cell
+Futuristic, Ammunition
+—
+½ lb.
+DMG'24
+Entertainer's Pack
+Adventuring Gear
+40 gp
+58½ lb.
+PHB'24
+Essence of Ether
+Adventuring Gear, Poison
+300 gp
+—
+DMG'24
+Exotic Saddle
+Tack and Harness
+60 gp
+40 lb.
+PHB'24
+Explorer's Pack
+Adventuring Gear
+10 gp
+55 lb.
+PHB'24
+Explosive Seed
+Adventuring Gear
+—
+—
+EGW
+Eye Agate
+Treasure (Gemstone)
+10 gp
+—
+DMG'24
+Eye patch decorated with tiny blue sapphires and moonstones
+Treasure (Art Object)
+2,500 gp
+—
+DMG'24
+Eye patch with a mock eye set in blue sapphire and moonstone (Brazen Coalition)
+Treasure (Art Object)
+2,500 gp
+—
+PSX
+Eyescratch
+Adventuring Gear, Poison
+—
+—
+WDH
+Fargab
+Adventuring Gear
+—
+—
+DSotDQ
+Feathered mantle with emerald clasp (Sun Empire)
+Treasure (Art Object)
+2,500 gp
+—
+PSX
+Feed (per day)
+Tack and Harness
+5 cp
+10 lb.
+PHB'24
+Feywild Trinket
+Adventuring Gear
+—
+—
+WBtW
+Fine Clothes
+Adventuring Gear
+15 gp
+6 lb.
+PHB'24
+Fine gold chain set with a fire opal
+Treasure (Art Object)
+2,500 gp
+—
+DMG'24
+Fine gold chain with fire opals (Legion of Dusk)
+Treasure (Art Object)
+2,500 gp
+—
+PSX
+Fine robe with dinosaur feathers and silver embroidery (Sun Empire)
+Treasure (Art Object)
+250 gp
+—
+PSX
+Fine steel rapier with gold filigree hilt (Legion of Dusk)
+Treasure (Art Object)
+750 gp
+—
+PSX
+Fine Wine (bottle)
+Food and Drink
+10 gp
+—
+PHB'24
+Finely articulated jade glove (River Heralds)
+Treasure (Art Object)
+2,500 gp
+—
+PSX
+Fire Opal
+Treasure (Gemstone)
+1,000 gp
+—
+DMG'24
+Firearm Bullet
+Ammunition
+3 sp
+⅕ lb.
+PHB'24
+Firearm Bullets (10)
+Ammunition
+3 gp
+2 lb.
+PHB'24
+Fishing Tackle
+Adventuring Gear
+1 gp
+4 lb.
+PHB'14
+Flail
+Martial Weapon, Melee Weapon
+10 gp
+2 lb.
+PHB'24
+Flare
+Ammunition
+1 gp
+1 lb.
+GC:VSS
+Flare Gun
+Simple Weapon, Ranged Weapon, Firearm
+100 gp
+1 lb.
+GC:VSS
+Flask
+Adventuring Gear
+2 cp
+1 lb.
+PHB'24
+Flensing Claws
+Other
+—
+—
+VGM
+Flensing Claws (Huge)
+Other
+—
+—
+VGM
+Flensing Claws (Large)
+Other
+—
+—
+VGM
+Flensing Claws (Medium)
+Other
+—
+—
+VGM
+Flensing Claws (Small)
+Other
+—
+—
+VGM
+Flour
+Trade Good
+2 cp
+2 lb.
+DMG'24
+Flute
+Instrument
+2 gp
+1 lb.
+PHB'24
+Flying Fish Ship
+Vehicle (Space)
+20,000 gp
+—
+AAG
+Forgery Kit
+Tool
+15 gp
+5 lb.
+PHB'24
+Fragmentation Grenade
+Modern, Explosive
+—
+1 lb.
+DMG'24
+Frostfell and Everice Trinket
+Adventuring Gear
+—
+—
+ERLW
+Galley
+Vehicle (Water)
+30,000 gp
+—
+PHB'24
+Gaming Set
+Gaming Set
+—
+—
+PHB'24
+Garnet
+Treasure (Gemstone)
+100 gp
+—
+DMG'24
+Gate Warden Trinket
+Adventuring Gear
+—
+—
+SatO
+Gatling Gun
+Martial Weapon, Ranged Weapon, Firearm
+750 gp
+125 lb.
+GC:VSS
+Giant Trinket
+Adventuring Gear
+—
+—
+BGG
+Gilded royal coach or funeral barge
+Treasure (Art Object)
+7,500 gp
+—
+DMG'24
+Ginger
+Trade Good
+1 gp
+1 lb.
+DMG'24
+Glaive
+Martial Weapon, Melee Weapon
+20 gp
+6 lb.
+PHB'24
+Glass Bottle
+Adventuring Gear
+2 gp
+2 lb.
+PHB'24
+Glassblower's Tools
+Artisan's Tools
+30 gp
+5 lb.
+PHB'24
+Glaur
+Instrument
+—
+—
+SCAG
+Gluebomb
+Explosive
+50 gp
+—
+TDCSR
+Goat
+Trade Good
+1 gp
+—
+DMG'24
+Gold
+Trade Good
+50 gp
+1 lb.
+DMG'24
+Gold Bar (5-pound)
+Trade Bar
+250 gp
+5 lb.
+DMG'24
+Gold basin with rubies (Legion of Dusk)
+Treasure (Art Object)
+7,500 gp
+—
+PSX
+Gold birdcage with electrum filigree
+Treasure (Art Object)
+250 gp
+—
+DMG'24
+Gold bracelet
+Treasure (Art Object)
+25 gp
+—
+DMG'24
+Gold chalice (Legion of Dusk)
+Treasure (Art Object)
+750 gp
+—
+PSX
+Gold chalice set with emeralds (Legion of Dusk)
+Treasure (Art Object)
+7,500 gp
+—
+PSX
+Gold circlet set with four aquamarines
+Treasure (Art Object)
+2,500 gp
+—
+DMG'24
+Gold comb shaped like a dragon with red garnets as eyes
+Treasure (Art Object)
+750 gp
+—
+DMG'24
+Gold cup set with emeralds
+Treasure (Art Object)
+7,500 gp
+—
+DMG'24
+Gold idol
+Treasure (Art Object)
+750 gp
+—
+DMG'24
+Gold jewelry box with platinum filigree
+Treasure (Art Object)
+7,500 gp
+—
+DMG'24
+Gold jewelry box with platinum filigree (Brazen Coalition)
+Treasure (Art Object)
+7,500 gp
+—
+PSX
+Gold locket with a painted portrait inside
+Treasure (Art Object)
+25 gp
+—
+DMG'24
+Gold locket with a painted portrait inside (Legion of Dusk)
+Treasure (Art Object)
+25 gp
+—
+PSX
+Gold music box
+Treasure (Art Object)
+2,500 gp
+—
+DMG'24
+Gold music box (Brazen Coalition)
+Treasure (Art Object)
+2,500 gp
+—
+PSX
+Gold pendant with black onyx (Legion of Dusk)
+Treasure (Art Object)
+250 gp
+—
+PSX
+Gold ring set with bloodstones
+Treasure (Art Object)
+250 gp
+—
+DMG'24
+Gold ring with turquoise (Legion of Dusk)
+Treasure (Art Object)
+25 gp
+—
+PSX
+Gold statuette set with rubies
+Treasure (Art Object)
+7,500 gp
+—
+DMG'24
+Gold-plated ceremonial helmet and pauldrons (Legion of Dusk)
+Treasure (Art Object)
+2,500 gp
+—
+PSX
+Gold-plated sextant with topaz (Brazen Coalition)
+Treasure (Art Object)
+750 gp
+—
+PSX
+Goose Egg Trinket
+Adventuring Gear
+—
+—
+BGG
+Grappling Hook
+Adventuring Gear
+2 gp
+4 lb.
+PHB'24
+Greataxe
+Martial Weapon, Melee Weapon
+30 gp
+7 lb.
+PHB'24
+Greatclub
+Simple Weapon, Melee Weapon
+2 sp
+10 lb.
+PHB'24
+Greatsword
+Martial Weapon, Melee Weapon
+50 gp
+6 lb.
+PHB'24
+Grenade Launcher
+Modern, Adventuring Gear
+—
+7 lb.
+DMG'24
+Gunpowder (keg)
+Explosive
+250 gp
+20 lb.
+DMG'24
+Gunpowder (powder horn)
+Explosive
+35 gp
+2 lb.
+DMG'24
+Halberd
+Martial Weapon, Melee Weapon
+20 gp
+6 lb.
+PHB'24
+Half Plate Armor
+Medium Armor
+750 gp
+40 lb.
+PHB'24
+Hammer
+Adventuring Gear
+1 gp
+3 lb.
+PHB'14
+Hammerhead Ship
+Vehicle (Space)
+40,000 gp
+—
+AAG
+Hand Crossbow
+Martial Weapon, Ranged Weapon
+75 gp
+3 lb.
+PHB'24
+Hand Drum
+Instrument
+—
+—
+SCAG
+Handaxe
+Simple Weapon, Melee Weapon
+5 gp
+2 lb.
+PHB'24
+Handgun
+Simple Weapon, Ranged Weapon, Firearm
+125 gp
+3 lb.
+GC:VSS
+Handheld mirror set in a painted wooden frame
+Treasure (Art Object)
+25 gp
+—
+DMG'24
+Healer's Kit
+Adventuring Gear
+5 gp
+3 lb.
+PHB'24
+Heavy Crossbow
+Martial Weapon, Ranged Weapon
+50 gp
+18 lb.
+PHB'24
+Hematite
+Treasure (Gemstone)
+10 gp
+—
+DMG'24
+Herbalism Kit
+Tool
+5 gp
+3 lb.
+PHB'24
+Hide Armor
+Medium Armor
+10 gp
+12 lb.
+PHB'24
+Holy Symbol
+Spellcasting Focus
+—
+—
+PHB'24
+Holy Water
+Adventuring Gear
+25 gp
+1 lb.
+PHB'24
+Hooded Lantern
+Adventuring Gear
+5 gp
+2 lb.
+PHB'24
+Hooked Shortspear
+Martial Weapon, Melee Weapon
+—
+2 lb.
+OotA
+Hoopak
+Martial Weapon, Melee Weapon
+1 sp
+2 lb.
+DSotDQ
+Horn
+Instrument
+3 gp
+2 lb.
+PHB'24
+Horror Trinket
+Adventuring Gear
+—
+—
+VRGR
+Hourglass
+Adventuring Gear
+25 gp
+1 lb.
+PHB'14
+Hunting Rifle
+Modern, Martial Weapon, Ranged Weapon, Firearm
+—
+8 lb.
+DMG'24
+Hunting Rifle
+Simple Weapon, Ranged Weapon, Firearm
+150 gp
+8 lb.
+GC:VSS
+Hunting Trap
+Adventuring Gear
+5 gp
+25 lb.
+PHB'24
+Icewind Dale Trinket
+Adventuring Gear
+—
+—
+IDRotF
+Ink
+Adventuring Gear
+10 gp
+—
+PHB'24
+Ink Pen
+Adventuring Gear
+2 cp
+—
+PHB'24
+Insect Repellent (block of incense)
+Adventuring Gear
+1 sp
+—
+ToA
+Insect Repellent (greasy salve)
+Adventuring Gear
+1 gp
+—
+ToA
+Iron
+Trade Good
+1 sp
+1 lb.
+DMG'24
+Iron Ball
+Simple Weapon, Ranged Weapon
+—
+—
+IDRotF
+Iron Pot
+Adventuring Gear
+2 gp
+10 lb.
+PHB'24
+Iron Spike
+Adventuring Gear
+1 sp
+½ lb.
+PHB'24
+Iron Spikes
+Adventuring Gear
+1 gp
+5 lb.
+PHB'24
+Ivana's Whisper
+Adventuring Gear, Poison
+—
+—
+VRGR
+Jacinth
+Treasure (Gemstone)
+5,000 gp
+—
+DMG'24
+Jade
+Treasure (Gemstone)
+100 gp
+—
+DMG'24
+Jade bowl (River Heralds)
+Treasure (Art Object)
+250 gp
+—
+PSX
+Jade breastplate (River Heralds)
+Treasure (Art Object)
+7,500 gp
+—
+PSX
+Jade game board with gold playing pieces
+Treasure (Art Object)
+7,500 gp
+—
+DMG'24
+Jade headpiece (River Heralds)
+Treasure (Art Object)
+250 gp
+—
+PSX
+Jade sword with amber (River Heralds)
+Treasure (Art Object)
+750 gp
+—
+PSX
+Jade totem with diamond eyes (River Heralds)
+Treasure (Art Object)
+7,500 gp
+—
+PSX
+Jasper
+Treasure (Gemstone)
+50 gp
+—
+DMG'24
+Javelin
+Simple Weapon, Melee Weapon
+5 sp
+2 lb.
+PHB'24
+Jet
+Treasure (Gemstone)
+100 gp
+—
+DMG'24
+Jeweled anklet
+Treasure (Art Object)
+2,500 gp
+—
+DMG'24
+Jeweled anklet (Brazen Coalition)
+Treasure (Art Object)
+2,500 gp
+—
+PSX
+Jeweled gold crown
+Treasure (Art Object)
+7,500 gp
+—
+DMG'24
+Jeweled platinum ring
+Treasure (Art Object)
+7,500 gp
+—
+DMG'24
+Jeweler's Tools
+Artisan's Tools
+25 gp
+2 lb.
+PHB'24
+Jug
+Adventuring Gear
+2 cp
+4 lb.
+PHB'24
+Keelboat
+Vehicle (Water)
+3,000 gp
+—
+PHB'24
+Keg of Alchemist's Fire
+Adventuring Gear
+—
+—
+LoX
+Khyber Trinket
+Adventuring Gear
+—
+—
+ERLW
+Ladder
+Adventuring Gear
+1 sp
+25 lb.
+PHB'24
+Lamp
+Adventuring Gear
+5 sp
+1 lb.
+PHB'24
+Lamprey Ship
+Vehicle (Space)
+20,000 gp
+—
+AAG
+Lance
+Martial Weapon, Melee Weapon
+10 gp
+6 lb.
+PHB'24
+Lapis Lazuli
+Treasure (Gemstone)
+10 gp
+—
+DMG'24
+Large gold bracelet (Legion of Dusk)
+Treasure (Art Object)
+250 gp
+—
+PSX
+Large jade totem (River Heralds)
+Treasure (Art Object)
+750 gp
+—
+PSX
+Large well-made tapestry (Legion of Dusk)
+Treasure (Art Object)
+250 gp
+—
+PSX
+Laser Pistol
+Futuristic, Martial Weapon, Ranged Weapon, Firearm
+—
+2 lb.
+DMG'24
+Laser Rifle
+Futuristic, Martial Weapon, Ranged Weapon, Firearm
+—
+7 lb.
+DMG'24
+Leather Armor
+Light Armor
+10 gp
+10 lb.
+PHB'24
+Leatherworker's Tools
+Artisan's Tools
+5 gp
+5 lb.
+PHB'24
+Light Crossbow
+Simple Weapon, Ranged Weapon
+25 gp
+5 lb.
+PHB'24
+Light Hammer
+Simple Weapon, Melee Weapon
+2 gp
+2 lb.
+PHB'24
+Light Repeating Crossbow
+Simple Weapon, Ranged Weapon
+—
+5 lb.
+OotA
+Linen (1 sq. yd.)
+Trade Good
+5 gp
+—
+DMG'24
+Living Ship
+Vehicle (Space)
+25,000 gp
+—
+AAG
+Lock
+Adventuring Gear
+10 gp
+1 lb.
+PHB'24
+Lolth's Sting
+Adventuring Gear, Poison
+200 gp
+—
+DMG'24
+Longbow
+Martial Weapon, Ranged Weapon
+50 gp
+2 lb.
+PHB'24
+Longhorn
+Instrument
+—
+—
+SCAG
+Longship
+Vehicle (Water)
+10,000 gp
+—
+PHB'24
+Longsword
+Martial Weapon, Melee Weapon
+15 gp
+3 lb.
+PHB'24
+Lorehold Trinket
+Adventuring Gear
+—
+—
+SCC
+Lute
+Instrument
+35 gp
+2 lb.
+PHB'24
+Lute crafted of exotic wood with mother-of-pearl inlay and zircon gems (Brazen Coalition)
+Treasure (Art Object)
+750 gp
+—
+PSX
+Lyre
+Instrument
+30 gp
+2 lb.
+PHB'24
+Mace
+Simple Weapon, Melee Weapon
+5 gp
+4 lb.
+PHB'24
+Magnifying Glass
+Adventuring Gear
+100 gp
+—
+PHB'24
+Magnum
+Martial Weapon, Ranged Weapon, Firearm
+600 gp
+6 lb.
+GC:VSS
+Malachite
+Treasure (Gemstone)
+10 gp
+—
+DMG'24
+Malice
+Adventuring Gear, Poison
+250 gp
+—
+DMG'24
+Manacles
+Adventuring Gear
+2 gp
+6 lb.
+PHB'24
+Map
+Adventuring Gear
+1 gp
+—
+PHB'24
+Map or Scroll Case
+Adventuring Gear
+1 gp
+1 lb.
+PHB'24
+Marble font with gold inlay (Legion of Dusk)
+Treasure (Art Object)
+7,500 gp
+—
+PSX
+Mason's Tools
+Artisan's Tools
+10 gp
+8 lb.
+PHB'24
+Masterpiece painting in mahogany frame with gold inlay (Legion of Dusk)
+Treasure (Art Object)
+2,500 gp
+—
+PSX
+Mastiff
+Mount
+25 gp
+—
+PHB'24
+Matchless Pipe
+Other
+—
+—
+WDH
+Maul
+Martial Weapon, Melee Weapon
+10 gp
+10 lb.
+PHB'24
+Menga leaves (1 ounce)
+Adventuring Gear
+2 gp
+1 oz.
+ToA
+Merchant's Scale
+Adventuring Gear
+5 gp
+3 lb.
+PHB'14
+Mess Kit
+Adventuring Gear
+2 sp
+1 lb.
+PHB'14
+Midnight Tears
+Adventuring Gear, Poison
+1,500 gp
+—
+DMG'24
+Military Saddle
+Tack and Harness
+20 gp
+30 lb.
+PHB'24
+Miner's Pick
+Adventuring Gear
+2 gp
+10 lb.
+PHB'14
+Mirror
+Adventuring Gear
+5 gp
+½ lb.
+PHB'24
+Modern Bullet
+Modern, Ammunition
+—
+1.6 oz.
+DMG'14
+Modern Bullets (10)
+Modern, Ammunition
+—
+1 lb.
+DMG'14
+Monster Hunter's Pack
+Adventuring Gear
+33 gp
+48½ lb.
+VRGR
+Moonstone
+Treasure (Gemstone)
+50 gp
+—
+DMG'24
+Moorbounder
+Mount
+400 gp
+—
+EGW
+Morningstar
+Martial Weapon, Melee Weapon
+15 gp
+4 lb.
+PHB'24
+Moss Agate
+Treasure (Gemstone)
+10 gp
+—
+DMG'24
+Mournland Trinket
+Adventuring Gear
+—
+—
+ERLW
+Mule
+Mount
+8 gp
+—
+PHB'24
+Murgaxor's Elixir of Life
+Adventuring Gear
+—
+—
+SCC
+Muroosa Balm
+Adventuring Gear
+100 gp
+—
+EGW
+Musical Instrument
+Instrument
+—
+—
+PHB'24
+Musket
+Martial Weapon, Ranged Weapon, Firearm
+500 gp
+10 lb.
+PHB'24
+Musket
+Martial Weapon, Ranged Weapon, Firearm
+500 gp
+10 lb.
+GC:VSS
+Narycrash
+Adventuring Gear
+—
+—
+DSotDQ
+Nautiloid
+Vehicle (Space)
+50,000 gp
+—
+AAG
+Navigator's Tools
+Tool
+25 gp
+2 lb.
+PHB'24
+Necklace of electrum medallions with red and blue tourmalines (Brazen Coalition)
+Treasure (Art Object)
+750 gp
+—
+PSX
+Necklace of jade and pink pearls (River Heralds)
+Treasure (Art Object)
+2,500 gp
+—
+PSX
+Necklace string of small pink pearls
+Treasure (Art Object)
+2,500 gp
+—
+DMG'24
+Needle
+Ammunition
+2 cp
+0.32 oz.
+PHB'24
+Needler Pistol
+Futuristic, Adventuring Gear
+—
+—
+QftIS
+Needles (50)
+Ammunition
+1 gp
+1 lb.
+PHB'24
+Net
+Adventuring Gear
+1 gp
+3 lb.
+PHB'24
+Nightspider
+Vehicle (Space)
+50,000 gp
+—
+AAG
+Nimblewright Detector
+Other
+—
+—
+WDH
+Obsidian
+Treasure (Gemstone)
+10 gp
+—
+DMG'24
+Obsidian statuette with gold fittings and inlay
+Treasure (Art Object)
+750 gp
+—
+DMG'24
+Oil
+Adventuring Gear
+1 sp
+1 lb.
+PHB'24
+Oil of Taggit
+Adventuring Gear, Poison
+400 gp
+—
+DMG'24
+Old masterpiece painting
+Treasure (Art Object)
+2,500 gp
+—
+DMG'24
+Olisuba Leaf
+Adventuring Gear
+50 gp
+—
+EGW
+Oloore Root Teabag
+Illegal Drug
+100 gp
+—
+TDCSR
+Onyx
+Treasure (Gemstone)
+50 gp
+—
+DMG'24
+Opal
+Treasure (Gemstone)
+1,000 gp
+—
+DMG'24
+Orb
+Spellcasting Focus
+20 gp
+3 lb.
+PHB'24
+Oversized Longbow
+Martial Weapon, Ranged Weapon
+—
+2 lb.
+WDH
+Ox
+Trade Good
+15 gp
+—
+DMG'24
+Pack Saddle
+Tack and Harness
+5 gp
+15 lb.
+PHB'14
+Padded Armor
+Light Armor
+5 gp
+8 lb.
+PHB'24
+Painted gold war mask
+Treasure (Art Object)
+750 gp
+—
+DMG'24
+Painter's Supplies
+Artisan's Tools
+10 gp
+5 lb.
+PHB'24
+Pair of engraved bone dice
+Treasure (Art Object)
+25 gp
+—
+DMG'24
+Pair of engraved bone dice (Brazen Coalition)
+Treasure (Art Object)
+25 gp
+—
+PSX
+Pale Tincture
+Adventuring Gear, Poison
+250 gp
+—
+DMG'24
+Pan Flute
+Instrument
+12 gp
+2 lb.
+PHB'24
+Paper
+Adventuring Gear
+2 sp
+—
+PHB'24
+Paralysis Pistol
+Futuristic, Adventuring Gear
+—
+—
+QftIS
+Parchment
+Adventuring Gear
+1 sp
+—
+PHB'24
+Parlor Gun
+Simple Weapon, Ranged Weapon, Firearm
+75 gp
+1 lb.
+GC:VSS
+Pearl
+Treasure (Gemstone)
+100 gp
+—
+DMG'24
+Pepper
+Trade Good
+2 gp
+1 lb.
+DMG'24
+Perfume
+Adventuring Gear
+5 gp
+—
+PHB'24
+Peridot
+Treasure (Gemstone)
+500 gp
+—
+DMG'24
+Pewter mug with green spinels (Brazen Coalition)
+Treasure (Art Object)
+250 gp
+—
+PSX
+Pig
+Trade Good
+3 gp
+—
+DMG'24
+Pike
+Martial Weapon, Melee Weapon
+5 gp
+18 lb.
+PHB'24
+Pistol
+Martial Weapon, Ranged Weapon, Firearm
+250 gp
+3 lb.
+PHB'24
+Pistol
+Martial Weapon, Ranged Weapon, Firearm
+250 gp
+3 lb.
+GC:VSS
+Pitcher
+Adventuring Gear
+2 cp
+4 lb.
+PHB'14
+Piton
+Adventuring Gear
+5 cp
+¼ lb.
+PHB'14
+Plainscow
+Mount
+200 gp
+—
+TDCSR
+Planar Philosopher Trinket
+Adventuring Gear
+—
+—
+SatO
+Plate Armor
+Heavy Armor
+1,500 gp
+65 lb.
+PHB'24
+Platinum
+Trade Good
+500 gp
+1 lb.
+DMG'24
+Platinum bracelet set with an emerald
+Treasure (Art Object)
+2,500 gp
+—
+DMG'24
+Platinum headdress with topaz sun symbol (Sun Empire)
+Treasure (Art Object)
+2,500 gp
+—
+PSX
+Platinum ring with yellow sapphire (Sun Empire)
+Treasure (Art Object)
+7,500 gp
+—
+PSX
+Platinum staff topped with amber (Sun Empire)
+Treasure (Art Object)
+7,500 gp
+—
+PSX
+Playing Cards
+Gaming Set
+5 sp
+—
+PHB'24
+Poisoner's Kit
+Tool
+50 gp
+2 lb.
+PHB'24
+Pole
+Adventuring Gear
+5 cp
+7 lb.
+PHB'24
+Pony
+Mount
+30 gp
+—
+PHB'24
+Portable Ram
+Adventuring Gear
+4 gp
+35 lb.
+PHB'24
+Potter's Tools
+Artisan's Tools
+10 gp
+3 lb.
+PHB'24
+Pouch
+Adventuring Gear
+5 sp
+1 lb.
+PHB'24
+Powered Armor
+Futuristic, Heavy Armor
+—
+—
+QftIS
+Pride Silk
+Adventuring Gear
+100 gp
+1 lb.
+EGW
+Pride Silk Outfit
+Adventuring Gear
+500 gp
+4 lb.
+EGW
+Priest's Pack
+Adventuring Gear
+33 gp
+29 lb.
+PHB'24
+Prismari Trinket
+Adventuring Gear
+—
+—
+SCC
+Psychic Blade
+Simple Weapon, Melee Weapon
+—
+—
+PHB'24
+Pump Shotgun
+Martial Weapon, Ranged Weapon, Firearm
+550 gp
+7 lb.
+GC:VSS
+Purple Worm Poison
+Adventuring Gear, Poison
+2,000 gp
+—
+DMG'24
+Quandrix Trinket
+Adventuring Gear
+—
+—
+SCC
+Quarterstaff
+Simple Weapon, Melee Weapon
+2 sp
+4 lb.
+PHB'24
+Quartz
+Treasure (Gemstone)
+50 gp
+—
+DMG'24
+Quiver
+Adventuring Gear
+1 gp
+1 lb.
+PHB'24
+Rain Catcher
+Adventuring Gear
+1 gp
+5 lb.
+ToA
+Rapier
+Martial Weapon, Melee Weapon
+25 gp
+2 lb.
+PHB'24
+Rations
+Adventuring Gear
+5 sp
+2 lb.
+PHB'24
+Reliquary
+Spellcasting Focus
+5 gp
+2 lb.
+PHB'24
+Revolver
+Modern, Martial Weapon, Ranged Weapon, Firearm
+—
+3 lb.
+DMG'24
+Revolver
+Simple Weapon, Ranged Weapon, Firearm
+125 gp
+3 lb.
+GC:VSS
+Rhodochrosite
+Treasure (Gemstone)
+10 gp
+—
+DMG'24
+Riding Horse
+Mount
+75 gp
+—
+PHB'24
+Riding Saddle
+Tack and Harness
+10 gp
+25 lb.
+PHB'24
+Ring Mail
+Heavy Armor
+30 gp
+40 lb.
+PHB'24
+Robe
+Adventuring Gear
+1 gp
+4 lb.
+PHB'24
+Robot Controller
+Futuristic, Adventuring Gear
+—
+—
+QftIS
+Rod
+Spellcasting Focus
+10 gp
+2 lb.
+PHB'24
+Rope
+Adventuring Gear
+1 gp
+5 lb.
+PHB'24
+Rowboat
+Vehicle (Water)
+50 gp
+—
+PHB'24
+Ruby
+Treasure (Gemstone)
+5,000 gp
+—
+DMG'24
+Ryath Root
+Adventuring Gear
+50 gp
+—
+ToA
+Sack
+Adventuring Gear
+1 cp
+½ lb.
+PHB'24
+Saddlebags
+Tack and Harness
+4 gp
+8 lb.
+PHB'14
+Saffron
+Trade Good
+15 gp
+1 lb.
+DMG'24
+Sailing Ship
+Vehicle (Water)
+10,000 gp
+—
+PHB'24
+Salt
+Trade Good
+5 cp
+1 lb.
+DMG'24
+Sardonyx
+Treasure (Gemstone)
+50 gp
+—
+DMG'24
+Sarlona Trinket
+Adventuring Gear
+—
+—
+ERLW
+Scale Mail
+Medium Armor
+50 gp
+45 lb.
+PHB'24
+Scholar's Pack
+Adventuring Gear
+40 gp
+22 lb.
+PHB'24
+Scimitar
+Martial Weapon, Melee Weapon
+25 gp
+3 lb.
+PHB'24
+Scorpion Ship
+Vehicle (Space)
+25,000 gp
+—
+AAG
+Sealing Wax
+Adventuring Gear
+5 sp
+—
+PHB'14
+Secondhand Steal Trinket
+Adventuring Gear
+—
+—
+BMT
+Semiautomatic Pistol
+Modern, Martial Weapon, Ranged Weapon, Firearm
+—
+3 lb.
+DMG'24
+Serpent Venom
+Adventuring Gear, Poison
+200 gp
+—
+DMG'24
+Set of gold nesting dolls
+Treasure (Art Object)
+7,500 gp
+—
+DMG'24
+Shatterstick
+Other
+—
+4 lb.
+BGDIA
+Shawm
+Instrument
+2 gp
+1 lb.
+PHB'24
+Sheep
+Trade Good
+2 gp
+—
+DMG'24
+Shell
+Ammunition
+5 sp
+2.4 oz.
+GC:VSS
+Shield
+Shield
+10 gp
+6 lb.
+PHB'24
+Shortbow
+Simple Weapon, Ranged Weapon
+25 gp
+2 lb.
+PHB'24
+Shortsword
+Martial Weapon, Melee Weapon
+10 gp
+2 lb.
+PHB'24
+Shot
+Ammunition
+1 sp
+⅕ lb.
+GC:VSS
+Shotgun
+Modern, Martial Weapon, Ranged Weapon, Firearm
+—
+7 lb.
+DMG'24
+Shovel
+Adventuring Gear
+2 gp
+5 lb.
+PHB'24
+Shrike Ship
+Vehicle (Space)
+20,000 gp
+—
+AAG
+Sickle
+Simple Weapon, Melee Weapon
+1 gp
+2 lb.
+PHB'24
+Signal Whistle
+Adventuring Gear
+5 cp
+—
+PHB'24
+Signet Ring
+Adventuring Gear
+5 gp
+—
+PHB'14
+Silk
+Trade Good
+10 gp
+1 lb.
+DMG'24
+Silk Rope (50 feet)
+Adventuring Gear
+10 gp
+5 lb.
+PHB'14
+Silk vestments with gold embroidery
+Treasure (Art Object)
+250 gp
+—
+DMG'24
+Silver
+Trade Good
+5 gp
+1 lb.
+DMG'24
+Silver and gold brooch
+Treasure (Art Object)
+750 gp
+—
+DMG'24
+Silver Bar (2-pound)
+Trade Bar
+10 gp
+2 lb.
+DMG'24
+Silver Bar (5-pound)
+Trade Bar
+25 gp
+5 lb.
+DMG'24
+Silver chalice set with moonstones
+Treasure (Art Object)
+750 gp
+—
+DMG'24
+Silver ewer
+Treasure (Art Object)
+25 gp
+—
+DMG'24
+Silver headdress with amber and red-coral feathers (Sun Empire)
+Treasure (Art Object)
+750 gp
+—
+PSX
+Silver medallion (Sun Empire)
+Treasure (Art Object)
+25 gp
+—
+PSX
+Silver necklace with a gemstone pendant
+Treasure (Art Object)
+250 gp
+—
+DMG'24
+Silver necklace with an amber pendant (Sun Empire)
+Treasure (Art Object)
+250 gp
+—
+PSX
+Silver shoulder piece with amber and garnet (Sun Empire)
+Treasure (Art Object)
+750 gp
+—
+PSX
+Silvered Ammunition
+Ammunition, Generic Variant
+—
+—
+PHB'14
+Silverquill Trinket
+Adventuring Gear
+—
+—
+SCC
+Sinda berries (10)
+Adventuring Gear
+5 gp
+—
+ToA
+Skyship
+Vehicle (Air)
+100,000 gp
+—
+EGW
+Skyship
+Vehicle (Air)
+100,000 gp
+—
+TDCSR
+Sled
+Vehicle (Land)
+20 gp
+300 lb.
+PHB'24
+Sled Dog
+Mount
+50 gp
+—
+IDRotF
+Sledgehammer
+Adventuring Gear
+2 gp
+10 lb.
+PHB'14
+Sleep Grenade
+Explosive
+—
+—
+QftIS
+Sling
+Simple Weapon, Ranged Weapon
+1 sp
+—
+PHB'24
+Sling Bullet
+Ammunition
+0.2 cp
+1.2 oz.
+PHB'24
+Sling Bullets (20)
+Ammunition
+4 cp
+1½ lb.
+PHB'24
+Smith's Tools
+Artisan's Tools
+20 gp
+8 lb.
+PHB'24
+Smoke Grenade
+Explosive
+50 gp
+2 lb.
+DMG'24
+Sniper Rifle
+Martial Weapon, Ranged Weapon, Firearm
+450 gp
+8 lb.
+GC:VSS
+Snowshoes
+Adventuring Gear
+2 gp
+4 lb.
+IDRotF
+Soap
+Adventuring Gear
+2 cp
+—
+PHB'14
+Songhorn
+Instrument
+—
+—
+SCAG
+Soothsalts
+Adventuring Gear
+150 gp
+—
+EGW
+Space Galleon
+Vehicle (Space)
+30,000 gp
+—
+AAG
+Spaceship Trinket
+Futuristic, Adventuring Gear
+—
+—
+QftIS
+Spear
+Simple Weapon, Melee Weapon
+1 gp
+3 lb.
+PHB'24
+Spellbook
+Adventuring Gear
+50 gp
+3 lb.
+PHB'14
+Spiked Armor
+Medium Armor
+75 gp
+45 lb.
+SCAG
+Spinel
+Treasure (Gemstone)
+100 gp
+—
+DMG'24
+Splint Armor
+Heavy Armor
+200 gp
+60 lb.
+PHB'24
+Sprig of Mistletoe
+Spellcasting Focus
+1 gp
+—
+PHB'24
+Spyglass
+Adventuring Gear
+1,000 gp
+1 lb.
+PHB'24
+Squid Ship
+Vehicle (Space)
+25,000 gp
+—
+AAG
+Stabling (per day)
+Tack and Harness
+5 cp
+—
+PHB'24
+Staff
+Staff, Simple Weapon, Melee Weapon, Spellcasting Focus
+5 gp
+4 lb.
+PHB'24
+Star Moth
+Vehicle (Space)
+40,000 gp
+—
+AAG
+Star rose quartz
+Treasure (Gemstone)
+50 gp
+—
+DMG'24
+Star Ruby
+Treasure (Gemstone)
+1,000 gp
+—
+DMG'24
+Star Sapphire
+Treasure (Gemstone)
+1,000 gp
+—
+DMG'24
+Stink Bomb
+Explosive
+25 gp
+—
+TDCSR
+String
+Adventuring Gear
+1 sp
+—
+PHB'24
+Studded Leather Armor
+Light Armor
+45 gp
+13 lb.
+PHB'24
+Submachine Gun
+Martial Weapon, Ranged Weapon, Firearm
+250 gp
+6 lb.
+GC:VSS
+Sun amulet on a beaded chain (Sun Empire)
+Treasure (Art Object)
+25 gp
+—
+PSX
+Survival Mantle
+Medium Armor
+—
+40 lb.
+VGM
+Tangler Grenade
+Other
+—
+—
+WDMM
+Tankard
+Adventuring Gear
+2 cp
+1 lb.
+PHB'14
+Tantan
+Instrument
+—
+—
+SCAG
+Tej
+Food and Drink
+—
+5 lb.
+ToA
+Tent
+Adventuring Gear
+2 gp
+20 lb.
+PHB'24
+The Incantations of Iriolarthas
+Adventuring Gear
+—
+3 lb.
+IDRotF
+Theki Root
+Adventuring Gear
+3 gp
+—
+EGW
+Thelarr
+Instrument
+—
+—
+SCAG
+Thessaltoxin
+Poison
+—
+—
+IMR
+Thieves' Tools
+Tool
+25 gp
+1 lb.
+PHB'24
+Three-Dragon Ante Set
+Gaming Set
+1 gp
+—
+PHB'24
+Tiger Eye
+Treasure (Gemstone)
+10 gp
+—
+DMG'24
+Tinderbox
+Adventuring Gear
+5 sp
+1 lb.
+PHB'24
+Tinker's Tools
+Artisan's Tools
+50 gp
+10 lb.
+PHB'24
+Tiny jade figurine (River Heralds)
+Treasure (Art Object)
+25 gp
+—
+PSX
+Tocken
+Instrument
+—
+—
+SCAG
+Tome of Strahd
+Adventuring Gear
+—
+5 lb.
+CoS
+Topaz
+Treasure (Gemstone)
+500 gp
+—
+DMG'24
+Torch
+Adventuring Gear
+1 cp
+1 lb.
+PHB'24
+Torpor
+Adventuring Gear, Poison
+600 gp
+—
+DMG'24
+Totem
+Spellcasting Focus
+1 gp
+—
+PHB'14
+Tourmaline
+Treasure (Gemstone)
+100 gp
+—
+DMG'24
+Traveler's Clothes
+Adventuring Gear
+2 gp
+4 lb.
+PHB'24
+Treasure chest crafted of exotic wood with gold fittings and opals (Brazen Coalition)
+Treasure (Art Object)
+7,500 gp
+—
+PSX
+Trident
+Martial Weapon, Melee Weapon
+5 gp
+4 lb.
+PHB'24
+Trinket
+Adventuring Gear
+—
+—
+AI
+Trinket
+Adventuring Gear
+—
+—
+CoS
+Trinket
+Adventuring Gear
+—
+—
+EET
+Trinket
+Adventuring Gear
+—
+—
+PHB'24
+Truth Serum
+Adventuring Gear, Poison
+150 gp
+—
+DMG'24
+Turquoise
+Treasure (Gemstone)
+10 gp
+—
+DMG'24
+Turtle Ship
+Vehicle (Space)
+40,000 gp
+—
+AAG
+Tyrant Ship
+Vehicle (Space)
+—
+—
+AAG
+Velvet doublet with gold buttons (Legion of Dusk)
+Treasure (Art Object)
+25 gp
+—
+PSX
+Vial
+Adventuring Gear
+1 gp
+—
+PHB'24
+Vial of Stardust
+Other
+—
+—
+WDMM
+Viol
+Instrument
+30 gp
+1 lb.
+PHB'24
+Wagon
+Vehicle (Land)
+35 gp
+400 lb.
+PHB'24
+Wand
+Spellcasting Focus
+10 gp
+1 lb.
+PHB'24
+War Pick
+Martial Weapon, Melee Weapon
+5 gp
+2 lb.
+PHB'24
+Wargong
+Instrument
+—
+—
+SCAG
+Warhammer
+Martial Weapon, Melee Weapon
+15 gp
+5 lb.
+PHB'24
+Warhorse
+Mount
+400 gp
+—
+PHB'24
+Warship
+Vehicle (Water)
+25,000 gp
+—
+PHB'24
+Wasp Ship
+Vehicle (Space)
+20,000 gp
+—
+AAG
+Waterskin
+Adventuring Gear
+2 sp
+5 lb. (full)
+PHB'24
+Weaver's Tools
+Artisan's Tools
+1 gp
+5 lb.
+PHB'24
+Well-made tapestry that is 10 feet by 10 feet
+Treasure (Art Object)
+250 gp
+—
+DMG'24
+Wheat
+Trade Good
+1 cp
+1 lb.
+DMG'24
+Whetstone
+Adventuring Gear
+1 cp
+1 lb.
+PHB'14
+Whip
+Martial Weapon, Melee Weapon
+2 gp
+3 lb.
+PHB'24
+Whistle-Stick
+Instrument
+—
+—
+OGA
+White Ghost Orchid Seed
+Adventuring Gear
+—
+—
+JttRC
+Wildroot
+Adventuring Gear
+25 gp
+—
+ToA
+Willowshade Oil
+Adventuring Gear
+30 gp
+—
+EGW
+Witherbloom Trinket
+Adventuring Gear
+—
+—
+SCC
+Woodcarver's Tools
+Artisan's Tools
+1 gp
+5 lb.
+PHB'24
+Wooden Staff
+Simple Weapon, Spellcasting Focus
+5 gp
+4 lb.
+PHB'24
+Writing Kit
+Adventuring Gear
+—
+—
+TDCSR
+Wukka Nut
+Adventuring Gear
+1 gp
+—
+ToA
+Wyvern Poison
+Adventuring Gear, Poison
+1,200 gp
+—
+DMG'24
+Xen'drik Trinket
+Adventuring Gear
+—
+—
+ERLW
+Yahcha
+Adventuring Gear
+1 gp
+—
+ToA
+Yarting
+Instrument
+—
+—
+SCAG
+Yellow Sapphire
+Treasure (Gemstone)
+1,000 gp
+—
+DMG'24
+Yew Wand
+Spellcasting Focus
+10 gp
+1 lb.
+PHB'24
+Yklwa
+Simple Weapon, Melee Weapon
+1 gp
+3 lb.
+ToA
+Zabou
+Adventuring Gear
+10 gp
+—
+ToA
+Zeal
+Illegal Drug
+150 gp
+—
+TDCSR
+Zircon
+Treasure (Gemstone)
+50 gp
+—
+DMG'24
+Zulkoon
+Instrument
+—
+—
+SCAG
