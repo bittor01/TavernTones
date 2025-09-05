@@ -14,10 +14,11 @@ let DEFAULT_LOCAL_FOLDER;
 
 
 class CommandHandler {
-    constructor(client, logToRendererInstance, musicPlayerInstance, config) {
+    constructor(client, logToRendererInstance, musicPlayerInstance, config, fiveEToolsParserInstance) {
         this.client = client;
         logToRenderer = logToRendererInstance;
         musicPlayer = musicPlayerInstance;
+        this.fiveEToolsParser = fiveEToolsParserInstance;
         this.lastResponse = null;
         BOT_ROLE_ID = config.BOT_ROLE_ID;
         DEFAULT_LOCAL_FOLDER = config.DEFAULT_LOCAL_FOLDER;
