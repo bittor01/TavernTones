@@ -1,0 +1,357 @@
+[
+  {
+    "text": "+2 Ring of Protection",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Azorius Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boros Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dimir Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Golgari Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gruul Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horned Ring",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Izzet Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Netherese Ring of Protection",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orzhov Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rakdos Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Acid Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Amity",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Animal Influence",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Barrels",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Cold Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Collecting",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Djinni Summoning",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Elemental Command",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Elemental Command (Air)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Elemental Command (Earth)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Elemental Command (Fire)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Elemental Command (Water)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Evasion",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Feather Falling",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Fire Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Force Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Free Action",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Invisibility",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Jumping",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Lightning Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Mind Shielding",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Necrotic Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Obscuring",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Poison Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Protection",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Psychic Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Puzzler's Wit",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Radiant Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Red Fury",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Regeneration",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Shooting Stars",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Spell Storing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Spell Turning",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Swimming",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Telekinesis",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Temporal Salvation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of the Copycat",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of the Orator",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of the Ram",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Three Wishes",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Thunder Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Treachery",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Truth Telling",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Warmth",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Water Walking",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Winter",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of X-ray Vision",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sage's Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sage's Signet (Bear)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sage's Signet (Hart)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sage's Signet (Lion)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sage's Signet (Serpent)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sage's Signet (Songbird)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sage's Signet (Wolf)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Selesnya Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Simic Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stonky's ring",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Teleporter Ring",
+    "unique": false,
+    "used": []
+  }
+]
