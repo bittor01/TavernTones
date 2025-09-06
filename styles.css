@@ -646,3 +646,13 @@ input:disabled {
 #stat-block-tooltip .trait-block strong {
     font-style: italic;
 }
+
+.interactive-stat {
+    background-color: #007bff; /* A distinct blue color */
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.interactive-stat:hover {
+    background-color: #0056b3; /* A darker blue on hover */
+}

@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!creature) return;
         document.getElementById('creature-name').value = creature.name || '';
         document.getElementById('creature-initiative').value = creature.initiative || '';
-        document.getElementById('creature-hp').value = creature.maxHp || '';
+        document.getElementById('creature-hp').value = creature.hpFormula || creature.maxHp || '';
         document.getElementById('creature-ac').value = creature.ac || '';
         document.getElementById('creature-speed').value = creature.speed || '';
         document.getElementById('attack-modifier').value = creature.attackMod || '';
@@ -532,6 +532,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${hasStatBlock ? `<span class="info-btn combatant-info-btn" data-id="${creature.id}" title="Show Stat Block">ℹ️</span>` : ''}
                     </div>
                     <div class="header-right-group">
+                        <span class="header-stat interactive-stat attack-roll-btn" data-id="${creature.id}">Attack: ${creature.attackMod || '+0'}</span>
                         <span class="header-stat">AC: ${creature.ac ?? '?'}</span>
                         <span class="header-stat">Speed: ${creature.speed || '?'}</span>
                         <span class="header-stat">DC: ${creature.saveDc ?? '?'}</span>
@@ -543,7 +544,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <div class="combatant-body">
                     <div class="main-controls">
-                        <button class="attack-roll-btn" data-id="${creature.id}">⚔️ Attack ${creature.attackMod || '+0'}</button>
                         <div class="hp-bar-container">
                             <div class="hp-bar-temp" style="width: ${tempHpPercentage}%;"></div>
                             <div class="hp-bar-current" style="width: ${hpPercentage}%; background-color: ${hpColor};"></div>
@@ -862,90 +862,112 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderStatBlock(rawDataString) {
         if (!rawDataString) return 'No data available.';
+
         try {
             const monster = JSON.parse(rawDataString);
 
-            // Recursive function to handle complex "entries" fields
+            // --- Helper Functions ---
+            const renderAc = (ac) => {
+                if (!ac || !ac.length) return 'N/A';
+                return ac.map(val => {
+                    if (typeof val === 'object' && val.ac) {
+                        let from = '';
+                        if (val.from) from = ` (${val.from.join(', ')})`;
+                        return `${val.ac}${from}`;
+                    }
+                    return val.toString();
+                }).join(', ');
+            };
+
+            const renderSpeed = (speed) => {
+                if (!speed) return 'N/A';
+                return Object.entries(speed).map(([type, val]) => {
+                    let speedVal = '';
+                    let condition = '';
+                    if (typeof val === 'object' && val.number) {
+                        speedVal = val.number;
+                        if (val.condition) condition = ` ${val.condition}`;
+                    } else {
+                        speedVal = val;
+                    }
+                    return `${type} ${speedVal} ft.${condition}`;
+                }).join(', ');
+            };
+
+            const renderCr = (cr) => {
+                if (!cr) return 'N/A';
+                if (typeof cr === 'object' && cr.cr) {
+                    return cr.cr;
+                }
+                return cr.toString();
+            };
+
             const renderEntries = (entries) => {
                 if (!entries || !Array.isArray(entries)) return '';
                 return entries.map(entry => {
                     if (typeof entry === 'string') {
-                        return entry.replace(/{@dice ([^}]+)}/g, '($1)'); // Basic dice tag handling
+                        // Replace 5eTools tags like {@dice 1d6 + 2} with (1d6 + 2)
+                        return entry.replace(/{@(dice|damage|hit) ([^}]+)}/g, '($2)');
                     }
-                    if (entry.type === 'list') {
-                        return `<ul>${entry.items.map(item => `<li>${renderEntries(item.entries || [item.name])}</li>`).join('')}</ul>`;
+                    if (typeof entry === 'object' && entry.type === 'list') {
+                        const listItems = entry.items.map(item => {
+                            const name = item.name ? `<strong>${item.name}.</strong> ` : '';
+                            const text = item.entry ? item.entry : (item.entries ? renderEntries(item.entries) : '');
+                            return `<li>${name}${text}</li>`;
+                        }).join('');
+                        return `<ul>${listItems}</ul>`;
                     }
-                    if (entry.type === 'entries') {
-                        return `<div class="trait-block"><strong><em>${entry.name}.</em></strong> ${renderEntries(entry.entries)}</div>`;
+                    if (typeof entry === 'object' && entry.name && entry.entries) {
+                         return `<div class="trait-block"><strong><em>${entry.name}.</em></strong> ${renderEntries(entry.entries)}</div>`;
                     }
-                    if (entry.type === 'attack') {
-                         return `${renderEntries(entry.entries)}`;
-                    }
-                    return JSON.stringify(entry); // Fallback for unknown types
-                }).join('');
+                    return ''; // Fallback for unknown entry types
+                }).join(' ');
             };
 
-            let html = `<h3>${monster.name}</h3>`;
-            if (monster.type) {
-                 html += `<p><em>${monster.size} ${monster.type.type || monster.type}, ${monster.alignment}</em></p>`;
-            }
-            html += `<hr>`;
+            // --- HTML Construction ---
+            let html = `<h3>${monster.name || 'Unknown Creature'}</h3>`;
 
-            // AC, HP, Speed
-            const ac = monster.ac[0].ac ? `${monster.ac[0].ac} ${monster.ac[0].from ? `(${monster.ac[0].from.join(', ')})` : ''}` : monster.ac[0];
-            html += `<div class="property-line"><strong>Armor Class</strong> <span>${ac}</span></div>`;
-            html += `<div class="property-line"><strong>Hit Points</strong> <span>${monster.hp.average} (${monster.hp.formula})</span></div>`;
-            const speed = Object.entries(monster.speed).map(([type, val]) => `${type} ${val.number || val} ft.${val.condition || ''}`).join(', ');
-            html += `<div class="property-line"><strong>Speed</strong> <span>${speed}</span></div>`;
-            html += `<hr>`;
+            const type = monster.type ? (typeof monster.type === 'object' ? monster.type.type : monster.type) : 'unknown';
+            html += `<p><em>${monster.size || ''} ${type}, ${monster.alignment || ''}</em></p><hr>`;
+
+            html += `<div class="property-line"><strong>Armor Class</strong> <span>${renderAc(monster.ac)}</span></div>`;
+            html += `<div class="property-line"><strong>Hit Points</strong> <span>${monster.hp ? `${monster.hp.average} (${monster.hp.formula})` : 'N/A'}</span></div>`;
+            html += `<div class="property-line"><strong>Speed</strong> <span>${renderSpeed(monster.speed)}</span></div><hr>`;
 
             // Stats
             html += `<div class="stat-block-grid">
-                <div><strong>STR</strong><br>${monster.str} (${formatModifier(Math.floor((monster.str - 10) / 2))})</div>
-                <div><strong>DEX</strong><br>${monster.dex} (${formatModifier(Math.floor((monster.dex - 10) / 2))})</div>
-                <div><strong>CON</strong><br>${monster.con} (${formatModifier(Math.floor((monster.con - 10) / 2))})</div>
-                <div><strong>INT</strong><br>${monster.int} (${formatModifier(Math.floor((monster.int - 10) / 2))})</div>
-                <div><strong>WIS</strong><br>${monster.wis} (${formatModifier(Math.floor((monster.wis - 10) / 2))})</div>
-                <div><strong>CHA</strong><br>${monster.cha} (${formatModifier(Math.floor((monster.cha - 10) / 2))})</div>
-            </div>`;
-            html += `<hr>`;
+                <div><strong>STR</strong><br>${monster.str || 10} (${formatModifier(Math.floor(((monster.str || 10) - 10) / 2))})</div>
+                <div><strong>DEX</strong><br>${monster.dex || 10} (${formatModifier(Math.floor(((monster.dex || 10) - 10) / 2))})</div>
+                <div><strong>CON</strong><br>${monster.con || 10} (${formatModifier(Math.floor(((monster.con || 10) - 10) / 2))})</div>
+                <div><strong>INT</strong><br>${monster.int || 10} (${formatModifier(Math.floor(((monster.int || 10) - 10) / 2))})</div>
+                <div><strong>WIS</strong><br>${monster.wis || 10} (${formatModifier(Math.floor(((monster.wis || 10) - 10) / 2))})</div>
+                <div><strong>CHA</strong><br>${monster.cha || 10} (${formatModifier(Math.floor(((monster.cha || 10) - 10) / 2))})</div>
+            </div><hr>`;
 
-            // Skills, Saves, Senses, Languages, Challenge
+            // Saves, Skills, Senses, Languages, CR
             if (monster.save) html += `<div class="property-line"><strong>Saving Throws</strong> <span>${Object.entries(monster.save).map(([stat, val]) => `${stat.toUpperCase()} ${val}`).join(', ')}</span></div>`;
             if (monster.skill) html += `<div class="property-line"><strong>Skills</strong> <span>${Object.entries(monster.skill).map(([name, val]) => `${name.charAt(0).toUpperCase() + name.slice(1)} ${val}`).join(', ')}</span></div>`;
             if (monster.senses) html += `<div class="property-line"><strong>Senses</strong> <span>${monster.senses.join(', ')}</span></div>`;
             if (monster.languages) html += `<div class="property-line"><strong>Languages</strong> <span>${monster.languages.join(', ')}</span></div>`;
-            html += `<div class="property-line"><strong>Challenge</strong> <span>${monster.cr.cr || monster.cr}</span></div>`;
-            html += `<hr>`;
+            html += `<div class="property-line"><strong>Challenge</strong> <span>${renderCr(monster.cr)}</span></div><hr>`;
 
-            // Traits
+            // Traits, Actions, etc.
             if (monster.trait) html += renderEntries(monster.trait);
-
-            // Actions
             if (monster.action) {
-                html += `<h3>Actions</h3>`;
-                html += renderEntries(monster.action);
+                html += `<h3>Actions</h3>${renderEntries(monster.action)}`;
             }
-
-            // Legendary Actions
             if (monster.legendary) {
-                html += `<h3>Legendary Actions</h3>`;
-                if (monster.legendary.length > 0) {
-                    html += `<p>The ${monster.name} can take ${monster.legendary.length} legendary actions, choosing from the options below. Only one legendary action option can be used at a time and only at the end of another creature's turn. The ${monster.name} regains spent legendary actions at the start of its turn.</p>`;
-                }
-                html += renderEntries(monster.legendary);
+                html += `<h3>Legendary Actions</h3>${renderEntries(monster.legendary)}`;
             }
-
-            // Reactions
             if (monster.reaction) {
-                html += `<h3>Reactions</h3>`;
-                html += renderEntries(monster.reaction);
+                html += `<h3>Reactions</h3>${renderEntries(monster.reaction)}`;
             }
 
             return html;
+
         } catch (e) {
             console.error("Failed to parse or render stat block:", e);
-            return "Error displaying stat block.";
+            return "Error: Could not display stat block. Data might be malformed.";
         }
     }
 

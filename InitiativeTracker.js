@@ -46,6 +46,24 @@ class InitiativeTracker {
     }
 
     addCreature(creature) {
+        // --- HP Handling ---
+        const hpInput = creature.hp.toString();
+        creature.hpFormula = hpInput; // Save the original formula
+        if (hpInput.match(/d/i)) { // It's a dice roll
+            try {
+                const roll = new DiceRoller().roll(hpInput);
+                creature.hp = roll.total;
+                this.logToRenderer(`${creature.name} rolled HP: ${hpInput} = ${roll.total}`);
+            } catch (e) {
+                this.logToRenderer(`Invalid HP dice notation "${hpInput}". Defaulting to 10.`);
+                creature.hp = 10;
+            }
+        } else { // It's a number
+            creature.hp = parseInt(hpInput, 10) || 10;
+        }
+        creature.maxHp = creature.hp;
+
+
         // Calculate saves from scores if not provided
         const stats = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
         stats.forEach(stat => {
