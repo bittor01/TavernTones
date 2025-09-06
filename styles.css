@@ -289,6 +289,7 @@ button:disabled {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: help;
 }
 .header-right-group {
     display: flex;
@@ -317,6 +318,10 @@ button:disabled {
     gap: 10px;
     margin-bottom: 8px;
 }
+.main-controls .attack-roll-btn {
+    flex-grow: 1;
+}
+
 .hp-display {
     font-weight: bold;
 }
@@ -350,6 +355,46 @@ button:disabled {
     cursor: pointer;
     line-height: 1;
     margin-left: 4px;
+}
+
+.has-tooltip {
+    position: relative;
+    cursor: pointer;
+}
+
+.has-tooltip .tooltip-text {
+    visibility: hidden;
+    width: 450px;
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: #222;
+    color: #fff;
+    text-align: left;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 10;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -225px;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    font-family: monospace;
+    font-size: 11px;
+    white-space: pre-wrap;
+    border: 1px solid #555;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+}
+
+.has-tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+.has-tooltip .tooltip-text pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 .stats-footer {

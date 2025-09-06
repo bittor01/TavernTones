@@ -75,6 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="form-actions">
             <button type="button" id="import-monster-btn">Import Monster</button>
             <button type="submit" class="add-creature-button">Add Creature</button>
+            <button type="button" id="clear-form-btn">Clear</button>
         </div>
     `;
 
@@ -97,6 +98,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         switch (targetId) {
             case 'import-monster-btn':
                 createPopup('monster-search', null, event.target);
+                break;
+            case 'clear-form-btn':
+                addCreatureForm.reset();
+                delete addCreatureForm.dataset.monsterStatBlock;
                 break;
             case 'log-toggle-btn': {
                 const logArea = document.getElementById('logArea');
@@ -316,9 +321,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         document.getElementById('creature-speed').value = highestSpeed > 0 ? `${highestSpeed}ft` : '30ft';
 
-        const dexMod = Math.floor(((monster.dex || 10) - 10) / 2);
-        const initBonus = dexMod >= 0 ? `+${dexMod}` : `${dexMod}`;
-        document.getElementById('creature-initiative').value = initBonus;
+        const calculateModifier = (score) => Math.floor(((score || 10) - 10) / 2);
+        const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
+
+        const dexMod = calculateModifier(monster.dex);
+        document.getElementById('creature-initiative').value = formatModifier(dexMod);
+
+        document.getElementById('str-score').value = monster.str || 10;
+        document.getElementById('dex-score').value = monster.dex || 10;
+        document.getElementById('con-score').value = monster.con || 10;
+        document.getElementById('int-score').value = monster.int || 10;
+        document.getElementById('wis-score').value = monster.wis || 10;
+        document.getElementById('cha-score').value = monster.cha || 10;
+
+        const saves = monster.save || {};
+        document.getElementById('str-save').value = saves.str || formatModifier(calculateModifier(monster.str));
+        document.getElementById('dex-save').value = saves.dex || formatModifier(calculateModifier(monster.dex));
+        document.getElementById('con-save').value = saves.con || formatModifier(calculateModifier(monster.con));
+        document.getElementById('int-save').value = saves.int || formatModifier(calculateModifier(monster.int));
+        document.getElementById('wis-save').value = saves.wis || formatModifier(calculateModifier(monster.wis));
+        document.getElementById('cha-save').value = saves.cha || formatModifier(calculateModifier(monster.cha));
 
         const fullStatBlock = JSON.stringify(monster);
         addCreatureForm.dataset.monsterStatBlock = fullStatBlock;
@@ -498,12 +520,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tempHpPercentage = (tempHp / maxHp) * 100;
             const hpColor = getHpColor(hp, maxHp);
 
-            creatureDiv.title = creature.statBlock ? JSON.stringify(JSON.parse(creature.statBlock), null, 2) : 'No stat block available.';
+            const statBlockFormatted = creature.statBlock ? `<pre>${JSON.stringify(JSON.parse(creature.statBlock), null, 2)}</pre>` : 'No stat block available.';
             creatureDiv.innerHTML = `
                 <div class="combatant-header">
-                    <h4>${creature.name}</h4>
+                    <h4 class="has-tooltip">${creature.name}<span class="tooltip-text">${statBlockFormatted}</span></h4>
                     <div class="header-right-group">
-                        <button class="attack-roll-btn" title="Attack" data-id="${creature.id}">⚔️</button>
                         <span class="header-stat">AC: ${creature.ac ?? '?'}</span>
                         <span class="header-stat">Speed: ${creature.speed || '?'}</span>
                         <span class="header-stat">DC: ${creature.saveDc ?? '?'}</span>
@@ -515,6 +536,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <div class="combatant-body">
                     <div class="main-controls">
+                        <button class="attack-roll-btn" data-id="${creature.id}">⚔️ Attack ${creature.attackMod || '+0'}</button>
                         <div class="hp-bar-container">
                             <div class="hp-bar-temp" style="width: ${tempHpPercentage}%;"></div>
                             <div class="hp-bar-current" style="width: ${hpPercentage}%; background-color: ${hpColor};"></div>
