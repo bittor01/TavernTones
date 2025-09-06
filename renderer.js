@@ -4,6 +4,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     let initiativeOrder = [];
     let combatantPanelOrder = []; // For custom sorting of the right-hand panel
     let currentTurnIndex = 0;
+    const logPanels = [
+        { id: 'logArea', title: 'Log' },
+        { id: 'diceLog', title: 'Dice Log' },
+        { id: 'statBlockArea', title: 'Stat Block' }
+    ];
+    let currentPanelIndex = 0; // Default to 'Log'
     let DND_CONDITIONS = {};
 
     // --- Element Refs ---
@@ -93,9 +99,63 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // --- Panel Switching Logic ---
+    function showPanel(panelId, title) {
+        const logTitle = document.getElementById('log-title');
+        let foundPanel = false;
+
+        logPanels.forEach((panel, index) => {
+            const panelEl = document.getElementById(panel.id);
+            if (panel.id === panelId) {
+                panelEl.style.display = 'block';
+                logTitle.textContent = title || panel.title;
+                currentPanelIndex = index;
+                foundPanel = true;
+            } else {
+                panelEl.style.display = 'none';
+            }
+        });
+        if (!foundPanel) showPanel('logArea', 'Log'); // Fallback
+    }
+
+    function displayStatBlock(rawDataString) {
+        const statBlockArea = document.getElementById('statBlockArea');
+        if (!rawDataString) {
+            statBlockArea.innerHTML = '<p>No data available for this creature.</p>';
+            showPanel('statBlockArea', 'Stat Block');
+            return;
+        }
+        try {
+            const monster = JSON.parse(rawDataString);
+            statBlockArea.innerHTML = renderStatBlock(rawDataString);
+            showPanel('statBlockArea', monster.name || 'Stat Block'); // Update title and show panel
+        } catch (e) {
+            statBlockArea.innerHTML = '<p>Error: Could not parse creature data.</p>';
+            showPanel('statBlockArea', 'Error');
+        }
+    }
+
     // --- Event Listeners ---
     document.addEventListener('click', (event) => {
-        const targetId = event.target.id;
+        const target = event.target;
+        const targetId = target.id;
+
+        // Handle info button clicks specifically
+        if (target.classList.contains('info-btn')) {
+            let rawDataString = null;
+            if (target.id === 'imported-monster-info-btn') {
+                rawDataString = addCreatureForm.dataset.monsterRawData;
+            } else if (target.classList.contains('combatant-info-btn')) {
+                const creatureId = parseInt(target.dataset.id, 10);
+                const creature = initiativeOrder.find(c => c.id === creatureId);
+                if (creature) rawDataString = creature.rawData;
+            }
+
+            if (rawDataString) {
+                displayStatBlock(rawDataString);
+            }
+            return; // Done with this click event
+        }
 
         switch (targetId) {
             case 'import-monster-btn':
@@ -106,22 +166,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('imported-monster-info-btn').style.display = 'none';
                 delete addCreatureForm.dataset.monsterRawData;
                 break;
-            case 'log-toggle-btn': {
-                const logArea = document.getElementById('logArea');
-                const diceLog = document.getElementById('diceLog');
-                const logTitle = document.getElementById('log-title');
-                if (logArea.style.display === 'none') {
-                    logArea.style.display = 'block'; // Show general log
-                    diceLog.style.display = 'none';
-                    logTitle.textContent = 'Log';
+            case 'log-toggle-btn':
+                currentPanelIndex = (currentPanelIndex + 1) % logPanels.length;
+                const nextPanel = logPanels[currentPanelIndex];
 
-                } else {
-                    logArea.style.display = 'none';
-                    diceLog.style.display = 'block'; // Show dice log
-                    logTitle.textContent = 'Dice Log';
+                // If the next panel is the stat block and it's empty, skip it.
+                const statBlockEl = document.getElementById('statBlockArea');
+                if (nextPanel.id === 'statBlockArea' && !statBlockEl.innerHTML) {
+                    currentPanelIndex = (currentPanelIndex + 1) % logPanels.length;
                 }
+                showPanel(logPanels[currentPanelIndex].id);
                 break;
-            }
             case 'reset-encounter-mid':
             case 'reset-encounter-right':
                 window.electron.ipcRenderer.send('reset-encounter');
@@ -226,6 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         diceLog.appendChild(logEntry);
         if (diceLog.children.length > maxLogEntries) diceLog.removeChild(diceLog.firstChild);
         diceLog.scrollTop = diceLog.scrollHeight;
+        showPanel('diceLog');
     });
 
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
@@ -841,6 +897,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const monster = await window.electron.ipcRenderer.invoke('get-monster-details', { name, source });
                     if (monster) {
                         populateMonsterForm(monster);
+                        displayStatBlock(JSON.stringify(monster));
                     }
                     popup.remove();
                 });
@@ -857,9 +914,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 0);
     }
 
-    // --- Tooltip Logic ---
-    const tooltip = document.getElementById('stat-block-tooltip');
-
+    // --- Stat Block Rendering (for panel) ---
     function renderStatBlock(rawDataString) {
         if (!rawDataString) return 'No data available.';
 
@@ -970,63 +1025,4 @@ document.addEventListener('DOMContentLoaded', async () => {
             return "Error: Could not display stat block. Data might be malformed.";
         }
     }
-
-    document.body.addEventListener('mouseover', (event) => {
-        if (!event.target.classList.contains('info-btn')) return;
-
-        let rawDataString = null;
-        const target = event.target;
-
-        if (target.id === 'imported-monster-info-btn') {
-            rawDataString = addCreatureForm.dataset.monsterRawData;
-        } else if (target.classList.contains('combatant-info-btn')) {
-            const creatureId = parseInt(target.dataset.id, 10);
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-            if (creature) {
-                rawDataString = creature.rawData;
-            }
-        }
-
-        if (rawDataString) {
-            tooltip.innerHTML = renderStatBlock(rawDataString);
-            tooltip.style.display = 'block'; // Show first to get dimensions
-
-            const mouseX = event.clientX;
-            const mouseY = event.clientY;
-            const tooltipWidth = tooltip.offsetWidth;
-            const tooltipHeight = tooltip.offsetHeight;
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-
-            let top, left;
-
-            // Position based on quadrant, opening towards the center
-            if (mouseX < windowWidth / 2) {
-                left = mouseX + 20; // Open to the right
-            } else {
-                left = mouseX - tooltipWidth - 20; // Open to the left
-            }
-
-            if (mouseY < windowHeight / 2) {
-                top = mouseY + 20; // Open downwards
-            } else {
-                top = mouseY - tooltipHeight - 20; // Open upwards
-            }
-
-            // Screen edge collision detection
-            if (left < 5) left = 5;
-            if (left + tooltipWidth > windowWidth) left = windowWidth - tooltipWidth - 5;
-            if (top < 5) top = 5;
-            if (top + tooltipHeight > windowHeight) top = windowHeight - tooltipHeight - 5;
-
-            tooltip.style.top = `${top}px`;
-            tooltip.style.left = `${left}px`;
-        }
-    });
-
-    document.body.addEventListener('mouseout', (event) => {
-        if (event.target.classList.contains('info-btn')) {
-            tooltip.style.display = 'none';
-        }
-    });
 });

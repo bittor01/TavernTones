@@ -592,61 +592,6 @@ input:disabled {
     flex-grow: 0; /* Remove grow from h4 itself */
 }
 
-/* --- Stat Block Tooltip --- */
-#stat-block-tooltip {
-    display: none;
-    position: absolute;
-    background-color: #1e1e1e;
-    border: 1px solid #555;
-    border-radius: 8px;
-    padding: 15px;
-    z-index: 1001; /* Higher than popups */
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    max-width: 500px;
-    max-height: 80vh;
-    overflow-y: auto;
-    pointer-events: none; /* Tooltip should not be interactive */
-    font-size: 0.9em;
-    line-height: 1.5;
-}
-
-#stat-block-tooltip h3 {
-    margin-top: 0;
-    margin-bottom: 5px;
-    font-size: 1.2em;
-    color: #a0c8ff;
-    border-bottom: 1px solid #444;
-    padding-bottom: 5px;
-}
-#stat-block-tooltip hr {
-    border-color: #444;
-    margin: 10px 0;
-}
-#stat-block-tooltip p {
-    margin: 0.5em 0;
-}
-#stat-block-tooltip .property-line {
-    display: flex;
-    justify-content: space-between;
-    padding: 2px 0;
-}
-#stat-block-tooltip .property-line strong {
-    margin-right: 10px;
-}
-#stat-block-tooltip .stat-block-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 10px;
-    text-align: center;
-    margin: 10px 0;
-}
-#stat-block-tooltip .trait-block {
-    margin: 10px 0;
-}
-#stat-block-tooltip .trait-block strong {
-    font-style: italic;
-}
-
 .interactive-stat {
     background-color: #007bff; /* A distinct blue color */
     cursor: pointer;
