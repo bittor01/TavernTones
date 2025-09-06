@@ -280,38 +280,35 @@ button:disabled {
     border-bottom: 1px solid #555;
     padding-bottom: 8px;
     margin-bottom: 8px;
-}
-.combatant-header {
-    display: grid;
-    grid-template-columns: 1fr auto auto; /* Name | Controls | Stats */
-    align-items: center;
     gap: 10px;
 }
 .combatant-header h4 {
     margin: 0;
     font-size: 1.2em;
-    grid-column: 1;
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-.card-controls {
-    grid-column: 2;
+.header-right-group {
     display: flex;
-    gap: 5px;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
 }
-.card-controls button {
+.header-right-group .header-stat {
+    font-size: 0.9em;
+    background-color: #5a5a5a;
+    padding: 2px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.header-right-group button {
     background: none;
     border: none;
-    font-size: 1.1em;
+    font-size: 1.2em;
     padding: 2px;
     cursor: pointer;
-}
-.header-stats {
-    grid-column: 3;
-}
-.header-stats {
-    display: flex;
-    gap: 15px;
-    font-size: 0.9em;
-    color: #ccc;
 }
 
 .main-controls {
@@ -423,67 +420,27 @@ button:disabled {
     z-index: 1000;
     display: flex;
     gap: 8px;
+    flex-direction: column;
 }
 .popup-dialog input, .popup-dialog select {
     background-color: #2a2a2a;
     color: #fff;
     border: 1px solid #666;
 }
-
-/* Styles for the rearranged combatant header */
-.combatant-header {
+.popup-results-list {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    /* Removing grid properties */
+    flex-direction: column;
+    max-height: 200px;
+    overflow-y: auto;
 }
-
-.combatant-header h4 {
-    margin: 0;
-    flex-grow: 1; /* Allows the name to take up available space */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.header-right-group {
-    display: flex;
-    align-items: center;
-    gap: 8px; /* Adds space between the elements */
-    flex-shrink: 0; /* Prevents this group from shrinking */
-}
-
-.header-right-group .header-stat {
-    font-size: 0.9em;
-    background-color: #5a5a5a;
-    padding: 2px 5px;
-    border-radius: 4px;
-    white-space: nowrap; /* Prevents wrapping */
-}
-
-.header-right-group button {
-    background: none;
-    border: none;
-    font-size: 1.1em;
-    padding: 2px;
+.popup-result-item {
+    padding: 8px;
     cursor: pointer;
 }
-
-/* Styles for monster import UI */
-.form-actions {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 10px;
-    gap: 10px;
+.popup-result-item:hover {
+    background-color: #5a5a5a;
 }
 
-#monster-import-container {
-    padding: 10px;
-    margin-top: 10px;
-    background-color: #333;
-    border-radius: 4px;
-}
 
 /* --- Soundboard Styles --- */
 #soundboard-container {
@@ -536,4 +493,11 @@ button:disabled {
     background-color: #2a2a2a;
     color: #fff;
     border: 1px solid #666;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 10px;
+    gap: 10px;
 }

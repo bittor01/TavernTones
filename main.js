@@ -31,6 +31,7 @@ let musicPlayer;
 let lastResponse = null; // Variable to store the last response
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
+let fiveEToolsParser;
 const maSelections = new Map();
 
 
@@ -550,7 +551,7 @@ client.once('clientReady', async () => {
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
-    const fiveEToolsParser = new FiveEToolsParser(logToRenderer);
+    fiveEToolsParser = new FiveEToolsParser(logToRenderer);
     const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER }, fiveEToolsParser);
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
