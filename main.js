@@ -152,7 +152,8 @@ function createEmojiHpBar(creature) {
 }
 
 function formatStatBlockForDiscord(monster) {
-    const embed = new EmbedBuilder()
+    // Part 1: Create the main embed with core stats
+    const mainEmbed = new EmbedBuilder()
         .setColor(0x0099FF)
         .setTitle(monster.name || 'Unknown Combatant');
 
@@ -169,8 +170,10 @@ function formatStatBlockForDiscord(monster) {
     description += `**STR** ${monster.str} (${formatMod(monster.str)}) | **DEX** ${monster.dex} (${formatMod(monster.dex)}) | **CON** ${monster.con} (${formatMod(monster.con)})\n`;
     description += `**INT** ${monster.int} (${formatMod(monster.int)}) | **WIS** ${monster.wis} (${formatMod(monster.wis)}) | **CHA** ${monster.cha} (${formatMod(monster.cha)})`;
 
-    embed.setDescription(description);
+    mainEmbed.setDescription(description);
 
+    // Part 2: Prepare long fields for separate messages
+    const longFields = [];
     const processEntries = (entries) => {
         if (!entries) return '';
         return entries.map(e => {
@@ -183,21 +186,57 @@ function formatStatBlockForDiscord(monster) {
         }).join('\n\n');
     };
 
-    const addField = (name, entries) => {
-        if (entries && entries.length > 0) {
-            const value = processEntries(entries);
-            if (value) {
-                embed.addFields({ name, value: value.substring(0, 1024) });
+    if (monster.trait && monster.trait.length > 0) {
+        longFields.push({ name: 'Traits', value: processEntries(monster.trait) });
+    }
+    if (monster.action && monster.action.length > 0) {
+        longFields.push({ name: 'Actions', value: processEntries(monster.action) });
+    }
+    if (monster.legendary && monster.legendary.length > 0) {
+        longFields.push({ name: 'Legendary Actions', value: processEntries(monster.legendary) });
+    }
+    if (monster.reaction && monster.reaction.length > 0) {
+        longFields.push({ name: 'Reactions', value: processEntries(monster.reaction) });
+    }
+
+    return { mainEmbed, longFields };
+}
+
+function splitText(text, maxLength = 1024) {
+    const chunks = [];
+    if (!text) return chunks;
+
+    let currentChunk = "";
+    const lines = text.split('\n');
+
+    for (const line of lines) {
+        // If a single line is longer than the max length, split it forcefully
+        if (line.length > maxLength) {
+            if (currentChunk) {
+                chunks.push(currentChunk);
+                currentChunk = "";
             }
+            const lineChunks = line.match(new RegExp(`.{1,${maxLength}}`, 'g')) || [];
+            chunks.push(...lineChunks);
+            continue;
         }
-    };
 
-    addField('Traits', monster.trait);
-    addField('Actions', monster.action);
-    addField('Legendary Actions', monster.legendary);
-    addField('Reactions', monster.reaction);
+        // If adding the next line exceeds max length, push the current chunk
+        if (currentChunk.length + line.length + 1 > maxLength) {
+            chunks.push(currentChunk);
+            currentChunk = "";
+        }
 
-    return embed;
+        // Add the line to the current chunk
+        currentChunk += (currentChunk ? '\n' : '') + line;
+    }
+
+    // Push the last remaining chunk
+    if (currentChunk) {
+        chunks.push(currentChunk);
+    }
+
+    return chunks;
 }
 
 async function checkAndShowReminders(creature, turnEvent) {
@@ -504,9 +543,31 @@ async function ipcloader() {
             }
             try {
                 const monster = JSON.parse(rawDataString);
-                const embed = formatStatBlockForDiscord(monster);
-                await channel.send({ embeds: [embed] });
-                logToRenderer('[push-statblock] Successfully pushed stat block to chat.');
+                const { mainEmbed, longFields } = formatStatBlockForDiscord(monster);
+
+                // Send the main embed
+                const mainMessage = await channel.send({ embeds: [mainEmbed] });
+                logToRenderer('[push-statblock] Successfully pushed main stat block embed.');
+
+                // If there are long fields, create a thread and post them
+                if (longFields.length > 0) {
+                    const thread = await mainMessage.startThread({
+                        name: `${monster.name} - Details`,
+                        autoArchiveDuration: 60,
+                    });
+
+                    for (const field of longFields) {
+                        const chunks = splitText(field.value, 1024);
+                        for (let i = 0; i < chunks.length; i++) {
+                            const chunkEmbed = new EmbedBuilder()
+                                .setColor(0x0099FF)
+                                .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
+                                .setDescription(chunks[i]);
+                            await thread.send({ embeds: [chunkEmbed] });
+                        }
+                    }
+                    logToRenderer(`[push-statblock] Sent ${longFields.length} detail section(s) to thread.`);
+                }
             } catch (error) {
                 logToRenderer(`[push-statblock] FAILED to send embed: ${error}`);
             }
