@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Element Refs ---
     const logArea = document.getElementById('logArea');
+    const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
     const diceLog = document.getElementById('diceLog');
     const saveButton = document.getElementById('save-button');
     const loadButton = document.getElementById('load-button');
@@ -34,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="form-group name-group">
                 <label for="creature-name">Name:</label>
                 <input type="text" id="creature-name" required>
+                <span id="imported-monster-info-btn" class="info-btn" style="display: none;" title="Show Stat Block">ℹ️</span>
             </div>
         </div>
         <div class="form-row">
@@ -101,7 +103,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 break;
             case 'clear-form-btn':
                 addCreatureForm.reset();
-                delete addCreatureForm.dataset.monsterStatBlock;
+                document.getElementById('imported-monster-info-btn').style.display = 'none';
+                delete addCreatureForm.dataset.monsterRawData;
                 break;
             case 'log-toggle-btn': {
                 const logArea = document.getElementById('logArea');
@@ -203,13 +206,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             reminders: { start: '', end: '' }
         };
 
-        if (addCreatureForm.dataset.monsterStatBlock) {
-            creature.statBlock = addCreatureForm.dataset.monsterStatBlock;
-            delete addCreatureForm.dataset.monsterStatBlock; // Clear it after use
+        if (addCreatureForm.dataset.monsterRawData) {
+            creature.rawData = addCreatureForm.dataset.monsterRawData;
+            delete addCreatureForm.dataset.monsterRawData; // Clear it after use
         }
 
         window.electron.ipcRenderer.send('add-creature', creature);
         addCreatureForm.reset();
+        document.getElementById('imported-monster-info-btn').style.display = 'none';
         document.getElementById('creature-name').focus();
     });
 
@@ -299,6 +303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function populateMonsterForm(monster) {
         if (!monster) return;
 
+        document.getElementById('imported-monster-info-btn').style.display = 'inline-block';
         document.getElementById('creature-name').value = monster.name || '';
         document.getElementById('creature-hp').value = monster.hp.formula || monster.hp.average || '';
 
@@ -322,7 +327,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('creature-speed').value = highestSpeed > 0 ? `${highestSpeed}ft` : '30ft';
 
         const calculateModifier = (score) => Math.floor(((score || 10) - 10) / 2);
-        const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
 
         const dexMod = calculateModifier(monster.dex);
         document.getElementById('creature-initiative').value = formatModifier(dexMod);
@@ -343,7 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('cha-save').value = saves.cha || formatModifier(calculateModifier(monster.cha));
 
         const fullStatBlock = JSON.stringify(monster);
-        addCreatureForm.dataset.monsterStatBlock = fullStatBlock;
+        addCreatureForm.dataset.monsterRawData = fullStatBlock;
     }
 
     renderSoundboard();
@@ -520,10 +524,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tempHpPercentage = (tempHp / maxHp) * 100;
             const hpColor = getHpColor(hp, maxHp);
 
-            const statBlockFormatted = creature.statBlock ? `<pre>${JSON.stringify(JSON.parse(creature.statBlock), null, 2)}</pre>` : 'No stat block available.';
+            const hasStatBlock = creature.rawData;
             creatureDiv.innerHTML = `
                 <div class="combatant-header">
-                    <h4 class="has-tooltip">${creature.name}<span class="tooltip-text">${statBlockFormatted}</span></h4>
+                    <div class="combatant-name-group">
+                        <h4>${creature.name}</h4>
+                        ${hasStatBlock ? `<span class="info-btn combatant-info-btn" data-id="${creature.id}" title="Show Stat Block">ℹ️</span>` : ''}
+                    </div>
                     <div class="header-right-group">
                         <span class="header-stat">AC: ${creature.ac ?? '?'}</span>
                         <span class="header-stat">Speed: ${creature.speed || '?'}</span>
@@ -788,15 +795,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (type === 'monster-search') {
             const searchBtn = document.getElementById('popup-monster-search');
             const queryInput = document.getElementById('popup-monster-query');
-            searchBtn.addEventListener('click', async () => {
+            const addCreatureBtn = document.querySelector('.add-creature-button');
+
+            const handleSearch = async () => {
                 const query = queryInput.value;
-                if (!query) return;
-                const results = await window.electron.ipcRenderer.invoke('search-monsters', query);
-                createPopup('monster-results', null, targetElement, { results });
-            });
+                if (!query || searchBtn.disabled) return;
+
+                const originalButtonText = searchBtn.innerHTML;
+
+                try {
+                    // --- Enter loading state ---
+                    searchBtn.disabled = true;
+                    queryInput.disabled = true;
+                    if (addCreatureBtn) addCreatureBtn.disabled = true;
+                    searchBtn.innerHTML = '🔄'; // Spinner
+
+                    // --- Perform search ---
+                    const results = await window.electron.ipcRenderer.invoke('search-monsters', query);
+                    // On success, create a new popup with results. The old one is discarded.
+                    createPopup('monster-results', null, targetElement, { results });
+
+                } catch (error) {
+                    console.error("Error searching for monster:", error);
+                } finally {
+                    // --- Exit loading state ---
+                    // This block runs whether the search succeeds or fails.
+                    // It restores the UI to its original state.
+                    searchBtn.disabled = false;
+                    queryInput.disabled = false;
+                    if (addCreatureBtn) addCreatureBtn.disabled = false;
+                    searchBtn.innerHTML = originalButtonText;
+                }
+            };
+
+            searchBtn.addEventListener('click', handleSearch);
             queryInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    searchBtn.click();
+                    handleSearch();
                 }
             });
         } else if (type === 'monster-results') {
@@ -821,4 +856,155 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, { once: true });
         }, 0);
     }
+
+    // --- Tooltip Logic ---
+    const tooltip = document.getElementById('stat-block-tooltip');
+
+    function renderStatBlock(rawDataString) {
+        if (!rawDataString) return 'No data available.';
+        try {
+            const monster = JSON.parse(rawDataString);
+
+            // Recursive function to handle complex "entries" fields
+            const renderEntries = (entries) => {
+                if (!entries || !Array.isArray(entries)) return '';
+                return entries.map(entry => {
+                    if (typeof entry === 'string') {
+                        return entry.replace(/{@dice ([^}]+)}/g, '($1)'); // Basic dice tag handling
+                    }
+                    if (entry.type === 'list') {
+                        return `<ul>${entry.items.map(item => `<li>${renderEntries(item.entries || [item.name])}</li>`).join('')}</ul>`;
+                    }
+                    if (entry.type === 'entries') {
+                        return `<div class="trait-block"><strong><em>${entry.name}.</em></strong> ${renderEntries(entry.entries)}</div>`;
+                    }
+                    if (entry.type === 'attack') {
+                         return `${renderEntries(entry.entries)}`;
+                    }
+                    return JSON.stringify(entry); // Fallback for unknown types
+                }).join('');
+            };
+
+            let html = `<h3>${monster.name}</h3>`;
+            if (monster.type) {
+                 html += `<p><em>${monster.size} ${monster.type.type || monster.type}, ${monster.alignment}</em></p>`;
+            }
+            html += `<hr>`;
+
+            // AC, HP, Speed
+            const ac = monster.ac[0].ac ? `${monster.ac[0].ac} ${monster.ac[0].from ? `(${monster.ac[0].from.join(', ')})` : ''}` : monster.ac[0];
+            html += `<div class="property-line"><strong>Armor Class</strong> <span>${ac}</span></div>`;
+            html += `<div class="property-line"><strong>Hit Points</strong> <span>${monster.hp.average} (${monster.hp.formula})</span></div>`;
+            const speed = Object.entries(monster.speed).map(([type, val]) => `${type} ${val.number || val} ft.${val.condition || ''}`).join(', ');
+            html += `<div class="property-line"><strong>Speed</strong> <span>${speed}</span></div>`;
+            html += `<hr>`;
+
+            // Stats
+            html += `<div class="stat-block-grid">
+                <div><strong>STR</strong><br>${monster.str} (${formatModifier(Math.floor((monster.str - 10) / 2))})</div>
+                <div><strong>DEX</strong><br>${monster.dex} (${formatModifier(Math.floor((monster.dex - 10) / 2))})</div>
+                <div><strong>CON</strong><br>${monster.con} (${formatModifier(Math.floor((monster.con - 10) / 2))})</div>
+                <div><strong>INT</strong><br>${monster.int} (${formatModifier(Math.floor((monster.int - 10) / 2))})</div>
+                <div><strong>WIS</strong><br>${monster.wis} (${formatModifier(Math.floor((monster.wis - 10) / 2))})</div>
+                <div><strong>CHA</strong><br>${monster.cha} (${formatModifier(Math.floor((monster.cha - 10) / 2))})</div>
+            </div>`;
+            html += `<hr>`;
+
+            // Skills, Saves, Senses, Languages, Challenge
+            if (monster.save) html += `<div class="property-line"><strong>Saving Throws</strong> <span>${Object.entries(monster.save).map(([stat, val]) => `${stat.toUpperCase()} ${val}`).join(', ')}</span></div>`;
+            if (monster.skill) html += `<div class="property-line"><strong>Skills</strong> <span>${Object.entries(monster.skill).map(([name, val]) => `${name.charAt(0).toUpperCase() + name.slice(1)} ${val}`).join(', ')}</span></div>`;
+            if (monster.senses) html += `<div class="property-line"><strong>Senses</strong> <span>${monster.senses.join(', ')}</span></div>`;
+            if (monster.languages) html += `<div class="property-line"><strong>Languages</strong> <span>${monster.languages.join(', ')}</span></div>`;
+            html += `<div class="property-line"><strong>Challenge</strong> <span>${monster.cr.cr || monster.cr}</span></div>`;
+            html += `<hr>`;
+
+            // Traits
+            if (monster.trait) html += renderEntries(monster.trait);
+
+            // Actions
+            if (monster.action) {
+                html += `<h3>Actions</h3>`;
+                html += renderEntries(monster.action);
+            }
+
+            // Legendary Actions
+            if (monster.legendary) {
+                html += `<h3>Legendary Actions</h3>`;
+                if (monster.legendary.length > 0) {
+                    html += `<p>The ${monster.name} can take ${monster.legendary.length} legendary actions, choosing from the options below. Only one legendary action option can be used at a time and only at the end of another creature's turn. The ${monster.name} regains spent legendary actions at the start of its turn.</p>`;
+                }
+                html += renderEntries(monster.legendary);
+            }
+
+            // Reactions
+            if (monster.reaction) {
+                html += `<h3>Reactions</h3>`;
+                html += renderEntries(monster.reaction);
+            }
+
+            return html;
+        } catch (e) {
+            console.error("Failed to parse or render stat block:", e);
+            return "Error displaying stat block.";
+        }
+    }
+
+    document.body.addEventListener('mouseover', (event) => {
+        if (!event.target.classList.contains('info-btn')) return;
+
+        let rawDataString = null;
+        const target = event.target;
+
+        if (target.id === 'imported-monster-info-btn') {
+            rawDataString = addCreatureForm.dataset.monsterRawData;
+        } else if (target.classList.contains('combatant-info-btn')) {
+            const creatureId = parseInt(target.dataset.id, 10);
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+            if (creature) {
+                rawDataString = creature.rawData;
+            }
+        }
+
+        if (rawDataString) {
+            tooltip.innerHTML = renderStatBlock(rawDataString);
+            tooltip.style.display = 'block'; // Show first to get dimensions
+
+            const mouseX = event.clientX;
+            const mouseY = event.clientY;
+            const tooltipWidth = tooltip.offsetWidth;
+            const tooltipHeight = tooltip.offsetHeight;
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            let top, left;
+
+            // Position based on quadrant, opening towards the center
+            if (mouseX < windowWidth / 2) {
+                left = mouseX + 20; // Open to the right
+            } else {
+                left = mouseX - tooltipWidth - 20; // Open to the left
+            }
+
+            if (mouseY < windowHeight / 2) {
+                top = mouseY + 20; // Open downwards
+            } else {
+                top = mouseY - tooltipHeight - 20; // Open upwards
+            }
+
+            // Screen edge collision detection
+            if (left < 5) left = 5;
+            if (left + tooltipWidth > windowWidth) left = windowWidth - tooltipWidth - 5;
+            if (top < 5) top = 5;
+            if (top + tooltipHeight > windowHeight) top = windowHeight - tooltipHeight - 5;
+
+            tooltip.style.top = `${top}px`;
+            tooltip.style.left = `${left}px`;
+        }
+    });
+
+    document.body.addEventListener('mouseout', (event) => {
+        if (event.target.classList.contains('info-btn')) {
+            tooltip.style.display = 'none';
+        }
+    });
 });
