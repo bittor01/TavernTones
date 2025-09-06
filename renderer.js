@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         { id: 'statBlockArea', title: 'Stat Block' }
     ];
     let currentPanelIndex = 0; // Default to 'Log'
+    let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
     let DND_CONDITIONS = {};
 
     // --- Element Refs ---
@@ -37,9 +38,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Initial UI Setup ---
     addCreatureForm.innerHTML = `
+        <h2>Add Combatant</h2>
         <div class="form-row">
             <div class="form-group name-group">
-                <label for="creature-name">Name:</label>
+                <label for="creature-name">Combatant:</label>
                 <input type="text" id="creature-name" required>
                 <span id="imported-monster-info-btn" class="info-btn" style="display: none;" title="Show Stat Block">ℹ️</span>
             </div>
@@ -81,8 +83,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <input type="text" id="cha-save" placeholder="+1">
         </div>
         <div class="form-actions">
-            <button type="button" id="import-monster-btn">Import Monster</button>
-            <button type="submit" class="add-creature-button">Add Creature</button>
+            <button type="button" id="import-monster-btn">Import Combatant</button>
+            <button type="submit" class="add-creature-button">Add Combatant</button>
             <button type="button" id="clear-form-btn">Clear</button>
         </div>
     `;
@@ -102,6 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Panel Switching Logic ---
     function showPanel(panelId, title) {
         const logTitle = document.getElementById('log-title');
+        const pushButton = document.getElementById('push-panel-btn');
         let foundPanel = false;
 
         logPanels.forEach((panel, index) => {
@@ -115,11 +118,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 panelEl.style.display = 'none';
             }
         });
+
+        // Show push button only for certain panels
+        if (panelId === 'diceLog' || panelId === 'statBlockArea') {
+            pushButton.style.display = 'inline-block';
+        } else {
+            pushButton.style.display = 'none';
+        }
+
         if (!foundPanel) showPanel('logArea', 'Log'); // Fallback
     }
 
     function displayStatBlock(rawDataString) {
         const statBlockArea = document.getElementById('statBlockArea');
+        currentStatBlockData = null; // Reset first
         if (!rawDataString) {
             statBlockArea.innerHTML = '<p>No data available for this creature.</p>';
             showPanel('statBlockArea', 'Stat Block');
@@ -129,6 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const monster = JSON.parse(rawDataString);
             statBlockArea.innerHTML = renderStatBlock(rawDataString);
             showPanel('statBlockArea', monster.name || 'Stat Block'); // Update title and show panel
+            currentStatBlockData = rawDataString; // Set the data for the push button
         } catch (e) {
             statBlockArea.innerHTML = '<p>Error: Could not parse creature data.</p>';
             showPanel('statBlockArea', 'Error');
@@ -177,6 +190,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 showPanel(logPanels[currentPanelIndex].id);
                 break;
+            case 'push-panel-btn': {
+                const activePanelId = logPanels[currentPanelIndex].id;
+                if (activePanelId === 'diceLog') {
+                    const diceLog = document.getElementById('diceLog');
+                    const entries = Array.from(diceLog.children).slice(-12); // Get last 12 entries
+                    const logContent = entries.map(entry => entry.textContent).join('\n');
+                    if (logContent) {
+                        window.electron.ipcRenderer.send('push-dicelog-to-discord', logContent);
+                    }
+                } else if (activePanelId === 'statBlockArea' && currentStatBlockData) {
+                    window.electron.ipcRenderer.send('push-statblock-to-discord', currentStatBlockData);
+                }
+                break;
+            }
             case 'reset-encounter-mid':
             case 'reset-encounter-right':
                 window.electron.ipcRenderer.send('reset-encounter');
@@ -386,6 +413,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const dexMod = calculateModifier(monster.dex);
         document.getElementById('creature-initiative').value = formatModifier(dexMod);
+
+        // --- Auto-parsing for Atk Mod and Save DC ---
+        const rawDataString = JSON.stringify(monster);
+
+        // Parse Attack Modifier from formats like "{@atkr m,r} (+7)" or "{@atkr m} (12)"
+        const atkMatches = [...rawDataString.matchAll(/{@atkr[^}]*?}\s*\(([\+\-]?\d+)\)/g)];
+        if (atkMatches.length > 0) {
+            const highestAtk = Math.max(...atkMatches.map(match => parseInt(match[1], 10)));
+            document.getElementById('attack-modifier').value = formatModifier(highestAtk);
+        }
+
+        // Parse Save DC from "{@dc 15}"
+        const dcMatches = [...rawDataString.matchAll(/{@dc\s+(\d+)}/g)];
+        if (dcMatches.length > 0) {
+            const highestDc = Math.max(...dcMatches.map(match => parseInt(match[1], 10)));
+            document.getElementById('save-dc').value = highestDc;
+        }
 
         document.getElementById('str-score').value = monster.str || 10;
         document.getElementById('dex-score').value = monster.dex || 10;
@@ -748,7 +792,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         } else if (type === 'monster-search') {
             contentHTML = `
-                <input type="text" id="popup-monster-query" placeholder="Monster Name">
+                <input type="text" id="popup-monster-query" placeholder="Combatant Name">
                 <button id="popup-monster-search">Search</button>
             `;
         } else if (type === 'monster-results') {
@@ -990,14 +1034,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             html += `<div class="property-line"><strong>Speed</strong> <span>${renderSpeed(monster.speed)}</span></div><hr>`;
 
             // Stats
-            html += `<div class="stat-block-grid">
-                <div><strong>STR</strong><br>${monster.str || 10} (${formatModifier(Math.floor(((monster.str || 10) - 10) / 2))})</div>
-                <div><strong>DEX</strong><br>${monster.dex || 10} (${formatModifier(Math.floor(((monster.dex || 10) - 10) / 2))})</div>
-                <div><strong>CON</strong><br>${monster.con || 10} (${formatModifier(Math.floor(((monster.con || 10) - 10) / 2))})</div>
-                <div><strong>INT</strong><br>${monster.int || 10} (${formatModifier(Math.floor(((monster.int || 10) - 10) / 2))})</div>
-                <div><strong>WIS</strong><br>${monster.wis || 10} (${formatModifier(Math.floor(((monster.wis || 10) - 10) / 2))})</div>
-                <div><strong>CHA</strong><br>${monster.cha || 10} (${formatModifier(Math.floor(((monster.cha || 10) - 10) / 2))})</div>
-            </div><hr>`;
+            const renderStat = (stat) => `${monster[stat] || 10} (${formatModifier(Math.floor(((monster[stat] || 10) - 10) / 2))})`;
+            html += `<table class="stat-block-table">
+                <tr><th>STR</th><th>DEX</th><th>CON</th></tr>
+                <tr><td>${renderStat('str')}</td><td>${renderStat('dex')}</td><td>${renderStat('con')}</td></tr>
+                <tr><th>INT</th><th>WIS</th><th>CHA</th></tr>
+                <tr><td>${renderStat('int')}</td><td>${renderStat('wis')}</td><td>${renderStat('cha')}</td></tr>
+            </table><hr>`;
 
             // Saves, Skills, Senses, Languages, CR
             if (monster.save) html += `<div class="property-line"><strong>Saving Throws</strong> <span>${Object.entries(monster.save).map(([stat, val]) => `${stat.toUpperCase()} ${val}`).join(', ')}</span></div>`;

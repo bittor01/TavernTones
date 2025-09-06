@@ -19,7 +19,8 @@ contextBridge.exposeInMainWorld('electron', {
         'reset-encounter', 'clear-encounter', 'update-initiative',
         'copy-creature', 'window-ready',
         'load-sound', 'play-sound', 'stop-sound', 'unload-sound',
-        'set-loop', 'set-soundboard-volume', 'request-initial-load'
+        'set-loop', 'set-soundboard-volume', 'request-initial-load',
+        'push-dicelog-to-discord', 'push-statblock-to-discord'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);

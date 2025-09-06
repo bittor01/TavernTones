@@ -601,3 +601,18 @@ input:disabled {
 .interactive-stat:hover {
     background-color: #0056b3; /* A darker blue on hover */
 }
+
+/* --- Stat Block Table --- */
+.stat-block-table {
+    width: 100%;
+    text-align: center;
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+.stat-block-table th, .stat-block-table td {
+    border: 1px solid #444;
+    padding: 5px;
+}
+.stat-block-table th {
+    background-color: #333;
+}

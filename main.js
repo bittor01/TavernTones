@@ -150,6 +150,56 @@ function createEmojiHpBar(creature) {
 
     return emoji.repeat(filledBlocks) + hpBarEmojiMap['empty'].repeat(emptyBlocks);
 }
+
+function formatStatBlockForDiscord(monster) {
+    const embed = new EmbedBuilder()
+        .setColor(0x0099FF)
+        .setTitle(monster.name || 'Unknown Combatant');
+
+    let description = `*${monster.size} ${typeof monster.type === 'object' ? monster.type.type : monster.type}, ${monster.alignment}*\n\n`;
+    const ac = monster.ac.map(a => (a.ac || a) + (a.from ? ` (${a.from.join(', ')})` : '')).join(', ');
+    description += `**Armor Class** ${ac}\n`;
+    description += `**Hit Points** ${monster.hp.average} (${monster.hp.formula})\n`;
+    description += `**Speed** ${Object.entries(monster.speed).map(([type, val]) => `${type} ${val.number || val} ft.`).join(', ')}\n\n`;
+
+    const formatMod = (score) => {
+        const mod = Math.floor(((score || 10) - 10) / 2);
+        return mod >= 0 ? `+${mod}` : `${mod}`;
+    };
+    description += `**STR** ${monster.str} (${formatMod(monster.str)}) | **DEX** ${monster.dex} (${formatMod(monster.dex)}) | **CON** ${monster.con} (${formatMod(monster.con)})\n`;
+    description += `**INT** ${monster.int} (${formatMod(monster.int)}) | **WIS** ${monster.wis} (${formatMod(monster.wis)}) | **CHA** ${monster.cha} (${formatMod(monster.cha)})`;
+
+    embed.setDescription(description);
+
+    const processEntries = (entries) => {
+        if (!entries) return '';
+        return entries.map(e => {
+            if (typeof e === 'string') return e;
+            if (e.name && e.entries) {
+                 const entryText = e.entries.join(' ').replace(/{@(dice|damage|hit) ([^}]+)}/g, '($2)');
+                 return `**_${e.name}._** ${entryText}`;
+            }
+            return '';
+        }).join('\n\n');
+    };
+
+    const addField = (name, entries) => {
+        if (entries && entries.length > 0) {
+            const value = processEntries(entries);
+            if (value) {
+                embed.addFields({ name, value: value.substring(0, 1024) });
+            }
+        }
+    };
+
+    addField('Traits', monster.trait);
+    addField('Actions', monster.action);
+    addField('Legendary Actions', monster.legendary);
+    addField('Reactions', monster.reaction);
+
+    return embed;
+}
+
 async function checkAndShowReminders(creature, turnEvent) {
     if (!creature) return;
 
@@ -425,6 +475,41 @@ async function ipcloader() {
             const monster = await fiveEToolsParser.getExact('bestiary', name, source);
             logToRenderer(`[IPC] Found monster details, returning to renderer.`);
             return monster;
+        });
+
+        ipcMain.on('push-dicelog-to-discord', async (event, logContent) => {
+            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+            if (!channel) {
+                logToRenderer(`[push-dicelog] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
+                return;
+            }
+            try {
+                const embed = new EmbedBuilder()
+                    .setColor(0x0099FF)
+                    .setTitle('Dice Rolls')
+                    .setDescription(logContent)
+                    .setTimestamp();
+                await channel.send({ embeds: [embed] });
+                logToRenderer('[push-dicelog] Successfully pushed dice log to chat.');
+            } catch (error) {
+                logToRenderer(`[push-dicelog] FAILED to send embed: ${error}`);
+            }
+        });
+
+        ipcMain.on('push-statblock-to-discord', async (event, rawDataString) => {
+            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+            if (!channel) {
+                logToRenderer(`[push-statblock] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
+                return;
+            }
+            try {
+                const monster = JSON.parse(rawDataString);
+                const embed = formatStatBlockForDiscord(monster);
+                await channel.send({ embeds: [embed] });
+                logToRenderer('[push-statblock] Successfully pushed stat block to chat.');
+            } catch (error) {
+                logToRenderer(`[push-statblock] FAILED to send embed: ${error}`);
+            }
         });
     }
     else {
