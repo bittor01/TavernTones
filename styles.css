@@ -430,6 +430,61 @@ button:disabled {
     border: 1px solid #666;
 }
 
+/* Styles for the rearranged combatant header */
+.combatant-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    /* Removing grid properties */
+}
+
+.combatant-header h4 {
+    margin: 0;
+    flex-grow: 1; /* Allows the name to take up available space */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-right-group {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Adds space between the elements */
+    flex-shrink: 0; /* Prevents this group from shrinking */
+}
+
+.header-right-group .header-stat {
+    font-size: 0.9em;
+    background-color: #5a5a5a;
+    padding: 2px 5px;
+    border-radius: 4px;
+    white-space: nowrap; /* Prevents wrapping */
+}
+
+.header-right-group button {
+    background: none;
+    border: none;
+    font-size: 1.1em;
+    padding: 2px;
+    cursor: pointer;
+}
+
+/* Styles for monster import UI */
+.form-actions {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 10px;
+    gap: 10px;
+}
+
+#monster-import-container {
+    padding: 10px;
+    margin-top: 10px;
+    background-color: #333;
+    border-radius: 4px;
+}
+
 /* --- Soundboard Styles --- */
 #soundboard-container {
     flex-shrink: 0; /* Prevent it from shrinking */

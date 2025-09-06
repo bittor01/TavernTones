@@ -72,7 +72,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             <input type="text" id="wis-save" placeholder="+1">
             <input type="text" id="cha-save" placeholder="+1">
         </div>
-        <button type="submit" class="add-creature-button">Add Creature</button>
+        <div id="monster-import-container" style="display: none;">
+            <!-- This will be populated with search input and results -->
+        </div>
+        <div class="form-actions">
+            <button type="button" id="import-monster-btn">Import Monster</button>
+            <button type="submit" class="add-creature-button">Add Creature</button>
+        </div>
     `;
 
     // --- Logging ---
@@ -88,6 +94,104 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Event Listeners ---
+    document.getElementById('import-monster-btn').addEventListener('click', () => {
+        const container = document.getElementById('monster-import-container');
+        container.style.display = 'block';
+        container.innerHTML = `
+            <div class="form-row">
+                <div class="form-group name-group">
+                    <label for="monster-search-query">Monster Name:</label>
+                    <input type="text" id="monster-search-query" placeholder="e.g., Goblin">
+                </div>
+                <button type="button" id="monster-search-btn">Search</button>
+            </div>
+            <div id="monster-results-container"></div>
+        `;
+
+        document.getElementById('monster-search-btn').addEventListener('click', async () => {
+            const query = document.getElementById('monster-search-query').value;
+            if (!query) return;
+            const results = await window.electron.ipcRenderer.invoke('search-monsters', query);
+            displayMonsterResults(results);
+        });
+    });
+
+    function displayMonsterResults(results) {
+        const container = document.getElementById('monster-results-container');
+        if (!results || results.length === 0) {
+            container.innerHTML = `<p>No results found.</p>`;
+            return;
+        }
+
+        const options = results.map(item => `<option value="${item.name}__${item.source}">${item.name} (${item.source})</option>`).join('');
+        container.innerHTML = `
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="monster-select">Select Monster:</label>
+                    <select id="monster-select">
+                        <option value="">--Please choose an option--</option>
+                        ${options}
+                    </select>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('monster-select').addEventListener('change', async (event) => {
+            const selectedValue = event.target.value;
+            if (!selectedValue) return;
+
+            const [name, source] = selectedValue.split('__');
+            const monster = await window.electron.ipcRenderer.invoke('get-monster-details', { name, source });
+
+            if (monster) {
+                populateMonsterForm(monster);
+            }
+
+            // Hide the import UI after selection
+            const importContainer = document.getElementById('monster-import-container');
+            importContainer.style.display = 'none';
+            importContainer.innerHTML = '';
+        });
+    }
+
+    function populateMonsterForm(monster) {
+        if (!monster) return;
+
+        // Populate basic fields
+        document.getElementById('creature-name').value = monster.name || '';
+        document.getElementById('creature-hp').value = monster.hp.formula || monster.hp.average || '';
+
+        // Handle complex AC structure
+        if (monster.ac && monster.ac[0]) {
+            document.getElementById('creature-ac').value = monster.ac[0].ac || monster.ac[0];
+        } else {
+            document.getElementById('creature-ac').value = '';
+        }
+
+        // Determine highest speed
+        let highestSpeed = 0;
+        if (monster.speed) {
+            if (typeof monster.speed === 'number') {
+                highestSpeed = monster.speed;
+            } else if (typeof monster.speed === 'object') {
+                const speeds = Object.values(monster.speed).filter(s => typeof s === 'number');
+                if (speeds.length > 0) {
+                    highestSpeed = Math.max(...speeds);
+                }
+            }
+        }
+        document.getElementById('creature-speed').value = highestSpeed > 0 ? `${highestSpeed}ft` : '30ft';
+
+        // Calculate initiative bonus from dexterity
+        const dexMod = Math.floor(((monster.dex || 10) - 10) / 2);
+        const initBonus = dexMod >= 0 ? `+${dexMod}` : `${dexMod}`;
+        document.getElementById('creature-initiative').value = initBonus;
+
+        // Attach the full stat block for the tooltip
+        const fullStatBlock = JSON.stringify(monster); // Storing the whole object
+        addCreatureForm.dataset.monsterStatBlock = fullStatBlock;
+    }
+
     document.addEventListener('click', (event) => {
         const targetId = event.target.id;
 
@@ -191,6 +295,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             isFriendly: false,
             reminders: { start: '', end: '' }
         };
+
+        if (addCreatureForm.dataset.monsterStatBlock) {
+            creature.statBlock = addCreatureForm.dataset.monsterStatBlock;
+            delete addCreatureForm.dataset.monsterStatBlock; // Clear it after use
+        }
+
         window.electron.ipcRenderer.send('add-creature', creature);
         addCreatureForm.reset();
         document.getElementById('creature-name').focus();
@@ -462,19 +572,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tempHpPercentage = (tempHp / maxHp) * 100;
             const hpColor = getHpColor(hp, maxHp);
 
+            creatureDiv.title = creature.statBlock ? JSON.stringify(JSON.parse(creature.statBlock), null, 2) : 'No stat block available.';
             creatureDiv.innerHTML = `
                 <div class="combatant-header">
                     <h4>${creature.name}</h4>
-                    <div class="header-controls">
+                    <div class="header-right-group">
                         <button class="attack-roll-btn" data-id="${creature.id}">Attack ${creature.attackMod || '+0'}</button>
-                        <div class="header-stats">
-                            <span>AC: ${creature.ac ?? '?'}</span>
-                            <span>Speed: ${creature.speed || '?'}</span>
-                            <span>DC: ${creature.saveDc ?? '?'}</span>
-                        </div>
-                    </div>
-                    <div class="card-controls">
-                        <button class="copy-btn" title="Copy" data-id="${creature.id}">📋</button>
+                        <span class="header-stat">AC: ${creature.ac ?? '?'}</span>
+                        <span class="header-stat">Speed: ${creature.speed || '?'}</span>
+                        <span class="header-stat">DC: ${creature.saveDc ?? '?'}</span>
+                        <button class="copy-btn" title="Copy" data-id="${creature.id}">👥</button>
                         <button class="edit-btn" title="Edit" data-id="${creature.id}">📝</button>
                         <button class="move-to-bottom-btn" title="Move to Bottom" data-id="${creature.id}">🔽</button>
                         <button class="remove-btn" title="Remove" data-id="${creature.id}">❌</button>

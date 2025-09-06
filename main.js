@@ -403,6 +403,18 @@ async function ipcloader() {
         ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
             initiativeTracker.updateCreatureFlag(creatureId, flag, value);
         });
+
+        ipcMain.handle('search-monsters', async (event, query) => {
+            if (!fiveEToolsParser) return [];
+            const results = await fiveEToolsParser.searchByName('bestiary', query);
+            return results;
+        });
+
+        ipcMain.handle('get-monster-details', async (event, { name, source }) => {
+            if (!fiveEToolsParser) return null;
+            const monster = await fiveEToolsParser.getExact('bestiary', name, source);
+            return monster;
+        });
     }
     else {
         logToRenderer('ipcloader() waiting for window to load...');
