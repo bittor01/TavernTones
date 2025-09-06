@@ -322,12 +322,7 @@ async function ipcloader() {
                     .setTitle('Initiative Order')
                     .setTimestamp();
 
-                const NAME_WIDTH = 20;
-                const CONDITION_WIDTH = 9; // Approx 4 emojis + space
-
-                let description = '`   Init | Name                 | Conditions | HP Bar   `\n';
-                description +=    '`------------------------------------------------------`\n';
-
+                let description = '';
                 initiativeOrder.forEach((creature, index) => {
                     const hpBar = createEmojiHpBar(creature);
 
@@ -339,11 +334,12 @@ async function ipcloader() {
                         conditionStr = conditionEmojis.join('');
                     }
 
-                    const activeMarker = index === currentTurnIndex ? '➤' : ' ';
-                    const initiativeStr = creature.initiative.toString().padStart(3, ' ');
-                    const nameStr = (creature.name || '').substring(0, NAME_WIDTH);
+                    const activeMarker = index === currentTurnIndex ? '➤ ' : '';
+                    const initiativeStr = creature.initiative.toString();
+                    const nameStr = (creature.name || '');
 
-                    const line = `\`${activeMarker}${initiativeStr} | ${nameStr.padEnd(NAME_WIDTH)} | ${conditionStr.padEnd(CONDITION_WIDTH)} | ${hpBar}\``;
+                    // New layout: Init | HP Bar | Name | Conditions
+                    const line = `${activeMarker}**${initiativeStr}** | ${hpBar} | ${nameStr} | ${conditionStr}`;
                     description += line + '\n';
                 });
 

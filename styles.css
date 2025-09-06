@@ -130,21 +130,17 @@ button:disabled {
     background-color: #4f5b66;
     font-weight: bold;
 }
+
+/* Reorder elements visually using flexbox 'order' property */
 .active-chevron {
     color: #a0c8ff;
+    order: 1;
 }
 .initiative-score {
     font-weight: bold;
     color: #ccc;
+    order: 2;
 }
-
-.initiative-entry .creature-name {
-    flex-grow: 1; /* Name takes up available space */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
 .initiative-hp-bar-container {
     width: 120px; /* Fixed width for alignment */
     height: 12px;
@@ -153,13 +149,21 @@ button:disabled {
     position: relative;
     overflow: hidden;
     flex-shrink: 0; /* Prevent from shrinking */
+    order: 3;
 }
-
+.initiative-entry .creature-name {
+    flex-grow: 1; /* Name takes up available space */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    order: 4;
+}
 .initiative-conditions {
     flex-shrink: 0; /* Prevent emojis from shrinking */
     font-size: 0.9em;
     width: 80px; /* Fixed width for alignment */
-    text-align: right;
+    text-align: left; /* Align left now that it's at the end */
+    order: 5;
 }
 
 .panel-header {
