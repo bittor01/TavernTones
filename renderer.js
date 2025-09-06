@@ -109,10 +109,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
 
         document.getElementById('monster-search-btn').addEventListener('click', async () => {
+            logMessage('[Import Monster] Search button clicked.');
             const query = document.getElementById('monster-search-query').value;
-            if (!query) return;
-            const results = await window.electron.ipcRenderer.invoke('search-monsters', query);
-            displayMonsterResults(results);
+            if (!query) {
+                logMessage('[Import Monster] Query is empty, aborting.');
+                return;
+            }
+            logMessage(`[Import Monster] Invoking "search-monsters" with query: "${query}"`);
+            try {
+                const results = await window.electron.ipcRenderer.invoke('search-monsters', query);
+                logMessage(`[Import Monster] Received ${results.length} results from backend.`);
+                displayMonsterResults(results);
+            } catch (error) {
+                logMessage(`[Import Monster] Error invoking "search-monsters": ${error.message}`);
+            }
         });
     });
 

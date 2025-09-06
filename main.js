@@ -405,14 +405,24 @@ async function ipcloader() {
         });
 
         ipcMain.handle('search-monsters', async (event, query) => {
-            if (!fiveEToolsParser) return [];
+            logToRenderer(`[IPC] Received "search-monsters" with query: "${query}"`);
+            if (!fiveEToolsParser) {
+                logToRenderer('[IPC] Parser not available.');
+                return [];
+            }
             const results = await fiveEToolsParser.searchByName('bestiary', query);
+            logToRenderer(`[IPC] Found ${results.length} monsters, returning to renderer.`);
             return results;
         });
 
         ipcMain.handle('get-monster-details', async (event, { name, source }) => {
-            if (!fiveEToolsParser) return null;
+            logToRenderer(`[IPC] Received "get-monster-details" for: ${name} (${source})`);
+            if (!fiveEToolsParser) {
+                 logToRenderer('[IPC] Parser not available.');
+                return null;
+            }
             const monster = await fiveEToolsParser.getExact('bestiary', name, source);
+            logToRenderer(`[IPC] Found monster details, returning to renderer.`);
             return monster;
         });
     }
