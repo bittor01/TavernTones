@@ -124,43 +124,42 @@ button:disabled {
     padding: 8px;
     border-radius: 4px;
     cursor: pointer;
+    gap: 10px; /* Add gap for spacing */
 }
 .initiative-entry.active-turn {
     background-color: #4f5b66;
     font-weight: bold;
 }
 .active-chevron {
-    margin-right: 8px;
     color: #a0c8ff;
 }
 .initiative-score {
-    margin-right: 10px;
     font-weight: bold;
     color: #ccc;
-    flex-shrink: 0; /* Prevent score from shrinking */
 }
 
-.initiative-details {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    margin: 0 10px;
-    min-width: 0; /* Allow flex children to shrink */
+.initiative-entry .creature-name {
+    flex-grow: 1; /* Name takes up available space */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .initiative-hp-bar-container {
-    width: 100%;
-    height: 8px;
+    width: 120px; /* Fixed width for alignment */
+    height: 12px;
     background-color: #1e1e1e;
     border-radius: 4px;
     position: relative;
     overflow: hidden;
-    margin-top: 4px;
+    flex-shrink: 0; /* Prevent from shrinking */
 }
 
 .initiative-conditions {
     flex-shrink: 0; /* Prevent emojis from shrinking */
     font-size: 0.9em;
+    width: 80px; /* Fixed width for alignment */
+    text-align: right;
 }
 
 .panel-header {

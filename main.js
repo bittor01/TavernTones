@@ -125,30 +125,33 @@ apploader();
 
 
 function createEmojiHpBar(creature) {
-    let hp = creature.hp || 0;
-    let maxHp = creature.maxHp || 1;
-    let temphp = creature.tempHp || 0;
+    const BAR_LENGTH = 8;
+    const hp = creature.hp || 0;
+    const maxHp = creature.maxHp || 1;
+    const tempHp = creature.tempHp || 0;
 
     if (hp <= 0) {
-        return hpBarEmojiMap['#6c757d'].repeat(8);
+        return hpBarEmojiMap['#6c757d'].repeat(BAR_LENGTH); // All dead blocks
     }
 
-    let color = getHpColor(hp, maxHp);
-    if (temphp > 0 || hp > maxHp) {
-        color = '#8a2be2'; // Purple for temp HP
+    const hpBlocks = Math.round((hp / maxHp) * BAR_LENGTH);
+    const tempHpBlocks = Math.min(BAR_LENGTH, Math.round((tempHp / maxHp) * BAR_LENGTH)); // Cap at bar length
+
+    const hpColorEmoji = hpBarEmojiMap[getHpColor(hp, maxHp)] || hpBarEmojiMap['#007bff'];
+    const tempHpEmoji = '⭐';
+    const emptyEmoji = hpBarEmojiMap['empty'];
+
+    let bar = '';
+    for (let i = 0; i < BAR_LENGTH; i++) {
+        if (i < tempHpBlocks) {
+            bar += tempHpEmoji;
+        } else if (i < hpBlocks) {
+            bar += hpColorEmoji;
+        } else {
+            bar += emptyEmoji;
+        }
     }
-
-    if (hp > maxHp) {
-        hp = maxHp;
-    }
-
-    const emoji = hpBarEmojiMap[color] || hpBarEmojiMap['#007bff'];
-    const percentage = Math.max(0, (hp / maxHp));
-
-    const filledBlocks = Math.round(percentage * 8);
-    const emptyBlocks = 8 - filledBlocks;
-
-    return emoji.repeat(filledBlocks) + hpBarEmojiMap['empty'].repeat(emptyBlocks);
+    return bar;
 }
 
 function formatStatBlockForDiscord(monster) {
@@ -319,15 +322,29 @@ async function ipcloader() {
                     .setTitle('Initiative Order')
                     .setTimestamp();
 
-                let description = '';
+                const NAME_WIDTH = 20;
+                const CONDITION_WIDTH = 9; // Approx 4 emojis + space
+
+                let description = '`   Init | Name                 | Conditions | HP Bar   `\n';
+                description +=    '`------------------------------------------------------`\n';
+
                 initiativeOrder.forEach((creature, index) => {
                     const hpBar = createEmojiHpBar(creature);
-                    const conditions = (creature.conditions || [])
-                        .map(c => DND_CONDITIONS[c]?.emoji || c)
-                        .join(' ');
 
-                    const activeMarker = index === currentTurnIndex ? '➤ ' : '';
-                    description += `${activeMarker}**${creature.initiative}** - ${creature.name}  |  ${hpBar}  |  ${conditions}\n`;
+                    let conditionEmojis = (creature.conditions || []).map(c => DND_CONDITIONS[c]?.emoji || '');
+                    let conditionStr;
+                    if (conditionEmojis.length > 3) {
+                        conditionStr = conditionEmojis.slice(0, 3).join('') + '♾️';
+                    } else {
+                        conditionStr = conditionEmojis.join('');
+                    }
+
+                    const activeMarker = index === currentTurnIndex ? '➤' : ' ';
+                    const initiativeStr = creature.initiative.toString().padStart(3, ' ');
+                    const nameStr = (creature.name || '').substring(0, NAME_WIDTH);
+
+                    const line = `\`${activeMarker}${initiativeStr} | ${nameStr.padEnd(NAME_WIDTH)} | ${conditionStr.padEnd(CONDITION_WIDTH)} | ${hpBar}\``;
+                    description += line + '\n';
                 });
 
                 embed.setDescription(description);

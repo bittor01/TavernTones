@@ -538,20 +538,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
 
-            const conditionEmojis = (creature.conditions || [])
-                .map(conditionName => DND_CONDITIONS[conditionName]?.emoji || '')
-                .join(' ');
+            let conditionEmojis = (creature.conditions || []).map(c => DND_CONDITIONS[c]?.emoji || '');
+            let conditionStr;
+            if (conditionEmojis.length > 3) {
+                conditionStr = conditionEmojis.slice(0, 3).join('') + '♾️';
+            } else {
+                conditionStr = conditionEmojis.join('');
+            }
 
             let content = '';
             if (isActive) {
                 content += '<span class="active-chevron">></span>';
             }
             content += `<span class="initiative-score" data-id="${creature.id}">${creature.initiative}</span>`;
-            content += `<div class="initiative-details">
-                            <span class="creature-name">${creature.name}</span>
-                            ${hpBarHTML}
-                        </div>`;
-            content += `<span class="initiative-conditions">${conditionEmojis}</span>`;
+            content += `<span class="creature-name">${creature.name}</span>`;
+            content += `<span class="initiative-conditions">${conditionStr}</span>`;
+            content += hpBarHTML;
 
             creatureDiv.innerHTML = content;
 
