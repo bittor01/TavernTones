@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <div class="form-row">
             <div class="form-group"><label for="creature-initiative">Initiative:</label><input type="text" id="creature-initiative" placeholder="+3 or 15"></div>
-            <div class="form-group"><label for="creature-hp">HP:</label><input type="number" id="creature-hp" placeholder="30"></div>
+            <div class="form-group"><label for="creature-hp">HP:</label><input type="text" id="creature-hp" placeholder="2d8+2"></div>
             <div class="form-group"><label for="creature-ac">AC:</label><input type="number" id="creature-ac" placeholder="15"></div>
         </div>
         <div class="form-row">
@@ -72,7 +72,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             <input type="text" id="wis-save" placeholder="+1">
             <input type="text" id="cha-save" placeholder="+1">
         </div>
-        <button type="submit" class="add-creature-button">Add Creature</button>
+        <div class="form-actions">
+            <button type="button" id="import-monster-btn">Import Monster</button>
+            <button type="submit" class="add-creature-button">Add Creature</button>
+            <button type="button" id="clear-form-btn">Clear</button>
+        </div>
     `;
 
     // --- Logging ---
@@ -92,19 +96,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         const targetId = event.target.id;
 
         switch (targetId) {
+            case 'import-monster-btn':
+                createPopup('monster-search', null, event.target);
+                break;
+            case 'clear-form-btn':
+                addCreatureForm.reset();
+                delete addCreatureForm.dataset.monsterStatBlock;
+                break;
             case 'log-toggle-btn': {
                 const logArea = document.getElementById('logArea');
                 const diceLog = document.getElementById('diceLog');
                 const logTitle = document.getElementById('log-title');
                 if (logArea.style.display === 'none') {
-                    logArea.style.display = 'none';
-                    diceLog.style.display = 'block';
-                    logTitle.textContent = 'Dice Log';
-
-                } else {
-                    logArea.style.display = 'block';
+                    logArea.style.display = 'block'; // Show general log
                     diceLog.style.display = 'none';
                     logTitle.textContent = 'Log';
+
+                } else {
+                    logArea.style.display = 'none';
+                    diceLog.style.display = 'block'; // Show dice log
+                    logTitle.textContent = 'Dice Log';
                 }
                 break;
             }
@@ -163,8 +174,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             id: Date.now(),
             name: getVal('creature-name'),
             initiative: getVal('creature-initiative'),
-            hp: getInt('creature-hp') || 0,
-            maxHp: getInt('creature-hp') || 0, // Set maxHp from the same field
+            hp: getVal('creature-hp') || '10', // Keep as string for dice notation
+            maxHp: getVal('creature-hp') || '10',
             tempHp: 0, // Initialize tempHp to 0
             ac: getInt('creature-ac'),
             speed: getVal('creature-speed'),
@@ -191,6 +202,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             isFriendly: false,
             reminders: { start: '', end: '' }
         };
+
+        if (addCreatureForm.dataset.monsterStatBlock) {
+            creature.statBlock = addCreatureForm.dataset.monsterStatBlock;
+            delete addCreatureForm.dataset.monsterStatBlock; // Clear it after use
+        }
+
         window.electron.ipcRenderer.send('add-creature', creature);
         addCreatureForm.reset();
         document.getElementById('creature-name').focus();
@@ -227,19 +244,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         initiativeOrder = data.initiativeOrder;
         currentTurnIndex = data.currentTurnIndex;
 
-        // Create a map of the latest creature data for efficient lookup
         const newCreatureMap = new Map(initiativeOrder.map(c => [c.id, c]));
 
-        // Get the updated data for creatures already in the panel, preserving their order
         const syncedPanelOrder = combatantPanelOrder
             .map(oldCreature => newCreatureMap.get(oldCreature.id))
-            .filter(Boolean); // Filter out any creatures that may have been deleted
+            .filter(Boolean);
 
-        // Identify any brand-new creatures that are not yet in our panel order
         const syncedPanelIds = new Set(syncedPanelOrder.map(c => c.id));
         const newCreatures = initiativeOrder.filter(c => !syncedPanelIds.has(c.id));
 
-        // Update the panel order with the synced and new creatures
         combatantPanelOrder = [...syncedPanelOrder, ...newCreatures];
 
         renderInitiativeList(initiativeOrder, currentTurnIndex);
@@ -282,6 +295,56 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('wis-save').value = saves.wis || '';
         document.getElementById('cha-save').value = saves.cha || '';
     });
+
+    function populateMonsterForm(monster) {
+        if (!monster) return;
+
+        document.getElementById('creature-name').value = monster.name || '';
+        document.getElementById('creature-hp').value = monster.hp.formula || monster.hp.average || '';
+
+        if (monster.ac && monster.ac[0]) {
+            document.getElementById('creature-ac').value = monster.ac[0].ac || monster.ac[0];
+        } else {
+            document.getElementById('creature-ac').value = '';
+        }
+
+        let highestSpeed = 0;
+        if (monster.speed) {
+            if (typeof monster.speed === 'number') {
+                highestSpeed = monster.speed;
+            } else if (typeof monster.speed === 'object') {
+                const speeds = Object.values(monster.speed).filter(s => typeof s === 'number');
+                if (speeds.length > 0) {
+                    highestSpeed = Math.max(...speeds);
+                }
+            }
+        }
+        document.getElementById('creature-speed').value = highestSpeed > 0 ? `${highestSpeed}ft` : '30ft';
+
+        const calculateModifier = (score) => Math.floor(((score || 10) - 10) / 2);
+        const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
+
+        const dexMod = calculateModifier(monster.dex);
+        document.getElementById('creature-initiative').value = formatModifier(dexMod);
+
+        document.getElementById('str-score').value = monster.str || 10;
+        document.getElementById('dex-score').value = monster.dex || 10;
+        document.getElementById('con-score').value = monster.con || 10;
+        document.getElementById('int-score').value = monster.int || 10;
+        document.getElementById('wis-score').value = monster.wis || 10;
+        document.getElementById('cha-score').value = monster.cha || 10;
+
+        const saves = monster.save || {};
+        document.getElementById('str-save').value = saves.str || formatModifier(calculateModifier(monster.str));
+        document.getElementById('dex-save').value = saves.dex || formatModifier(calculateModifier(monster.dex));
+        document.getElementById('con-save').value = saves.con || formatModifier(calculateModifier(monster.con));
+        document.getElementById('int-save').value = saves.int || formatModifier(calculateModifier(monster.int));
+        document.getElementById('wis-save').value = saves.wis || formatModifier(calculateModifier(monster.wis));
+        document.getElementById('cha-save').value = saves.cha || formatModifier(calculateModifier(monster.cha));
+
+        const fullStatBlock = JSON.stringify(monster);
+        addCreatureForm.dataset.monsterStatBlock = fullStatBlock;
+    }
 
     renderSoundboard();
 
@@ -357,7 +420,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             creatureDiv.className = 'initiative-entry' + (isActive ? ' active-turn' : '');
             creatureDiv.dataset.id = creature.id;
 
-            // HP Bar Logic
             const hp = creature.hp || 0;
             const maxHp = creature.maxHp || 1;
             const tempHp = creature.tempHp || 0;
@@ -372,12 +434,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
 
-            // Condition Emojis
             const conditionEmojis = (creature.conditions || [])
                 .map(conditionName => DND_CONDITIONS[conditionName]?.emoji || '')
                 .join(' ');
 
-            // Build Content
             let content = '';
             if (isActive) {
                 content += '<span class="active-chevron">></span>';
@@ -422,15 +482,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         combatantDetailsListDiv.innerHTML = '';
         if (!orderToRender || orderToRender.length === 0) return;
 
-        // Find the ID of the creature whose turn it is, for highlighting
         const activeCreatureId = initiativeOrder.length > 0 ? initiativeOrder[currentTurnIndex]?.id : null;
 
         orderToRender.forEach((creature) => {
             const creatureDiv = document.createElement('div');
-            // Highlight based on the actual turn index from the main initiativeOrder
             const isActive = activeCreatureId === creature.id;
             creatureDiv.className = 'combatant-details-entry' + (isActive ? ' active-turn' : '');
-            creatureDiv.dataset.id = creature.id; // Add id for scrolling
+            creatureDiv.dataset.id = creature.id;
 
             const saves = creature.saves || {};
             const scores = creature.scores || {};
@@ -462,19 +520,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tempHpPercentage = (tempHp / maxHp) * 100;
             const hpColor = getHpColor(hp, maxHp);
 
+            const statBlockFormatted = creature.statBlock ? `<pre>${JSON.stringify(JSON.parse(creature.statBlock), null, 2)}</pre>` : 'No stat block available.';
             creatureDiv.innerHTML = `
                 <div class="combatant-header">
-                    <h4>${creature.name}</h4>
-                    <div class="header-controls">
-                        <button class="attack-roll-btn" data-id="${creature.id}">Attack ${creature.attackMod || '+0'}</button>
-                        <div class="header-stats">
-                            <span>AC: ${creature.ac ?? '?'}</span>
-                            <span>Speed: ${creature.speed || '?'}</span>
-                            <span>DC: ${creature.saveDc ?? '?'}</span>
-                        </div>
-                    </div>
-                    <div class="card-controls">
-                        <button class="copy-btn" title="Copy" data-id="${creature.id}">📋</button>
+                    <h4 class="has-tooltip">${creature.name}<span class="tooltip-text">${statBlockFormatted}</span></h4>
+                    <div class="header-right-group">
+                        <span class="header-stat">AC: ${creature.ac ?? '?'}</span>
+                        <span class="header-stat">Speed: ${creature.speed || '?'}</span>
+                        <span class="header-stat">DC: ${creature.saveDc ?? '?'}</span>
+                        <button class="copy-btn" title="Copy" data-id="${creature.id}">👥</button>
                         <button class="edit-btn" title="Edit" data-id="${creature.id}">📝</button>
                         <button class="move-to-bottom-btn" title="Move to Bottom" data-id="${creature.id}">🔽</button>
                         <button class="remove-btn" title="Remove" data-id="${creature.id}">❌</button>
@@ -482,6 +536,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <div class="combatant-body">
                     <div class="main-controls">
+                        <button class="attack-roll-btn" data-id="${creature.id}">⚔️ Attack ${creature.attackMod || '+0'}</button>
                         <div class="hp-bar-container">
                             <div class="hp-bar-temp" style="width: ${tempHpPercentage}%;"></div>
                             <div class="hp-bar-current" style="width: ${hpPercentage}%; background-color: ${hpColor};"></div>
@@ -573,13 +628,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (creatureIndex > -1) {
                 const [creature] = combatantPanelOrder.splice(creatureIndex, 1);
                 combatantPanelOrder.push(creature);
-                // Re-render the list with the new order
                 renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
             }
         }));
     }
 
-    function createPopup(type, creatureId, targetElement) {
+    function createPopup(type, creatureId, targetElement, data = {}) {
         // Close any existing popups
         document.querySelectorAll('.popup-dialog').forEach(p => p.remove());
 
@@ -629,22 +683,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button id="popup-reminders-save">Save</button>
                 </div>
             `;
+        } else if (type === 'monster-search') {
+            contentHTML = `
+                <input type="text" id="popup-monster-query" placeholder="Monster Name">
+                <button id="popup-monster-search">Search</button>
+            `;
+        } else if (type === 'monster-results') {
+            const results = data.results || [];
+            if (results.length === 0) {
+                contentHTML = `<p>No results found.</p>`;
+            } else {
+                const itemsHTML = results.map(r => `<div class="popup-result-item" data-name="${r.name}" data-source="${r.source}">${r.name} (${r.source})</div>`).join('');
+                contentHTML = `<div class="popup-results-list">${itemsHTML}</div>`;
+            }
         }
 
         popup.innerHTML = contentHTML;
         document.body.appendChild(popup);
 
-        // Programmatically focus the first input or textarea in the popup
         const inputToFocus = popup.querySelector('input[type="text"], input[type="number"], textarea');
         if (inputToFocus) {
             inputToFocus.focus();
         }
 
-        // Position popup near the button that was clicked
         const rect = targetElement.getBoundingClientRect();
         popup.style.top = `${rect.bottom + window.scrollY}px`;
-        const popupWidth = popup.offsetWidth;
-        popup.style.left = `${rect.left + window.scrollX - popupWidth}px`;
+
+        popup.style.left = `${rect.left + window.scrollX}px`;
 
         // Add listeners for popup actions
         if (type === 'hp') {
@@ -719,6 +784,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const end = document.getElementById('end-turn-reminder').value;
                 window.electron.ipcRenderer.send('update-reminders', { creatureId: parseInt(creatureId), reminders: { start, end } });
                 popup.remove();
+            });
+        } else if (type === 'monster-search') {
+            const searchBtn = document.getElementById('popup-monster-search');
+            const queryInput = document.getElementById('popup-monster-query');
+            searchBtn.addEventListener('click', async () => {
+                const query = queryInput.value;
+                if (!query) return;
+                const results = await window.electron.ipcRenderer.invoke('search-monsters', query);
+                createPopup('monster-results', null, targetElement, { results });
+            });
+            queryInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    searchBtn.click();
+                }
+            });
+        } else if (type === 'monster-results') {
+            popup.querySelectorAll('.popup-result-item').forEach(item => {
+                item.addEventListener('click', async () => {
+                    const { name, source } = item.dataset;
+                    const monster = await window.electron.ipcRenderer.invoke('get-monster-details', { name, source });
+                    if (monster) {
+                        populateMonsterForm(monster);
+                    }
+                    popup.remove();
+                });
             });
         }
 

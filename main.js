@@ -11,13 +11,15 @@ const { Client, GatewayIntentBits, EmbedBuilder, ModalBuilder, TextInputBuilder,
 console.log('Discord.js Client loaded.');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 console.log('Discord.js Voice loaded.');
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent] });
 console.log('Discord client instantiated.');
 const axios = require('axios');
 console.log('Axios loaded.');
 const BackendAudioPlayer = require('./BackendAudioPlayer.js');
 const CommandHandler = require('./CommandHandler.js');
 const MagicItemGenerator = require('./MagicItemGenerator.js');
+const FiveEToolsParser = require('./5eParser.js');
+const { format5eResult } = require('./5eEmbedFormatter.js');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
 const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
@@ -29,6 +31,7 @@ let musicPlayer;
 let lastResponse = null; // Variable to store the last response
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
+let fiveEToolsParser;
 const maSelections = new Map();
 
 
@@ -401,6 +404,28 @@ async function ipcloader() {
         ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
             initiativeTracker.updateCreatureFlag(creatureId, flag, value);
         });
+
+        ipcMain.handle('search-monsters', async (event, query) => {
+            logToRenderer(`[IPC] Received "search-monsters" with query: "${query}"`);
+            if (!fiveEToolsParser) {
+                logToRenderer('[IPC] Parser not available.');
+                return [];
+            }
+            const results = await fiveEToolsParser.searchByName('bestiary', query);
+            logToRenderer(`[IPC] Found ${results.length} monsters, returning to renderer.`);
+            return results;
+        });
+
+        ipcMain.handle('get-monster-details', async (event, { name, source }) => {
+            logToRenderer(`[IPC] Received "get-monster-details" for: ${name} (${source})`);
+            if (!fiveEToolsParser) {
+                 logToRenderer('[IPC] Parser not available.');
+                return null;
+            }
+            const monster = await fiveEToolsParser.getExact('bestiary', name, source);
+            logToRenderer(`[IPC] Found monster details, returning to renderer.`);
+            return monster;
+        });
     }
     else {
         logToRenderer('ipcloader() waiting for window to load...');
@@ -526,12 +551,29 @@ client.once('clientReady', async () => {
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
-    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER });
+    fiveEToolsParser = new FiveEToolsParser(logToRenderer);
+    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER }, fiveEToolsParser);
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
     client.on('interactionCreate', async interaction => {
         if (interaction.isStringSelectMenu()) {
             const { customId, values, message } = interaction;
+
+            if (customId === '5e-result-select') {
+                await interaction.deferUpdate();
+                const [category, source, name] = values[0].split('__');
+
+                const item = await fiveEToolsParser.getExact(category, name, source);
+
+                if (item) {
+                    const embed = format5eResult(item);
+                    await interaction.editReply({ embeds: [embed], components: [] }); // Remove the dropdown
+                } else {
+                    await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details for that item.', components: [] });
+                }
+                return; // Stop further processing for this interaction
+            }
+
             const [prefix, selectType] = customId.split('-');
 
             if (prefix === 'ma') {

@@ -280,38 +280,36 @@ button:disabled {
     border-bottom: 1px solid #555;
     padding-bottom: 8px;
     margin-bottom: 8px;
-}
-.combatant-header {
-    display: grid;
-    grid-template-columns: 1fr auto auto; /* Name | Controls | Stats */
-    align-items: center;
     gap: 10px;
 }
 .combatant-header h4 {
     margin: 0;
     font-size: 1.2em;
-    grid-column: 1;
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: help;
 }
-.card-controls {
-    grid-column: 2;
+.header-right-group {
     display: flex;
-    gap: 5px;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
 }
-.card-controls button {
+.header-right-group .header-stat {
+    font-size: 0.9em;
+    background-color: #5a5a5a;
+    padding: 2px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.header-right-group button {
     background: none;
     border: none;
-    font-size: 1.1em;
+    font-size: 1.2em;
     padding: 2px;
     cursor: pointer;
-}
-.header-stats {
-    grid-column: 3;
-}
-.header-stats {
-    display: flex;
-    gap: 15px;
-    font-size: 0.9em;
-    color: #ccc;
 }
 
 .main-controls {
@@ -320,6 +318,10 @@ button:disabled {
     gap: 10px;
     margin-bottom: 8px;
 }
+.main-controls .attack-roll-btn {
+    flex-grow: 1;
+}
+
 .hp-display {
     font-weight: bold;
 }
@@ -353,6 +355,46 @@ button:disabled {
     cursor: pointer;
     line-height: 1;
     margin-left: 4px;
+}
+
+.has-tooltip {
+    position: relative;
+    cursor: pointer;
+}
+
+.has-tooltip .tooltip-text {
+    visibility: hidden;
+    width: 450px;
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: #222;
+    color: #fff;
+    text-align: left;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 10;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -225px;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    font-family: monospace;
+    font-size: 11px;
+    white-space: pre-wrap;
+    border: 1px solid #555;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+}
+
+.has-tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+.has-tooltip .tooltip-text pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 .stats-footer {
@@ -423,12 +465,27 @@ button:disabled {
     z-index: 1000;
     display: flex;
     gap: 8px;
+    flex-direction: column;
 }
 .popup-dialog input, .popup-dialog select {
     background-color: #2a2a2a;
     color: #fff;
     border: 1px solid #666;
 }
+.popup-results-list {
+    display: flex;
+    flex-direction: column;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.popup-result-item {
+    padding: 8px;
+    cursor: pointer;
+}
+.popup-result-item:hover {
+    background-color: #5a5a5a;
+}
+
 
 /* --- Soundboard Styles --- */
 #soundboard-container {
@@ -481,4 +538,11 @@ button:disabled {
     background-color: #2a2a2a;
     color: #fff;
     border: 1px solid #666;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 10px;
+    gap: 10px;
 }

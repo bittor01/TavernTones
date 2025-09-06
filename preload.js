@@ -26,7 +26,7 @@ contextBridge.exposeInMainWorld('electron', {
       }
     },
     invoke: (channel, data) => {
-      const validChannels = ['open-file-dialog', 'get-default-local-folder', 'get-dnd-conditions', 'load-encounter-dialog'];
+      const validChannels = ['open-file-dialog', 'get-default-local-folder', 'get-dnd-conditions', 'load-encounter-dialog', 'search-monsters', 'get-monster-details'];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);
       }

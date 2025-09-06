@@ -14,10 +14,11 @@ let DEFAULT_LOCAL_FOLDER;
 
 
 class CommandHandler {
-    constructor(client, logToRendererInstance, musicPlayerInstance, config) {
+    constructor(client, logToRendererInstance, musicPlayerInstance, config, fiveEToolsParserInstance) {
         this.client = client;
         logToRenderer = logToRendererInstance;
         musicPlayer = musicPlayerInstance;
+        this.fiveEToolsParser = fiveEToolsParserInstance;
         this.lastResponse = null;
         BOT_ROLE_ID = config.BOT_ROLE_ID;
         DEFAULT_LOCAL_FOLDER = config.DEFAULT_LOCAL_FOLDER;
@@ -30,6 +31,14 @@ class CommandHandler {
             .setDescription('To use any command, be sure to @me!')
             .addFields(
                 { name: '!ping', value: 'Test to see if the bot is working.' },
+                { name: '!5e <query>', value: 'Search all 5etools data by name.' },
+                { name: '!spell <query>', value: 'Search for a spell by name.' },
+                { name: '!item <query>', value: 'Search for an item by name.' },
+                { name: '!monster <query>', value: 'Search for a monster by name.' },
+                { name: '!feat <query>', value: 'Search for a feat by name.' },
+                { name: '!race <query>', value: 'Search for a race by name.' },
+                { name: '!background <query>', value: 'Search for a background by name.' },
+                { name: '!deep <query>', value: 'Search all 5etools data by name and content.' },
                 { name: '!su (!surge)', value: 'Roll on the Wild Magic Surge table.' },
                 { name: '!sh (!shield)', value: 'Roll on the Wild Magic Shield table.' },
                 { name: '!ro (!roll)', value: 'Roll on random tables. Provide the folder name, then the number of rolls you want to make, then an arbitrary number of weights and tables in pairs. Can be used for things like random weather, random loot, random spells, etc. Example usage: `!ro spells 3 8 lvl1 4 lvl2 2 lvl3 1 lvl4`' },
@@ -45,6 +54,38 @@ class CommandHandler {
         }
 
         await message.reply({ embeds: [helpEmbed] });
+    }
+
+    async _handle5eSearch(message, results, query) {
+        if (!results || results.length === 0) {
+            await message.reply(`I couldn't find anything matching "${query}".`);
+            return;
+        }
+
+        if (results.length > 25) {
+            await message.reply(`I found over 25 results for "${query}". Please be more specific.`);
+            return;
+        }
+
+        const options = results.map(item => ({
+            label: item.name,
+            description: `Category: ${item.category.charAt(0).toUpperCase() + item.category.slice(1)} | Source: ${item.source}`,
+            value: `${item.category}__${item.source}__${item.name}`.substring(0, 100)
+        }));
+
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId('5e-result-select')
+            .setPlaceholder('Select an item to view details')
+            .addOptions(options);
+
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+
+        const embed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle(`Search Results for "${query}"`)
+            .setDescription(`I found ${results.length} results. Please select one from the dropdown below.`);
+
+        await message.reply({ embeds: [embed], components: [row] });
     }
 
     async handleMessage(message) {
@@ -69,7 +110,101 @@ class CommandHandler {
                         logToRenderer('Ping successfully ponged.');
                         break;
 
+                    case content.includes('!5e'): {
+                        logToRenderer('5e command detected');
+                        const query = message.content.substring(message.content.toLowerCase().indexOf('!5e') + 3).trim();
+                        if (!query) {
+                            await message.reply('Please provide a search term. Usage: `@Bot !5e <search term>`');
+                            break;
+                        }
+                        const results = await this.fiveEToolsParser.searchAllByName(query);
+                        await this._handle5eSearch(message, results, query);
+                        break;
+                    }
 
+                    case content.includes('!spell'): {
+                        logToRenderer('Spell command detected');
+                        const query = message.content.substring(message.content.toLowerCase().indexOf('!spell') + 6).trim();
+                        if (!query) {
+                            await message.reply('Please provide a search term. Usage: `@Bot !spell <spell name>`');
+                            break;
+                        }
+                        const results = await this.fiveEToolsParser.searchByName('spells', query);
+                        await this._handle5eSearch(message, results, query);
+                        break;
+                    }
+
+                    case content.includes('!item'): {
+                        logToRenderer('Item command detected');
+                        const query = message.content.substring(message.content.toLowerCase().indexOf('!item') + 5).trim();
+                        if (!query) {
+                            await message.reply('Please provide a search term. Usage: `@Bot !item <item name>`');
+                            break;
+                        }
+                        const results = await this.fiveEToolsParser.searchByName('items', query);
+                        await this._handle5eSearch(message, results, query);
+                        break;
+                    }
+
+                    case content.includes('!monster'): {
+                        logToRenderer('Monster command detected');
+                        const query = message.content.substring(message.content.toLowerCase().indexOf('!monster') + 8).trim();
+                        if (!query) {
+                            await message.reply('Please provide a search term. Usage: `@Bot !monster <monster name>`');
+                            break;
+                        }
+                        const results = await this.fiveEToolsParser.searchByName('bestiary', query);
+                        await this._handle5eSearch(message, results, query);
+                        break;
+                    }
+
+                    case content.includes('!feat'): {
+                        logToRenderer('Feat command detected');
+                        const query = message.content.substring(message.content.toLowerCase().indexOf('!feat') + 5).trim();
+                        if (!query) {
+                            await message.reply('Please provide a search term. Usage: `@Bot !feat <feat name>`');
+                            break;
+                        }
+                        const results = await this.fiveEToolsParser.searchByName('feats', query);
+                        await this._handle5eSearch(message, results, query);
+                        break;
+                    }
+
+                    case content.includes('!background'): {
+                        logToRenderer('Background command detected');
+                        const query = message.content.substring(message.content.toLowerCase().indexOf('!background') + 11).trim();
+                        if (!query) {
+                            await message.reply('Please provide a search term. Usage: `@Bot !background <background name>`');
+                            break;
+                        }
+                        const results = await this.fiveEToolsParser.searchByName('backgrounds', query);
+                        await this._handle5eSearch(message, results, query);
+                        break;
+                    }
+
+                    case content.includes('!race'): {
+                        logToRenderer('Race command detected');
+                        const query = message.content.substring(message.content.toLowerCase().indexOf('!race') + 5).trim();
+                        if (!query) {
+                            await message.reply('Please provide a search term. Usage: `@Bot !race <race name>`');
+                            break;
+                        }
+                        const results = await this.fiveEToolsParser.searchByName('races', query);
+                        await this._handle5eSearch(message, results, query);
+                        break;
+                    }
+
+                    case content.includes('!deep'): {
+                        logToRenderer('Deep search command detected');
+                        const query = message.content.substring(message.content.toLowerCase().indexOf('!deep') + 5).trim();
+                        if (!query) {
+                            await message.reply('Please provide a search term. Usage: `@Bot !deep <search term>`');
+                            break;
+                        }
+                        const results = await this.fiveEToolsParser.searchByContent(query);
+                        await this._handle5eSearch(message, results, query);
+                        break;
+                    }
 
                     case content.includes('!su'):
                         logToRenderer('Surge command detected');
