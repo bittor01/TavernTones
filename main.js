@@ -29,6 +29,7 @@ let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
 const maSelections = new Map();
+const encounterSelections = new Map();
 
 
 // --- State Management ---
@@ -153,10 +154,9 @@ function createEmojiHpBar(creature) {
 function formatStatBlockForDiscord(monster) {
     // Part 1: Create the main embed with core stats
     const mainEmbed = new EmbedBuilder()
-        .setColor(0x0099FF)
-        .setTitle(monster.name || 'Unknown Combatant');
+        .setColor(0x0099FF);
 
-    let description = `*${monster.size} ${typeof monster.type === 'object' ? monster.type.type : monster.type}, ${monster.alignment}*\n\n`;
+    let description = `# ${monster.name}\n*${monster.size} ${typeof monster.type === 'object' ? monster.type.type : monster.type}, ${monster.alignment}*\n\n`;
     const ac = monster.ac.map(a => (a.ac || a) + (a.from ? ` (${a.from.join(', ')})` : '')).join(', ');
     description += `**Armor Class** ${ac}\n`;
     description += `**Hit Points** ${monster.hp.average} (${monster.hp.formula})\n`;
@@ -708,11 +708,28 @@ client.once('clientReady', async () => {
 
     fiveEToolsParser = new FiveEToolsParser(logToRenderer);
     const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER }, fiveEToolsParser);
+    client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
     client.on('interactionCreate', async interaction => {
         if (interaction.isStringSelectMenu()) {
             const { customId, values, message } = interaction;
+
+            if (customId === 'encounter-creature-select') {
+                const selections = encounterSelections.get(message.id) || {};
+                selections.creature = values[0];
+                encounterSelections.set(message.id, selections);
+                await interaction.deferUpdate();
+                return;
+            }
+
+            if (customId === 'encounter-difficulty-select') {
+                const selections = encounterSelections.get(message.id) || {};
+                selections.difficulty = values[0];
+                encounterSelections.set(message.id, selections);
+                await interaction.deferUpdate();
+                return;
+            }
 
             if (customId === '5e-result-select') {
                 await interaction.deferUpdate();
@@ -786,6 +803,62 @@ client.once('clientReady', async () => {
         }
 
         if (interaction.isButton()) {
+            if (interaction.customId.startsWith('encounter-proceed-button')) {
+                const parts = interaction.customId.split('|');
+                const selections = encounterSelections.get(interaction.message.id) || {};
+
+                let modalCustomId;
+                if (parts.length > 1 && parts[1] === 'type') {
+                    // Type-based encounter
+                    const type = parts[2];
+                    if (!selections.difficulty) {
+                        await interaction.reply({ content: 'Please select a difficulty before proceeding.', flags: [MessageFlags.Ephemeral] });
+                        return;
+                    }
+                    modalCustomId = `encounter-modal|type|${type}|${selections.difficulty}`;
+                } else {
+                    // Creature-based encounter
+                    if (!selections.creature || !selections.difficulty) {
+                        await interaction.reply({ content: 'Please select a creature and a difficulty before proceeding.', flags: [MessageFlags.Ephemeral] });
+                        return;
+                    }
+                    modalCustomId = `encounter-modal|creature|${selections.creature}|${selections.difficulty}`;
+                }
+
+                const modal = new ModalBuilder()
+                    .setCustomId(modalCustomId)
+                    .setTitle('Encounter Details');
+
+                const partyLevelInput = new TextInputBuilder()
+                    .setCustomId('partyLevel')
+                    .setLabel("Average Party Level (1-20)")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                const partySizeInput = new TextInputBuilder()
+                    .setCustomId('partySize')
+                    .setLabel("Number of Party Members")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                const multiplierInput = new TextInputBuilder()
+                    .setCustomId('multiplier')
+                    .setLabel("Difficulty Multiplier (optional, default 1.0)")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(false);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(partyLevelInput),
+                    new ActionRowBuilder().addComponents(partySizeInput),
+                    new ActionRowBuilder().addComponents(multiplierInput)
+                );
+
+                await interaction.showModal(modal);
+                // Clean up the selections map after use
+                encounterSelections.delete(interaction.message.id);
+                return;
+            }
+
             if (interaction.customId === 'ma-cancel-button') {
                 maSelections.delete(interaction.message.id);
 
@@ -848,6 +921,95 @@ client.once('clientReady', async () => {
         }
 
         if (interaction.isModalSubmit()) {
+            if (interaction.customId.startsWith('encounter-modal|')) {
+                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
+                const parts = interaction.customId.split('|');
+                const encounterType = parts[1];
+                const difficulty = parts.pop();
+
+                const partyLevel = parseInt(interaction.fields.getTextInputValue('partyLevel'), 10);
+                const partySize = parseInt(interaction.fields.getTextInputValue('partySize'), 10);
+                const multiplier = parseFloat(interaction.fields.getTextInputValue('multiplier')) || 1.0;
+
+                if (isNaN(partyLevel) || isNaN(partySize) || partyLevel < 1 || partyLevel > 20 || partySize < 1) {
+                    await interaction.editReply({ content: 'Invalid party level or size. Level must be 1-20, and size must be at least 1.' });
+                    return;
+                }
+
+                let encounterParams = { partyLevel, partySize, difficulty, multiplier };
+                let mainCreature;
+
+                if (encounterType === 'creature') {
+                    const creatureValue = parts.slice(2).join('|');
+                    const [category, source, name] = creatureValue.split('|');
+                    mainCreature = await fiveEToolsParser.getExact(category, name, source);
+                    if (!mainCreature) {
+                        await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details for the selected creature.' });
+                        return;
+                    }
+                    mainCreature.xp = client.commandHandler.encounterBuilder.crToXp[mainCreature.cr] || 0;
+                    mainCreature.type = typeof mainCreature.type === 'object' ? mainCreature.type.type : mainCreature.type;
+                    encounterParams.mainCreature = mainCreature;
+                } else { // type === 'type'
+                    const creatureType = parts[2];
+                    encounterParams.creatureType = creatureType;
+                }
+
+                const result = await client.commandHandler.encounterBuilder.generateEncounter(encounterParams);
+
+                if (result.error) {
+                    await interaction.editReply({ content: `Error generating encounter: ${result.error}` });
+                    return;
+                }
+
+                const { encounter, totalXp, xpBudget } = result;
+
+                const summaryEmbed = new EmbedBuilder()
+                    .setColor(0x2ECC71)
+                    .setTitle('Encounter Generated!')
+                    .setDescription(`**XP Budget:** ${totalXp.toLocaleString()} / ${xpBudget.toLocaleString()}`)
+                    .addFields({ name: 'Creatures', value: encounter.map(m => {
+                        if (m.isMob) {
+                            return `1x Mob of ${m.count} ${m.name}`;
+                        }
+                        return `${m.count}x ${m.name}`;
+                    }).join('\n') || 'None' });
+
+                const originalMessage = await interaction.channel.send({ embeds: [summaryEmbed] });
+
+                const threadName = mainCreature
+                    ? `Encounter Details for ${mainCreature.name}`
+                    : `Encounter Details for ${encounterParams.creatureType}`;
+                const thread = await originalMessage.startThread({
+                    name: threadName,
+                    autoArchiveDuration: 60,
+                });
+
+                for (const monster of encounter) {
+                    const fullMonsterData = await fiveEToolsParser.getExact('bestiary', monster.name, monster.source);
+                    if (fullMonsterData) {
+                        const { mainEmbed, longFields } = formatStatBlockForDiscord(fullMonsterData);
+                        await thread.send({ embeds: [mainEmbed] });
+                        if (longFields.length > 0) {
+                            for (const field of longFields) {
+                                const chunks = splitText(field.value, 1024);
+                                for (let i = 0; i < chunks.length; i++) {
+                                    const chunkEmbed = new EmbedBuilder()
+                                        .setColor(0x0099FF)
+                                        .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
+                                        .setDescription(chunks[i]);
+                                    await thread.send({ embeds: [chunkEmbed] });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                await interaction.editReply({ content: `Encounter generated! You can view it here: ${originalMessage.url}` });
+
+                return;
+            }
             const parts = interaction.customId.split('-');
             const prefix = parts[0];
             const context = parts[1];

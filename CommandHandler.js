@@ -4,6 +4,7 @@ const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { shell } = require('electron');
 const axios = require('axios');
+const EncounterBuilder = require('./EncounterBuilder.js');
 
 // These will be initialized in the constructor
 let logToRenderer;
@@ -19,6 +20,7 @@ class CommandHandler {
         logToRenderer = logToRendererInstance;
         musicPlayer = musicPlayerInstance;
         this.fiveEToolsParser = fiveEToolsParserInstance;
+        this.encounterBuilder = new EncounterBuilder(this.fiveEToolsParser);
         this.lastResponse = null;
         BOT_ROLE_ID = config.BOT_ROLE_ID;
         DEFAULT_LOCAL_FOLDER = config.DEFAULT_LOCAL_FOLDER;
@@ -31,6 +33,7 @@ class CommandHandler {
             .setDescription('To use any command, be sure to @me!')
             .addFields(
                 { name: '!ping', value: 'Test to see if the bot is working.' },
+                { name: '!create en <creature>', value: 'Starts the interactive encounter builder.' },
                 { name: '!5e <query>', value: 'Search all 5etools data by name.' },
                 { name: '!spell <query>', value: 'Search for a spell by name.' },
                 { name: '!item <query>', value: 'Search for an item by name.' },
@@ -88,6 +91,80 @@ class CommandHandler {
         await message.reply({ embeds: [embed], components: [row] });
     }
 
+    async _handleEncounterCreatureSearch(message, results, query) {
+        if (!results || results.length === 0) {
+            await message.reply(`I couldn't find any creatures matching "${query}".`);
+            return;
+        }
+
+        if (results.length > 25) {
+            await message.reply(`I found over 25 results for "${query}". Please be more specific.`);
+            return;
+        }
+
+        const options = results.map(item => ({
+            label: item.name,
+            description: `CR: ${item.cr} | Source: ${item.source}`,
+            value: `${item.category}|${item.source}|${item.name}`.substring(0, 100)
+        }));
+
+        const creatureSelectMenu = new StringSelectMenuBuilder()
+            .setCustomId('encounter-creature-select')
+            .setPlaceholder('Select the main creature')
+            .addOptions(options);
+
+        const difficultySelectMenu = new StringSelectMenuBuilder()
+            .setCustomId('encounter-difficulty-select')
+            .setPlaceholder('Select encounter difficulty')
+            .addOptions([
+                { label: 'Low', value: 'low' },
+                { label: 'Moderate', value: 'moderate' },
+                { label: 'High', value: 'high' },
+            ]);
+
+        const proceedButton = new ButtonBuilder()
+            .setCustomId('encounter-proceed-button')
+            .setLabel('Proceed')
+            .setStyle(ButtonStyle.Success);
+
+        const row1 = new ActionRowBuilder().addComponents(creatureSelectMenu);
+        const row2 = new ActionRowBuilder().addComponents(difficultySelectMenu);
+        const row3 = new ActionRowBuilder().addComponents(proceedButton);
+
+        const embed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle(`Encounter Builder`)
+            .setDescription(`Found ${results.length} creatures matching "${query}".\nPlease select a creature and a difficulty, then click "Proceed".`);
+
+        await message.reply({ embeds: [embed], components: [row1, row2, row3] });
+    }
+
+    async _handleEncounterTypeSearch(message, type) {
+        const difficultySelectMenu = new StringSelectMenuBuilder()
+            .setCustomId('encounter-difficulty-select')
+            .setPlaceholder('Select encounter difficulty')
+            .addOptions([
+                { label: 'Low', value: 'low' },
+                { label: 'Moderate', value: 'moderate' },
+                { label: 'High', value: 'high' },
+            ]);
+
+        const proceedButton = new ButtonBuilder()
+            .setCustomId(`encounter-proceed-button|type|${type}`)
+            .setLabel('Proceed')
+            .setStyle(ButtonStyle.Success);
+
+        const row1 = new ActionRowBuilder().addComponents(difficultySelectMenu);
+        const row2 = new ActionRowBuilder().addComponents(proceedButton);
+
+        const embed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle(`Encounter Builder: ${type}`)
+            .setDescription(`Building an encounter with the theme "${type}".\nPlease select a difficulty, then click "Proceed".`);
+
+        await message.reply({ embeds: [embed], components: [row1, row2] });
+    }
+
     async handleMessage(message) {
         // Ignore messages from the bot itself
         if (message.author.bot) {
@@ -99,20 +176,23 @@ class CommandHandler {
 
         if (message.mentions.has(this.client.user) || message.mentions.roles.has(BOT_ROLE_ID)) { // Check if the bot is mentioned
             const userId = message.author.id;
-            const content = message.content.toLowerCase();
+
+            // Strip the mention from the message content
+            const commandBody = message.content.replace(/<@.?[0-9]+>/, '').trim();
+            const content = commandBody.toLowerCase();
 
             try {
                 let typingInterval;
                 switch (true) {
-                    case content.includes('!ping'):
+                    case content.startsWith('!ping'):
                         logToRenderer('Ping command detected'); // Log when ping command is detected
                         await message.reply('Pong!');
                         logToRenderer('Ping successfully ponged.');
                         break;
 
-                    case content.includes('!5e'): {
+                    case content.startsWith('!5e'): {
                         logToRenderer('5e command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!5e') + 3).trim();
+                        const query = content.substring('!5e'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !5e <search term>`');
                             break;
@@ -122,9 +202,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!spell'): {
+                    case content.startsWith('!spell'): {
                         logToRenderer('Spell command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!spell') + 6).trim();
+                        const query = content.substring('!spell'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !spell <spell name>`');
                             break;
@@ -134,9 +214,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!item'): {
+                    case content.startsWith('!item'): {
                         logToRenderer('Item command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!item') + 5).trim();
+                        const query = content.substring('!item'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !item <item name>`');
                             break;
@@ -146,9 +226,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!monster'): {
+                    case content.startsWith('!monster'): {
                         logToRenderer('Monster command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!monster') + 8).trim();
+                        const query = content.substring('!monster'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !monster <monster name>`');
                             break;
@@ -158,9 +238,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!feat'): {
+                    case content.startsWith('!feat'): {
                         logToRenderer('Feat command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!feat') + 5).trim();
+                        const query = content.substring('!feat'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !feat <feat name>`');
                             break;
@@ -170,9 +250,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!background'): {
+                    case content.startsWith('!background'): {
                         logToRenderer('Background command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!background') + 11).trim();
+                        const query = content.substring('!background'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !background <background name>`');
                             break;
@@ -182,9 +262,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!race'): {
+                    case content.startsWith('!race'): {
                         logToRenderer('Race command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!race') + 5).trim();
+                        const query = content.substring('!race'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !race <race name>`');
                             break;
@@ -194,9 +274,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!deep'): {
+                    case content.startsWith('!deep'): {
                         logToRenderer('Deep search command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!deep') + 5).trim();
+                        const query = content.substring('!deep'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !deep <search term>`');
                             break;
@@ -206,7 +286,67 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!su'):
+                    case content.startsWith('!create en') || content.startsWith('!create enc') || content.startsWith('!create encounter'): {
+                        logToRenderer('Create Encounter command detected');
+                        const commandMatch = content.match(/!create\s+(?:en|enc|encounter)\s+(.+)/i);
+                        if (!commandMatch || !commandMatch[1]) {
+                            await message.reply('Usage: `@Bot !create en <creature name or type>`');
+                            break;
+                        }
+
+                        const query = commandMatch[1].trim().replace(/_/g, ' ');
+                        const creatureTypes = ["aberration", "beast", "celestial", "construct", "dragon", "elemental", "fey", "fiend", "giant", "humanoid", "monstrosity", "ooze", "plant", "undead"];
+
+                        if (creatureTypes.includes(query.toLowerCase())) {
+                            await this._handleEncounterTypeSearch(message, query);
+                        } else {
+                            const results = await this.fiveEToolsParser.searchByName('bestiary', query);
+                            await this._handleEncounterCreatureSearch(message, results, query);
+                        }
+                        break;
+                    }
+
+                    case content.startsWith('!en'): {
+                        logToRenderer('Encounter table command detected');
+                        const invalidCharsRegex = /[.,:;\/\\?*"<>|&]+/g;
+                        const commandBody = content.substring('!en'.length).trim();
+                        const args = commandBody.replace(invalidCharsRegex, "").trim().split(/\s+/);
+
+                        // Parse weights and table names
+                        const tableEntries = [];
+                        let validArgs = true;
+                        for (let i = 0; i < args.length; i += 2) {
+                            const weight = parseInt(args[i], 10);
+                            const tableName = args[i + 1];
+
+                            if (isNaN(weight) || weight <= 0 || !tableName) {
+                                await message.reply('Invalid format. Please ensure weights are positive integers and table names are valid.');
+                                validArgs = false;
+                                break;
+                            }
+                            tableEntries.push({ weight, tableName });
+                        }
+
+                        if (!validArgs) {
+                            break;
+                        }
+                        if (tableEntries.length === 0) {
+                             await message.reply('No table arguments provided. Please specify weights and table names.');
+                             break;
+                        }
+
+                        const result = await rollFromTable("encountertables", tableEntries, message.channel.id);
+
+                        if (result.success) {
+                            const finalMessage = `Effect: ||${result.text}||`;
+                            await message.reply(finalMessage);
+                        } else {
+                            await message.reply(result.message);
+                        }
+                        break;
+                    }
+
+                    case content.startsWith('!su'):
                         logToRenderer('Surge command detected');
                         const surgeFilePath = path.join(__dirname, 'randomtables/surge.json');
                         const surgeData = JSON.parse(fs.readFileSync(surgeFilePath, 'utf8'));
@@ -255,71 +395,6 @@ class CommandHandler {
                         }
                         break;
 
-                    case content.includes('!en'):
-                        logToRenderer('Encounter command detected');
-                        const invalidCharsRegex = /[.,:;\/\\?*"<>|&]+/g;
-                        const regex = /^!\S*\s*(.*)/;
-                        const match = content.match(regex);
-                        let args;
-
-                        if (match) {
-                            // Filtered and split arguments
-                            args = match[1]
-                                .replace(invalidCharsRegex, "")    // Remove invalid characters
-                                .trim()                            // Remove extra spaces at the ends
-                                .split(/\s+/);
-                        } else {
-                            await message.reply('Invalid format. Please use the command like this: @TT !en 80 clear 30 calmweather 15 choppyweather 5 specialweather');
-                            break;
-                        }
-
-                        // Parse weights and table names
-                        const tableEntries = [];
-                        let validArgs = true; // Flag to track argument validity
-                        for (let i = 0; i < args.length; i += 2) {
-                            const weight = parseInt(args[i], 10);
-                            const tableName = args[i + 1];
-
-                            if (isNaN(weight) || weight <= 0 || !tableName) {
-                                await message.reply('Invalid format. Please ensure weights are positive integers and table names are valid.');
-                                validArgs = false; // Set flag to false
-                                break; // Exit loop early
-                            }
-                            tableEntries.push({ weight, tableName });
-                        }
-
-                        if (!validArgs) { // Check flag before proceeding
-                            break; // Exit case if arguments were invalid
-                        }
-
-                        if (tableEntries.length === 0 && args.length > 0) {
-                            // This case implies that parsing failed to produce entries,
-                            // possibly due to an odd number of arguments or other unhandled parsing issues,
-                            // though the loop's `!tableName` check should catch most.
-                            // However, if the loop was broken due to invalid format, the message is already sent.
-                            // This is a fallback.
-                            if (validArgs) { // Only send if no other error message was sent
-                                await message.reply('Could not parse table entries. Please check the format.');
-                            }
-                            break;
-                        }
-
-                        if (tableEntries.length === 0 && args.length === 0) {
-                             await message.reply('No table arguments provided. Please specify weights and table names.');
-                             break;
-                        }
-
-
-                        // Call the new rollFromTable function
-                        const result = await rollFromTable("encountertables", tableEntries, message.channel.id);
-
-                        if (result.success) {
-                            const finalMessage = `Effect: ||${result.text}||`;
-                            await message.reply(finalMessage);
-                        } else {
-                            await message.reply(result.message); // Send the error message from rollFromTable
-                        }
-                        break;
 
                     case content.includes('!ro'):
                         logToRenderer('Roll command detected');

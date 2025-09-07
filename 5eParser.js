@@ -158,6 +158,26 @@ class FiveEToolsParser {
         }
         return null;
     }
+
+    async searchByType(type) {
+        const items = await this._loadCategoryData('bestiary');
+        const lowerCaseType = type.toLowerCase();
+
+        const results = items.filter(item => {
+            if (!item.type) return false;
+            const itemType = typeof item.type === 'object' ? item.type.type : item.type;
+            return itemType.toLowerCase() === lowerCaseType;
+        });
+
+        return results.map(item => ({ ...item, category: 'bestiary' }));
+    }
+
+    clearCache(category) {
+        if (this.cache.has(category)) {
+            this.cache.delete(category);
+            this.logToRenderer(`[5eParser] Cleared cache for category: ${category}`);
+        }
+    }
 }
 
 module.exports = FiveEToolsParser;
