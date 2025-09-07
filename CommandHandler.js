@@ -21,7 +21,6 @@ class CommandHandler {
         musicPlayer = musicPlayerInstance;
         this.fiveEToolsParser = fiveEToolsParserInstance;
         this.encounterBuilder = new EncounterBuilder(this.fiveEToolsParser);
-        this.initializationPromise = this.encounterBuilder.initialize();
         this.lastResponse = null;
         BOT_ROLE_ID = config.BOT_ROLE_ID;
         DEFAULT_LOCAL_FOLDER = config.DEFAULT_LOCAL_FOLDER;
@@ -289,7 +288,6 @@ class CommandHandler {
 
                     case content.startsWith('!create en') || content.startsWith('!create enc') || content.startsWith('!create encounter'): {
                         logToRenderer('Create Encounter command detected');
-                        await this.initializationPromise; // Ensure monster data is loaded
                         const commandMatch = content.match(/!create\s+(?:en|enc|encounter)\s+(.+)/i);
                         if (!commandMatch || !commandMatch[1]) {
                             await message.reply('Usage: `@Bot !create en <creature name or type>`');

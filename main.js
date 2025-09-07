@@ -812,14 +812,14 @@ client.once('clientReady', async () => {
                     // Type-based encounter
                     const type = parts[2];
                     if (!selections.difficulty) {
-                        await interaction.reply({ content: 'Please select a difficulty before proceeding.', ephemeral: true });
+                        await interaction.reply({ content: 'Please select a difficulty before proceeding.', flags: [MessageFlags.Ephemeral] });
                         return;
                     }
                     modalCustomId = `encounter-modal|type|${type}|${selections.difficulty}`;
                 } else {
                     // Creature-based encounter
                     if (!selections.creature || !selections.difficulty) {
-                        await interaction.reply({ content: 'Please select a creature and a difficulty before proceeding.', ephemeral: true });
+                        await interaction.reply({ content: 'Please select a creature and a difficulty before proceeding.', flags: [MessageFlags.Ephemeral] });
                         return;
                     }
                     modalCustomId = `encounter-modal|creature|${selections.creature}|${selections.difficulty}`;
@@ -922,7 +922,7 @@ client.once('clientReady', async () => {
 
         if (interaction.isModalSubmit()) {
             if (interaction.customId.startsWith('encounter-modal|')) {
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
                 const parts = interaction.customId.split('|');
                 const encounterType = parts[1];
@@ -933,7 +933,7 @@ client.once('clientReady', async () => {
                 const multiplier = parseFloat(interaction.fields.getTextInputValue('multiplier')) || 1.0;
 
                 if (isNaN(partyLevel) || isNaN(partySize) || partyLevel < 1 || partyLevel > 20 || partySize < 1) {
-                    await interaction.editReply({ content: 'Invalid party level or size. Level must be 1-20, and size must be at least 1.', ephemeral: true });
+                    await interaction.editReply({ content: 'Invalid party level or size. Level must be 1-20, and size must be at least 1.' });
                     return;
                 }
 
@@ -945,7 +945,7 @@ client.once('clientReady', async () => {
                     const [category, source, name] = creatureValue.split('|');
                     mainCreature = await fiveEToolsParser.getExact(category, name, source);
                     if (!mainCreature) {
-                        await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details for the selected creature.', ephemeral: true });
+                        await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details for the selected creature.' });
                         return;
                     }
                     mainCreature.xp = client.commandHandler.encounterBuilder.crToXp[mainCreature.cr] || 0;
@@ -956,10 +956,10 @@ client.once('clientReady', async () => {
                     encounterParams.creatureType = creatureType;
                 }
 
-                const result = client.commandHandler.encounterBuilder.generateEncounter(encounterParams);
+                const result = await client.commandHandler.encounterBuilder.generateEncounter(encounterParams);
 
                 if (result.error) {
-                    await interaction.editReply({ content: `Error generating encounter: ${result.error}`, ephemeral: true });
+                    await interaction.editReply({ content: `Error generating encounter: ${result.error}` });
                     return;
                 }
 
@@ -1006,7 +1006,7 @@ client.once('clientReady', async () => {
                     }
                 }
 
-                await interaction.editReply({ content: `Encounter generated! You can view it here: ${originalMessage.url}`, ephemeral: true });
+                await interaction.editReply({ content: `Encounter generated! You can view it here: ${originalMessage.url}` });
 
                 return;
             }

@@ -171,6 +171,13 @@ class FiveEToolsParser {
 
         return results.map(item => ({ ...item, category: 'bestiary' }));
     }
+
+    clearCache(category) {
+        if (this.cache.has(category)) {
+            this.cache.delete(category);
+            this.logToRenderer(`[5eParser] Cleared cache for category: ${category}`);
+        }
+    }
 }
 
 module.exports = FiveEToolsParser;

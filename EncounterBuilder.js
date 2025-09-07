@@ -9,19 +9,7 @@ const xpThresholds = {
 class EncounterBuilder {
     constructor(fiveEToolsParser) {
         this.fiveEToolsParser = fiveEToolsParser;
-        this.monsters = [];
         this.crToXp = crToXp;
-    }
-
-    async initialize() {
-        if (this.monsters.length > 0) return;
-        const rawMonsters = await this.fiveEToolsParser._loadCategoryData('bestiary');
-        this.monsters = rawMonsters.map(monster => ({
-            ...monster,
-            xp: this.crToXp[monster.cr] || 0,
-            type: typeof monster.type === 'object' ? monster.type.type : monster.type
-        }));
-        console.log(`Initialized EncounterBuilder with ${this.monsters.length} monsters.`);
     }
 
     getCrValue(cr) {
@@ -43,7 +31,9 @@ class EncounterBuilder {
         return score;
     }
 
-    generateEncounter({ mainCreature, creatureType, partyLevel, partySize, difficulty, multiplier = 1.0 }) {
+    async generateEncounter({ mainCreature, creatureType, partyLevel, partySize, difficulty, multiplier = 1.0 }) {
+        const monsters = await this.fiveEToolsParser._loadCategoryData('bestiary');
+
         // 1. Initialization
         const xpPerCharacter = xpThresholds[partyLevel]?.[difficulty.toLowerCase()];
         if (xpPerCharacter === undefined) {
@@ -65,11 +55,11 @@ class EncounterBuilder {
             addedCreatureNames.add(mainCreature.name);
 
             const primaryCrValue = this.getCrValue(mainCreature.cr);
-            candidates = this.monsters.filter(m =>
+            candidates = monsters.filter(m =>
                 m.name !== mainCreature.name && this.getCrValue(m.cr) <= primaryCrValue && m.xp > 0
             );
         } else if (creatureType) {
-            candidates = this.monsters.filter(m => m.type && m.type.toLowerCase() === creatureType.toLowerCase() && m.xp > 0);
+            candidates = monsters.filter(m => m.type && m.type.toLowerCase() === creatureType.toLowerCase() && m.xp > 0);
         } else {
             return { error: 'Either a main creature or a creature type must be provided.' };
         }
@@ -139,7 +129,7 @@ class EncounterBuilder {
 
         // 7. Final Padding
         if (currentMonsterCount < partySize) {
-            const cr0Candidates = this.monsters.filter(m => this.getCrValue(m.cr) === 0 && !addedCreatureNames.has(m.name));
+            const cr0Candidates = monsters.filter(m => this.getCrValue(m.cr) === 0 && !addedCreatureNames.has(m.name));
             while (currentMonsterCount < partySize && cr0Candidates.length > 0) {
                 const candidate = cr0Candidates.shift();
                 if (remainingXp >= candidate.xp) {
@@ -151,6 +141,9 @@ class EncounterBuilder {
         }
 
         const totalXp = encounter.reduce((sum, m) => sum + (m.xp_per_creature * m.count), 0);
+
+        this.fiveEToolsParser.clearCache('bestiary');
+
         return { encounter, totalXp, xpBudget: totalXpBudget };
     }
 }
