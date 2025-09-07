@@ -159,7 +159,7 @@ class ThreeDragonAnteManager {
         const embed = this._generateLobbyEmbed(game);
         const components = this._buildLobbyComponents(game);
 
-        const lobbyMessage = await message.channel.send({ embeds: [embed], components, files: [path.join(__dirname, 'resources', 'ThreeDragonAnteImages', 'Card Back.jpg')] });
+        const lobbyMessage = await message.channel.send({ embeds: [embed], components });
         game.lobbyMessageId = lobbyMessage.id;
 
         const collector = lobbyMessage.createMessageComponentCollector({ time: 3_600_000 });
@@ -206,7 +206,6 @@ class ThreeDragonAnteManager {
         const embed = new EmbedBuilder()
             .setTitle('Three-Dragon Ante Lobby')
             .setColor(0x5539cc)
-            .setThumbnail('attachment://Card Back.jpg')
             .setDescription('Players are gathering to play Three-Dragon Ante. Click "Join" to enter the game!')
             .setFooter({ text: 'The game will begin once the "Start Game" button is pressed.' });
 
