@@ -17,16 +17,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const logArea = document.getElementById('logArea');
     const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
     const diceLog = document.getElementById('diceLog');
-    const saveButton = document.getElementById('save-button');
-    const loadButton = document.getElementById('load-button');
     const playPauseButton = document.getElementById('playPauseButton');
-    const selectFileButton = document.getElementById('selectFileButton');
     const selectedFileLabel = document.getElementById('selectedFileLabel');
     const addCreatureForm = document.getElementById('add-creature-form');
     const initiativeListDiv = document.getElementById('initiative-list');
     const combatantDetailsListDiv = document.getElementById('combatant-details-list');
-    const nextTurnButton = document.getElementById('next-turn-button');
-    const previousTurnButton = document.getElementById('previous-turn-button');
     const maxLogEntries = 50;
 
     // --- Initial Load ---

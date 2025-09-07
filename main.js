@@ -2,14 +2,11 @@ require('dotenv').config({ path: 'environmentvars.env' }); // Load environment v
 console.log('Main.js script started');
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 console.log('Electron loaded.');
-const fs = require('fs');
 const path = require('path');
-console.log('FS and Path loaded.');
-const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
-console.log('DiceRoller loaded.');
+console.log('Path loaded.');
 const { Client, GatewayIntentBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, StringSelectMenuBuilder } = require('discord.js');
 console.log('Discord.js Client loaded.');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
+const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 console.log('Discord.js Voice loaded.');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent] });
 console.log('Discord client instantiated.');
@@ -28,7 +25,6 @@ const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
 const TEXT_CHANNEL_ID = process.env.TEXT_CHANNEL_ID;
 let connection;
 let musicPlayer;
-let lastResponse = null; // Variable to store the last response
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
@@ -334,12 +330,12 @@ async function ipcloader() {
                         conditionStr = conditionEmojis.join('');
                     }
 
-                    const activeMarker = index === currentTurnIndex ? '➤ ' : '';
+                    const activeMarker = index === currentTurnIndex ? '`➤`' : '` `';
                     const initiativeStr = creature.initiative.toString();
                     const nameStr = (creature.name || '');
 
                     // New layout: Init | HP Bar | Name | Conditions
-                    const line = `${activeMarker}**${initiativeStr}** | ${hpBar} | ${nameStr} | ${conditionStr}`;
+                    const line = `${activeMarker}${hpBar}${conditionStr} ${nameStr}`;
                     description += line + '\n';
                 });
 
