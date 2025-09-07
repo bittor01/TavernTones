@@ -109,19 +109,35 @@ class CommandHandler {
             value: `${item.category}|${item.source}|${item.name}`.substring(0, 100)
         }));
 
-        const selectMenu = new StringSelectMenuBuilder()
+        const creatureSelectMenu = new StringSelectMenuBuilder()
             .setCustomId('encounter-creature-select')
-            .setPlaceholder('Select the main creature for the encounter')
+            .setPlaceholder('Select the main creature')
             .addOptions(options);
 
-        const row = new ActionRowBuilder().addComponents(selectMenu);
+        const difficultySelectMenu = new StringSelectMenuBuilder()
+            .setCustomId('encounter-difficulty-select')
+            .setPlaceholder('Select encounter difficulty')
+            .addOptions([
+                { label: 'Low', value: 'low' },
+                { label: 'Moderate', value: 'moderate' },
+                { label: 'High', value: 'high' },
+            ]);
+
+        const proceedButton = new ButtonBuilder()
+            .setCustomId('encounter-proceed-button')
+            .setLabel('Proceed')
+            .setStyle(ButtonStyle.Success);
+
+        const row1 = new ActionRowBuilder().addComponents(creatureSelectMenu);
+        const row2 = new ActionRowBuilder().addComponents(difficultySelectMenu);
+        const row3 = new ActionRowBuilder().addComponents(proceedButton);
 
         const embed = new EmbedBuilder()
             .setColor(0x0099FF)
-            .setTitle(`Creature Search for Encounter: "${query}"`)
-            .setDescription(`Found ${results.length} creatures. Select one to be the main creature for your encounter.`);
+            .setTitle(`Encounter Builder`)
+            .setDescription(`Found ${results.length} creatures matching "${query}".\nPlease select a creature and a difficulty, then click "Proceed".`);
 
-        await message.reply({ embeds: [embed], components: [row] });
+        await message.reply({ embeds: [embed], components: [row1, row2, row3] });
     }
 
     async handleMessage(message) {

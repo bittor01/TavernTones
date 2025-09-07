@@ -29,6 +29,7 @@ let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
 const maSelections = new Map();
+const encounterSelections = new Map();
 
 
 // --- State Management ---
@@ -716,56 +717,18 @@ client.once('clientReady', async () => {
             const { customId, values, message } = interaction;
 
             if (customId === 'encounter-creature-select') {
+                const selections = encounterSelections.get(message.id) || {};
+                selections.creature = values[0];
+                encounterSelections.set(message.id, selections);
                 await interaction.deferUpdate();
-                const creatureValue = values[0];
-                const difficultySelect = new StringSelectMenuBuilder()
-                    .setCustomId(`encounter-difficulty-select|${creatureValue}`)
-                    .setPlaceholder('Select encounter difficulty')
-                    .addOptions([
-                        { label: 'Low', value: 'low' },
-                        { label: 'Moderate', value: 'moderate' },
-                        { label: 'High', value: 'high' },
-                    ]);
-                const row = new ActionRowBuilder().addComponents(difficultySelect);
-                await interaction.editReply({ content: 'Creature selected. Now, please select the encounter difficulty.', components: [row] });
                 return;
             }
 
-            if (customId.startsWith('encounter-difficulty-select|')) {
+            if (customId === 'encounter-difficulty-select') {
+                const selections = encounterSelections.get(message.id) || {};
+                selections.difficulty = values[0];
+                encounterSelections.set(message.id, selections);
                 await interaction.deferUpdate();
-                const parts = customId.split('|');
-                const creatureValue = parts.slice(1).join('|');
-                const difficulty = values[0];
-
-                const modal = new ModalBuilder()
-                    .setCustomId(`encounter-modal|${creatureValue}|${difficulty}`)
-                    .setTitle('Encounter Details');
-
-                const partyLevelInput = new TextInputBuilder()
-                    .setCustomId('partyLevel')
-                    .setLabel("Average Party Level (1-20)")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true);
-
-                const partySizeInput = new TextInputBuilder()
-                    .setCustomId('partySize')
-                    .setLabel("Number of Party Members")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true);
-
-                const multiplierInput = new TextInputBuilder()
-                    .setCustomId('multiplier')
-                    .setLabel("Difficulty Multiplier (optional, default 1.0)")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(false);
-
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(partyLevelInput),
-                    new ActionRowBuilder().addComponents(partySizeInput),
-                    new ActionRowBuilder().addComponents(multiplierInput)
-                );
-
-                await interaction.showModal(modal);
                 return;
             }
 
@@ -841,6 +804,47 @@ client.once('clientReady', async () => {
         }
 
         if (interaction.isButton()) {
+            if (interaction.customId === 'encounter-proceed-button') {
+                const selections = encounterSelections.get(interaction.message.id);
+                if (!selections || !selections.creature || !selections.difficulty) {
+                    await interaction.reply({ content: 'Please select a creature and a difficulty before proceeding.', ephemeral: true });
+                    return;
+                }
+
+                const modal = new ModalBuilder()
+                    .setCustomId(`encounter-modal|${selections.creature}|${selections.difficulty}`)
+                    .setTitle('Encounter Details');
+
+                const partyLevelInput = new TextInputBuilder()
+                    .setCustomId('partyLevel')
+                    .setLabel("Average Party Level (1-20)")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                const partySizeInput = new TextInputBuilder()
+                    .setCustomId('partySize')
+                    .setLabel("Number of Party Members")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                const multiplierInput = new TextInputBuilder()
+                    .setCustomId('multiplier')
+                    .setLabel("Difficulty Multiplier (optional, default 1.0)")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(false);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(partyLevelInput),
+                    new ActionRowBuilder().addComponents(partySizeInput),
+                    new ActionRowBuilder().addComponents(multiplierInput)
+                );
+
+                await interaction.showModal(modal);
+                // Clean up the selections map after use
+                encounterSelections.delete(interaction.message.id);
+                return;
+            }
+
             if (interaction.customId === 'ma-cancel-button') {
                 maSelections.delete(interaction.message.id);
 
