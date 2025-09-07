@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const path = require('path');
 
 const DECK_DEFINITION = [
@@ -184,10 +184,18 @@ class ThreeDragonAnteManager {
                 if (!isPlayerInGame) return i.reply({ content: 'You must be in the game to start it.', ephemeral: true });
                 if (game.players.length < 2) return i.reply({ content: 'You need at least 2 players to start.', ephemeral: true });
 
-                collector.stop('game_started');
-                game.state = 'starting';
-                await i.update({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game, true) });
-                this._startGame(game, i.channel);
+                const modal = new ModalBuilder()
+                    .setCustomId(`tda_ante_modal_${game.channelId}`)
+                    .setTitle('Set Game Ante');
+                const anteInput = new TextInputBuilder()
+                    .setCustomId('ante_amount')
+                    .setLabel("Initial Ante (e.g., 1000)")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true)
+                    .setPlaceholder('Enter a positive number');
+                const actionRow = new ActionRowBuilder().addComponents(anteInput);
+                modal.addComponents(actionRow);
+                await i.showModal(modal);
                 return;
             }
 
@@ -230,42 +238,42 @@ class ThreeDragonAnteManager {
         return [row1, row2];
     }
 
-    async _startGame(game, channel) {
-        try {
-            const host = game.players[0];
-            if (!host) {
-                channel.send({ content: "The host has left! Game cancelled." });
-                return this.activeGames.delete(channel.id);
-            }
-
-            const dmChannel = await host.user.createDM();
-            await dmChannel.send({ content: "You are the host! Please set the initial ante for the game in GP. Enter a whole number (e.g., 1000). You have 60 seconds." });
-
-            const filter = m => !m.author.bot && !isNaN(parseInt(m.content)) && parseInt(m.content) > 0;
-            const collector = dmChannel.createMessageCollector({ filter, time: 60000, max: 1 });
-
-            collector.on('collect', async m => {
-                const ante = parseInt(m.content);
-                game.initialAnte = ante;
-                game.players.forEach(p => { p.hoard = ante; });
-
-                await dmChannel.send({ content: `The ante is set to ${ante} GP. Each player starts with ${ante} GP.` });
-                await channel.send({ content: `The ante has been set by the host. The card draft will now begin in your DMs.` });
-
-                this._startDrafting(game, channel);
-            });
-
-            collector.on('end', (collected, reason) => {
-                if (reason === 'time') {
-                    channel.send({ content: `The host did not set the ante in time. The game has been cancelled.` });
-                    this.activeGames.delete(game.channelId);
-                }
-            });
-        } catch (error) {
-            console.error("Error starting game:", error);
-            channel.send({ content: "There was an error starting the game. Please try again." });
-            this.activeGames.delete(game.channelId);
+    async handleAnteModalSubmit(interaction) {
+        const channelId = interaction.customId.split('_')[3];
+        const game = this.activeGames.get(channelId);
+        if (!game) {
+            return interaction.reply({ content: "Could not find an active game for this action.", ephemeral: true });
         }
+
+        const ante = parseInt(interaction.fields.getTextInputValue('ante_amount'));
+        if (isNaN(ante) || ante <= 0) {
+            return interaction.reply({ content: 'Please enter a valid, positive number for the ante.', ephemeral: true });
+        }
+
+        // Acknowledge the modal and disable the original lobby message components
+        try {
+            const lobbyMessage = await interaction.channel.messages.fetch(game.lobbyMessageId);
+            if (lobbyMessage) {
+                // This stops the original collector
+                const collector = lobbyMessage.createMessageComponentCollector({ time: 1 });
+                collector.stop('game_started');
+                await interaction.update({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game, true) });
+            } else {
+                await interaction.deferUpdate();
+            }
+        } catch(e) {
+            console.error("TDA: Could not find lobby message to disable components.", e);
+            await interaction.deferUpdate();
+        }
+
+        game.initialAnte = ante;
+        game.state = 'starting';
+        game.players.forEach(p => { p.hoard = ante; });
+
+        const channel = this.client.channels.cache.get(game.channelId);
+        await channel.send({ content: `The ante has been set to ${ante} GP by ${interaction.user.username}. The card draft will now begin in your DMs.` });
+
+        this._startDrafting(game, channel);
     }
 
     async _startDrafting(game, channel) {

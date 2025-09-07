@@ -8,7 +8,7 @@ const { Client, GatewayIntentBits, EmbedBuilder, ModalBuilder, TextInputBuilder,
 console.log('Discord.js Client loaded.');
 const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 console.log('Discord.js Voice loaded.');
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
 console.log('Discord client instantiated.');
 const axios = require('axios');
 console.log('Axios loaded.');
@@ -921,6 +921,9 @@ client.once('clientReady', async () => {
         }
 
         if (interaction.isModalSubmit()) {
+            if (interaction.customId.startsWith('tda_ante_modal')) {
+                return client.commandHandler.tdaManager.handleAnteModalSubmit(interaction);
+            }
             if (interaction.customId.startsWith('encounter-modal|')) {
                 await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
