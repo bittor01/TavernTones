@@ -1,4 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+const path = require('path');
 
 const DECK_DEFINITION = [
   { name: "Black Dragon", optional: false, value: 1, image: "1 black.jpg", effect: "Black" },
@@ -158,7 +159,7 @@ class ThreeDragonAnteManager {
         const embed = this._generateLobbyEmbed(game);
         const components = this._buildLobbyComponents(game);
 
-        const lobbyMessage = await message.channel.send({ embeds: [embed], components, files: [`resources/ThreeDragonAnteImages/Card Back.jpg`] });
+        const lobbyMessage = await message.channel.send({ embeds: [embed], components, files: [path.join(__dirname, 'resources', 'ThreeDragonAnteImages', 'Card Back.jpg')] });
         game.lobbyMessageId = lobbyMessage.id;
 
         const collector = lobbyMessage.createMessageComponentCollector({ time: 3_600_000 });
@@ -1091,12 +1092,12 @@ class ThreeDragonAnteManager {
                 const embed = this._generateGameStateEmbed(game, lastPlayedCard);
                 const files = [];
                 if (lastPlayedCard) {
-                    files.push(`resources/ThreeDragonAnteImages/${lastPlayedCard.image}`);
+                    files.push(path.join(__dirname, 'resources', 'ThreeDragonAnteImages', lastPlayedCard.image));
                 }
                 await dmChannel.send({ embeds: [embed], files });
 
                 const attachments = player.hand.map(card => ({
-                    attachment: `resources/ThreeDragonAnteImages/${card.image}`,
+                    attachment: path.join(__dirname, 'resources', 'ThreeDragonAnteImages', card.image),
                     name: card.image
                 }));
 
