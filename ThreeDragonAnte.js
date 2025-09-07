@@ -158,7 +158,7 @@ class ThreeDragonAnteManager {
         const embed = this._generateLobbyEmbed(game);
         const components = this._buildLobbyComponents(game);
 
-        const lobbyMessage = await message.channel.send({ embeds: [embed], components, files: [`resources/threedragonanteimages/Card Back.jpg`] });
+        const lobbyMessage = await message.channel.send({ embeds: [embed], components, files: [`resources/ThreeDragonAnteImages/Card Back.jpg`] });
         game.lobbyMessageId = lobbyMessage.id;
 
         const collector = lobbyMessage.createMessageComponentCollector({ time: 3_600_000 });
@@ -1091,12 +1091,12 @@ class ThreeDragonAnteManager {
                 const embed = this._generateGameStateEmbed(game, lastPlayedCard);
                 const files = [];
                 if (lastPlayedCard) {
-                    files.push(`resources/threedragonanteimages/${lastPlayedCard.image}`);
+                    files.push(`resources/ThreeDragonAnteImages/${lastPlayedCard.image}`);
                 }
                 await dmChannel.send({ embeds: [embed], files });
 
                 const attachments = player.hand.map(card => ({
-                    attachment: `resources/threedragonanteimages/${card.image}`,
+                    attachment: `resources/ThreeDragonAnteImages/${card.image}`,
                     name: card.image
                 }));
 
