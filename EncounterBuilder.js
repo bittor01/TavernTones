@@ -154,7 +154,29 @@ class EncounterBuilder {
             }
         }
 
-        // 4. Add CR 0 monsters if needed to meet the minimum count
+        // 4. Mob-filling phase for high-level encounters
+        if (remainingXp > totalXpBudget * 0.25) {
+            for (const candidate of candidates) {
+                if (currentMonsterCount >= maxMonsters) break;
+                if (candidate.xp === 0) continue;
+
+                const canAfford = Math.floor(remainingXp / candidate.xp);
+                const mobSize = Math.min(10, canAfford);
+
+                if (mobSize >= 5) {
+                    const existing = encounter.find(e => e.name === candidate.name && e.source === candidate.source);
+                    if (existing) {
+                        existing.count += mobSize;
+                    } else {
+                        encounter.push({ ...candidate, count: mobSize, isMob: true });
+                    }
+                    remainingXp -= candidate.xp * mobSize;
+                    currentMonsterCount++; // Mob counts as one combatant
+                }
+            }
+        }
+
+        // 5. Add CR 0 monsters if needed to meet the minimum count
         if (currentMonsterCount < partySize) {
             const cr0Candidates = this.monsters
                 .filter(m => this.getCrValue(m.cr) === 0 && m.name !== mainCreature.name)
@@ -168,10 +190,9 @@ class EncounterBuilder {
                 });
 
             while (currentMonsterCount < partySize && cr0Candidates.length > 0) {
-                // Find a candidate that we can afford
                 const candidateIndex = cr0Candidates.findIndex(c => remainingXp >= (c.xp || 0));
                 if (candidateIndex === -1) {
-                    break; // Can't afford any more CR 0 creatures
+                    break;
                 }
                 const candidate = cr0Candidates[candidateIndex];
 
@@ -183,8 +204,6 @@ class EncounterBuilder {
                 }
                 remainingXp -= (candidate.xp || 0);
                 currentMonsterCount++;
-
-                // Remove the used candidate so we don't pick it again unless intended
                 cr0Candidates.splice(candidateIndex, 1);
             }
         }

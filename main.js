@@ -157,7 +157,7 @@ function formatStatBlockForDiscord(monster) {
         .setColor(0x0099FF)
         .setTitle(monster.name || 'Unknown Combatant');
 
-    let description = `*${monster.size} ${typeof monster.type === 'object' ? monster.type.type : monster.type}, ${monster.alignment}*\n\n`;
+    let description = `# ${monster.name}\n*${monster.size} ${typeof monster.type === 'object' ? monster.type.type : monster.type}, ${monster.alignment}*\n\n`;
     const ac = monster.ac.map(a => (a.ac || a) + (a.from ? ` (${a.from.join(', ')})` : '')).join(', ');
     description += `**Armor Class** ${ac}\n`;
     description += `**Hit Points** ${monster.hp.average} (${monster.hp.formula})\n`;
@@ -953,7 +953,12 @@ client.once('clientReady', async () => {
                     .setColor(0x2ECC71)
                     .setTitle('Encounter Generated!')
                     .setDescription(`**XP Budget:** ${totalXp.toLocaleString()} / ${xpBudget.toLocaleString()}`)
-                    .addFields({ name: 'Creatures', value: encounter.map(m => `${m.count}x ${m.name}`).join('\n') || 'None' });
+                    .addFields({ name: 'Creatures', value: encounter.map(m => {
+                        if (m.isMob) {
+                            return `1x Mob of ${m.count} ${m.name}`;
+                        }
+                        return `${m.count}x ${m.name}`;
+                    }).join('\n') || 'None' });
 
                 const originalMessage = await interaction.channel.send({ embeds: [summaryEmbed] });
 
