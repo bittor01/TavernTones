@@ -4,6 +4,7 @@ const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { shell } = require('electron');
 const axios = require('axios');
+const EncounterBuilder = require('./EncounterBuilder.js');
 
 // These will be initialized in the constructor
 let logToRenderer;
@@ -19,6 +20,8 @@ class CommandHandler {
         logToRenderer = logToRendererInstance;
         musicPlayer = musicPlayerInstance;
         this.fiveEToolsParser = fiveEToolsParserInstance;
+        this.encounterBuilder = new EncounterBuilder(this.fiveEToolsParser);
+        this.initializationPromise = this.encounterBuilder.initialize();
         this.lastResponse = null;
         BOT_ROLE_ID = config.BOT_ROLE_ID;
         DEFAULT_LOCAL_FOLDER = config.DEFAULT_LOCAL_FOLDER;
@@ -84,6 +87,41 @@ class CommandHandler {
             .setColor(0x0099FF)
             .setTitle(`Search Results for "${query}"`)
             .setDescription(`I found ${results.length} results. Please select one from the dropdown below.`);
+
+        await message.reply({ embeds: [embed], components: [row] });
+    }
+
+    async _handleEncounterCreatureSearch(message, results, query, encounterParams) {
+        if (!results || results.length === 0) {
+            await message.reply(`I couldn't find any creatures matching "${query}".`);
+            return;
+        }
+
+        if (results.length > 25) {
+            await message.reply(`I found over 25 results for "${query}". Please be more specific.`);
+            return;
+        }
+
+        const options = results.map(item => ({
+            label: item.name,
+            description: `CR: ${item.cr} | Source: ${item.source}`,
+            value: `${item.category}__${item.source}__${item.name}`.substring(0, 100)
+        }));
+
+        const { partyLevel, partySize, difficulty, multiplier } = encounterParams;
+        const customId = `encounter-select__${partyLevel}__${partySize}__${difficulty}__${multiplier}`;
+
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId(customId)
+            .setPlaceholder('Select the main creature for the encounter')
+            .addOptions(options);
+
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+
+        const embed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle(`Creature Search for Encounter: "${query}"`)
+            .setDescription(`Found ${results.length} creatures. Select one to be the main creature for your encounter.`);
 
         await message.reply({ embeds: [embed], components: [row] });
     }
@@ -206,54 +244,43 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!su'):
-                        logToRenderer('Surge command detected');
-                        const surgeFilePath = path.join(__dirname, 'randomtables/surge.json');
-                        const surgeData = JSON.parse(fs.readFileSync(surgeFilePath, 'utf8'));
-                        const surgeEffect = getRandomEffect(surgeData, userId);
-                        if (surgeEffect) {
-                            const evaluatedText = evaluateDiceRolls(surgeEffect.text);
-                            logToRenderer(evaluatedText + (surgeEffect.unique ? '  - Unique!' : ''));
-                            await message.reply(evaluatedText + (surgeEffect.unique ? '  - 🥳Unique!🎊' : ''));
-
-                            if (surgeEffect.unique) {
-                                if (!Array.isArray(surgeEffect.used)) {
-                                    surgeEffect.used = [];
-                                }
-                                surgeEffect.used.push(userId);
-                                fs.writeFileSync(surgeFilePath, JSON.stringify(surgeData, null, 2), 'utf8');
-                                logToRenderer('Updated surgeData written to file.');
-                            }
-
-                        } else {
-                            await message.reply('No available effects for you.');
+                    case /!create-e(n|nc|ncounter)/.test(content): {
+                        logToRenderer('Create Encounter command detected');
+                        await this.initializationPromise; // Ensure monster data is loaded
+                        const commandMatch = message.content.match(/!create-e(?:n|nc|ncounter)\s+(.+)/i);
+                        if (!commandMatch) {
+                            await message.reply('Usage: `@Bot !create-en <creature> <partyLevel> <partySize> <difficulty> [multiplier]`');
+                            break;
                         }
-                        break;
 
-                    case content.includes('!sh'):
-                        logToRenderer('Shield command detected');
-                        const shieldFilePath = path.join(__dirname, 'randomtables/shield.json');
-                        const shieldData = JSON.parse(fs.readFileSync(shieldFilePath, 'utf8'));
-                        const shieldEffect = getRandomEffect(shieldData, userId);
-                        if (shieldEffect) {
-                            const evaluatedText = evaluateDiceRolls(shieldEffect.text);
-                            logToRenderer(evaluatedText + (shieldEffect.unique ? '  - Unique!' : ''));
-                            await message.reply(evaluatedText + (shieldEffect.unique ? '  - 🥳Unique!🎊' : ''));
+                        const args = commandMatch[1].trim().split(/\s+/);
 
-                            // Mark the effect as used by the user if it's unique
-                            if (shieldEffect.unique) {
-                                if (!Array.isArray(shieldEffect.used)) {
-                                    shieldEffect.used = [];
-                                }
-                                shieldEffect.used.push(userId);
-                                fs.writeFileSync(shieldFilePath, JSON.stringify(shieldData, null, 2), 'utf8');
-                                logToRenderer('Updated shieldData written to file.');
-                            }
-                        } else {
-                            logToRenderer('No Available effects for user!');
-                            await message.reply('No available effects for you.');
+                        if (args.length < 4) {
+                            await message.reply('Usage: `@Bot !create-en <creature> <partyLevel> <partySize> <difficulty> [multiplier]`\n**Difficulty:** low, moderate, high.');
+                            break;
                         }
+
+                        const creatureName = args[0].replace(/_/g, ' ');
+                        const partyLevel = parseInt(args[1], 10);
+                        const partySize = parseInt(args[2], 10);
+                        const difficulty = args[3].toLowerCase();
+                        const multiplier = parseFloat(args[4]) || 1.0;
+
+                        if (isNaN(partyLevel) || isNaN(partySize) || partyLevel < 1 || partyLevel > 20 || partySize < 1) {
+                            await message.reply('Invalid party level or size. Level must be 1-20, and size must be at least 1.');
+                            break;
+                        }
+
+                        if (!['low', 'moderate', 'high'].includes(difficulty)) {
+                            await message.reply('Invalid difficulty. Please choose from: `low`, `moderate`, `high`.');
+                            break;
+                        }
+
+                        const encounterParams = { partyLevel, partySize, difficulty, multiplier };
+                        const results = await this.fiveEToolsParser.searchByName('bestiary', creatureName);
+                        await this._handleEncounterCreatureSearch(message, results, creatureName, encounterParams);
                         break;
+                    }
 
                     case content.includes('!en'):
                         logToRenderer('Encounter command detected');
@@ -320,6 +347,56 @@ class CommandHandler {
                             await message.reply(result.message); // Send the error message from rollFromTable
                         }
                         break;
+
+                    case content.includes('!su'):
+                        logToRenderer('Surge command detected');
+                        const surgeFilePath = path.join(__dirname, 'randomtables/surge.json');
+                        const surgeData = JSON.parse(fs.readFileSync(surgeFilePath, 'utf8'));
+                        const surgeEffect = getRandomEffect(surgeData, userId);
+                        if (surgeEffect) {
+                            const evaluatedText = evaluateDiceRolls(surgeEffect.text);
+                            logToRenderer(evaluatedText + (surgeEffect.unique ? '  - Unique!' : ''));
+                            await message.reply(evaluatedText + (surgeEffect.unique ? '  - 🥳Unique!🎊' : ''));
+
+                            if (surgeEffect.unique) {
+                                if (!Array.isArray(surgeEffect.used)) {
+                                    surgeEffect.used = [];
+                                }
+                                surgeEffect.used.push(userId);
+                                fs.writeFileSync(surgeFilePath, JSON.stringify(surgeData, null, 2), 'utf8');
+                                logToRenderer('Updated surgeData written to file.');
+                            }
+
+                        } else {
+                            await message.reply('No available effects for you.');
+                        }
+                        break;
+
+                    case content.includes('!sh'):
+                        logToRenderer('Shield command detected');
+                        const shieldFilePath = path.join(__dirname, 'randomtables/shield.json');
+                        const shieldData = JSON.parse(fs.readFileSync(shieldFilePath, 'utf8'));
+                        const shieldEffect = getRandomEffect(shieldData, userId);
+                        if (shieldEffect) {
+                            const evaluatedText = evaluateDiceRolls(shieldEffect.text);
+                            logToRenderer(evaluatedText + (shieldEffect.unique ? '  - Unique!' : ''));
+                            await message.reply(evaluatedText + (shieldEffect.unique ? '  - 🥳Unique!🎊' : ''));
+
+                            // Mark the effect as used by the user if it's unique
+                            if (shieldEffect.unique) {
+                                if (!Array.isArray(shieldEffect.used)) {
+                                    shieldEffect.used = [];
+                                }
+                                shieldEffect.used.push(userId);
+                                fs.writeFileSync(shieldFilePath, JSON.stringify(shieldData, null, 2), 'utf8');
+                                logToRenderer('Updated shieldData written to file.');
+                            }
+                        } else {
+                            logToRenderer('No Available effects for user!');
+                            await message.reply('No available effects for you.');
+                        }
+                        break;
+
 
                     case content.includes('!ro'):
                         logToRenderer('Roll command detected');

@@ -708,11 +708,86 @@ client.once('clientReady', async () => {
 
     fiveEToolsParser = new FiveEToolsParser(logToRenderer);
     const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER }, fiveEToolsParser);
+    client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
     client.on('interactionCreate', async interaction => {
         if (interaction.isStringSelectMenu()) {
             const { customId, values, message } = interaction;
+
+            if (customId.startsWith('encounter-select__')) {
+                await interaction.deferUpdate();
+                const params = customId.split('__');
+                const encounterParams = {
+                    partyLevel: parseInt(params[1], 10),
+                    partySize: parseInt(params[2], 10),
+                    difficulty: params[3],
+                    multiplier: parseFloat(params[4])
+                };
+
+                const [category, source, name] = values[0].split('__');
+                const mainCreature = await fiveEToolsParser.getExact(category, name, source);
+
+                if (!mainCreature) {
+                    await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details for the selected creature.', components: [] });
+                    return;
+                }
+                const commandHandler = client.commandHandler; // Assuming commandHandler is attached to client
+                // Ensure monster has xp and normalized type, similar to EncounterBuilder's initialization
+                mainCreature.xp = commandHandler.encounterBuilder.crToXp[mainCreature.cr] || 0;
+                mainCreature.type = typeof mainCreature.type === 'object' ? mainCreature.type.type : mainCreature.type;
+
+                const result = commandHandler.encounterBuilder.generateEncounter({
+                    mainCreature: mainCreature,
+                    ...encounterParams
+                });
+
+                if (result.error) {
+                    await interaction.editReply({ content: `Error generating encounter: ${result.error}`, components: [] });
+                    return;
+                }
+
+                const { encounter, totalXp, xpBudget } = result;
+
+                const summaryEmbed = new EmbedBuilder()
+                    .setColor(0x2ECC71)
+                    .setTitle('Encounter Generated!')
+                    .setDescription(`**XP Budget:** ${totalXp.toLocaleString()} / ${xpBudget.toLocaleString()}`)
+                    .addFields({ name: 'Creatures', value: encounter.map(m => `${m.count}x ${m.name}`).join('\n') || 'None' });
+
+                const originalMessage = await interaction.editReply({ embeds: [summaryEmbed], components: [] });
+
+                const thread = await originalMessage.startThread({
+                    name: `Encounter Details for ${mainCreature.name}`,
+                    autoArchiveDuration: 60,
+                });
+
+                for (const monster of encounter) {
+                    const fullMonsterData = await fiveEToolsParser.getExact('bestiary', monster.name, monster.source);
+                    if(fullMonsterData){
+                         const { mainEmbed, longFields } = formatStatBlockForDiscord(fullMonsterData);
+                         const monsterMessage = await thread.send({ embeds: [mainEmbed] });
+                         if (longFields.length > 0) {
+                             const detailThread = await monsterMessage.startThread({
+                                 name: `${fullMonsterData.name} - Details`,
+                                 autoArchiveDuration: 60,
+                             });
+                             for (const field of longFields) {
+                                 const chunks = splitText(field.value, 1024);
+                                 for (let i = 0; i < chunks.length; i++) {
+                                     const chunkEmbed = new EmbedBuilder()
+                                         .setColor(0x0099FF)
+                                         .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
+                                         .setDescription(chunks[i]);
+                                     await detailThread.send({ embeds: [chunkEmbed] });
+                                 }
+                             }
+                         }
+                    }
+                }
+
+                return;
+            }
 
             if (customId === '5e-result-select') {
                 await interaction.deferUpdate();
