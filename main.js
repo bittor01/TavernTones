@@ -154,8 +154,7 @@ function createEmojiHpBar(creature) {
 function formatStatBlockForDiscord(monster) {
     // Part 1: Create the main embed with core stats
     const mainEmbed = new EmbedBuilder()
-        .setColor(0x0099FF)
-        .setTitle(monster.name || 'Unknown Combatant');
+        .setColor(0x0099FF);
 
     let description = `# ${monster.name}\n*${monster.size} ${typeof monster.type === 'object' ? monster.type.type : monster.type}, ${monster.alignment}*\n\n`;
     const ac = monster.ac.map(a => (a.ac || a) + (a.from ? ` (${a.from.join(', ')})` : '')).join(', ');
