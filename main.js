@@ -803,15 +803,30 @@ client.once('clientReady', async () => {
         }
 
         if (interaction.isButton()) {
-            if (interaction.customId === 'encounter-proceed-button') {
-                const selections = encounterSelections.get(interaction.message.id);
-                if (!selections || !selections.creature || !selections.difficulty) {
-                    await interaction.reply({ content: 'Please select a creature and a difficulty before proceeding.', ephemeral: true });
-                    return;
+            if (interaction.customId.startsWith('encounter-proceed-button')) {
+                const parts = interaction.customId.split('|');
+                const selections = encounterSelections.get(interaction.message.id) || {};
+
+                let modalCustomId;
+                if (parts.length > 1 && parts[1] === 'type') {
+                    // Type-based encounter
+                    const type = parts[2];
+                    if (!selections.difficulty) {
+                        await interaction.reply({ content: 'Please select a difficulty before proceeding.', ephemeral: true });
+                        return;
+                    }
+                    modalCustomId = `encounter-modal|type|${type}|${selections.difficulty}`;
+                } else {
+                    // Creature-based encounter
+                    if (!selections.creature || !selections.difficulty) {
+                        await interaction.reply({ content: 'Please select a creature and a difficulty before proceeding.', ephemeral: true });
+                        return;
+                    }
+                    modalCustomId = `encounter-modal|creature|${selections.creature}|${selections.difficulty}`;
                 }
 
                 const modal = new ModalBuilder()
-                    .setCustomId(`encounter-modal|${selections.creature}|${selections.difficulty}`)
+                    .setCustomId(modalCustomId)
                     .setTitle('Encounter Details');
 
                 const partyLevelInput = new TextInputBuilder()
@@ -910,9 +925,8 @@ client.once('clientReady', async () => {
                 await interaction.deferReply({ ephemeral: true });
 
                 const parts = interaction.customId.split('|');
+                const encounterType = parts[1];
                 const difficulty = parts.pop();
-                const creatureValue = parts.slice(1).join('|');
-                const [category, source, name] = creatureValue.split('|');
 
                 const partyLevel = parseInt(interaction.fields.getTextInputValue('partyLevel'), 10);
                 const partySize = parseInt(interaction.fields.getTextInputValue('partySize'), 10);
@@ -923,23 +937,26 @@ client.once('clientReady', async () => {
                     return;
                 }
 
-                const mainCreature = await fiveEToolsParser.getExact(category, name, source);
-                if (!mainCreature) {
-                    await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details for the selected creature.', ephemeral: true });
-                    return;
+                let encounterParams = { partyLevel, partySize, difficulty, multiplier };
+                let mainCreature;
+
+                if (encounterType === 'creature') {
+                    const creatureValue = parts.slice(2).join('|');
+                    const [category, source, name] = creatureValue.split('|');
+                    mainCreature = await fiveEToolsParser.getExact(category, name, source);
+                    if (!mainCreature) {
+                        await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details for the selected creature.', ephemeral: true });
+                        return;
+                    }
+                    mainCreature.xp = client.commandHandler.encounterBuilder.crToXp[mainCreature.cr] || 0;
+                    mainCreature.type = typeof mainCreature.type === 'object' ? mainCreature.type.type : mainCreature.type;
+                    encounterParams.mainCreature = mainCreature;
+                } else { // type === 'type'
+                    const creatureType = parts[2];
+                    encounterParams.creatureType = creatureType;
                 }
 
-                const commandHandler = client.commandHandler;
-                mainCreature.xp = commandHandler.encounterBuilder.crToXp[mainCreature.cr] || 0;
-                mainCreature.type = typeof mainCreature.type === 'object' ? mainCreature.type.type : mainCreature.type;
-
-                const result = commandHandler.encounterBuilder.generateEncounter({
-                    mainCreature,
-                    partyLevel,
-                    partySize,
-                    difficulty,
-                    multiplier
-                });
+                const result = client.commandHandler.encounterBuilder.generateEncounter(encounterParams);
 
                 if (result.error) {
                     await interaction.editReply({ content: `Error generating encounter: ${result.error}`, ephemeral: true });
@@ -961,8 +978,11 @@ client.once('clientReady', async () => {
 
                 const originalMessage = await interaction.channel.send({ embeds: [summaryEmbed] });
 
+                const threadName = mainCreature
+                    ? `Encounter Details for ${mainCreature.name}`
+                    : `Encounter Details for ${encounterParams.creatureType}`;
                 const thread = await originalMessage.startThread({
-                    name: `Encounter Details for ${mainCreature.name}`,
+                    name: threadName,
                     autoArchiveDuration: 60,
                 });
 

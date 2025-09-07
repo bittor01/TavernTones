@@ -140,6 +140,32 @@ class CommandHandler {
         await message.reply({ embeds: [embed], components: [row1, row2, row3] });
     }
 
+    async _handleEncounterTypeSearch(message, type) {
+        const difficultySelectMenu = new StringSelectMenuBuilder()
+            .setCustomId('encounter-difficulty-select')
+            .setPlaceholder('Select encounter difficulty')
+            .addOptions([
+                { label: 'Low', value: 'low' },
+                { label: 'Moderate', value: 'moderate' },
+                { label: 'High', value: 'high' },
+            ]);
+
+        const proceedButton = new ButtonBuilder()
+            .setCustomId(`encounter-proceed-button|type|${type}`)
+            .setLabel('Proceed')
+            .setStyle(ButtonStyle.Success);
+
+        const row1 = new ActionRowBuilder().addComponents(difficultySelectMenu);
+        const row2 = new ActionRowBuilder().addComponents(proceedButton);
+
+        const embed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle(`Encounter Builder: ${type}`)
+            .setDescription(`Building an encounter with the theme "${type}".\nPlease select a difficulty, then click "Proceed".`);
+
+        await message.reply({ embeds: [embed], components: [row1, row2] });
+    }
+
     async handleMessage(message) {
         // Ignore messages from the bot itself
         if (message.author.bot) {
@@ -266,13 +292,19 @@ class CommandHandler {
                         await this.initializationPromise; // Ensure monster data is loaded
                         const commandMatch = content.match(/!create\s+(?:en|enc|encounter)\s+(.+)/i);
                         if (!commandMatch || !commandMatch[1]) {
-                            await message.reply('Usage: `@Bot !create en <creature name>`');
+                            await message.reply('Usage: `@Bot !create en <creature name or type>`');
                             break;
                         }
 
-                        const creatureName = commandMatch[1].trim().replace(/_/g, ' ');
-                        const results = await this.fiveEToolsParser.searchByName('bestiary', creatureName);
-                        await this._handleEncounterCreatureSearch(message, results, creatureName);
+                        const query = commandMatch[1].trim().replace(/_/g, ' ');
+                        const creatureTypes = ["aberration", "beast", "celestial", "construct", "dragon", "elemental", "fey", "fiend", "giant", "humanoid", "monstrosity", "ooze", "plant", "undead"];
+
+                        if (creatureTypes.includes(query.toLowerCase())) {
+                            await this._handleEncounterTypeSearch(message, query);
+                        } else {
+                            const results = await this.fiveEToolsParser.searchByName('bestiary', query);
+                            await this._handleEncounterCreatureSearch(message, results, query);
+                        }
                         break;
                     }
 

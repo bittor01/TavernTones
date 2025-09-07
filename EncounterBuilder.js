@@ -43,7 +43,7 @@ class EncounterBuilder {
         return score;
     }
 
-    generateEncounter({ mainCreature, partyLevel, partySize, difficulty, multiplier = 1.0 }) {
+    generateEncounter({ mainCreature, creatureType, partyLevel, partySize, difficulty, multiplier = 1.0 }) {
         // 1. Initialization
         const xpPerCharacter = xpThresholds[partyLevel]?.[difficulty.toLowerCase()];
         if (xpPerCharacter === undefined) {
@@ -54,17 +54,27 @@ class EncounterBuilder {
         let encounter = [];
         let remainingXp = totalXpBudget;
         let currentMonsterCount = 0;
+        const addedCreatureNames = new Set();
 
-        // 2. Add Main Creature
-        encounter.push({ ...mainCreature, count: 1, xp_per_creature: mainCreature.xp });
-        remainingXp -= mainCreature.xp;
-        currentMonsterCount++;
+        // 2. Handle Main Creature or Creature Type
+        let candidates;
+        if (mainCreature) {
+            encounter.push({ ...mainCreature, count: 1, xp_per_creature: mainCreature.xp });
+            remainingXp -= mainCreature.xp;
+            currentMonsterCount++;
+            addedCreatureNames.add(mainCreature.name);
+
+            const primaryCrValue = this.getCrValue(mainCreature.cr);
+            candidates = this.monsters.filter(m =>
+                m.name !== mainCreature.name && this.getCrValue(m.cr) <= primaryCrValue && m.xp > 0
+            );
+        } else if (creatureType) {
+            candidates = this.monsters.filter(m => m.type && m.type.toLowerCase() === creatureType.toLowerCase() && m.xp > 0);
+        } else {
+            return { error: 'Either a main creature or a creature type must be provided.' };
+        }
 
         // 3. Build Combatant Unit Pool
-        const primaryCrValue = this.getCrValue(mainCreature.cr);
-        const candidates = this.monsters.filter(m =>
-            m.name !== mainCreature.name && this.getCrValue(m.cr) <= primaryCrValue && m.xp > 0
-        );
 
         let combatantUnitPool = [];
         for (const candidate of candidates) {
@@ -80,16 +90,30 @@ class EncounterBuilder {
 
         // 4. Sort the Pool
         combatantUnitPool.sort((a, b) => {
-            // We want to weigh thematic score higher than pure XP
-            const scoreA = this.getCreatureScore(a.base, mainCreature);
-            const scoreB = this.getCreatureScore(b.base, mainCreature);
-            if (scoreB !== scoreA) return scoreB - scoreA;
-            // Then sort by XP
+            if (mainCreature) {
+                const scoreA = this.getCreatureScore(a.base, mainCreature);
+                const scoreB = this.getCreatureScore(b.base, mainCreature);
+                if (scoreB !== scoreA) return scoreB - scoreA;
+            }
             return b.xp - a.xp;
         });
 
-        // 5. Greedy Selection
-        const addedCreatureNames = new Set([mainCreature.name]);
+        // 5. Phase 1: Fill with Singletons to meet party size
+        const singletons = combatantUnitPool.filter(u => u.body === 1 && !u.isMob);
+        for (const unit of singletons) {
+            if (currentMonsterCount >= partySize) break;
+            if (remainingXp <= 0 || currentMonsterCount >= maxMonsters) break;
+            if (addedCreatureNames.has(unit.base.name)) continue;
+
+            if (unit.xp <= remainingXp) {
+                encounter.push({ ...unit.base, count: unit.count, isMob: unit.isMob, xp_per_creature: unit.base.xp });
+                remainingXp -= unit.xp;
+                currentMonsterCount += unit.body;
+                addedCreatureNames.add(unit.base.name);
+            }
+        }
+
+        // 6. Phase 2: Fill remaining budget with any unit type
         for (const unit of combatantUnitPool) {
             if (remainingXp <= 0 || currentMonsterCount >= maxMonsters) break;
             if (addedCreatureNames.has(unit.base.name)) continue;
