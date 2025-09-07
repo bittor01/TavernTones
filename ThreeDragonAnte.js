@@ -125,7 +125,7 @@ const CARD_EFFECTS = [
   { name: "Sorcerer", alignment: "mortal", text: "Reveal the top three cards of the deck. Discard this card and replace it with one of the revealed cards. that card's power triggers. Put the other two revealed cards into the ante" },
 ];
 
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 
 const SPECIAL_ABILITIES = [
     { label: 'Bluff (Deception)', value: 'bluff', description: 'Pay 1 fewer gold when paying 2+ to a player.' },
@@ -1244,28 +1244,3 @@ module.exports = {
     CARD_EFFECTS,
     initializeThreeDragonAnte,
 };
-
-// --- Bot Initialization ---
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.DirectMessages,
-    ]
-});
-
-const token = process.env.DISCORD_TOKEN;
-
-if (token) {
-    client.once('ready', () => {
-        console.log(`Bot is ready! Logged in as ${client.user.tag}`);
-        initializeThreeDragonAnte(client);
-    });
-
-    client.login(token).catch(err => {
-        console.error("Failed to login:", err);
-    });
-} else {
-    console.error("Error: DISCORD_TOKEN environment variable not set. Bot cannot start.");
-}
