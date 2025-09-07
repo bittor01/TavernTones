@@ -124,43 +124,46 @@ button:disabled {
     padding: 8px;
     border-radius: 4px;
     cursor: pointer;
+    gap: 10px; /* Add gap for spacing */
 }
 .initiative-entry.active-turn {
     background-color: #4f5b66;
     font-weight: bold;
 }
+
+/* Reorder elements visually using flexbox 'order' property */
 .active-chevron {
-    margin-right: 8px;
     color: #a0c8ff;
+    order: 1;
 }
 .initiative-score {
-    margin-right: 10px;
     font-weight: bold;
     color: #ccc;
-    flex-shrink: 0; /* Prevent score from shrinking */
+    order: 2;
 }
-
-.initiative-details {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    margin: 0 10px;
-    min-width: 0; /* Allow flex children to shrink */
-}
-
 .initiative-hp-bar-container {
-    width: 100%;
-    height: 8px;
+    width: 120px; /* Fixed width for alignment */
+    height: 12px;
     background-color: #1e1e1e;
     border-radius: 4px;
     position: relative;
     overflow: hidden;
-    margin-top: 4px;
+    flex-shrink: 0; /* Prevent from shrinking */
+    order: 3;
 }
-
+.initiative-entry .creature-name {
+    flex-grow: 1; /* Name takes up available space */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    order: 4;
+}
 .initiative-conditions {
     flex-shrink: 0; /* Prevent emojis from shrinking */
     font-size: 0.9em;
+    width: 80px; /* Fixed width for alignment */
+    text-align: left; /* Align left now that it's at the end */
+    order: 5;
 }
 
 .panel-header {
@@ -545,4 +548,74 @@ button:disabled {
     justify-content: space-around;
     margin-top: 10px;
     gap: 10px;
+}
+
+/* --- Info Button --- */
+.info-btn {
+    cursor: pointer;
+    font-size: 1.2em;
+    color: #a0c8ff;
+    display: inline-block;
+    margin-left: 5px;
+}
+
+.info-btn:hover {
+    color: #d0e8ff;
+}
+
+/* --- Disabled Input State --- */
+input:disabled {
+    background-color: #2a2a2a;
+    color: #666;
+    cursor: not-allowed;
+}
+
+/* --- Combatant Header Name Group --- */
+.combatant-name-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-grow: 1;
+    min-width: 0; /* Ensures text-overflow works correctly in a flex container */
+}
+
+.combatant-name-group h4 {
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Override for existing h4 to remove flex-grow */
+.combatant-header .combatant-name-group + .header-right-group {
+    /* This empty rule is just to show structure, no change needed here */
+}
+
+.combatant-header h4 {
+    flex-grow: 0; /* Remove grow from h4 itself */
+}
+
+.interactive-stat {
+    background-color: #007bff; /* A distinct blue color */
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.interactive-stat:hover {
+    background-color: #0056b3; /* A darker blue on hover */
+}
+
+/* --- Stat Block Table --- */
+.stat-block-table {
+    width: 100%;
+    text-align: center;
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+.stat-block-table th, .stat-block-table td {
+    border: 1px solid #444;
+    padding: 5px;
+}
+.stat-block-table th {
+    background-color: #333;
 }

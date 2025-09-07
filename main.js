@@ -125,31 +125,123 @@ apploader();
 
 
 function createEmojiHpBar(creature) {
-    let hp = creature.hp || 0;
-    let maxHp = creature.maxHp || 1;
-    let temphp = creature.tempHp || 0;
+    const BAR_LENGTH = 8;
+    const hp = creature.hp || 0;
+    const maxHp = creature.maxHp || 1;
+    const tempHp = creature.tempHp || 0;
 
     if (hp <= 0) {
-        return hpBarEmojiMap['#6c757d'].repeat(8);
+        return hpBarEmojiMap['#6c757d'].repeat(BAR_LENGTH); // All dead blocks
     }
 
-    let color = getHpColor(hp, maxHp);
-    if (temphp > 0 || hp > maxHp) {
-        color = '#8a2be2'; // Purple for temp HP
+    const hpBlocks = Math.round((hp / maxHp) * BAR_LENGTH);
+    const tempHpBlocks = Math.min(BAR_LENGTH, Math.round((tempHp / maxHp) * BAR_LENGTH)); // Cap at bar length
+
+    const hpColorEmoji = hpBarEmojiMap[getHpColor(hp, maxHp)] || hpBarEmojiMap['#007bff'];
+    const tempHpEmoji = '⭐';
+    const emptyEmoji = hpBarEmojiMap['empty'];
+
+    let bar = '';
+    for (let i = 0; i < BAR_LENGTH; i++) {
+        if (i < tempHpBlocks) {
+            bar += tempHpEmoji;
+        } else if (i < hpBlocks) {
+            bar += hpColorEmoji;
+        } else {
+            bar += emptyEmoji;
+        }
     }
-
-    if (hp > maxHp) {
-        hp = maxHp;
-    }
-
-    const emoji = hpBarEmojiMap[color] || hpBarEmojiMap['#007bff'];
-    const percentage = Math.max(0, (hp / maxHp));
-
-    const filledBlocks = Math.round(percentage * 8);
-    const emptyBlocks = 8 - filledBlocks;
-
-    return emoji.repeat(filledBlocks) + hpBarEmojiMap['empty'].repeat(emptyBlocks);
+    return bar;
 }
+
+function formatStatBlockForDiscord(monster) {
+    // Part 1: Create the main embed with core stats
+    const mainEmbed = new EmbedBuilder()
+        .setColor(0x0099FF)
+        .setTitle(monster.name || 'Unknown Combatant');
+
+    let description = `*${monster.size} ${typeof monster.type === 'object' ? monster.type.type : monster.type}, ${monster.alignment}*\n\n`;
+    const ac = monster.ac.map(a => (a.ac || a) + (a.from ? ` (${a.from.join(', ')})` : '')).join(', ');
+    description += `**Armor Class** ${ac}\n`;
+    description += `**Hit Points** ${monster.hp.average} (${monster.hp.formula})\n`;
+    description += `**Speed** ${Object.entries(monster.speed).map(([type, val]) => `${type} ${val.number || val} ft.`).join(', ')}\n\n`;
+
+    const formatMod = (score) => {
+        const mod = Math.floor(((score || 10) - 10) / 2);
+        return mod >= 0 ? `+${mod}` : `${mod}`;
+    };
+    description += `**STR** ${monster.str} (${formatMod(monster.str)}) | **DEX** ${monster.dex} (${formatMod(monster.dex)}) | **CON** ${monster.con} (${formatMod(monster.con)})\n`;
+    description += `**INT** ${monster.int} (${formatMod(monster.int)}) | **WIS** ${monster.wis} (${formatMod(monster.wis)}) | **CHA** ${monster.cha} (${formatMod(monster.cha)})`;
+
+    mainEmbed.setDescription(description);
+
+    // Part 2: Prepare long fields for separate messages
+    const longFields = [];
+    const processEntries = (entries) => {
+        if (!entries) return '';
+        return entries.map(e => {
+            if (typeof e === 'string') return e;
+            if (e.name && e.entries) {
+                 const entryText = e.entries.join(' ').replace(/{@(dice|damage|hit) ([^}]+)}/g, '($2)');
+                 return `**_${e.name}._** ${entryText}`;
+            }
+            return '';
+        }).join('\n\n');
+    };
+
+    if (monster.trait && monster.trait.length > 0) {
+        longFields.push({ name: 'Traits', value: processEntries(monster.trait) });
+    }
+    if (monster.action && monster.action.length > 0) {
+        longFields.push({ name: 'Actions', value: processEntries(monster.action) });
+    }
+    if (monster.legendary && monster.legendary.length > 0) {
+        longFields.push({ name: 'Legendary Actions', value: processEntries(monster.legendary) });
+    }
+    if (monster.reaction && monster.reaction.length > 0) {
+        longFields.push({ name: 'Reactions', value: processEntries(monster.reaction) });
+    }
+
+    return { mainEmbed, longFields };
+}
+
+function splitText(text, maxLength = 1024) {
+    const chunks = [];
+    if (!text) return chunks;
+
+    let currentChunk = "";
+    const lines = text.split('\n');
+
+    for (const line of lines) {
+        // If a single line is longer than the max length, split it forcefully
+        if (line.length > maxLength) {
+            if (currentChunk) {
+                chunks.push(currentChunk);
+                currentChunk = "";
+            }
+            const lineChunks = line.match(new RegExp(`.{1,${maxLength}}`, 'g')) || [];
+            chunks.push(...lineChunks);
+            continue;
+        }
+
+        // If adding the next line exceeds max length, push the current chunk
+        if (currentChunk.length + line.length + 1 > maxLength) {
+            chunks.push(currentChunk);
+            currentChunk = "";
+        }
+
+        // Add the line to the current chunk
+        currentChunk += (currentChunk ? '\n' : '') + line;
+    }
+
+    // Push the last remaining chunk
+    if (currentChunk) {
+        chunks.push(currentChunk);
+    }
+
+    return chunks;
+}
+
 async function checkAndShowReminders(creature, turnEvent) {
     if (!creature) return;
 
@@ -233,12 +325,22 @@ async function ipcloader() {
                 let description = '';
                 initiativeOrder.forEach((creature, index) => {
                     const hpBar = createEmojiHpBar(creature);
-                    const conditions = (creature.conditions || [])
-                        .map(c => DND_CONDITIONS[c]?.emoji || c)
-                        .join(' ');
+
+                    let conditionEmojis = (creature.conditions || []).map(c => DND_CONDITIONS[c]?.emoji || '');
+                    let conditionStr;
+                    if (conditionEmojis.length > 3) {
+                        conditionStr = conditionEmojis.slice(0, 3).join('') + '♾️';
+                    } else {
+                        conditionStr = conditionEmojis.join('');
+                    }
 
                     const activeMarker = index === currentTurnIndex ? '➤ ' : '';
-                    description += `${activeMarker}**${creature.initiative}** - ${creature.name}  |  ${hpBar}  |  ${conditions}\n`;
+                    const initiativeStr = creature.initiative.toString();
+                    const nameStr = (creature.name || '');
+
+                    // New layout: Init | HP Bar | Name | Conditions
+                    const line = `${activeMarker}**${initiativeStr}** | ${hpBar} | ${nameStr} | ${conditionStr}`;
+                    description += line + '\n';
                 });
 
                 embed.setDescription(description);
@@ -425,6 +527,63 @@ async function ipcloader() {
             const monster = await fiveEToolsParser.getExact('bestiary', name, source);
             logToRenderer(`[IPC] Found monster details, returning to renderer.`);
             return monster;
+        });
+
+        ipcMain.on('push-dicelog-to-discord', async (event, logContent) => {
+            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+            if (!channel) {
+                logToRenderer(`[push-dicelog] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
+                return;
+            }
+            try {
+                const embed = new EmbedBuilder()
+                    .setColor(0x0099FF)
+                    .setTitle('Dice Rolls')
+                    .setDescription(logContent)
+                    .setTimestamp();
+                await channel.send({ embeds: [embed] });
+                logToRenderer('[push-dicelog] Successfully pushed dice log to chat.');
+            } catch (error) {
+                logToRenderer(`[push-dicelog] FAILED to send embed: ${error}`);
+            }
+        });
+
+        ipcMain.on('push-statblock-to-discord', async (event, rawDataString) => {
+            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+            if (!channel) {
+                logToRenderer(`[push-statblock] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
+                return;
+            }
+            try {
+                const monster = JSON.parse(rawDataString);
+                const { mainEmbed, longFields } = formatStatBlockForDiscord(monster);
+
+                // Send the main embed
+                const mainMessage = await channel.send({ embeds: [mainEmbed] });
+                logToRenderer('[push-statblock] Successfully pushed main stat block embed.');
+
+                // If there are long fields, create a thread and post them
+                if (longFields.length > 0) {
+                    const thread = await mainMessage.startThread({
+                        name: `${monster.name} - Details`,
+                        autoArchiveDuration: 60,
+                    });
+
+                    for (const field of longFields) {
+                        const chunks = splitText(field.value, 1024);
+                        for (let i = 0; i < chunks.length; i++) {
+                            const chunkEmbed = new EmbedBuilder()
+                                .setColor(0x0099FF)
+                                .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
+                                .setDescription(chunks[i]);
+                            await thread.send({ embeds: [chunkEmbed] });
+                        }
+                    }
+                    logToRenderer(`[push-statblock] Sent ${longFields.length} detail section(s) to thread.`);
+                }
+            } catch (error) {
+                logToRenderer(`[push-statblock] FAILED to send embed: ${error}`);
+            }
         });
     }
     else {
