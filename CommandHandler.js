@@ -34,6 +34,7 @@ class CommandHandler {
             .setDescription('To use any command, be sure to @me!')
             .addFields(
                 { name: '!ping', value: 'Test to see if the bot is working.' },
+                { name: '!create en <creature>', value: 'Starts the interactive encounter builder.' },
                 { name: '!5e <query>', value: 'Search all 5etools data by name.' },
                 { name: '!spell <query>', value: 'Search for a spell by name.' },
                 { name: '!item <query>', value: 'Search for an item by name.' },
@@ -134,20 +135,23 @@ class CommandHandler {
 
         if (message.mentions.has(this.client.user) || message.mentions.roles.has(BOT_ROLE_ID)) { // Check if the bot is mentioned
             const userId = message.author.id;
-            const content = message.content.toLowerCase();
+
+            // Strip the mention from the message content
+            const commandBody = message.content.replace(/<@.?[0-9]+>/, '').trim();
+            const content = commandBody.toLowerCase();
 
             try {
                 let typingInterval;
                 switch (true) {
-                    case content.includes('!ping'):
+                    case content.startsWith('!ping'):
                         logToRenderer('Ping command detected'); // Log when ping command is detected
                         await message.reply('Pong!');
                         logToRenderer('Ping successfully ponged.');
                         break;
 
-                    case content.includes('!5e'): {
+                    case content.startsWith('!5e'): {
                         logToRenderer('5e command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!5e') + 3).trim();
+                        const query = content.substring('!5e'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !5e <search term>`');
                             break;
@@ -157,9 +161,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!spell'): {
+                    case content.startsWith('!spell'): {
                         logToRenderer('Spell command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!spell') + 6).trim();
+                        const query = content.substring('!spell'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !spell <spell name>`');
                             break;
@@ -169,9 +173,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!item'): {
+                    case content.startsWith('!item'): {
                         logToRenderer('Item command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!item') + 5).trim();
+                        const query = content.substring('!item'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !item <item name>`');
                             break;
@@ -181,9 +185,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!monster'): {
+                    case content.startsWith('!monster'): {
                         logToRenderer('Monster command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!monster') + 8).trim();
+                        const query = content.substring('!monster'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !monster <monster name>`');
                             break;
@@ -193,9 +197,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!feat'): {
+                    case content.startsWith('!feat'): {
                         logToRenderer('Feat command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!feat') + 5).trim();
+                        const query = content.substring('!feat'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !feat <feat name>`');
                             break;
@@ -205,9 +209,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!background'): {
+                    case content.startsWith('!background'): {
                         logToRenderer('Background command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!background') + 11).trim();
+                        const query = content.substring('!background'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !background <background name>`');
                             break;
@@ -217,9 +221,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!race'): {
+                    case content.startsWith('!race'): {
                         logToRenderer('Race command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!race') + 5).trim();
+                        const query = content.substring('!race'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !race <race name>`');
                             break;
@@ -229,9 +233,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!deep'): {
+                    case content.startsWith('!deep'): {
                         logToRenderer('Deep search command detected');
-                        const query = message.content.substring(message.content.toLowerCase().indexOf('!deep') + 5).trim();
+                        const query = content.substring('!deep'.length).trim();
                         if (!query) {
                             await message.reply('Please provide a search term. Usage: `@Bot !deep <search term>`');
                             break;
@@ -241,10 +245,10 @@ class CommandHandler {
                         break;
                     }
 
-                    case /^\s*!create\s+(?:en|enc|encounter)/.test(content): {
+                    case content.startsWith('!create en') || content.startsWith('!create enc') || content.startsWith('!create encounter'): {
                         logToRenderer('Create Encounter command detected');
                         await this.initializationPromise; // Ensure monster data is loaded
-                        const commandMatch = content.match(/!\s*create\s+(?:en|enc|encounter)\s+(.+)/i);
+                        const commandMatch = content.match(/!create\s+(?:en|enc|encounter)\s+(.+)/i);
                         if (!commandMatch || !commandMatch[1]) {
                             await message.reply('Usage: `@Bot !create en <creature name>`');
                             break;
@@ -256,7 +260,47 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.includes('!su'):
+                    case content.startsWith('!en'): {
+                        logToRenderer('Encounter table command detected');
+                        const invalidCharsRegex = /[.,:;\/\\?*"<>|&]+/g;
+                        const commandBody = content.substring('!en'.length).trim();
+                        const args = commandBody.replace(invalidCharsRegex, "").trim().split(/\s+/);
+
+                        // Parse weights and table names
+                        const tableEntries = [];
+                        let validArgs = true;
+                        for (let i = 0; i < args.length; i += 2) {
+                            const weight = parseInt(args[i], 10);
+                            const tableName = args[i + 1];
+
+                            if (isNaN(weight) || weight <= 0 || !tableName) {
+                                await message.reply('Invalid format. Please ensure weights are positive integers and table names are valid.');
+                                validArgs = false;
+                                break;
+                            }
+                            tableEntries.push({ weight, tableName });
+                        }
+
+                        if (!validArgs) {
+                            break;
+                        }
+                        if (tableEntries.length === 0) {
+                             await message.reply('No table arguments provided. Please specify weights and table names.');
+                             break;
+                        }
+
+                        const result = await rollFromTable("encountertables", tableEntries, message.channel.id);
+
+                        if (result.success) {
+                            const finalMessage = `Effect: ||${result.text}||`;
+                            await message.reply(finalMessage);
+                        } else {
+                            await message.reply(result.message);
+                        }
+                        break;
+                    }
+
+                    case content.startsWith('!su'):
                         logToRenderer('Surge command detected');
                         const surgeFilePath = path.join(__dirname, 'randomtables/surge.json');
                         const surgeData = JSON.parse(fs.readFileSync(surgeFilePath, 'utf8'));
