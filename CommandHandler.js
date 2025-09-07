@@ -91,7 +91,7 @@ class CommandHandler {
         await message.reply({ embeds: [embed], components: [row] });
     }
 
-    async _handleEncounterCreatureSearch(message, results, query, encounterParams) {
+    async _handleEncounterCreatureSearch(message, results, query) {
         if (!results || results.length === 0) {
             await message.reply(`I couldn't find any creatures matching "${query}".`);
             return;
@@ -105,14 +105,11 @@ class CommandHandler {
         const options = results.map(item => ({
             label: item.name,
             description: `CR: ${item.cr} | Source: ${item.source}`,
-            value: `${item.category}__${item.source}__${item.name}`.substring(0, 100)
+            value: `${item.category}|${item.source}|${item.name}`.substring(0, 100)
         }));
 
-        const { partyLevel, partySize, difficulty, multiplier } = encounterParams;
-        const customId = `encounter-select__${partyLevel}__${partySize}__${difficulty}__${multiplier}`;
-
         const selectMenu = new StringSelectMenuBuilder()
-            .setCustomId(customId)
+            .setCustomId('encounter-creature-select')
             .setPlaceholder('Select the main creature for the encounter')
             .addOptions(options);
 
@@ -244,109 +241,20 @@ class CommandHandler {
                         break;
                     }
 
-                    case /!create-e(n|nc|ncounter)/.test(content): {
+                    case /^\s*!create\s+(?:en|enc|encounter)/.test(content): {
                         logToRenderer('Create Encounter command detected');
                         await this.initializationPromise; // Ensure monster data is loaded
-                        const commandMatch = message.content.match(/!create-e(?:n|nc|ncounter)\s+(.+)/i);
-                        if (!commandMatch) {
-                            await message.reply('Usage: `@Bot !create-en <creature> <partyLevel> <partySize> <difficulty> [multiplier]`');
+                        const commandMatch = content.match(/!\s*create\s+(?:en|enc|encounter)\s+(.+)/i);
+                        if (!commandMatch || !commandMatch[1]) {
+                            await message.reply('Usage: `@Bot !create en <creature name>`');
                             break;
                         }
 
-                        const args = commandMatch[1].trim().split(/\s+/);
-
-                        if (args.length < 4) {
-                            await message.reply('Usage: `@Bot !create-en <creature> <partyLevel> <partySize> <difficulty> [multiplier]`\n**Difficulty:** low, moderate, high.');
-                            break;
-                        }
-
-                        const creatureName = args[0].replace(/_/g, ' ');
-                        const partyLevel = parseInt(args[1], 10);
-                        const partySize = parseInt(args[2], 10);
-                        const difficulty = args[3].toLowerCase();
-                        const multiplier = parseFloat(args[4]) || 1.0;
-
-                        if (isNaN(partyLevel) || isNaN(partySize) || partyLevel < 1 || partyLevel > 20 || partySize < 1) {
-                            await message.reply('Invalid party level or size. Level must be 1-20, and size must be at least 1.');
-                            break;
-                        }
-
-                        if (!['low', 'moderate', 'high'].includes(difficulty)) {
-                            await message.reply('Invalid difficulty. Please choose from: `low`, `moderate`, `high`.');
-                            break;
-                        }
-
-                        const encounterParams = { partyLevel, partySize, difficulty, multiplier };
+                        const creatureName = commandMatch[1].trim().replace(/_/g, ' ');
                         const results = await this.fiveEToolsParser.searchByName('bestiary', creatureName);
-                        await this._handleEncounterCreatureSearch(message, results, creatureName, encounterParams);
+                        await this._handleEncounterCreatureSearch(message, results, creatureName);
                         break;
                     }
-
-                    case content.includes('!en'):
-                        logToRenderer('Encounter command detected');
-                        const invalidCharsRegex = /[.,:;\/\\?*"<>|&]+/g;
-                        const regex = /^!\S*\s*(.*)/;
-                        const match = content.match(regex);
-                        let args;
-
-                        if (match) {
-                            // Filtered and split arguments
-                            args = match[1]
-                                .replace(invalidCharsRegex, "")    // Remove invalid characters
-                                .trim()                            // Remove extra spaces at the ends
-                                .split(/\s+/);
-                        } else {
-                            await message.reply('Invalid format. Please use the command like this: @TT !en 80 clear 30 calmweather 15 choppyweather 5 specialweather');
-                            break;
-                        }
-
-                        // Parse weights and table names
-                        const tableEntries = [];
-                        let validArgs = true; // Flag to track argument validity
-                        for (let i = 0; i < args.length; i += 2) {
-                            const weight = parseInt(args[i], 10);
-                            const tableName = args[i + 1];
-
-                            if (isNaN(weight) || weight <= 0 || !tableName) {
-                                await message.reply('Invalid format. Please ensure weights are positive integers and table names are valid.');
-                                validArgs = false; // Set flag to false
-                                break; // Exit loop early
-                            }
-                            tableEntries.push({ weight, tableName });
-                        }
-
-                        if (!validArgs) { // Check flag before proceeding
-                            break; // Exit case if arguments were invalid
-                        }
-
-                        if (tableEntries.length === 0 && args.length > 0) {
-                            // This case implies that parsing failed to produce entries,
-                            // possibly due to an odd number of arguments or other unhandled parsing issues,
-                            // though the loop's `!tableName` check should catch most.
-                            // However, if the loop was broken due to invalid format, the message is already sent.
-                            // This is a fallback.
-                            if (validArgs) { // Only send if no other error message was sent
-                                await message.reply('Could not parse table entries. Please check the format.');
-                            }
-                            break;
-                        }
-
-                        if (tableEntries.length === 0 && args.length === 0) {
-                             await message.reply('No table arguments provided. Please specify weights and table names.');
-                             break;
-                        }
-
-
-                        // Call the new rollFromTable function
-                        const result = await rollFromTable("encountertables", tableEntries, message.channel.id);
-
-                        if (result.success) {
-                            const finalMessage = `Effect: ||${result.text}||`;
-                            await message.reply(finalMessage);
-                        } else {
-                            await message.reply(result.message); // Send the error message from rollFromTable
-                        }
-                        break;
 
                     case content.includes('!su'):
                         logToRenderer('Surge command detected');
