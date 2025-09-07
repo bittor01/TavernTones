@@ -1,3 +1,5 @@
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+
 const DECK_DEFINITION = [
   { name: "Black Dragon", optional: false, value: 1, image: "1 black.jpg", effect: "Black" },
   { name: "Blue Dragon", optional: false, value: 1, image: "1 blue.jpg", effect: "Blue" },
@@ -90,8 +92,6 @@ const DECK_DEFINITION = [
   { name: "The Princess", optional: true, value: 4, image: "Princess.jpg", effect: "Princess" },
   { name: "The Sorcerer", optional: true, value: 8, image: "Sorcerer.jpg", effect: "Sorcerer" },
 ];
-//{ name: "", value: , image: ".jpg", effect: "" },
-//{ name: "", alignment: "", text: "" },
 const CARD_EFFECTS = [
   { name: "Black", alignment: "evil", text: "Steal 3 gold from the stakes" },
   { name: "Blue", alignment: "evil", text: "Choose one: Each opponent gives you 1 gold; OR each opponent adds 1 gold to the stakes for each card in your flight" },
@@ -124,9 +124,6 @@ const CARD_EFFECTS = [
   { name: "Princess", alignment: "mortal", text: "The power of each good dragon in your flight triggers" },
   { name: "Sorcerer", alignment: "mortal", text: "Reveal the top three cards of the deck. Discard this card and replace it with one of the revealed cards. that card's power triggers. Put the other two revealed cards into the ante" },
 ];
-
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
-
 const SPECIAL_ABILITIES = [
     { label: 'Bluff (Deception)', value: 'bluff', description: 'Pay 1 fewer gold when paying 2+ to a player.' },
     { label: 'Concentration', value: 'concentration', description: 'Pay 1 fewer gold to the stakes when you ante.' },
@@ -138,17 +135,77 @@ const SPECIAL_ABILITIES = [
     { label: 'Wild Card', value: 'wild_card', description: 'Once per game, count a mortal as a dragon for a color flight.' },
 ];
 
-/**
- * Initializes the Three-Dragon Ante game command listeners.
- * @param {import('discord.js').Client} client The Discord client instance.
- */
-function initializeThreeDragonAnte(client) {
-    const activeGames = new Map();
+class ThreeDragonAnteManager {
+    constructor(client) {
+        this.client = client;
+        this.activeGames = new Map();
+    }
 
-    const generateLobbyEmbed = (game) => {
+    async handleCommand(message) {
+        if (this.activeGames.has(message.channel.id)) {
+            return message.channel.send({ content: 'A game is already in progress in this channel.' });
+        }
+
+        const game = {
+            hostId: message.author.id,
+            channelId: message.channel.id,
+            players: [],
+            state: 'lobby',
+            client: this.client,
+        };
+        this.activeGames.set(message.channel.id, game);
+
+        const embed = this._generateLobbyEmbed(game);
+        const components = this._buildLobbyComponents(game);
+
+        const lobbyMessage = await message.channel.send({ embeds: [embed], components, files: [`resources/threedragonanteimages/Card Back.jpg`] });
+        game.lobbyMessageId = lobbyMessage.id;
+
+        const collector = lobbyMessage.createMessageComponentCollector({ time: 3_600_000 });
+
+        collector.on('collect', async i => {
+            const game = this.activeGames.get(i.channelId);
+            if (!game) return i.reply({ content: 'This game lobby is no longer active.', ephemeral: true });
+
+            const isPlayerInGame = game.players.some(p => p.id === i.user.id);
+
+            if (i.customId === 'tda_join') {
+                if (isPlayerInGame) return i.reply({ content: 'You are already in the game.', ephemeral: true });
+                game.players.push({ id: i.user.id, user: i.user, specialAbility: null });
+            } else if (i.customId === 'tda_leave') {
+                if (!isPlayerInGame) return i.reply({ content: 'You are not in this game.', ephemeral: true });
+                game.players = game.players.filter(p => p.id !== i.user.id);
+            } else if (i.customId === 'tda_ability_select') {
+                if (!isPlayerInGame) return i.reply({ content: 'You must join the game before selecting an ability.', ephemeral: true });
+                const player = game.players.find(p => p.id === i.user.id);
+                player.specialAbility = i.values[0];
+            } else if (i.customId === 'tda_start') {
+                if (!isPlayerInGame) return i.reply({ content: 'You must be in the game to start it.', ephemeral: true });
+                if (game.players.length < 2) return i.reply({ content: 'You need at least 2 players to start.', ephemeral: true });
+
+                collector.stop('game_started');
+                game.state = 'starting';
+                await i.update({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game, true) });
+                this._startGame(game, i.channel);
+                return;
+            }
+
+            await i.update({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game) });
+        });
+
+        collector.on('end', (collected, reason) => {
+            if (reason !== 'game_started') {
+                this.activeGames.delete(message.channel.id);
+                lobbyMessage.edit({ content: 'This game lobby has expired.', embeds: [], components: [] }).catch(() => {});
+            }
+        });
+    }
+
+    _generateLobbyEmbed(game) {
         const embed = new EmbedBuilder()
             .setTitle('Three-Dragon Ante Lobby')
             .setColor(0x5539cc)
+            .setThumbnail('attachment://Card Back.jpg')
             .setDescription('Players are gathering to play Three-Dragon Ante. Click "Join" to enter the game!')
             .setFooter({ text: 'The game will begin once the "Start Game" button is pressed.' });
 
@@ -157,15 +214,12 @@ function initializeThreeDragonAnte(client) {
             return `- ${p.user.username}` + (ability ? ` (${ability.label})` : '');
         }).join('\n');
 
-        if (!playerList) {
-            playerList = 'No players have joined yet.';
-        }
-
+        if (!playerList) playerList = 'No players have joined yet.';
         embed.addFields({ name: `Players (${game.players.length})`, value: playerList });
         return embed;
-    };
+    }
 
-    const buildLobbyComponents = (game, disabled = false) => {
+    _buildLobbyComponents(game, disabled = false) {
         const joinButton = new ButtonBuilder().setCustomId('tda_join').setLabel('Join Game').setStyle(ButtonStyle.Success).setDisabled(disabled);
         const leaveButton = new ButtonBuilder().setCustomId('tda_leave').setLabel('Leave Game').setStyle(ButtonStyle.Danger).setDisabled(disabled);
         const startButton = new ButtonBuilder().setCustomId('tda_start').setLabel('Start Game').setStyle(ButtonStyle.Primary).setDisabled(disabled || game.players.length < 2);
@@ -174,14 +228,14 @@ function initializeThreeDragonAnte(client) {
         const row1 = new ActionRowBuilder().addComponents(joinButton, leaveButton, startButton);
         const row2 = new ActionRowBuilder().addComponents(abilityMenu);
         return [row1, row2];
-    };
+    }
 
-    const startGame = async (game, channel) => {
+    async _startGame(game, channel) {
         try {
             const host = game.players[0];
             if (!host) {
                 channel.send({ content: "The host has left! Game cancelled." });
-                return activeGames.delete(channel.id);
+                return this.activeGames.delete(channel.id);
             }
 
             const dmChannel = await host.user.createDM();
@@ -198,25 +252,23 @@ function initializeThreeDragonAnte(client) {
                 await dmChannel.send({ content: `The ante is set to ${ante} GP. Each player starts with ${ante} GP.` });
                 await channel.send({ content: `The ante has been set by the host. The card draft will now begin in your DMs.` });
 
-                startDrafting(game, channel);
+                this._startDrafting(game, channel);
             });
 
             collector.on('end', (collected, reason) => {
                 if (reason === 'time') {
                     channel.send({ content: `The host did not set the ante in time. The game has been cancelled.` });
-                    activeGames.delete(game.channelId);
+                    this.activeGames.delete(game.channelId);
                 }
             });
         } catch (error) {
             console.error("Error starting game:", error);
             channel.send({ content: "There was an error starting the game. Please try again." });
-            activeGames.delete(game.channelId);
+            this.activeGames.delete(game.channelId);
         }
-        // After any power resolves, check if the new card in the flight completed a special flight
-        await checkSpecialFlights(game, player, channel);
-    };
+    }
 
-    const startDrafting = async (game, channel) => {
+    async _startDrafting(game, channel) {
         game.state = 'drafting';
         game.removedCards = [];
         const optionalCards = DECK_DEFINITION.filter(c => c.optional);
@@ -227,7 +279,7 @@ function initializeThreeDragonAnte(client) {
         const nextDraftTurn = async () => {
             if (removedCount >= 10) {
                 await channel.send({ content: "The card draft is complete! The final deck is being prepared. Dealing hands now..." });
-                startGameplay(game, channel);
+                this._startGameplay(game, channel);
                 return;
             }
 
@@ -246,22 +298,11 @@ function initializeThreeDragonAnte(client) {
                     rows.push(currentRow);
                     currentRow = new ActionRowBuilder();
                 }
-                currentRow.addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`tda_draft_remove_${index}`)
-                        .setLabel(card.name)
-                        .setStyle(ButtonStyle.Secondary)
-                );
+                currentRow.addComponents(new ButtonBuilder().setCustomId(`tda_draft_remove_${index}`).setLabel(card.name).setStyle(ButtonStyle.Secondary));
             });
-            if (currentRow.components.length > 0) {
-                rows.push(currentRow);
-            }
+            if (currentRow.components.length > 0) rows.push(currentRow);
 
-            const draftMessage = await dmChannel.send({
-                content: 'It\'s your turn to draft. Please choose one card to **remove** from the deck for this game. You have 2 minutes.',
-                components: rows,
-            });
-
+            const draftMessage = await dmChannel.send({ content: 'It\'s your turn to draft. Please choose one card to **remove** from the deck for this game. You have 2 minutes.', components: rows });
             const collector = draftMessage.createMessageComponentCollector({ filter: i => i.user.id === currentPlayer.id, time: 120000, max: 1 });
 
             collector.on('collect', async i => {
@@ -282,53 +323,43 @@ function initializeThreeDragonAnte(client) {
                     const removedCard = availableToDraft[0];
                     game.removedCards.push(removedCard);
                     removedCount++;
-
                     dmChannel.send({ content: `You did not make a selection in time. The **${removedCard.name}** has been removed for you.` });
                     channel.send({ content: `**${currentPlayer.user.username}** did not choose in time. The **${removedCard.name}** has been removed automatically. The draft continues.` });
-
                     draftTurnIndex++;
                     nextDraftTurn();
                 }
             });
         };
-
         await nextDraftTurn();
-    };
+    }
 
-    const startGameplay = async (game, channel) => {
+    async _startGameplay(game, channel) {
         game.state = 'playing';
-
-        // 1. Construct final deck
         const standardCards = DECK_DEFINITION.filter(c => !c.optional);
         const optionalCards = DECK_DEFINITION.filter(c => c.optional && !game.removedCards.includes(c));
         game.deck = [...standardCards, ...optionalCards];
 
-        // 2. Shuffle the deck (Fisher-Yates shuffle)
         for (let i = game.deck.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [game.deck[i], game.deck[j]] = [game.deck[j], game.deck[i]];
         }
 
         game.discardPile = [];
-
-        // 3. Deal initial hands
         game.players.forEach(player => {
-            player.hand = game.deck.splice(0, 6); // Takes the first 6 cards from the deck
-            player.flight = []; // Initialize empty flight
+            player.hand = game.deck.splice(0, 6);
+            player.flight = [];
         });
 
         await channel.send({ content: "Hands have been dealt. The first gambit will now begin!"});
+        this._startGambit(game, channel);
+    }
 
-        // 4. Start the first gambit
-        startGambit(game, channel);
-    };
-
-    const startGambit = async (game, channel) => {
+    async _startGambit(game, channel) {
         game.state = 'ante';
         game.gambit = {
             number: (game.gambit?.number || 0) + 1,
-            antedByPlayer: [], // Store {card, player} for processing
-            antePile: [],      // Store raw cards in the ante
+            antedByPlayer: [],
+            antePile: [],
             stakes: 0,
             rounds: [],
         };
@@ -343,14 +374,13 @@ function initializeThreeDragonAnte(client) {
             return new Promise(async (resolve) => {
                 try {
                     const dmChannel = await player.user.createDM();
-
                     const rows = [];
                     let currentRow = new ActionRowBuilder();
                     player.hand.forEach((card, index) => {
                         if (currentRow.components.length >= 5) { rows.push(currentRow); currentRow = new ActionRowBuilder(); }
                         currentRow.addComponents(new ButtonBuilder().setCustomId(`tda_ante_${index}`).setLabel(card.name).setStyle(ButtonStyle.Secondary));
                     });
-                    if (currentRow.components.length > 0) { rows.push(currentRow); }
+                    if (currentRow.components.length > 0) rows.push(currentRow);
 
                     const anteMessage = await dmChannel.send({ content: 'Choose a card from your hand to ante for this gambit. You have 2 minutes.', components: rows });
                     const collector = anteMessage.createMessageComponentCollector({ filter: i => i.user.id === player.id, time: 120000, max: 1 });
@@ -378,18 +408,15 @@ function initializeThreeDragonAnte(client) {
                     channel.send(`Could not DM ${player.user.username}. Auto-anteing their first card.`);
                     const card = player.hand[0];
                     player.hand.splice(0, 1);
-                    game.gambit.anteCards.push({ card, player });
+                    game.gambit.antedByPlayer.push({ card, player });
                     resolve();
                 }
             });
         });
 
         await Promise.all(antePromises);
-
-        // Populate the antePile from the player antes
         game.gambit.antePile.push(...game.gambit.antedByPlayer.map(a => a.card));
 
-        // All players have anted. Now, process the results using antedByPlayer
         const anteCardText = game.gambit.antedByPlayer.map(ac => `**${ac.player.user.username}** anted a **${ac.card.name}** (Strength ${ac.card.value})`).join('\n');
         await channel.send({ content: `**Ante Results**\n${anteCardText}` });
 
@@ -407,9 +434,7 @@ function initializeThreeDragonAnte(client) {
         await channel.send({ content: paymentText });
 
         const strengthCounts = {};
-        game.gambit.antedByPlayer.forEach(ac => {
-            strengthCounts[ac.card.value] = (strengthCounts[ac.card.value] || 0) + 1;
-        });
+        game.gambit.antedByPlayer.forEach(ac => { strengthCounts[ac.card.value] = (strengthCounts[ac.card.value] || 0) + 1; });
 
         let uniqueHighStrength = 0;
         let leader = null;
@@ -426,57 +451,49 @@ function initializeThreeDragonAnte(client) {
             game.gambit.antePile = [];
             game.gambit.antedByPlayer = [];
             game.players.forEach(p => { if (game.deck.length > 0) p.hand.push(game.deck.pop()); });
-            startGambit(game, channel); // Recursive call to re-ante
+            this._startGambit(game, channel);
             return;
         }
 
         game.gambit.leader = leader;
         game.gambit.currentPlayerId = leader.id;
-
         await channel.send({ content: `The leader for the first round is **${leader.user.username}**.` });
-        startRound(game, channel);
-    };
+        this._startRound(game, channel);
+    }
 
-    const startRound = async (game, channel) => {
+    async _startRound(game, channel) {
         const roundNumber = game.gambit.rounds.length + 1;
         const round = { number: roundNumber, turns: [] };
         game.gambit.rounds.push(round);
         game.state = 'playing_round';
-
         await channel.send(`-- Round ${roundNumber} --`);
-
         const leaderIndex = game.players.findIndex(p => p.id === game.gambit.leader.id);
 
         for (let i = 0; i < game.players.length; i++) {
             const currentPlayerIndex = (leaderIndex + i) % game.players.length;
             const currentPlayer = game.players[currentPlayerIndex];
             game.gambit.currentPlayerId = currentPlayer.id;
-
             await channel.send({ content: `It's **${currentPlayer.user.username}**'s turn to play.` });
 
-            const playedCard = await getPlayerMove(game, currentPlayer);
+            const lastTurn = round.turns.length > 0 ? round.turns[round.turns.length - 1] : null;
+            const lastPlayedCard = lastTurn ? lastTurn.card : null;
+            const playedCard = await this._getPlayerMove(game, currentPlayer, lastPlayedCard);
             if (!playedCard) {
-                // Player failed to move, maybe the DM failed. The game should probably end.
                 await channel.send({ content: `Could not get a move from ${currentPlayer.user.username}. The game cannot continue.`});
-                activeGames.delete(game.channelId);
+                this.activeGames.delete(game.channelId);
                 return;
             }
 
             currentPlayer.flight.push(playedCard);
             round.turns.push({ player: currentPlayer, card: playedCard });
-
             await channel.send({ content: `**${currentPlayer.user.username}** played the **${playedCard.name}** (Strength ${playedCard.value}).` });
-
-            await resolveCardPower(game, currentPlayer, playedCard, channel);
+            await this._resolveCardPower(game, currentPlayer, playedCard, channel);
         }
 
         await channel.send({ content: `-- End of Round ${roundNumber} --` });
-
-        // 1. Determine next leader
         const roundTurns = round.turns;
         const strengthCounts = {};
         roundTurns.forEach(t => { strengthCounts[t.card.value] = (strengthCounts[t.card.value] || 0) + 1; });
-
         let uniqueHighStrength = -1;
         let nextLeader = null;
         roundTurns.forEach(t => {
@@ -493,7 +510,6 @@ function initializeThreeDragonAnte(client) {
             await channel.send({ content: `**${game.gambit.leader.user.username}** remains the leader.` });
         }
 
-        // 2. Check for gambit end condition
         let gambitOver = false;
         if (roundNumber >= 3) {
             const flightStrengths = game.players.map(p => p.flight.reduce((sum, c) => sum + c.value, 0));
@@ -507,24 +523,20 @@ function initializeThreeDragonAnte(client) {
                 if (strongestPlayers.length === 1) gambitOver = true;
             }
         }
-
         if (game.gambit.stakes <= 0 && roundNumber > 0) {
             gambitOver = true;
             await channel.send({ content: "The stakes are empty! The gambit ends." });
         }
-
         if (gambitOver) {
-            endGambit(game, channel);
+            this._endGambit(game, channel);
         } else {
-            startRound(game, channel);
+            this._startRound(game, channel);
         }
-    };
+    }
 
-    const endGambit = async (game, channel) => {
+    async _endGambit(game, channel) {
         game.state = 'scoring';
         await channel.send({ content: `--- **Gambit ${game.gambit.number} Over** ---` });
-
-        // 1. Determine winner
         let winner = null;
         const flightStrengths = game.players.map(p => p.flight.reduce((sum, card) => sum + card.value, 0));
 
@@ -532,18 +544,13 @@ function initializeThreeDragonAnte(client) {
             await channel.send({ content: "The Druid was played, so the weakest flight wins!" });
             const minStrength = Math.min(...flightStrengths);
             const weakestPlayers = game.players.filter((p, i) => flightStrengths[i] === minStrength);
-            if (weakestPlayers.length === 1) {
-                winner = weakestPlayers[0];
-            }
+            if (weakestPlayers.length === 1) winner = weakestPlayers[0];
         } else {
             const maxStrength = Math.max(...flightStrengths);
             const strongestPlayers = game.players.filter((p, i) => flightStrengths[i] === maxStrength);
-            if (strongestPlayers.length === 1) {
-                winner = strongestPlayers[0];
-            }
+            if (strongestPlayers.length === 1) winner = strongestPlayers[0];
         }
 
-        // 2. Award stakes
         if (winner) {
             await channel.send({ content: `**${winner.user.username}** has the strongest flight and wins the stakes of ${game.gambit.stakes} GP!` });
             winner.hoard += game.gambit.stakes;
@@ -552,9 +559,6 @@ function initializeThreeDragonAnte(client) {
             await channel.send({ content: "There was no winner. The stakes are lost." });
         }
 
-        // TODO: Step 5/7 - Check for special flights (color/strength) during the round, not just at the end.
-
-        // 4. Clear flights and ante cards
         game.players.forEach(p => {
             game.discardPile.push(...p.flight);
             p.flight = [];
@@ -563,11 +567,9 @@ function initializeThreeDragonAnte(client) {
         game.gambit.antePile = [];
         game.gambit.antedByPlayer = [];
 
-        // 5. Check for game end condition
         const playersWithGold = game.players.filter(p => p.hoard > 0);
         if (playersWithGold.length < game.players.length) {
             await channel.send({ content: "A player has run out of gold! The game is over!" });
-
             let finalWinner = null;
             let maxHoard = -1;
             game.players.forEach(p => {
@@ -576,29 +578,25 @@ function initializeThreeDragonAnte(client) {
                     finalWinner = p;
                 }
             });
-
             if (finalWinner) {
                 await channel.send({ content: `The winner is **${finalWinner.user.username}** with ${finalWinner.hoard} GP! Congratulations!` });
             } else {
                  await channel.send({ content: `The game ended in a draw!` });
             }
-            activeGames.delete(game.channelId);
-            return; // End the game
+            this.activeGames.delete(game.channelId);
+            return;
         }
 
-        // 7. If game continues, deal cards and start next gambit
         await channel.send({ content: "All players draw two cards." });
         for (const p of game.players) {
-            await drawCards(game, p, 2, channel);
+            await this._drawCards(game, p, 2, channel);
         }
 
         await channel.send({ content: "Preparing the next gambit..." });
-        setTimeout(() => {
-            startGambit(game, channel);
-        }, 5000);
-    };
+        setTimeout(() => { this._startGambit(game, channel); }, 5000);
+    }
 
-    const generateGameStateEmbed = (game) => {
+    _generateGameStateEmbed(game, lastPlayedCard = null) {
         const embed = new EmbedBuilder()
             .setTitle(`Gambit ${game.gambit.number} - Round ${game.gambit.rounds.length}`)
             .setColor(0x3498db)
@@ -612,17 +610,22 @@ function initializeThreeDragonAnte(client) {
                 value: flightText,
             });
         });
-        return embed;
-    };
 
-    const drawCards = async (game, player, amount, channel) => {
+        if (lastPlayedCard) {
+            embed.setImage(`attachment://${lastPlayedCard.image}`);
+            embed.setFooter({ text: `Previous card played: ${lastPlayedCard.name} (Strength ${lastPlayedCard.value})` });
+        }
+
+        return embed;
+    }
+
+    async _drawCards(game, player, amount, channel) {
         let drawnCards = [];
         for (let i = 0; i < amount; i++) {
             if (player.hand.length >= 10) {
                 try { await player.user.createDM().send("Your hand is full (10 cards). You cannot draw any more cards."); } catch (e) {}
                 break;
             }
-
             if (game.deck.length === 0) {
                 if (game.discardPile.length === 0) {
                     await channel.send({ content: "The deck and discard pile are empty! No more cards can be drawn." });
@@ -636,7 +639,6 @@ function initializeThreeDragonAnte(client) {
                 }
                 await channel.send({ content: "The discard pile has been shuffled to form a new deck." });
             }
-
             const card = game.deck.pop();
             player.hand.push(card);
             drawnCards.push(card);
@@ -645,13 +647,12 @@ function initializeThreeDragonAnte(client) {
            try { await player.user.createDM().send({ content: `You drew: ${drawnCards.map(c => `**${c.name}**`).join(', ')}.` }); } catch(e) {}
         }
         return drawnCards.length;
-    };
+    }
 
-    const checkSpecialFlights = async (game, player, channel) => {
+    async _checkSpecialFlights(game, player, channel) {
         // Strength Flight
         const strengthCounts = {};
         player.flight.forEach(c => { strengthCounts[c.value] = (strengthCounts[c.value] || 0) + 1; });
-
         for (const strengthStr in strengthCounts) {
             const strength = parseInt(strengthStr);
             if (strengthCounts[strength] >= 3 && !player.triggeredStrengthFlights.includes(strength)) {
@@ -663,7 +664,6 @@ function initializeThreeDragonAnte(client) {
                     player.hoard += finalAmount;
                     await channel.send({ content: `**${player.user.username}** completed a Strength Flight of ${strength}s! They steal ${finalAmount} GP from the stakes.` });
                 }
-
                 const cardsTaken = [];
                 while (game.gambit.antePile.length > 0 && player.hand.length < 10) {
                     cardsTaken.push(game.gambit.antePile.pop());
@@ -687,14 +687,12 @@ function initializeThreeDragonAnte(client) {
                 }
             });
         });
-
         for (const color in colorCounts) {
             if (colorCounts[color] >= 3 && !player.triggeredColorFlights.includes(color)) {
                 player.triggeredColorFlights.push(color);
                 const dragonsOfColor = player.flight.filter(c => c.effect === color || (c.effect === 'Tiamat' && ['Black', 'Blue', 'Green', 'Red', 'White'].includes(color)));
                 dragonsOfColor.sort((a, b) => a.value - b.value);
                 const secondStrongest = dragonsOfColor[dragonsOfColor.length - 2];
-
                 if (secondStrongest) {
                     const goldAmount = secondStrongest.value * (game.initialAnte / 50);
                     if (goldAmount > 0) {
@@ -711,34 +709,28 @@ function initializeThreeDragonAnte(client) {
                 }
             }
         }
-    };
+    }
 
-    const resolveCardPower = async (game, player, card, channel, forceTrigger = false) => {
+    async _resolveCardPower(game, player, card, channel, forceTrigger = false) {
         const round = game.gambit.rounds[game.gambit.rounds.length - 1];
         const turnIndex = round.turns.length - 1;
         let trigger = false;
-
         if (forceTrigger || player.id === game.gambit.leader.id || (turnIndex > 0 && card.value <= round.turns[turnIndex - 1].card.value)) {
             trigger = true;
         }
-
         if (!trigger) {
             await channel.send({ content: `The power of **${card.name}** does not trigger.` });
             return;
         }
-
         await channel.send({ content: `The power of **${card.name}** triggers!` });
         const effect = CARD_EFFECTS.find(e => e.name === card.effect);
         if (!effect) return;
-
         switch (effect.name) {
             case 'Copper': {
                 const copperIndex = player.flight.findIndex(c => c === card);
                 if (copperIndex > -1) player.flight.splice(copperIndex, 1);
-
                 const turnRecord = round.turns.find(t => t.card === card);
                 game.discardPile.push(card);
-
                 if (game.deck.length === 0) {
                     if (game.discardPile.length === 0) {
                         await channel.send({ content: "The deck is empty, so the Copper Dragon has no card to draw."});
@@ -755,9 +747,8 @@ function initializeThreeDragonAnte(client) {
                 const newCard = game.deck.pop();
                 player.flight.push(newCard);
                 if (turnRecord) turnRecord.card = newCard;
-
                 await channel.send({ content: `The Copper Dragon is replaced by a **${newCard.name}**!` });
-                await resolveCardPower(game, player, newCard, channel, true); // Force the new card's power to trigger
+                await this._resolveCardPower(game, player, newCard, channel, true);
                 break;
             }
             case 'Bronze': {
@@ -795,7 +786,7 @@ function initializeThreeDragonAnte(client) {
                 }
                 break;
             }
-            case 'Black': { // "Steal 3 gold from the stakes"
+            case 'Black': {
                 const baseAmount = 3;
                 const scaledAmount = baseAmount * (game.initialAnte / 50);
                 const finalAmount = Math.min(game.gambit.stakes, scaledAmount);
@@ -804,11 +795,9 @@ function initializeThreeDragonAnte(client) {
                 await channel.send({ content: `**${player.user.username}** steals ${finalAmount} GP from the stakes!` });
                 break;
             }
-            case 'White': { // "The weakest opponent pays you 2 gold"
+            case 'White': {
                 let weakestOpponents = [];
                 let lowestStrength = Infinity;
-
-                // Find the lowest flight strength among opponents
                 game.players.forEach(p => {
                     if (p.id === player.id) return;
                     const pStrength = p.flight.reduce((sum, c) => sum + c.value, 0);
@@ -819,16 +808,13 @@ function initializeThreeDragonAnte(client) {
                         weakestOpponents.push(p);
                     }
                 });
-
                 if (weakestOpponents.length > 0) {
                     const baseAmount = 2;
                     const scaledAmount = baseAmount * (game.initialAnte / 50);
-                    let totalPaid = 0;
                     for (const weakPlayer of weakestOpponents) {
                         const payment = Math.min(weakPlayer.hoard, scaledAmount);
                         weakPlayer.hoard -= payment;
                         player.hoard += payment;
-                        totalPaid += payment;
                         await channel.send({ content: `**${weakPlayer.user.username}** is a weakest opponent and pays ${payment} GP to **${player.user.username}**.` });
                     }
                 } else {
@@ -836,30 +822,28 @@ function initializeThreeDragonAnte(client) {
                 }
                 break;
             }
-            case 'Gold': { // "Draw a card for each good dragon in your flight"
+            case 'Gold': {
                 const goodDragonsInFlight = player.flight.filter(c => {
                     const cEffect = CARD_EFFECTS.find(e => e.name === c.effect);
                     return cEffect && cEffect.alignment === 'good';
                 }).length;
-
                 if (goodDragonsInFlight > 0) {
                     await channel.send({ content: `**${player.user.username}** will draw ${goodDragonsInFlight} card(s) for the good dragons in their flight.` });
-                    await drawCards(game, player, goodDragonsInFlight, channel);
+                    await this._drawCards(game, player, goodDragonsInFlight, channel);
                 }
                 break;
             }
-            case 'Silver': { // "Each player with at least one good dragon in their flight draws a card."
+            case 'Silver': {
                 const playersToDraw = game.players.filter(p => {
                     return p.flight.some(c => {
                         const cEffect = CARD_EFFECTS.find(e => e.name === c.effect);
                         return cEffect && cEffect.alignment === 'good';
                     });
                 });
-
                 if (playersToDraw.length > 0) {
                     await channel.send({ content: `${playersToDraw.map(p => `**${p.user.username}**`).join(', ')} will draw a card for having good dragons in their flight.` });
                     for (const p of playersToDraw) {
-                        await drawCards(game, p, 1, channel);
+                        await this._drawCards(game, p, 1, channel);
                     }
                 }
                 break;
@@ -874,14 +858,11 @@ function initializeThreeDragonAnte(client) {
                 const goldAmount = 1 * (game.initialAnte / 50);
                 const flightSize = player.flight.length;
                 const stakesAmount = flightSize * (game.initialAnte / 50);
-
                 const takeGoldButton = new ButtonBuilder().setCustomId('tda_blue_take').setLabel(`Take ${goldAmount} GP from each opponent`).setStyle(ButtonStyle.Primary);
                 const addToStakesButton = new ButtonBuilder().setCustomId('tda_blue_stakes').setLabel(`Opponents add ${stakesAmount} GP to stakes`).setStyle(ButtonStyle.Secondary);
                 const choiceRow = new ActionRowBuilder().addComponents(takeGoldButton, addToStakesButton);
-
                 const choiceMsg = await dmChannel.send({ content: `Your Blue Dragon's power triggers. Choose an effect:`, components: [choiceRow] });
                 const choiceCollector = choiceMsg.createMessageComponentCollector({ filter: i => i.user.id === player.id, time: 120000, max: 1 });
-
                 const handleChoice = async (choice) => {
                     if (choice === 'take') {
                         let totalTaken = 0;
@@ -905,7 +886,6 @@ function initializeThreeDragonAnte(client) {
                         await channel.send({ content: `**${player.user.username}** uses the Blue Dragon to force opponents to add a total of ${totalAdded} GP to the stakes.` });
                     }
                 };
-
                 choiceCollector.on('collect', async i => {
                     if (i.customId === 'tda_blue_take') {
                         await i.update({ content: "You chose to take gold from each opponent.", components: [] });
@@ -915,7 +895,6 @@ function initializeThreeDragonAnte(client) {
                         await handleChoice('stakes');
                     }
                 });
-
                 choiceCollector.on('end', async (collected, reason) => {
                     if (reason === 'time') {
                         await dmChannel.send({ content: "You ran out of time. Defaulting to taking gold from opponents." });
@@ -929,7 +908,6 @@ function initializeThreeDragonAnte(client) {
                 if (sorcererIndex > -1) player.flight.splice(sorcererIndex, 1);
                 const turnRecord = round.turns.find(t => t.card === card);
                 game.discardPile.push(card);
-
                 const revealedCards = [];
                 for (let i = 0; i < 3; i++) {
                     if (game.deck.length === 0) {
@@ -943,30 +921,25 @@ function initializeThreeDragonAnte(client) {
                     }
                     if (game.deck.length > 0) revealedCards.push(game.deck.pop());
                 }
-
                 if (revealedCards.length === 0) {
                     await channel.send({ content: "Not enough cards to reveal for the Sorcerer's power." });
                     break;
                 }
-
                 const dmChannel = await player.user.createDM();
                 if (revealedCards.length === 1) {
                     const chosenCard = revealedCards[0];
                     player.flight.push(chosenCard);
                     if (turnRecord) turnRecord.card = chosenCard;
                     await channel.send({ content: `The Sorcerer reveals one card: **${chosenCard.name}**, which replaces it.` });
-                    await resolveCardPower(game, player, chosenCard, channel, true);
+                    await this._resolveCardPower(game, player, chosenCard, channel, true);
                     break;
                 }
-
                 const rows = [new ActionRowBuilder()];
                 revealedCards.forEach((c, index) => {
                     rows[0].addComponents(new ButtonBuilder().setCustomId(`tda_sorc_choice_${index}`).setLabel(c.name).setStyle(ButtonStyle.Secondary));
                 });
-
                 const choiceMsg = await dmChannel.send({ content: "Your Sorcerer reveals three cards. Choose one to replace it. The other two will be added to the ante.", components: rows });
                 const choiceCollector = choiceMsg.createMessageComponentCollector({ filter: i => i.user.id === player.id, time: 120000, max: 1 });
-
                 const handleSorcererChoice = async (choiceIndex) => {
                     const chosenCard = revealedCards[choiceIndex];
                     player.flight.push(chosenCard);
@@ -974,15 +947,13 @@ function initializeThreeDragonAnte(client) {
                     const others = revealedCards.filter((c, i) => i !== choiceIndex);
                     game.gambit.antePile.push(...others);
                     await channel.send({ content: `The Sorcerer is replaced by a **${chosenCard.name}**! The other revealed cards (${others.map(c=>c.name).join(', ')}) are added to the ante.` });
-                    await resolveCardPower(game, player, chosenCard, channel, true);
+                    await this._resolveCardPower(game, player, chosenCard, channel, true);
                 };
-
                 choiceCollector.on('collect', async i => {
                     const choiceIndex = parseInt(i.customId.split('_')[3]);
                     await i.update({ content: `You chose the **${revealedCards[choiceIndex].name}**.`, components: [] });
                     await handleSorcererChoice(choiceIndex);
                 });
-
                 choiceCollector.on('end', async (collected, reason) => {
                     if (reason === 'time') {
                         await dmChannel.send({ content: `You ran out of time. The **${revealedCards[0].name}** was chosen for you.` });
@@ -991,11 +962,9 @@ function initializeThreeDragonAnte(client) {
                 });
                 break;
             }
-            // Other card effects will be added here in subsequent steps.
-            case 'Red': { // "The strongest opponent pays you 1 gold. Take a random card from that player's hand"
+            case 'Red': {
                 let strongestOpponents = [];
                 let highestStrength = -1;
-
                 game.players.forEach(p => {
                     if (p.id === player.id) return;
                     const pStrength = p.flight.reduce((sum, c) => sum + c.value, 0);
@@ -1006,16 +975,13 @@ function initializeThreeDragonAnte(client) {
                         strongestOpponents.push(p);
                     }
                 });
-
                 const target = strongestOpponents.length > 0 ? strongestOpponents[Math.floor(Math.random() * strongestOpponents.length)] : null;
-
                 if (target) {
                     const goldAmount = 1 * (game.initialAnte / 50);
                     const goldPayment = Math.min(target.hoard, goldAmount);
                     target.hoard -= goldPayment;
                     player.hoard += goldPayment;
                     await channel.send({ content: `**${target.user.username}** is a strongest opponent and pays ${goldPayment} GP to **${player.user.username}**.` });
-
                     if (target.hand.length > 0) {
                         const randomIndex = Math.floor(Math.random() * target.hand.length);
                         const stolenCard = target.hand.splice(randomIndex, 1)[0];
@@ -1031,20 +997,16 @@ function initializeThreeDragonAnte(client) {
                 }
                 break;
             }
-            case 'Green': { // "The player who plays next chooses to either give you a weaker evil dragon or to pay you 5 gold"
+            case 'Green': {
                 const currentPlayerIndex = game.players.findIndex(p => p.id === player.id);
                 const nextPlayer = game.players[(currentPlayerIndex + 1) % game.players.length];
-
                 await channel.send({ content: `**${player.user.username}**'s Green Dragon targets **${nextPlayer.user.username}**! They must now make a choice in their DMs.` });
-
                 const weakerEvilDragons = nextPlayer.hand.filter(c => {
                     const cEffect = CARD_EFFECTS.find(e => e.name === c.effect);
                     return cEffect && cEffect.alignment === 'evil' && c.value < card.value;
                 });
-
                 const dmChannel = await nextPlayer.user.createDM();
                 const goldAmount = 5 * (game.initialAnte / 50);
-
                 if (weakerEvilDragons.length === 0) {
                     const payment = Math.min(nextPlayer.hoard, goldAmount);
                     nextPlayer.hoard -= payment;
@@ -1053,14 +1015,11 @@ function initializeThreeDragonAnte(client) {
                     await channel.send({ content: `**${nextPlayer.user.username}** had no weaker evil dragons and was forced to pay **${player.user.username}** ${payment} GP.` });
                     break;
                 }
-
                 const giveCardButton = new ButtonBuilder().setCustomId('tda_green_give').setLabel('Give a Card').setStyle(ButtonStyle.Secondary);
                 const payGoldButton = new ButtonBuilder().setCustomId('tda_green_pay').setLabel(`Pay ${goldAmount} GP`).setStyle(ButtonStyle.Primary);
                 const choiceRow = new ActionRowBuilder().addComponents(giveCardButton, payGoldButton);
-
                 const choiceMsg = await dmChannel.send({ content: `The Green Dragon's power forces you to choose: give a weaker evil dragon to **${player.user.username}**, or pay them ${goldAmount} GP.`, components: [choiceRow] });
                 const choiceCollector = choiceMsg.createMessageComponentCollector({ filter: i => i.user.id === nextPlayer.id, time: 120000, max: 1 });
-
                 choiceCollector.on('collect', async i => {
                     if (i.customId === 'tda_green_pay') {
                         const payment = Math.min(nextPlayer.hoard, goldAmount);
@@ -1078,7 +1037,6 @@ function initializeThreeDragonAnte(client) {
                             await channel.send({ content: `**${nextPlayer.user.username}** gave the **${cardToGive.name}** to **${player.user.username}**.` });
                         } else {
                             await i.update({ content: `You chose to give a card. Now, please select which card to give.`, components: [] });
-
                             const cardChoiceRows = [];
                             let currentRow = new ActionRowBuilder();
                             weakerEvilDragons.forEach((c, index) => {
@@ -1086,24 +1044,20 @@ function initializeThreeDragonAnte(client) {
                                 currentRow.addComponents(new ButtonBuilder().setCustomId(`tda_green_give_${index}`).setLabel(c.name).setStyle(ButtonStyle.Danger));
                             });
                             if (currentRow.components.length > 0) { cardChoiceRows.push(currentRow); }
-
                             const cardChoiceMsg = await dmChannel.send({ content: "Select the card you wish to give:", components: cardChoiceRows });
                             const cardChoiceCollector = cardChoiceMsg.createMessageComponentCollector({ filter: i2 => i2.user.id === nextPlayer.id, time: 120000, max: 1 });
-
                             const handleCardGive = async (cardToGive) => {
                                 const cardIndexInHand = nextPlayer.hand.findIndex(c => c === cardToGive);
                                 if (cardIndexInHand > -1) nextPlayer.hand.splice(cardIndexInHand, 1);
                                 player.hand.push(cardToGive);
                                 await channel.send({ content: `**${nextPlayer.user.username}** gave the **${cardToGive.name}** to **${player.user.username}**.` });
                             };
-
                             cardChoiceCollector.on('collect', async i2 => {
                                 const cardIndex = parseInt(i2.customId.split('_')[3]);
                                 const cardToGive = weakerEvilDragons[cardIndex];
                                 await i2.update({ content: `You gave the **${cardToGive.name}**.`, components: [] });
                                 await handleCardGive(cardToGive);
                             });
-
                             cardChoiceCollector.on('end', async (collected, reason) => {
                                 if (reason === 'time') {
                                     const cardToGive = weakerEvilDragons[0];
@@ -1114,7 +1068,6 @@ function initializeThreeDragonAnte(client) {
                         }
                     }
                 });
-
                 choiceCollector.on('end', (collected, reason) => {
                     if (reason === 'time') {
                         const payment = Math.min(nextPlayer.hoard, goldAmount);
@@ -1127,15 +1080,33 @@ function initializeThreeDragonAnte(client) {
                 break;
             }
         }
-    };
+        await this._checkSpecialFlights(game, player, channel);
+    }
 
-    const getPlayerMove = (game, player) => {
+    async _getPlayerMove(game, player, lastPlayedCard = null) {
         return new Promise(async (resolve) => {
             try {
                 const dmChannel = await player.user.createDM();
 
-                const embed = generateGameStateEmbed(game);
-                await dmChannel.send({ embeds: [embed] });
+                const embed = this._generateGameStateEmbed(game, lastPlayedCard);
+                const files = [];
+                if (lastPlayedCard) {
+                    files.push(`resources/threedragonanteimages/${lastPlayedCard.image}`);
+                }
+                await dmChannel.send({ embeds: [embed], files });
+
+                const attachments = player.hand.map(card => ({
+                    attachment: `resources/threedragonanteimages/${card.image}`,
+                    name: card.image
+                }));
+
+                if (attachments.length > 0) {
+                    await dmChannel.send({ content: "Your hand:", files: attachments });
+                } else {
+                    await dmChannel.send({ content: "You have no cards in your hand!" });
+                    // TODO: Implement logic for forcing a player to buy cards if their hand is empty.
+                    return resolve(null);
+                }
 
                 const rows = [];
                 let currentRow = new ActionRowBuilder();
@@ -1143,9 +1114,10 @@ function initializeThreeDragonAnte(client) {
                     if (currentRow.components.length >= 5) { rows.push(currentRow); currentRow = new ActionRowBuilder(); }
                     currentRow.addComponents(new ButtonBuilder().setCustomId(`tda_play_${index}`).setLabel(card.name).setStyle(ButtonStyle.Primary));
                 });
-                if (currentRow.components.length > 0) { rows.push(currentRow); }
 
-                const moveMessage = await dmChannel.send({ content: 'It is your turn. Choose a card to play. You have 3 minutes.', components: rows });
+                const components = player.hand.length > 0 ? rows : [];
+                const moveMessage = await dmChannel.send({ content: 'It is your turn. Choose a card to play. You have 3 minutes.', components });
+
                 const collector = moveMessage.createMessageComponentCollector({ filter: i => i.user.id === player.id, time: 180000, max: 1 });
 
                 collector.on('collect', async i => {
@@ -1157,11 +1129,13 @@ function initializeThreeDragonAnte(client) {
                 });
 
                 collector.on('end', (collected, reason) => {
-                    if (reason === 'time') {
+                    if (reason === 'time' && player.hand.length > 0) {
                         const card = player.hand[0];
                         player.hand.splice(0, 1);
                         dmChannel.send({ content: `You ran out of time! The **${card.name}** was played for you.` });
                         resolve(card);
+                    } else if (reason === 'time') {
+                        resolve(null); // Timed out with no cards
                     }
                 });
             } catch (e) {
@@ -1169,78 +1143,7 @@ function initializeThreeDragonAnte(client) {
                 resolve(null);
             }
         });
-    };
-
-    client.on('messageCreate', async message => {
-        if (message.author.bot || !client.user) return;
-
-        const prefix = '!';
-        const mentionRegex = new RegExp(`^<@!?${client.user.id}>\\s+`);
-        if (!mentionRegex.test(message.content)) return;
-
-        const contentWithoutMention = message.content.replace(mentionRegex, '');
-        if (!contentWithoutMention.startsWith(prefix)) return;
-
-        const args = contentWithoutMention.slice(prefix.length).trim().split(/ +/);
-        const command = args.shift().toLowerCase();
-
-        if (command === '3da' || command === 'tda') {
-            if (activeGames.has(message.channel.id)) {
-                return message.channel.send({ content: 'A game is already in progress in this channel.' });
-            }
-
-            const game = { hostId: message.author.id, channelId: message.channel.id, players: [], state: 'lobby' };
-            activeGames.set(message.channel.id, game);
-
-            const lobbyMessage = await message.channel.send({ embeds: [generateLobbyEmbed(game)], components: buildLobbyComponents(game) });
-            game.lobbyMessageId = lobbyMessage.id;
-
-            const collector = lobbyMessage.createMessageComponentCollector({ time: 3_600_000 });
-
-            collector.on('collect', async i => {
-                const game = activeGames.get(i.channelId);
-                if (!game) return i.reply({ content: 'This game lobby is no longer active.', ephemeral: true });
-
-                const isPlayerInGame = game.players.some(p => p.id === i.user.id);
-
-                if (i.customId === 'tda_join') {
-                    if (isPlayerInGame) return i.reply({ content: 'You are already in the game.', ephemeral: true });
-                    game.players.push({ id: i.user.id, user: i.user, specialAbility: null });
-                } else if (i.customId === 'tda_leave') {
-                    if (!isPlayerInGame) return i.reply({ content: 'You are not in this game.', ephemeral: true });
-                    game.players = game.players.filter(p => p.id !== i.user.id);
-                } else if (i.customId === 'tda_ability_select') {
-                    if (!isPlayerInGame) return i.reply({ content: 'You must join the game before selecting an ability.', ephemeral: true });
-                    const player = game.players.find(p => p.id === i.user.id);
-                    player.specialAbility = i.values[0];
-                } else if (i.customId === 'tda_start') {
-                    if (!isPlayerInGame) return i.reply({ content: 'You must be in the game to start it.', ephemeral: true });
-                    if (game.players.length < 2) return i.reply({ content: 'You need at least 2 players to start.', ephemeral: true });
-
-                    collector.stop('game_started');
-                    game.state = 'starting';
-                    await i.update({ embeds: [generateLobbyEmbed(game)], components: buildLobbyComponents(game, true) });
-
-                    // --- Begin Game Start Flow ---
-                    startGame(game, message.channel);
-                    return; // Return to prevent trying to update the interaction again
-                }
-
-                await i.update({ embeds: [generateLobbyEmbed(game)], components: buildLobbyComponents(game) });
-            });
-
-            collector.on('end', (collected, reason) => {
-                if (reason !== 'game_started') {
-                    activeGames.delete(message.channel.id);
-                    lobbyMessage.edit({ content: 'This game lobby has expired.', embeds: [], components: [] }).catch(() => {});
-                }
-            });
-        }
-    });
+    }
 }
 
-module.exports = {
-    DECK_DEFINITION,
-    CARD_EFFECTS,
-    initializeThreeDragonAnte,
-};
+module.exports = ThreeDragonAnteManager;
