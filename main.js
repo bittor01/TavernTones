@@ -83,10 +83,10 @@ function sleep(ms) {
 // Electron Setup
 let mainWindow;
 let windowloaded = false;
-async function createWindow() {
+async function createWindow(showWindow = true) {
     console.log('createWindow() called.');
     mainWindow = new BrowserWindow({
-        show: false, // Do not show the window until it's ready and maximized
+        show: false, // Do not show the window until it's ready
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -94,9 +94,15 @@ async function createWindow() {
             nodeIntegration: true
         }
     });
-    mainWindow.maximize();
-    mainWindow.show();
-    console.log('Window created and shown.');
+
+    if (showWindow) {
+        mainWindow.maximize();
+        mainWindow.show();
+        console.log('Window created and shown.');
+    } else {
+        console.log('Window created minimized.');
+    }
+
     await mainWindow.loadFile('index.html');
     console.log('index.html loaded.');
     windowloaded = true;
@@ -138,20 +144,21 @@ async function apploader() {
         console.log('App is ready.');
         fiveEToolsParser = new FiveEToolsParser(logToRenderer); // Initialize parser early
 
-        // Check for launch arguments
-        const args = process.argv.slice(2);
-        if (args.includes('--tool=gamify')) {
+        const isGamifyLaunch = process.argv.includes('--tool=gamify');
+
+        // Create the main window, but don't show it if we are launching the gamify tool
+        createWindow(!isGamifyLaunch);
+
+        // If it's a gamify launch, also create the gamify window
+        if (isGamifyLaunch) {
             createGamifyWindow();
-        } else {
-            createWindow();
         }
 
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length === 0) {
-                if (args.includes('--tool=gamify')) {
+                createWindow(!isGamifyLaunch);
+                if (isGamifyLaunch) {
                     createGamifyWindow();
-                } else {
-                    createWindow();
                 }
             }
         });
@@ -340,8 +347,8 @@ async function ipcloader() {
                 const spell = spellList[itemIndex];
                 const spellName = spell.text.split(' - ')[0];
                 // Use the generic search since spell names might not be exact matches
-                const spellDetailsResults = await fiveEToolsParser.searchByName('spell', spellName);
-                const spellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spell', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
+                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', spellName);
+                const spellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spells', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
 
                 return {
                     success: true,
@@ -389,8 +396,8 @@ async function ipcloader() {
                 const nextSpellList = JSON.parse(nextFileData);
                 const nextSpell = nextSpellList[taskData.progress.itemIndex];
                 const nextSpellName = nextSpell.text.split(' - ')[0];
-                const spellDetailsResults = await fiveEToolsParser.searchByName('spell', nextSpellName);
-                const nextSpellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spell', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
+                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', nextSpellName);
+                const nextSpellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spells', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
 
                 return {
                     success: true,
@@ -440,8 +447,8 @@ async function ipcloader() {
 
                 // 5. Get the details for the (now current) spell
                 const spellName = previousSpellState.text.split(' - ')[0];
-                const spellDetailsResults = await fiveEToolsParser.searchByName('spell', spellName);
-                const spellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spell', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
+                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', spellName);
+                const spellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spells', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
                 const spellCount = targetSpellList.length;
 
                 return {

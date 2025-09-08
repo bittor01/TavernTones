@@ -259,3 +259,4 @@ This is a list of potential future features, fixes, and improvements.
 ### Quality of Life Improvements
 6.  **Refactor `!ro` Command**: Improve the user experience of the `!ro` command by replacing the clunky text-based input with an interactive Discord Modal.
 7.  **Investigate New Generators from 5eTools Data**: Explore the `5etoolsdata` directory, specifically files like `loot.json` and `life.json`, to find opportunities for new generators or bot features.
+8.  **Remember Window Positions**: Save the position and size of the main and secondary windows on close and restore them on the next launch.
