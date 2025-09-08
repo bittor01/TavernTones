@@ -136,9 +136,24 @@ function createGamifyWindow() {
 async function apploader() {
     await app.whenReady().then(() => {
         console.log('App is ready.');
-        createWindow();
+        fiveEToolsParser = new FiveEToolsParser(logToRenderer); // Initialize parser early
+
+        // Check for launch arguments
+        const args = process.argv.slice(2);
+        if (args.includes('--tool=gamify')) {
+            createGamifyWindow();
+        } else {
+            createWindow();
+        }
+
         app.on('activate', () => {
-            if (BrowserWindow.getAllWindows().length == 0) createWindow();
+            if (BrowserWindow.getAllWindows().length === 0) {
+                if (args.includes('--tool=gamify')) {
+                    createGamifyWindow();
+                } else {
+                    createWindow();
+                }
+            }
         });
         isAppReady = true;
         ipcloader();
@@ -876,7 +891,6 @@ client.once('clientReady', async () => {
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
-    fiveEToolsParser = new FiveEToolsParser(logToRenderer);
     const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER }, fiveEToolsParser);
     client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));

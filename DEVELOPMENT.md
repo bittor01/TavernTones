@@ -190,6 +190,25 @@ This feature provides a generic way to roll on custom random tables.
     - **`CommandHandler.js`**: Implements the logic for all three commands, including parsing the complex arguments for the `!ro` command.
     - **`/randomtables` directory**: Contains all the JSON files that are used as random tables.
 
+### Gamified JSON-Parsing Tool
+
+This is a standalone tool designed to make the repetitive work of editing and tagging large sets of JSON files faster and more engaging.
+
+- **Functionality**:
+    -   Launches in a separate window from the main application.
+    -   Loads a "task file" that defines a queue of JSON files to process.
+    -   Displays one JSON object at a time with a custom UI for editing.
+    -   Features gamification elements like a score, session high score, and a progress bar.
+    -   Includes "Next" and "Undo" buttons for quick navigation and correction.
+    -   Saves progress automatically, allowing the user to stop and resume tasks.
+    -   The initial implemented task allows for tagging `itemtypes` for all spells in the `randomtables/spells/lvl*.json` files.
+
+- **Key Files**:
+    -   **`json-gamify.html`**, **`json-gamify.js`**, **`json-gamify.css`**: The frontend UI and logic for the tool.
+    -   **`main.js`**: Contains the backend IPC handlers for file I/O and data processing for the tool.
+    -   **`spell-item-types-task.json`**: The default task file for the spell tagging task.
+    -   For instructions on creating new tasks, see the **[Gamify Tool README](GAMIFY_TOOL_README.md)**.
+
 ### LLM Integration (`!ll`, `!re`)
 
 The bot can connect to a locally running Large Language Model (LLM) service to answer user prompts.
@@ -224,20 +243,19 @@ This is a list of potential future features, fixes, and improvements.
 
 ### High Priority Fixes
 1.  **Fix Soundboard**: The soundboard is currently non-functional. It needs to be re-wired to use the `BackendAudioPlayer` and the UI needs to be fixed to display the buttons correctly.
-2.  **Fix Initiative Tracker UI**: The "Attack" button in the combatant details panel should have its color changed to match the stat/save roll buttons below it, not the header buttons next to it.
-3.  **Investigate Encounter Builder Bug**: Debug the `!create en` command to understand why the XP calculation fails for high-CR creatures.
+2.  **Fix Gamify Tool Launch**: Implement the separate command-line launch for the Gamify Tool (e.g., `npm run json`).
+3.  **Fix Gamify Tool Data Lookup**: Debug and resolve the issue where the tool fails to fetch spell details from the 5eTools data on launch.
+4.  **Fix Initiative Tracker UI**: The "Attack" button in the combatant details panel should have its color changed to match the stat/save roll buttons below it, not the header buttons next to it.
+5.  **Investigate Encounter Builder Bug**: Debug the `!create en` command to understand why the XP calculation fails for high-CR creatures.
 
 ### New Features & Major Improvements
-4.  **Gamified JSON-Parsing Tool**:
-    -   **Goal**: Create a standalone tool to motivate and streamline the manual work of editing/tagging JSON data.
-    -   **Concept**: A separate Electron UI that loads a "Task File". This file defines a multi-file task (e.g., tag all spell files for `itemtypes`). The tool will display one JSON object at a time (e.g., a spell) with a custom UI (e.g., checkboxes for item types) and save progress back to the Task File. It should be able to load context (like full spell descriptions) from the 5eTools data to aid decision-making.
-5.  **Advanced Loot Generator**:
+4.  **Advanced Loot Generator**:
     -   **Goal**: Create a new, more powerful loot generator.
     -   **Concept**: This generator would use the existing `!ma` probability engine as a base, but instead of just generating spell-based items, it would also query the `5etools` item database to include standard and unique magic items in the results, creating more diverse and interesting loot hoards.
-6.  **LLM Agent (`!ask` command)**:
+5.  **LLM Agent (`!ask` command)**:
     -   **Goal**: Evolve the LLM integration into a "Master Control Program" that can use the bot's other features as tools.
     -   **Concept**: A user could make a natural language request like `!ask generate a moderate encounter for 4 level 5 players in a swamp`. The LLM would parse this, identify the correct tool (`EncounterBuilder`), determine the parameters (`partyLevel: 5`, `partySize: 4`, `difficulty: moderate`, `creatureType: ?`), and execute the command. This is a major architectural feature.
 
 ### Quality of Life Improvements
-7.  **Refactor `!ro` Command**: Improve the user experience of the `!ro` command by replacing the clunky text-based input with an interactive Discord Modal.
-8.  **Investigate New Generators from 5eTools Data**: Explore the `5etoolsdata` directory, specifically files like `loot.json` and `life.json`, to find opportunities for new generators or bot features.
+6.  **Refactor `!ro` Command**: Improve the user experience of the `!ro` command by replacing the clunky text-based input with an interactive Discord Modal.
+7.  **Investigate New Generators from 5eTools Data**: Explore the `5etoolsdata` directory, specifically files like `loot.json` and `life.json`, to find opportunities for new generators or bot features.
