@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld('electron', {
         'load-sound', 'play-sound', 'stop-sound', 'unload-sound',
         'set-loop', 'set-soundboard-volume', 'request-initial-load',
         'push-dicelog-to-discord', 'push-statblock-to-discord',
-        'open-gamify-tool'
+        'open-gamify-tool', 'save-high-score'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);
@@ -31,7 +31,8 @@ contextBridge.exposeInMainWorld('electron', {
       const validChannels = [
           'open-file-dialog', 'get-default-local-folder', 'get-dnd-conditions',
           'load-encounter-dialog', 'search-monsters', 'get-monster-details',
-          'get-task-data', 'save-and-get-next-spell', 'undo-and-get-previous-spell'
+          'get-task-data', 'save-and-get-next-spell', 'undo-and-get-previous-spell',
+          'get-high-score', 'load-task-by-path'
         ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);

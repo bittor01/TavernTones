@@ -1,175 +1,258 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- STATE ---
     let taskData = null;
-    let currentSpell = null;
-    let spellDetails = null;
-    let previousSpellState = null; // For the undo functionality
+    let currentItem = null;
+    let itemDetails = null; // e.g., for spell descriptions
+    let previousItemState = null;
     let score = 0;
     let highScore = 0;
     let itemsCompletedInSet = 0;
-    let totalSpellsInCurrentFile = 0;
-
-    // --- CONSTANTS ---
-    const ALL_ITEM_TYPES = ["Giz", "Scr", "GWT", "Amm", "Pot", "Ing", "Inh", "Con", "Inj"];
-    const PROGRESS_BAR_SET_SIZE = 10;
+    let totalItemsInCurrentFile = 0;
 
     // --- DOM ELEMENTS ---
     const scoreEl = document.getElementById('score');
     const highScoreEl = document.getElementById('high-score');
     const progressBarEl = document.getElementById('progress-bar');
-    const spellNameEl = document.getElementById('spell-name');
-    const spellTextEl = document.getElementById('spell-text');
-    const itemTypesCheckboxesEl = document.getElementById('item-types-checkboxes');
+    const titleEl = document.getElementById('spell-name'); // Re-purposing this for a generic title
+    const detailsEl = document.getElementById('spell-text'); // Re-purposing this for generic details
+    const dynamicUIContainerEl = document.getElementById('item-types-container');
     const nextButton = document.getElementById('next-button');
     const undoButton = document.getElementById('undo-button');
     const containerEl = document.getElementById('container');
 
-    // --- RENDER FUNCTIONS ---
+    // --- RENDER & UI FUNCTIONS ---
+
+    function generateUI(uiDefinition, data) {
+        dynamicUIContainerEl.innerHTML = `<h3>${uiDefinition.title || 'Properties'}</h3>`;
+        const formEl = document.createElement('form');
+        formEl.id = 'dynamic-form';
+
+        uiDefinition.fields.forEach(field => {
+            const formGroup = document.createElement('div');
+            formGroup.className = 'form-group';
+
+            const label = document.createElement('label');
+            label.htmlFor = `field-${field.key}`;
+            label.textContent = field.label;
+
+            let input;
+            const currentValue = data[field.key];
+
+            switch (field.type) {
+                case 'checkbox':
+                    input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.checked = currentValue === true;
+                    break;
+                case 'checkbox-group': // For string arrays like itemtypes
+                    field.options.forEach(option => {
+                        const checkGroup = document.createElement('div');
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.id = `field-${field.key}-${option}`;
+                        checkbox.dataset.key = field.key;
+                        checkbox.value = option;
+                        checkbox.checked = currentValue && currentValue.includes(option);
+
+                        const checkLabel = document.createElement('label');
+                        checkLabel.htmlFor = checkbox.id;
+                        checkLabel.textContent = option;
+
+                        checkGroup.append(checkbox, checkLabel);
+                        formEl.appendChild(checkGroup);
+                    });
+                    return; // Skip default append
+                case 'textarea':
+                    input = document.createElement('textarea');
+                    input.value = currentValue || '';
+                    input.rows = field.rows || 3;
+                    break;
+                default: // text input
+                    input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = currentValue || '';
+            }
+
+            input.id = `field-${field.key}`;
+            input.dataset.key = field.key;
+
+            formGroup.appendChild(label);
+            formGroup.appendChild(input);
+            formEl.appendChild(formGroup);
+        });
+
+        dynamicUIContainerEl.appendChild(formEl);
+    }
+
+    function readUIData() {
+        const updatedItem = JSON.parse(JSON.stringify(currentItem));
+        const uiDefinition = taskData.ui;
+
+        uiDefinition.fields.forEach(field => {
+            switch (field.type) {
+                case 'checkbox':
+                    updatedItem[field.key] = document.getElementById(`field-${field.key}`).checked;
+                    break;
+                case 'checkbox-group':
+                    const checkedValues = [];
+                    document.querySelectorAll(`input[data-key="${field.key}"]:checked`).forEach(cb => {
+                        checkedValues.push(cb.value);
+                    });
+                    updatedItem[field.key] = checkedValues;
+                    break;
+                case 'textarea':
+                case 'text':
+                    updatedItem[field.key] = document.getElementById(`field-${field.key}`).value;
+                    break;
+            }
+        });
+        return updatedItem;
+    }
+
     function render() {
-        if (!currentSpell) {
-            spellNameEl.textContent = "Error";
-            spellTextEl.innerHTML = "<p>Could not load a spell.</p>";
+        if (!currentItem || !taskData) {
+            titleEl.textContent = "Error";
+            detailsEl.innerHTML = "<p>Could not load task item.</p>";
             return;
         }
 
-        // Update scores
         scoreEl.textContent = score;
         highScoreEl.textContent = highScore;
 
-        // Update progress bar
-        const progressPercentage = (itemsCompletedInSet / PROGRESS_BAR_SET_SIZE) * 100;
+        const progressPercentage = totalItemsInCurrentFile > 0 ? ((taskData.progress.itemIndex + 1) / totalItemsInCurrentFile) * 100 : 0;
         progressBarEl.style.width = `${progressPercentage}%`;
 
-        // Update spell info
-        const spellName = currentSpell.text.split(' - ')[0];
-        const progressIndicator = `(${taskData.progress.itemIndex + 1} / ${totalSpellsInCurrentFile} in Lvl ${taskData.progress.fileIndex})`;
-        spellNameEl.textContent = `${spellName} ${progressIndicator}`;
+        const title = currentItem[taskData.ui.titleField] || "Unnamed Item";
+        const progressIndicator = `(${taskData.progress.itemIndex + 1} / ${totalItemsInCurrentFile} in File ${taskData.progress.fileIndex + 1})`;
+        titleEl.textContent = `${title} ${progressIndicator}`;
 
-        if (spellDetails && spellDetails.entries) {
+        if (itemDetails && itemDetails.entries) {
             let html = '';
-            spellDetails.entries.forEach(entry => {
+            itemDetails.entries.forEach(entry => {
                 if (typeof entry === 'string') {
                     html += `<p>${entry.replace(/{@(dice|damage|hit) ([^}]+)}/g, '($2)')}</p>`;
                 } else if (entry.type === 'list') {
                     html += `<ul>${entry.items.map(item => `<li>${item}</li>`).join('')}</ul>`;
                 }
             });
-            spellTextEl.innerHTML = html;
+            detailsEl.innerHTML = html;
         } else {
-            spellTextEl.innerHTML = `<p>No detailed description available.</p>`;
+            detailsEl.innerHTML = `<p>No detailed description available.</p>`;
         }
 
-
-        // Update checkboxes
-        itemTypesCheckboxesEl.innerHTML = '';
-        ALL_ITEM_TYPES.forEach(itemType => {
-            const isChecked = currentSpell.itemtypes.includes(itemType);
-            const checkboxWrapper = document.createElement('div');
-            checkboxWrapper.innerHTML = `
-                <input type="checkbox" id="type-${itemType}" value="${itemType}" ${isChecked ? 'checked' : ''}>
-                <label for="type-${itemType}">${itemType}</label>
-            `;
-            itemTypesCheckboxesEl.appendChild(checkboxWrapper);
-        });
+        generateUI(taskData.ui, currentItem);
     }
 
-    function handleTaskCompletion() {
-        spellNameEl.textContent = "Task Complete!";
-        spellTextEl.innerHTML = "<p>You've processed all the files. Great job!</p>";
-        itemTypesCheckboxesEl.innerHTML = '';
-        nextButton.disabled = true;
-        undoButton.disabled = true;
-    }
+    async function handleTaskCompletion() {
+        // Check for a next task
+        if (taskData && taskData.nextTask) {
+            const nextTaskPath = taskData.nextTask;
+            // Reset state before loading new task
+            taskData = null;
+            currentItem = null;
+            itemDetails = null;
+            previousItemState = null;
+            totalItemsInCurrentFile = 0;
+            titleEl.textContent = "Loading next task...";
+            detailsEl.innerHTML = "";
+            dynamicUIContainerEl.innerHTML = "";
 
-    function triggerProgressBarReward() {
-        progressBarEl.style.backgroundColor = '#28a745'; // Green flash
-        containerEl.style.boxShadow = '0 0 25px #28a745';
-        setTimeout(() => {
-            progressBarEl.style.backgroundColor = '#7289da'; // Revert to original color
-            containerEl.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
-        }, 600);
+            const response = await window.electron.ipcRenderer.invoke('load-task-by-path', nextTaskPath);
+            if (response.success) {
+                // Essentially re-initializing
+                taskData = response.taskData;
+                currentItem = response.spell;
+                itemDetails = response.spellDetails;
+                totalItemsInCurrentFile = response.spellCount;
+                undoButton.disabled = true;
+                render();
+            } else {
+                titleEl.textContent = "Error";
+                detailsEl.textContent = `Failed to load next task: ${response.error}`;
+            }
+        } else {
+            titleEl.textContent = "All Tasks Complete!";
+            detailsEl.innerHTML = "<p>You've processed all the files. Great job!</p>";
+            dynamicUIContainerEl.innerHTML = '';
+            nextButton.disabled = true;
+            undoButton.disabled = true;
+        }
     }
 
     // --- EVENT LISTENERS ---
     nextButton.addEventListener('click', async () => {
-        if (!currentSpell) return;
+        if (!currentItem) return;
 
-        // 1. Store previous state for undo
-        previousSpellState = JSON.parse(JSON.stringify(currentSpell)); // Deep copy
+        previousItemState = JSON.parse(JSON.stringify(currentItem));
 
-        // 2. Read current checkbox state and update spell
-        const selectedTypes = [];
-        itemTypesCheckboxesEl.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
-            selectedTypes.push(cb.value);
-        });
-        currentSpell.itemtypes = selectedTypes;
+        const updatedItem = readUIData();
+        currentItem = updatedItem;
 
-        // 3. Send data to backend to save and get next item
-        const response = await window.electron.ipcRenderer.invoke('save-and-get-next-spell', { taskData, currentSpell });
+        const response = await window.electron.ipcRenderer.invoke('save-and-get-next-spell', { taskData, currentSpell: currentItem });
 
         if (!response.success) {
-            spellNameEl.textContent = "Error";
-            spellTextEl.textContent = `Failed to save or get next spell: ${response.error}`;
+            titleEl.textContent = "Error";
+            detailsEl.textContent = `Failed to save or get next item: ${response.error}`;
             return;
         }
 
-        // 4. Update score and progress
         score++;
         if (score > highScore) {
             highScore = score;
-        }
-        itemsCompletedInSet++;
-        if (itemsCompletedInSet >= PROGRESS_BAR_SET_SIZE) {
-            itemsCompletedInSet = 0;
-            triggerProgressBarReward();
+            window.electron.ipcRenderer.send('save-high-score', highScore);
         }
 
-        // 5. Update state with new data from backend
+        itemsCompletedInSet++;
+        if (itemsCompletedInSet >= 10) {
+            itemsCompletedInSet = 0;
+            // This is a placeholder for the reward animation/effect
+            containerEl.style.boxShadow = '0 0 25px #7289da';
+            setTimeout(() => {
+                containerEl.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+            }, 600);
+        }
+
         if (response.taskComplete) {
-            handleTaskCompletion();
+            await handleTaskCompletion();
             return;
         }
         taskData = response.taskData;
-        currentSpell = response.spell;
-        spellDetails = response.spellDetails;
-        totalSpellsInCurrentFile = response.spellCount;
+        currentItem = response.spell; // The backend still calls it 'spell'
+        itemDetails = response.spellDetails;
+        totalItemsInCurrentFile = response.spellCount;
 
-        // 6. Enable undo button and re-render
         undoButton.disabled = false;
         render();
     });
 
     undoButton.addEventListener('click', async () => {
-        if (!previousSpellState) return;
+        if (!previousItemState) return;
 
-        // 1. Send previous state to backend to save and get it back
-        const response = await window.electron.ipcRenderer.invoke('undo-and-get-previous-spell', { taskData, previousSpellState });
+        const response = await window.electron.ipcRenderer.invoke('undo-and-get-previous-spell', { taskData, previousSpellState: previousItemState });
 
         if (!response.success) {
-            // Maybe show a less intrusive error
             console.error("Undo failed:", response.error);
             return;
         }
 
-        // 2. Update score
         score--;
 
-        // 3. Update state with reverted data
         taskData = response.taskData;
-        currentSpell = response.spell;
-        spellDetails = response.spellDetails;
-        totalSpellsInCurrentFile = response.spellCount;
+        currentItem = response.spell;
+        itemDetails = response.spellDetails;
+        totalItemsInCurrentFile = response.spellCount;
 
-        // 4. Clear previous state to prevent multiple undos, disable button
-        previousSpellState = null;
+        previousItemState = null;
         undoButton.disabled = true;
 
-        // 5. Re-render
         render();
     });
 
     // --- INITIAL LOAD ---
     async function initialize() {
+        highScore = await window.electron.ipcRenderer.invoke('get-high-score');
+        highScoreEl.textContent = highScore;
+
         const response = await window.electron.ipcRenderer.invoke('get-task-data');
         if (response.success) {
             if (response.taskComplete) {
@@ -177,15 +260,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             taskData = response.taskData;
-            currentSpell = response.spell;
-            spellDetails = response.spellDetails;
-            totalSpellsInCurrentFile = response.spellCount;
+            currentItem = response.spell;
+            itemDetails = response.spellDetails;
+            totalItemsInCurrentFile = response.spellCount;
 
-            undoButton.disabled = true; // Can't undo on the first item
+            undoButton.disabled = true;
             render();
         } else {
-            spellNameEl.textContent = "Error";
-            spellTextEl.textContent = `Failed to load task data: ${response.error}`;
+            titleEl.textContent = "Error";
+            detailsEl.textContent = `Failed to load task data: ${response.error}`;
         }
     }
 

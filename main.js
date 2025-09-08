@@ -328,39 +328,86 @@ async function ipcloader() {
         // --- All core IPC listeners should be registered after the app is ready ---
         ipcMain.on('open-gamify-tool', createGamifyWindow);
 
-        ipcMain.handle('get-task-data', async () => {
+        ipcMain.handle('get-high-score', async () => {
             try {
-                const taskFilePath = path.join(__dirname, 'spell-item-types-task.json');
+                const settingsPath = path.join(__dirname, 'gamify-settings.json');
+                const data = await fs.readFile(settingsPath, 'utf8');
+                const settings = JSON.parse(data);
+                return settings.highScore || 0;
+            } catch (error) {
+                if (error.code === 'ENOENT') {
+                    const settingsPath = path.join(__dirname, 'gamify-settings.json');
+                    await fs.writeFile(settingsPath, JSON.stringify({ highScore: 0 }, null, 2));
+                    return 0;
+                }
+                logToRenderer(`Error reading high score: ${error}`);
+                return 0;
+            }
+        });
+
+        ipcMain.on('save-high-score', async (event, score) => {
+            try {
+                const settingsPath = path.join(__dirname, 'gamify-settings.json');
+                let settings = {};
+                try {
+                    const data = await fs.readFile(settingsPath, 'utf8');
+                    settings = JSON.parse(data);
+                } catch (readError) {
+                    // File might not exist, that's fine.
+                }
+                settings.highScore = score;
+                await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
+            } catch (error) {
+                logToRenderer(`Error saving high score: ${error}`);
+            }
+        });
+
+        async function loadTaskData(taskFilePath) {
+            try {
                 const data = await fs.readFile(taskFilePath, 'utf8');
                 const taskData = JSON.parse(data);
 
                 const { fileIndex, itemIndex } = taskData.progress;
 
                 if (fileIndex >= taskData.files.length) {
-                    return { success: true, taskComplete: true };
+                    return { success: true, taskComplete: true, taskData };
                 }
 
-                const spellFilePath = path.join(__dirname, taskData.files[fileIndex]);
-                const spellFileData = await fs.readFile(spellFilePath, 'utf8');
-                const spellList = JSON.parse(spellFileData);
+                const itemFilePath = path.join(__dirname, taskData.files[fileIndex]);
+                const itemFileData = await fs.readFile(itemFilePath, 'utf8');
+                const itemList = JSON.parse(itemFileData);
 
-                const spell = spellList[itemIndex];
-                const spellName = spell.text.split(' - ')[0];
-                // Use the generic search since spell names might not be exact matches
-                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', spellName);
-                const spellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spells', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
+                const item = itemList[itemIndex];
+
+                // Try to get details if it's a spell, but don't fail if it's not
+                let itemDetails = null;
+                if (item.text && item.text.includes('-')) {
+                    const itemName = item.text.split(' - ')[0];
+                    const spellDetailsResults = await fiveEToolsParser.searchByName('spells', itemName);
+                    itemDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spells', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
+                }
 
                 return {
                     success: true,
                     taskData,
-                    spell,
-                    spellDetails,
-                    spellCount: spellList.length,
+                    spell: item, // Keep 'spell' key for frontend compatibility for now
+                    spellDetails: itemDetails,
+                    spellCount: itemList.length,
                 };
             } catch (error) {
-                logToRenderer(`Error in get-task-data: ${error}`);
+                logToRenderer(`Error in loadTaskData for ${taskFilePath}: ${error}`);
                 return { success: false, error: error.message };
             }
+        }
+
+        ipcMain.handle('load-task-by-path', async (event, filePath) => {
+            const taskPath = path.join(__dirname, filePath);
+            return await loadTaskData(taskPath);
+        });
+
+        ipcMain.handle('get-task-data', async () => {
+            const defaultTaskPath = path.join(__dirname, 'spell-item-types-task.json');
+            return await loadTaskData(defaultTaskPath);
         });
 
         ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell }) => {

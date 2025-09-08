@@ -1,0 +1,43 @@
+{
+  "taskName": "Deck Card Editing",
+  "files": [
+    "randomtables/deck/fool.json",
+    "randomtables/deck/king.json",
+    "randomtables/deck/knight.json",
+    "randomtables/deck/liar.json",
+    "randomtables/deck/twins.json",
+    "randomtables/deck/weaver.json"
+  ],
+  "progress": {
+    "fileIndex": 0,
+    "itemIndex": 0
+  },
+  "nextTask": null,
+  "ui": {
+    "titleField": "name",
+    "fields": [
+      {
+        "key": "name",
+        "label": "Card Name",
+        "type": "text"
+      },
+      {
+        "key": "unique",
+        "label": "Is Unique?",
+        "type": "checkbox"
+      },
+      {
+        "key": "depiction",
+        "label": "Depiction Text",
+        "type": "textarea",
+        "rows": 2
+      },
+      {
+        "key": "effect",
+        "label": "Effect Text",
+        "type": "textarea",
+        "rows": 4
+      }
+    ]
+  }
+}
