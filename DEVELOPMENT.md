@@ -99,11 +99,16 @@ The application includes a music player for ambient background music and a sound
     - **`renderer.js`**: Renders the music player controls and the soundboard grid. It sends IPC messages to control the audio.
     - **`main.js`**: Instantiates `BackendAudioPlayer` and sets up the IPC channels for UI control.
 
-### Three-Dragon Ante (Card Game)
+### Three-Dragon Ante (Card Game) - *Needs Repair*
 
-This is a complex, fully-featured implementation of the Three-Dragon Ante card game, played entirely through Discord chat commands and interactive components (buttons, modals, dropdowns).
+This is a complex implementation of the Three-Dragon Ante card game. It is **partially functional but currently unplayable** due to critical bugs.
 
-- **Functionality**:
+- **Current State**:
+    - The lobby system (`!3da`), player joining/leaving, and the pre-game card drafting phase are functional.
+    - The game breaks down during the first "ante" phase. The cause is unclear, partly because card images are not displaying in Discord embeds, making the game state very difficult to parse.
+    - It requires a dedicated work session to debug and fix. A good first step would be to fix the card image display issue.
+
+- **Original Implemented Features (For reference during debugging)**:
     - **Lobby System**: A player can start a game with `!3da` or `!tda`. Other players can join/leave via buttons. Players can optionally select a D&D special ability via a dropdown menu.
     - **Game Setup**: The game host uses a modal to set the initial ante (starting gold). The game then proceeds to a drafting phase where players take turns removing optional cards from the deck via their DMs.
     - **Core Gameplay**: The game correctly follows the gambit/round structure. Players ante cards, pay stakes, and play cards in turn. All player actions are handled in DMs to keep their hands private.
@@ -116,14 +121,14 @@ This is a complex, fully-featured implementation of the Three-Dragon Ante card g
     - **`CommandHandler.js`**: The entry point that receives the `!3da` command and delegates control to the `ThreeDragonAnteManager`.
     - **`main.js`**: Handles the `interactionCreate` events for buttons and modals submitted by players during the game.
 
-- **Current Status & To-Do (from `TDA_STATUS.md`)**:
-    - **Known Bugs**:
-        1.  **Image Display Failure**: Card images sometimes fail to appear for players. This may be an environment-specific issue with file path resolution.
-        2.  **Gold Scaling Not Working**: Gold values from card effects do not seem to be scaling with the initial ante as intended.
+- **Known Issues & Missing Features**:
+    - **Bugs**:
+        1.  **Image Display Failure**: Card images do not appear in embeds.
+        2.  **Gold Scaling Not Working**: Gold values from card effects do not scale with the initial ante as intended.
+        3.  **Ante Phase Failure**: The game stalls or enters a confusing state during the first ante.
     - **Not Yet Implemented**:
         - **Remaining Card Powers**: The powers for Legendary Dragons (`Black Raider`, `Blue Overlord`, etc.) and some other mortals/special dragons (`The Princess`, `The Kobold`, etc.) are not yet implemented.
-        - **D&D Special Abilities**: The mechanical effects of the special abilities (Bluff, Concentration, etc.) are not hooked into the game logic, even though they can be selected in the UI.
-        - **Minor Rule Simplifications**: Special Flights are checked at the end of a turn, not at the exact moment the third card is played. The `startRound` function is recursive, which could be an issue in very long gambits.
+        - **D&D Special Abilities**: The mechanical effects of the special abilities (Bluff, Concentration, etc.) are not hooked into the game logic.
 
 ### 5eTools Data Search (`!5e`, `!spell`, etc.)
 
@@ -207,18 +212,32 @@ The application's data-driven features rely on two key directories:
     -   Files in the root of this directory (e.g., `surge.json`, `shield.json`) are used for simple, one-off rolls.
     -   Subdirectories (e.g., `/spells`, `/items`) contain collections of tables that can be rolled on using the generic `!ro` command. The JSON files in the `/spells` subdirectory are also used by the Magic Item Generator.
 
+## Known Bugs
+
+1.  **Encounter Builder (`!create en`)**: When building an encounter with a high-CR creature (e.g., CR 21 Lich), the XP calculation is incorrect. The final encounter has a total XP value that is far too low.
+2.  **Soundboard (UI)**: The soundboard UI is blank and does not display the control buttons. It is completely non-functional.
+3.  **Three-Dragon Ante**: See the "Known Issues" listed in the TDA feature description above.
+
 ## To-Do List
 
-This is a list of potential future features and tasks.
+This is a list of potential future features, fixes, and improvements.
 
-1.  **Gamified JSON-Parsing Tool**:
-    -   **Goal**: Create a tool to motivate the manual work of combing through JSON files and adding metadata (e.g., adding `itemtypes` to spells).
-    -   **Concept**: An Electron window that presents the user with a specific task (e.g., "Go through `lvl1.json` and tag all spells compatible with Potions"). The user would perform the task, and the tool would track their progress, award points, and provide visual feedback (like filling a progress bar).
-    -   **Technical Requirements**:
-        -   Needs a way to pass data to the Electron window.
-        -   Will require a "to-do list" JSON file to define the tasks.
-        -   Will need a settings folder (e.g., in `/resources`) to store the configuration for each task and track progress.
+### High Priority Fixes
+1.  **Fix Soundboard**: The soundboard is currently non-functional. It needs to be re-wired to use the `BackendAudioPlayer` and the UI needs to be fixed to display the buttons correctly.
+2.  **Fix Initiative Tracker UI**: The "Attack" button in the combatant details panel should have its color changed to match the stat/save roll buttons below it, not the header buttons next to it.
+3.  **Investigate Encounter Builder Bug**: Debug the `!create en` command to understand why the XP calculation fails for high-CR creatures.
 
-2.  **Investigate New Generators from 5eTools Data**:
-    -   **Goal**: Explore the `5etoolsdata` directory, specifically files like `loot.json` and `life.json`, to find opportunities for new generators or bot features.
-    -   **Task**: Manually inspect these and other potentially useful JSON files to understand their structure and content. Reverse-engineer the data format to see if it can be used to build new features like a random loot generator or a character background generator.
+### New Features & Major Improvements
+4.  **Gamified JSON-Parsing Tool**:
+    -   **Goal**: Create a standalone tool to motivate and streamline the manual work of editing/tagging JSON data.
+    -   **Concept**: A separate Electron UI that loads a "Task File". This file defines a multi-file task (e.g., tag all spell files for `itemtypes`). The tool will display one JSON object at a time (e.g., a spell) with a custom UI (e.g., checkboxes for item types) and save progress back to the Task File. It should be able to load context (like full spell descriptions) from the 5eTools data to aid decision-making.
+5.  **Advanced Loot Generator**:
+    -   **Goal**: Create a new, more powerful loot generator.
+    -   **Concept**: This generator would use the existing `!ma` probability engine as a base, but instead of just generating spell-based items, it would also query the `5etools` item database to include standard and unique magic items in the results, creating more diverse and interesting loot hoards.
+6.  **LLM Agent (`!ask` command)**:
+    -   **Goal**: Evolve the LLM integration into a "Master Control Program" that can use the bot's other features as tools.
+    -   **Concept**: A user could make a natural language request like `!ask generate a moderate encounter for 4 level 5 players in a swamp`. The LLM would parse this, identify the correct tool (`EncounterBuilder`), determine the parameters (`partyLevel: 5`, `partySize: 4`, `difficulty: moderate`, `creatureType: ?`), and execute the command. This is a major architectural feature.
+
+### Quality of Life Improvements
+7.  **Refactor `!ro` Command**: Improve the user experience of the `!ro` command by replacing the clunky text-based input with an interactive Discord Modal.
+8.  **Investigate New Generators from 5eTools Data**: Explore the `5etoolsdata` directory, specifically files like `loot.json` and `life.json`, to find opportunities for new generators or bot features.
