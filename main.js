@@ -17,6 +17,7 @@ const CommandHandler = require('./CommandHandler.js');
 const MagicItemGenerator = require('./MagicItemGenerator.js');
 const FiveEToolsParser = require('./5eParser.js');
 const { format5eResult } = require('./5eEmbedFormatter.js');
+const fs = require('fs').promises;
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
 const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
@@ -99,6 +100,37 @@ async function createWindow() {
     await mainWindow.loadFile('index.html');
     console.log('index.html loaded.');
     windowloaded = true;
+}
+
+let gamifyWindow; // Keep a reference to the window object
+
+function createGamifyWindow() {
+    // If the window already exists, focus it
+    if (gamifyWindow) {
+        gamifyWindow.focus();
+        return;
+    }
+
+    gamifyWindow = new BrowserWindow({
+        width: 1200,
+        height: 900,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            enableRemoteModule: false,
+            nodeIntegration: true // Keep consistent with mainWindow
+        }
+    });
+
+    gamifyWindow.loadFile('json-gamify.html');
+
+    // Optional: Open DevTools for debugging
+    // gamifyWindow.webContents.openDevTools();
+
+    gamifyWindow.on('closed', () => {
+        // Dereference the window object
+        gamifyWindow = null;
+    });
 }
 
 async function apploader() {
@@ -272,6 +304,144 @@ async function ipcloader() {
         logToRenderer('ipcloader() called.');
         initiativeTracker = new InitiativeTracker(logToRenderer, sendInitiativeUpdate, autosavePath);
         // --- All core IPC listeners should be registered after the app is ready ---
+        ipcMain.on('open-gamify-tool', createGamifyWindow);
+
+        ipcMain.handle('get-task-data', async () => {
+            try {
+                const taskFilePath = path.join(__dirname, 'spell-item-types-task.json');
+                const data = await fs.readFile(taskFilePath, 'utf8');
+                const taskData = JSON.parse(data);
+
+                const { fileIndex, itemIndex } = taskData.progress;
+
+                if (fileIndex >= taskData.files.length) {
+                    return { success: true, taskComplete: true };
+                }
+
+                const spellFilePath = path.join(__dirname, taskData.files[fileIndex]);
+                const spellFileData = await fs.readFile(spellFilePath, 'utf8');
+                const spellList = JSON.parse(spellFileData);
+
+                const spell = spellList[itemIndex];
+                const spellName = spell.text.split(' - ')[0];
+                // Use the generic search since spell names might not be exact matches
+                const spellDetailsResults = await fiveEToolsParser.searchByName('spell', spellName);
+                const spellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spell', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
+
+                return {
+                    success: true,
+                    taskData,
+                    spell,
+                    spellDetails,
+                    spellCount: spellList.length,
+                };
+            } catch (error) {
+                logToRenderer(`Error in get-task-data: ${error}`);
+                return { success: false, error: error.message };
+            }
+        });
+
+        ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell }) => {
+            try {
+                // 1. Save the current spell changes
+                const currentFilePath = path.join(__dirname, taskData.files[taskData.progress.fileIndex]);
+                const currentFileData = await fs.readFile(currentFilePath, 'utf8');
+                let currentSpellList = JSON.parse(currentFileData);
+                currentSpellList[taskData.progress.itemIndex] = currentSpell;
+                await fs.writeFile(currentFilePath, JSON.stringify(currentSpellList, null, 2));
+
+                // 2. Update progress
+                taskData.progress.itemIndex++;
+
+                if (taskData.progress.itemIndex >= currentSpellList.length) {
+                    taskData.progress.itemIndex = 0;
+                    taskData.progress.fileIndex++;
+                    if (taskData.progress.fileIndex >= taskData.files.length) {
+                        // Task complete!
+                        const taskFilePath = path.join(__dirname, 'spell-item-types-task.json');
+                        await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+                        return { success: true, taskComplete: true };
+                    }
+                }
+
+                // 3. Save the new progress to the task file
+                const taskFilePath = path.join(__dirname, 'spell-item-types-task.json');
+                await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+
+                // 4. Get the next spell and its details
+                const nextFilePath = path.join(__dirname, taskData.files[taskData.progress.fileIndex]);
+                const nextFileData = await fs.readFile(nextFilePath, 'utf8');
+                const nextSpellList = JSON.parse(nextFileData);
+                const nextSpell = nextSpellList[taskData.progress.itemIndex];
+                const nextSpellName = nextSpell.text.split(' - ')[0];
+                const spellDetailsResults = await fiveEToolsParser.searchByName('spell', nextSpellName);
+                const nextSpellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spell', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
+
+                return {
+                    success: true,
+                    taskData,
+                    spell: nextSpell,
+                    spellDetails: nextSpellDetails,
+                    spellCount: nextSpellList.length,
+                };
+
+            } catch (error) {
+                logToRenderer(`Error in save-and-get-next-spell: ${error}`);
+                return { success: false, error: error.message };
+            }
+        });
+
+        ipcMain.handle('undo-and-get-previous-spell', async (event, { taskData, previousSpellState }) => {
+            try {
+                // 1. Determine the previous spell's position
+                let prevFileIndex = taskData.progress.fileIndex;
+                let prevItemIndex = taskData.progress.itemIndex - 1;
+
+                if (prevItemIndex < 0) {
+                    prevFileIndex--;
+                    if (prevFileIndex < 0) {
+                        return { success: false, error: "Already at the beginning." };
+                    }
+                    const prevFilePath = path.join(__dirname, taskData.files[prevFileIndex]);
+                    const prevFileData = await fs.readFile(prevFilePath, 'utf8');
+                    const prevSpellList = JSON.parse(prevFileData);
+                    prevItemIndex = prevSpellList.length - 1;
+                }
+
+                // 2. Save the *previous* state back to the file
+                const targetFilePath = path.join(__dirname, taskData.files[prevFileIndex]);
+                const targetFileData = await fs.readFile(targetFilePath, 'utf8');
+                let targetSpellList = JSON.parse(targetFileData);
+                targetSpellList[prevItemIndex] = previousSpellState;
+                await fs.writeFile(targetFilePath, JSON.stringify(targetSpellList, null, 2));
+
+                // 3. Update progress to the previous spell's position
+                taskData.progress.fileIndex = prevFileIndex;
+                taskData.progress.itemIndex = prevItemIndex;
+
+                // 4. Save the new progress to the task file
+                const taskFilePath = path.join(__dirname, 'spell-item-types-task.json');
+                await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+
+                // 5. Get the details for the (now current) spell
+                const spellName = previousSpellState.text.split(' - ')[0];
+                const spellDetailsResults = await fiveEToolsParser.searchByName('spell', spellName);
+                const spellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spell', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
+                const spellCount = targetSpellList.length;
+
+                return {
+                    success: true,
+                    taskData,
+                    spell: previousSpellState,
+                    spellDetails,
+                    spellCount,
+                };
+            } catch (error) {
+                logToRenderer(`Error in undo-and-get-previous-spell: ${error}`);
+                return { success: false, error: error.message };
+            }
+        });
+
         ipcMain.handle('open-file-dialog', async () => {
             const { filePaths } = await dialog.showOpenDialog(mainWindow, {
                 title: 'Select Music File',

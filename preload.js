@@ -20,14 +20,19 @@ contextBridge.exposeInMainWorld('electron', {
         'copy-creature', 'window-ready',
         'load-sound', 'play-sound', 'stop-sound', 'unload-sound',
         'set-loop', 'set-soundboard-volume', 'request-initial-load',
-        'push-dicelog-to-discord', 'push-statblock-to-discord'
+        'push-dicelog-to-discord', 'push-statblock-to-discord',
+        'open-gamify-tool'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);
       }
     },
     invoke: (channel, data) => {
-      const validChannels = ['open-file-dialog', 'get-default-local-folder', 'get-dnd-conditions', 'load-encounter-dialog', 'search-monsters', 'get-monster-details'];
+      const validChannels = [
+          'open-file-dialog', 'get-default-local-folder', 'get-dnd-conditions',
+          'load-encounter-dialog', 'search-monsters', 'get-monster-details',
+          'get-task-data', 'save-and-get-next-spell', 'undo-and-get-previous-spell'
+        ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);
       }

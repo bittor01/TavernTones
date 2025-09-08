@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>JSON Gamify Tool</title>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="json-gamify.css">
+</head>
+<body>
+  <div id="container">
+    <div id="header">
+      <h1>Spell Item Type Tagger</h1>
+      <div id="scores">
+        <span>Score: <span id="score">0</span></span>
+        <span>High Score: <span id="high-score">0</span></span>
+      </div>
+    </div>
+    <div id="progress-bar-container">
+      <div id="progress-bar"></div>
+    </div>
+    <div id="main-content">
+      <div id="spell-info-container">
+        <h2 id="spell-name">Loading...</h2>
+        <div id="spell-text"></div>
+      </div>
+      <div id="item-types-container">
+        <h3>Item Types</h3>
+        <div id="item-types-checkboxes">
+          <!-- Checkboxes will be dynamically inserted here -->
+        </div>
+      </div>
+    </div>
+    <div id="footer">
+      <button id="undo-button">Undo</button>
+      <button id="next-button">Next</button>
+    </div>
+  </div>
+  <script src="json-gamify.js"></script>
+</body>
+</html>

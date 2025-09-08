@@ -1,0 +1,19 @@
+{
+  "taskName": "Spell Item Type Tagging",
+  "files": [
+    "randomtables/spells/lvl0.json",
+    "randomtables/spells/lvl1.json",
+    "randomtables/spells/lvl2.json",
+    "randomtables/spells/lvl3.json",
+    "randomtables/spells/lvl4.json",
+    "randomtables/spells/lvl5.json",
+    "randomtables/spells/lvl6.json",
+    "randomtables/spells/lvl7.json",
+    "randomtables/spells/lvl8.json",
+    "randomtables/spells/lvl9.json"
+  ],
+  "progress": {
+    "fileIndex": 0,
+    "itemIndex": 0
+  }
+}
