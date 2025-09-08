@@ -5,6 +5,7 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, 
 const { shell } = require('electron');
 const axios = require('axios');
 const EncounterBuilder = require('./EncounterBuilder.js');
+const ThreeDragonAnteManager = require('./ThreeDragonAnte.js');
 
 // These will be initialized in the constructor
 let logToRenderer;
@@ -21,6 +22,7 @@ class CommandHandler {
         musicPlayer = musicPlayerInstance;
         this.fiveEToolsParser = fiveEToolsParserInstance;
         this.encounterBuilder = new EncounterBuilder(this.fiveEToolsParser);
+        this.tdaManager = new ThreeDragonAnteManager(this.client);
         this.lastResponse = null;
         BOT_ROLE_ID = config.BOT_ROLE_ID;
         DEFAULT_LOCAL_FOLDER = config.DEFAULT_LOCAL_FOLDER;
@@ -33,6 +35,7 @@ class CommandHandler {
             .setDescription('To use any command, be sure to @me!')
             .addFields(
                 { name: '!ping', value: 'Test to see if the bot is working.' },
+                { name: '!3da or !tda', value: 'Starts a game of Three-Dragon Ante in the current channel.' },
                 { name: '!create en <creature>', value: 'Starts the interactive encounter builder.' },
                 { name: '!5e <query>', value: 'Search all 5etools data by name.' },
                 { name: '!spell <query>', value: 'Search for a spell by name.' },
@@ -184,6 +187,10 @@ class CommandHandler {
             try {
                 let typingInterval;
                 switch (true) {
+                    case content.startsWith('!3da') || content.startsWith('!tda'):
+                        logToRenderer('Three-Dragon Ante command detected');
+                        this.tdaManager.handleCommand(message);
+                        break;
                     case content.startsWith('!ping'):
                         logToRenderer('Ping command detected'); // Log when ping command is detected
                         await message.reply('Pong!');
