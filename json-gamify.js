@@ -7,18 +7,24 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentTaskPath = null;
     let score = 0;
     let highScore = 0;
+    let sessionTimings = [];
+    let startTime = 0;
     let itemsCompletedInSet = 0;
     let totalItemsInCurrentFile = 0;
 
     // --- DOM ELEMENTS ---
     const scoreEl = document.getElementById('score');
     const highScoreEl = document.getElementById('high-score');
-    const progressBarEl = document.getElementById('progress-bar');
+    const etaFileEl = document.getElementById('eta-file');
+    const etaTaskEl = document.getElementById('eta-task');
+    const fileProgressBarEl = document.getElementById('progress-bar');
+    const overallProgressBarEl = document.getElementById('overall-progress-bar');
     const titleEl = document.getElementById('item-title');
     const detailsEl = document.getElementById('item-details');
     const dynamicUIContainerEl = document.getElementById('dynamic-ui-container');
     const nextButton = document.getElementById('next-button');
     const undoButton = document.getElementById('undo-button');
+    const loadTaskButton = document.getElementById('load-task-button');
     const containerEl = document.getElementById('container');
 
     // --- RENDER & UI FUNCTIONS ---
@@ -120,8 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreEl.textContent = score;
         highScoreEl.textContent = highScore;
 
-        const progressPercentage = totalItemsInCurrentFile > 0 ? ((taskData.progress.itemIndex + 1) / totalItemsInCurrentFile) * 100 : 0;
-        progressBarEl.style.width = `${progressPercentage}%`;
+        updateETAsAndProgress();
 
         const title = currentItem[taskData.ui.titleField] || "Unnamed Item";
         const progressIndicator = `(${taskData.progress.itemIndex + 1} / ${totalItemsInCurrentFile} in File ${taskData.progress.fileIndex + 1})`;
@@ -138,10 +143,50 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             detailsEl.innerHTML = html;
         } else {
-            detailsEl.innerHTML = `<p>No detailed description available.</p>`;
+            detailsEl.innerHTML = `<p><strong>Note: No details found in 5eTools data. This may be a custom entry.</strong></p>`;
         }
 
         generateUI(taskData.ui, currentItem);
+        startTime = Date.now(); // Start timer for the new item
+    }
+
+    function formatTime(ms) {
+        if (ms === Infinity || isNaN(ms)) return '--';
+        const seconds = Math.round(ms / 1000);
+        if (seconds < 60) return `${seconds}s`;
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}m ${remainingSeconds}s`;
+    }
+
+    function updateETAsAndProgress() {
+        // File Progress Bar
+        const fileProgress = totalItemsInCurrentFile > 0 ? ((taskData.progress.itemIndex) / totalItemsInCurrentFile) * 100 : 0;
+        fileProgressBarEl.style.width = `${fileProgress}%`;
+
+        // Overall Progress Bar
+        const overallProgress = taskData.files.length > 0 ? ((taskData.progress.fileIndex) / taskData.files.length) * 100 : 0;
+        overallProgressBarEl.style.width = `${overallProgress}%`;
+
+        // ETAs
+        if (sessionTimings.length === 0) {
+            etaFileEl.textContent = '--';
+            etaTaskEl.textContent = '--';
+            return;
+        }
+
+        const avgTime = sessionTimings.reduce((a, b) => a + b, 0) / sessionTimings.length;
+        const itemsLeftInFile = totalItemsInCurrentFile - taskData.progress.itemIndex;
+        const etaFile = avgTime * itemsLeftInFile;
+        etaFileEl.textContent = formatTime(etaFile);
+
+        // For overall ETA, we need to estimate total items. This is a rough guess.
+        // A better implementation would require reading all files first.
+        const avgItemsPerFile = totalItemsInCurrentFile; // Use current file as estimate
+        const filesLeft = taskData.files.length - (taskData.progress.fileIndex + 1);
+        const estimatedItemsLeft = itemsLeftInFile + (filesLeft * avgItemsPerFile);
+        const etaTask = avgTime * estimatedItemsLeft;
+        etaTaskEl.textContent = formatTime(etaTask);
     }
 
     async function handleTaskCompletion() {
@@ -184,6 +229,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- EVENT LISTENERS ---
     nextButton.addEventListener('click', async () => {
         if (!currentItem) return;
+
+        const timeTaken = Date.now() - startTime;
+        sessionTimings.push(timeTaken);
 
         previousItemState = JSON.parse(JSON.stringify(currentItem));
 
@@ -256,6 +304,34 @@ document.addEventListener('DOMContentLoaded', () => {
         undoButton.disabled = true;
 
         render();
+    });
+
+    loadTaskButton.addEventListener('click', async () => {
+        const filePath = await window.electron.ipcRenderer.invoke('open-task-file-dialog');
+        if (filePath) {
+            // This logic is very similar to the task chaining logic
+            titleEl.textContent = "Loading new task...";
+            detailsEl.innerHTML = "";
+            dynamicUIContainerEl.innerHTML = "";
+            const response = await window.electron.ipcRenderer.invoke('load-task-by-path', filePath);
+            if (response.success) {
+                // Reset session-specific state, but keep high score
+                score = 0;
+                itemsCompletedInSet = 0;
+                sessionTimings = []; // Reset ETA calculator
+                taskData = response.taskData;
+                currentTaskPath = response.taskFilePath;
+                currentItem = response.spell;
+                itemDetails = response.spellDetails;
+                totalItemsInCurrentFile = response.spellCount;
+                undoButton.disabled = true;
+                nextButton.disabled = false;
+                render();
+            } else {
+                titleEl.textContent = "Error";
+                detailsEl.textContent = `Failed to load selected task: ${response.error}`;
+            }
+        }
     });
 
     // --- INITIAL LOAD ---

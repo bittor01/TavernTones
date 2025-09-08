@@ -12,10 +12,19 @@
       <div id="scores">
         <span>Score: <span id="score">0</span></span>
         <span>High Score: <span id="high-score">0</span></span>
+        <div id="eta-container">
+            <span>File ETA: <span id="eta-file">--</span></span>
+            <span>Task ETA: <span id="eta-task">--</span></span>
+        </div>
       </div>
     </div>
-    <div id="progress-bar-container">
-      <div id="progress-bar"></div>
+    <label for="progress-bar">File Progress:</label>
+    <div id="progress-bar-container" class="progress-bar-container">
+      <div id="progress-bar" class="progress-bar"></div>
+    </div>
+    <label for="overall-progress-bar">Overall Task Progress:</label>
+    <div id="overall-progress-bar-container" class="progress-bar-container">
+        <div id="overall-progress-bar" class="progress-bar"></div>
     </div>
     <div id="main-content">
       <div id="details-container">
@@ -27,8 +36,11 @@
       </div>
     </div>
     <div id="footer">
-      <button id="undo-button">Undo</button>
-      <button id="next-button">Next</button>
+      <button id="load-task-button">Load Task</button>
+      <div class="footer-right">
+        <button id="undo-button">Undo</button>
+        <button id="next-button">Next</button>
+      </div>
     </div>
   </div>
   <script src="json-gamify.js"></script>

@@ -328,6 +328,19 @@ async function ipcloader() {
         // --- All core IPC listeners should be registered after the app is ready ---
         ipcMain.on('open-gamify-tool', createGamifyWindow);
 
+        ipcMain.handle('open-task-file-dialog', async () => {
+            const { filePaths } = await dialog.showOpenDialog(gamifyWindow, { // gamifyWindow should be the parent
+                title: 'Select Task File',
+                properties: ['openFile'],
+                filters: [{ name: 'JSON Files', extensions: ['json'] }]
+            });
+
+            if (filePaths && filePaths.length > 0) {
+                return filePaths[0];
+            }
+            return null;
+        });
+
         ipcMain.handle('get-high-score', async () => {
             try {
                 const settingsPath = path.join(__dirname, 'gamify-settings.json');
