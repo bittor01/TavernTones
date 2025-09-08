@@ -1,4 +1,5 @@
 environmentvars.env
+.env
 node_modules/
 *.bak
 TavernTones.code-workspace

@@ -88,7 +88,7 @@ The application includes a music player for ambient background music and a sound
         - Can search for music in subfolders of a main music directory.
         - Supports play, pause, and looping.
         - The bot can be controlled via chat commands (`!pl`, `!pa`) or the Electron UI.
-    - **Soundboard (UI Only)**:
+    - **Soundboard (UI Only) (Needs Repair)**:
         - A 3x3 grid of buttons in the UI.
         - Each slot can be loaded with a sound effect.
         - Supports playing, stopping, and looping individual sounds.
