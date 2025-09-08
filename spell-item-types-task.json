@@ -13,8 +13,8 @@
     "randomtables/spells/lvl9.json"
   ],
   "progress": {
-    "fileIndex": 3,
-    "itemIndex": 35
+    "fileIndex": 0,
+    "itemIndex": 0
   },
   "nextTask": "deck-editing-task.json",
   "ui": {
@@ -25,15 +25,7 @@
         "label": "Item Types",
         "type": "checkbox-group",
         "options": [
-          "Giz",
-          "Scr",
-          "GWT",
-          "Amm",
-          "Pot",
-          "Ing",
-          "Inh",
-          "Con",
-          "Inj"
+          "Giz", "Scr", "GWT", "Amm", "Pot", "Ing", "Inh", "Con", "Inj"
         ]
       }
     ]

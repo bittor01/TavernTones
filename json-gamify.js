@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentItem = null;
     let itemDetails = null; // e.g., for spell descriptions
     let previousItemState = null;
+    let currentTaskPath = null;
     let score = 0;
     let highScore = 0;
     let itemsCompletedInSet = 0;
@@ -13,9 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const scoreEl = document.getElementById('score');
     const highScoreEl = document.getElementById('high-score');
     const progressBarEl = document.getElementById('progress-bar');
-    const titleEl = document.getElementById('spell-name'); // Re-purposing this for a generic title
-    const detailsEl = document.getElementById('spell-text'); // Re-purposing this for generic details
-    const dynamicUIContainerEl = document.getElementById('item-types-container');
+    const titleEl = document.getElementById('item-title');
+    const detailsEl = document.getElementById('item-details');
+    const dynamicUIContainerEl = document.getElementById('dynamic-ui-container');
     const nextButton = document.getElementById('next-button');
     const undoButton = document.getElementById('undo-button');
     const containerEl = document.getElementById('container');
@@ -23,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- RENDER & UI FUNCTIONS ---
 
     function generateUI(uiDefinition, data) {
-        dynamicUIContainerEl.innerHTML = `<h3>${uiDefinition.title || 'Properties'}</h3>`;
+        dynamicUIContainerEl.innerHTML = ''; // Clear previous form
         const formEl = document.createElement('form');
         formEl.id = 'dynamic-form';
 
@@ -161,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.success) {
                 // Essentially re-initializing
                 taskData = response.taskData;
+                currentTaskPath = response.taskFilePath;
                 currentItem = response.spell;
                 itemDetails = response.spellDetails;
                 totalItemsInCurrentFile = response.spellCount;
@@ -188,7 +190,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const updatedItem = readUIData();
         currentItem = updatedItem;
 
-        const response = await window.electron.ipcRenderer.invoke('save-and-get-next-spell', { taskData, currentSpell: currentItem });
+        const response = await window.electron.ipcRenderer.invoke('save-and-get-next-spell', {
+            taskData,
+            currentSpell: currentItem,
+            taskFilePath: currentTaskPath
+        });
 
         if (!response.success) {
             titleEl.textContent = "Error";
@@ -228,7 +234,11 @@ document.addEventListener('DOMContentLoaded', () => {
     undoButton.addEventListener('click', async () => {
         if (!previousItemState) return;
 
-        const response = await window.electron.ipcRenderer.invoke('undo-and-get-previous-spell', { taskData, previousSpellState: previousItemState });
+        const response = await window.electron.ipcRenderer.invoke('undo-and-get-previous-spell', {
+            taskData,
+            previousSpellState: previousItemState,
+            taskFilePath: currentTaskPath
+        });
 
         if (!response.success) {
             console.error("Undo failed:", response.error);
@@ -256,10 +266,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await window.electron.ipcRenderer.invoke('get-task-data');
         if (response.success) {
             if (response.taskComplete) {
-                handleTaskCompletion();
+                await handleTaskCompletion(); // It's async now
                 return;
             }
             taskData = response.taskData;
+            currentTaskPath = response.taskFilePath;
             currentItem = response.spell;
             itemDetails = response.spellDetails;
             totalItemsInCurrentFile = response.spellCount;

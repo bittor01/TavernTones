@@ -382,14 +382,19 @@ async function ipcloader() {
                 // Try to get details if it's a spell, but don't fail if it's not
                 let itemDetails = null;
                 if (item.text && item.text.includes('-')) {
-                    const itemName = item.text.split(' - ')[0];
+                    const itemName = item.text.split(' - ')[0].trim();
                     const spellDetailsResults = await fiveEToolsParser.searchByName('spells', itemName);
-                    itemDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spells', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
+
+                    // Find the exact match from the search results
+                    const exactMatch = spellDetailsResults.find(result => result.name.toLowerCase() === itemName.toLowerCase());
+
+                    itemDetails = exactMatch ? await fiveEToolsParser.getExact('spells', exactMatch.name, exactMatch.source) : null;
                 }
 
                 return {
                     success: true,
                     taskData,
+                    taskFilePath: taskFilePath, // Return the path of the loaded task
                     spell: item, // Keep 'spell' key for frontend compatibility for now
                     spellDetails: itemDetails,
                     spellCount: itemList.length,
@@ -410,48 +415,51 @@ async function ipcloader() {
             return await loadTaskData(defaultTaskPath);
         });
 
-        ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell }) => {
+        ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell, taskFilePath }) => {
             try {
                 // 1. Save the current spell changes
-                const currentFilePath = path.join(__dirname, taskData.files[taskData.progress.fileIndex]);
-                const currentFileData = await fs.readFile(currentFilePath, 'utf8');
-                let currentSpellList = JSON.parse(currentFileData);
-                currentSpellList[taskData.progress.itemIndex] = currentSpell;
-                await fs.writeFile(currentFilePath, JSON.stringify(currentSpellList, null, 2));
+                const currentItemFilePath = path.join(__dirname, taskData.files[taskData.progress.fileIndex]);
+                const currentItemFileData = await fs.readFile(currentItemFilePath, 'utf8');
+                let currentItemList = JSON.parse(currentItemFileData);
+                currentItemList[taskData.progress.itemIndex] = currentSpell;
+                await fs.writeFile(currentItemFilePath, JSON.stringify(currentItemList, null, 2));
 
                 // 2. Update progress
                 taskData.progress.itemIndex++;
 
-                if (taskData.progress.itemIndex >= currentSpellList.length) {
+                if (taskData.progress.itemIndex >= currentItemList.length) {
                     taskData.progress.itemIndex = 0;
                     taskData.progress.fileIndex++;
                     if (taskData.progress.fileIndex >= taskData.files.length) {
                         // Task complete!
-                        const taskFilePath = path.join(__dirname, 'spell-item-types-task.json');
                         await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-                        return { success: true, taskComplete: true };
+                        return { success: true, taskComplete: true, taskData };
                     }
                 }
 
                 // 3. Save the new progress to the task file
-                const taskFilePath = path.join(__dirname, 'spell-item-types-task.json');
                 await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
 
                 // 4. Get the next spell and its details
                 const nextFilePath = path.join(__dirname, taskData.files[taskData.progress.fileIndex]);
                 const nextFileData = await fs.readFile(nextFilePath, 'utf8');
-                const nextSpellList = JSON.parse(nextFileData);
-                const nextSpell = nextSpellList[taskData.progress.itemIndex];
-                const nextSpellName = nextSpell.text.split(' - ')[0];
-                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', nextSpellName);
-                const nextSpellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spells', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
+                const nextItemList = JSON.parse(nextFileData);
+                const nextItem = nextItemList[taskData.progress.itemIndex];
+
+                let nextItemDetails = null;
+                if (nextItem.text && nextItem.text.includes('-')) {
+                    const nextItemName = nextItem.text.split(' - ')[0].trim();
+                    const spellDetailsResults = await fiveEToolsParser.searchByName('spells', nextItemName);
+                    const exactMatch = spellDetailsResults.find(result => result.name.toLowerCase() === nextItemName.toLowerCase());
+                    nextItemDetails = exactMatch ? await fiveEToolsParser.getExact('spells', exactMatch.name, exactMatch.source) : null;
+                }
 
                 return {
                     success: true,
                     taskData,
-                    spell: nextSpell,
-                    spellDetails: nextSpellDetails,
-                    spellCount: nextSpellList.length,
+                    spell: nextItem,
+                    spellDetails: nextItemDetails,
+                    spellCount: nextItemList.length,
                 };
 
             } catch (error) {
@@ -460,7 +468,7 @@ async function ipcloader() {
             }
         });
 
-        ipcMain.handle('undo-and-get-previous-spell', async (event, { taskData, previousSpellState }) => {
+        ipcMain.handle('undo-and-get-previous-spell', async (event, { taskData, previousSpellState, taskFilePath }) => {
             try {
                 // 1. Determine the previous spell's position
                 let prevFileIndex = taskData.progress.fileIndex;
@@ -489,7 +497,6 @@ async function ipcloader() {
                 taskData.progress.itemIndex = prevItemIndex;
 
                 // 4. Save the new progress to the task file
-                const taskFilePath = path.join(__dirname, 'spell-item-types-task.json');
                 await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
 
                 // 5. Get the details for the (now current) spell

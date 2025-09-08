@@ -8,7 +8,11 @@
       "Scr",
       "GWT",
       "Amm",
-      "Pot"
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -20,7 +24,11 @@
       "Scr",
       "GWT",
       "Amm",
-      "Pot"
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -30,7 +38,13 @@
     "itemtypes": [
       "Giz",
       "Scr",
-      "GWT"
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -40,7 +54,13 @@
     "itemtypes": [
       "Giz",
       "Scr",
-      "GWT"
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -52,7 +72,11 @@
       "Scr",
       "GWT",
       "Amm",
-      "Pot"
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -63,7 +87,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -91,6 +120,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -106,6 +136,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -116,7 +147,17 @@
     "text": "Blade of Blood and Bone - 1st level Necromancy 💀",
     "unique": false,
     "used": [],
-    "itemtypes": []
+    "itemtypes": [
+      "Giz",
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
+    ]
   },
   {
     "text": "Bless - 1st level Enchantment 🤯",
@@ -127,7 +168,11 @@
       "Scr",
       "GWT",
       "Amm",
-      "Pot"
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -155,6 +200,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -169,7 +215,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Amm"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -181,6 +232,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -195,7 +247,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -207,6 +264,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -222,6 +280,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -237,6 +296,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -251,7 +311,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -263,7 +328,11 @@
       "Scr",
       "GWT",
       "Amm",
-      "Pot"
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -291,6 +360,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -306,6 +376,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -337,6 +408,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -368,7 +440,11 @@
       "Scr",
       "GWT",
       "Amm",
-      "Pot"
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -380,6 +456,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -394,7 +471,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -405,7 +487,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -416,7 +503,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -444,6 +536,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -459,6 +552,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -474,7 +568,11 @@
       "Scr",
       "GWT",
       "Amm",
-      "Pot"
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -486,6 +584,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -501,6 +600,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -515,7 +615,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Amm"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -527,6 +632,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -542,7 +648,11 @@
       "Scr",
       "GWT",
       "Amm",
-      "Pot"
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -554,6 +664,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -568,7 +679,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -580,6 +696,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -595,6 +712,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -609,7 +727,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -621,6 +744,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -635,7 +759,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -647,7 +776,11 @@
       "Scr",
       "GWT",
       "Amm",
-      "Pot"
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -656,7 +789,14 @@
     "used": [],
     "itemtypes": [
       "Giz",
-      "Scr"
+      "Scr",
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -667,7 +807,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Amm"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -693,7 +838,13 @@
     "itemtypes": [
       "Giz",
       "Scr",
-      "GWT"
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -704,6 +855,8 @@
       "Giz",
       "Scr",
       "GWT",
+      "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -750,7 +903,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Amm"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -778,6 +936,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -793,6 +952,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -807,7 +967,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -819,6 +984,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -850,6 +1016,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -865,6 +1032,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -880,6 +1048,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -895,7 +1064,11 @@
       "Scr",
       "GWT",
       "Amm",
-      "Pot"
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -906,7 +1079,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -918,6 +1096,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -933,6 +1112,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -947,7 +1127,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -958,7 +1143,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -969,7 +1159,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -981,6 +1176,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1012,6 +1208,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1027,6 +1224,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1041,7 +1239,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1053,7 +1256,11 @@
       "Scr",
       "GWT",
       "Amm",
-      "Pot"
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1065,6 +1272,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1079,6 +1287,8 @@
       "Giz",
       "Scr",
       "GWT",
+      "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1093,7 +1303,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1103,7 +1318,13 @@
     "itemtypes": [
       "Giz",
       "Scr",
-      "GWT"
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1115,6 +1336,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1129,7 +1351,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1140,7 +1367,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1152,6 +1384,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1167,6 +1400,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1182,6 +1416,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1196,7 +1431,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Amm"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1223,7 +1463,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1249,7 +1494,13 @@
     "itemtypes": [
       "Giz",
       "Scr",
-      "GWT"
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1259,7 +1510,13 @@
     "itemtypes": [
       "Giz",
       "Scr",
-      "GWT"
+      "GWT",
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1287,6 +1544,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1301,7 +1559,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1313,6 +1576,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1328,6 +1592,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1342,7 +1607,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Amm"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1353,7 +1623,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   },
   {
@@ -1365,6 +1640,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1379,6 +1655,8 @@
       "Giz",
       "Scr",
       "GWT",
+      "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1394,6 +1672,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1409,6 +1688,7 @@
       "Scr",
       "GWT",
       "Amm",
+      "Pot",
       "Ing",
       "Inh",
       "Con",
@@ -1423,7 +1703,12 @@
       "Giz",
       "Scr",
       "GWT",
-      "Pot"
+      "Amm",
+      "Pot",
+      "Ing",
+      "Inh",
+      "Con",
+      "Inj"
     ]
   }
 ]
