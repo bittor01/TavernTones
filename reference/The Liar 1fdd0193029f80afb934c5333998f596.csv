@@ -1,0 +1,221 @@
+﻿Card Name,Depiction,Card Effect
+<False Trail,A pair of footprints that suddenly vanish,"After you move, you can leave behind illusory tracks that mislead trackers for 1 hour 🔍>"
+<Mind Maze,An intricate maze overlaying a frightened face,All creatures in a 20-foot radius must succeed on a DC [[14]] Intelligence saving throw or be unable to take reactions until the start of your next turn 🧠>
+<Lie's Resonance,A pulsing rune of tangled threads,"All creatures of your choice within 15 feet must succeed on a DC [[15]] Wisdom saving throw or take psychic damage equal to [[2d6]] and be unable to speak truth for 1 minute, effectively imposing disadvantage on Persuasion checks 🧠>"
+<Web of Confusion,A tangled spiderweb shimmering with ethereal light,All creatures of your choice within 15 ft must succeed on a DC [[14]] Intelligence saving throw or be affected by the confusion spell for 1 minute 🕸️>
+<Crowd's Confusion,A swirling vortex of faces blending into one,"All creatures within 30 feet must succeed on a Wisdom saving throw or become unable to distinguish friend from foe for 1 minute, causing attacks to roll with disadvantage 🔄>"
+<Blinkstep,A pair of mismatched footprints fading away,"As a bonus action, teleport up to 30 feet to an unoccupied space you can see"
+<Mirage Step,Footprints fading into mist,"As a bonus action, you teleport up to 30 feet to an unoccupied space you can see that is lightly obscured by illusion or darkness 🌫️>"
+<Evasive Mirage,A flickering duplicate of yourself,"As a reaction when targeted by an attack, impose disadvantage on that attack by creating a fleeting illusion of your location 🌀>"
+<Bait and Switch,A card with two identical figures swapping places,"As a reaction, when hit by an attack, you can swap places with a willing creature within 30 feet, causing the attack to target the new position instead 🔄>"
+<Mirage Veil,"A shimmering, translucent mask floating in air","Become invisible until you attack or cast a spell, or for up to 1 minute 🌫>"
+<Whispered Falsehood,A mouth whispering into a shadowy ear,Cast disadvantage on the next Charisma (Deception) check you make within the next hour 🤫>
+<Veil of Shadows,A swirling mist obscuring a figure,Cast invisibility on yourself for up to 1 hour or until you attack or cast a spell 🕶️>
+<Smoke and Mirrors,An ornate mask shrouded by smoke,"Cast minor illusion at will without verbal components for 10 minutes, usable once per long rest 🎭>"
+<False Promise,"Two masked faces, one frowning, one smiling","Cast the spell ""Suggestion"" at 2nd level, requiring no verbal component and made without expending a spell slot 🗣️>"
+<Veil of Confusion,A swirling mist obscuring vision,Choose a 20-foot radius within 60 feet
+<Phantom Echo,A ghostly double mimicking a spellcasting gesture,Choose a creature within 30 feet
+<Web of Lies,"A spider weaving a glowing, intricate web",Choose a creature within 30 feet
+<False Footsteps,A pair of footprints leading in two directions,"Choose a target within 30 feet—they must succeed a DC [[15]] Wisdom saving throw or be fooled by an illusory sound or image distracting them, imposing disadvantage on their next attack or ability check 👣>"
+<Silent Tongue,A mouth with a lock over it,Choose one creature that cannot speak or cast spells with verbal components for 1 minute unless it succeeds a DC [[15]] Constitution saving throw 🤐>
+<Whispered Falsehood,A mouth with a tongue made of smoke,Choose one creature within 30 feet
+<False Friend,"Two hands shaking, one skeletal beneath the other",Choose one creature within 30 feet
+<Whispered Doubt,A stylized ear with a faint wisp of smoke,Choose one creature within 30 feet
+<Whispered Falsehood,A mouth whispering with a trail of shimmering words,Choose one creature within 30 feet to believe a falsehood
+<False Footing,A pair of mismatched boots walking in opposite directions,Choose one creature within 30 feet—its next movement provokes opportunity attacks as if it moved 5 feet closer to enemies it can see 👣>
+<Veil of Confusion,A swirling fog around a single figure,Choose one creature within 30 feet—target must succeed on a DC 14 Intelligence saving throw or be confused (roll on the confusion table) for 1 minute 🤯>
+<Mirror's Whisper,A shimmering face reflecting a false expression,"Choose one creature within 30 feet, they must succeed on a DC 15 Wisdom saving throw or be deceived by an illusion of your choice, granting you advantage on your next Charisma check against them 🪞>"
+<Whispered Lies,A mouth covered by a finger in a hush gesture,Choose one creature within 30 ft
+<Mirror’s Gaze,A cracked mirror reflecting a distorted face,Choose one creature you can see
+<Silent Tongue,A tongue wrapped in shadows,Choose one target within 30 feet— they cannot speak or cast spells with verbal components for 1 minute unless they succeed on a DC [[14]] Constitution saving throw 🤐>
+<Web of Facades,A network of marionette strings tangled around several figures,Choose up to five creatures in a 20-foot radius
+<Web of Lies,A spiderweb woven between two hands,Create a 10-foot radius illusionary web at a point within 60 feet
+<Smoke and Shadows,A swirling cloud of dark smoke,Create a 20-foot-radius sphere of thick smoke centered on you that heavily obscures the area for 1 minute 🌫️>
+<Echo of Lies,A distorted reflection in a cracked mirror,Create an illusory double of yourself for 1 minute that mimics your actions but cannot attack
+<Mirror’s Mirage,A cracked mirror reflecting multiple distorted faces,Create an illusory double of yourself for 1 minute that mimics your movements and distracts enemies
+<Mirror's Gambit,Two identical faces split by a jagged line,"Create an illusory double of yourself that lasts 1 minute, imposing disadvantage on attack rolls against you 🎭>"
+<Smoke and Mirrors,A swirling kaleidoscope of colors and shapes,Create an illusory double of yourself that lasts for 1 minute
+<Mirror's Gambit,A shattered mirror reflecting a different face,"Create an illusory double of yourself within 30 feet that mimics your actions for 1 minute, causing enemies to target it instead of you"
+<Echo of Lies,A phantom double whispering deceit,"Create an illusory duplicate of yourself that distracts enemies, granting you advantage on Stealth checks for 10 minutes 👥>"
+<Smoke and Mirrors,A swirling cloud of smoke reflecting distorted faces,"Create an illusory duplicate of yourself that lasts 1 minute, drawing attacks away from you 🎭>"
+<Veil of Mirrors,A swirling fog of fragmented faces,"Create an illusory duplicate of yourself that mimics your actions for 1 minute, distracting enemies"
+<Confounding Mirage,An illusory maze twisting in endless corridors,"Create an illusory duplicate of yourself that moves independently within 60 feet for 1 minute, granting attackers disadvantage on attacks against you as they target the duplicate instead 🌀>"
+<False Alarm,An alarm bell that emits colored smoke instead of sound,"Create an illusory noise or visual effect of your choice audible or visible up to 60 feet, lasting 1 minute to distract or mislead foes 🔔>"
+<False Footprints,"A trail of glowing, shifting footprints leading away","Create an illusory trail that misdirects pursuers, causing them to follow a false path for [[1d4+1]] rounds 🐾>"
+<Mirror Mirage,A shattered mirror reflecting multiple distorted versions of one person,"Create illusory duplicates of a target within 30 feet, each taking 1 hit point and vanishing when hit, lasting 1 minute or until all duplicates disappear 🎭>"
+<False Reflection,A mirror shattering into multiple distorted images,Create illusory duplicates of yourself that impose disadvantage on attacks against you until the start of your next turn 🤡>
+<Mirror Trick,A shattered mirror showing multiple distorted reflections,"Create illusory duplicates of yourself that last for 1 minute, causing attackers to have disadvantage on attacks against you 🎴>"
+<Smoke and Mirrors,A shattered mirror reflecting multiple images,"Create illusory duplicates of yourself that last for 1 minute, granting attackers disadvantage on attacks against you 🎭>"
+<False Reflection,A fractured mirror showing multiple images,"Create illusory duplicates of yourself that mimic your actions for 1 minute, granting attackers disadvantage on you, concentration 👥>"
+<Smoke and Mirrors,Two hands holding magical smoke that forms illusions,"Create illusory duplicates that move with you in a 20 ft radius for 1 minute, causing disadvantage on enemies' attacks within that area 🌫️>"
+<False Trail,A trail of glowing footprints leading away from the user,"Create illusory footsteps for 1 hour that mislead pursuers, granting advantage on stealth checks to evade detection 🦶>"
+<False Footsteps,Ghostly footprints fading into the air,"Create illusory footsteps that lead away from your actual location, granting advantage on Stealth checks to move silently for 10 minutes 👣>"
+<False Footsteps,Ghostly footprints leading in different directions,Create illusory sounds of footsteps in any direction within 60 feet to mislead pursuers or enemies for 1 minute 👣>
+<False Trail,A set of footprints leading off in different directions,Create illusory tracks that mislead trackers within 1 mile for 24 hours 🦶>
+<Mirror’s Trick,A shattered hand mirror reflecting multiple distorted faces,"Create three illusory duplicates of yourself that last for 1 minute, each has AC 10 and 1 HP, and impose disadvantage on attack rolls targeting you 🎭>"
+<Mirror Masque,A crystal mask that reflects multiple distorted faces,Create three illusory duplicates of yourself that mimic your actions for 1 minute
+<Smoke and Mirrors,A swirling cloud of smoke revealing multiple indistinct figures,"Create three illusory duplicates that mimic your actions for 10 minutes or until destroyed, each having AC 10 and 1 HP 🃏>"
+<False Light,A glowing orb that flickers and splits into many,Create up to three illusory lights that shed dim light and can mislead enemies within 60 feet for 10 minutes 💡>
+<Mirrormaze,A shattered mirror reflecting multiple versions of the same character,"Creates 3 illusory duplicates of the target for 1 minute, each takes a hit before vanishing, illusions cause attackers to have disadvantage 🎭>"
+<Veil of Smoke,A swirling cloud masking a face,"Creates a 10-foot radius cloud of thick smoke centered on you, heavily obscuring the area for 1 minute or until dispersed by wind 🍂>"
+<Crowd’s Confusion,A swirl of masked faces blending into one another,Creates an illusionary crowd that imposes disadvantage on attack rolls and perception checks for all creatures within 20 feet for 1 minute 🌀>
+<Mirror Mirage,Two identical illusory duplicates of you stand side by side,"Creates two illusory duplicates that mimic your actions, granting attackers disadvantage until the start of your next turn 🎭>"
+<False Trail,"A twisted, broken path in a forest","For 1 hour, you can leave behind an illusory trail leading away from your true path, misleading pursuers who follow it to see [[1d4+1]] false tracks 🚶>"
+<Silent Steps,A pair of footprints fading away,"For 1 hour, your movement leaves no sound and does not trigger opportunity attacks, and you have advantage on Stealth checks 👣>"
+<Fool's Glimmer,Two contrasting eyes peeking through a cracked mask,"For 1 minute, attackers have disadvantage on attack rolls against you as illusions confuse their aim 🎭>"
+<Chorus of Echoes,Multiple shadowy figures whispering in unison,"For 1 minute, create illusory duplicates of yourself causing attackers to have a 50% chance to target a duplicate instead of you, duplicates vanish if hit 👥>"
+<Echoes of Deceit,Multiple shadowy silhouettes blurred around a person,"For 1 minute, enemies that attack you choose randomly if they target you or one of your illusory duplicates (up to three), debilitating their focus 🎲>"
+<Veil of Misdirection,A swirling veil of smoke curling around a figure,"For 1 minute, enemies that target you must succeed on a Wisdom saving throw or attack another creature within 10 feet instead 💨>"
+<Veil of Whispers,A shadowy figure with a blurred face,"For 1 minute, you can cast Disguise Self at will without expending a spell slot 🎭>"
+<Cloak of the Trickster,A shadowy cloak slipping between pillars,"For 1 minute, you can move through creatures and objects as if they were difficult terrain"
+<False Steps,Ghostly footprints leading away from the target,"For 10 minutes, tracking or chasing the target requires a DC [[15+Charisma modifier]] Survival check or they lose the trail 🚶‍♂️>"
+<Whispered Veil,A shadowy figure covering its mouth while eyes gleam,"For 10 minutes, you can cast *Disguise Self* at will without expending a spell slot 🕶️>"
+<Veil of Whispers,A swirling mist enveloping a masked figure,"For 10 minutes, you can cast Disguise Self at will without expending a spell slot 🎭>"
+<Masks of Many Faces,A set of shifting masks floating in the air,"For 10 minutes, you can change your appearance to any humanoid you have seen and mimic their voice perfectly 🎭>"
+<Mirror Mask,A smooth mask reflecting a distorted version of the wearer’s face,"For 10 minutes, you can change your appearance to any humanoid, gaining advantage on Deception checks 🪞>"
+<Silent Tongue,A sealed mouth with a vine wrapped around it,"For 10 minutes, you can communicate only through telepathy within 30 feet and are immune to being overheard or magically eavesdropped on 🤫>"
+<Eye of Deceit,An eye with a swirling vortex in place of the pupil,"For 10 minutes, you can reroll one Insight or Deception check per round, taking the better roll 👁>"
+<Whispered Web,Spider webs tangled with faint glowing runes,"For 10 minutes, you can silently communicate telepathically with any creature within 60 feet that you've previously met, sharing whispered lies or secrets 🕸>"
+<Silent Step,A pair of ethereal footprints fading into mist,"For 10 minutes, your movement makes no sound and cannot be tracked by nonmagical means 👣>"
+<Fabricated Alibi,A parchment with false witnesses' signatures,"For one hour, any history, investigation, or insight checks related to you or your actions have disadvantage 📜>"
+<Mirror’s Glint,A sharp eye reflected in a crackling mirror,"For one minute, any attack roll made against you has disadvantage as attackers see multiple illusory doubles 🪞>"
+<Confounding Glimmer,"A shimmering, distorted shimmer around a person","For one minute, one creature’s movement is erratic—when it moves, roll a d6: on a 4-6, it moves in a random direction instead of its intended path 🔀>"
+<Mislead,A shattered mirror reflecting multiple distorted faces,"For the next 10 minutes, creatures attacking you must roll [[1d20]] and hit only on a roll of 15 or higher as their attacks are misdirected 🎯>"
+<Fox’s Tongue,A sly fox with a sly grin and tongue sticking out,"For the next 10 minutes, you can cast Disguise Self at will and gain advantage on Deception checks 🦊>"
+<Whispering Shadow,A dark shadow whispering into an ear,"For the next 10 minutes, you can communicate telepathically with any creature you can see within 60 feet without speaking 🗣>"
+<Silent Footsteps,A pair of shadowy boots leaving no prints,"For the next 10 minutes, your movement leaves no sound and no tracks, granting advantage on Stealth checks involving movement 👣>"
+<Lie’s Echo,A cracked mask emitting echoing laughter,"For the next hour, any attempt to recall a truth from one creature within 60 feet has a 50% chance to instead recall a convincing but false memory 🌀>"
+<Mirror Mask,A mask reflecting multiple fake faces,"For the next hour, when targeted by an attack, you can use your reaction to impose disadvantage on that attack as several illusory duplicates scatter around you 🎭>"
+<Mirror’s Whisper,A cracked mirror reflecting multiple indistinct faces,"For the next minute, any attack against you has a 50% chance to target an illusory duplicate instead (DC 15 Wisdom save to disbelieve) 🪞>"
+<Broken Reflection,A shattered mirror showing a distorted face,"For the next minute, you can create illusory duplicates of yourself that impose disadvantage on attack rolls against you, as if under the effect of *mirror image* 🪞>"
+<Silent Step,A footprint fading into mist,"For the next minute, your movement does not provoke opportunity attacks, and you leave no tracks or noise while moving 🦶>"
+<Whispered Doubt,A shadowed figure whispering into another's ear,"Force a creature within 30 feet to reroll their last saving throw, choosing the lower result [[1 use per long rest]] 🤫>"
+<The Grand Deception,A masked figure holding a deck of cards with a sly grin,"Force all creatures within 20 feet to make a DC [[14+Charisma modifier]] Wisdom saving throw or be unable to distinguish friend from foe, causing disadvantage on attack rolls for 1 minute 🤡>"
+<Whispered Falsehood,Two masked faces exchanging secrets,Force one creature within 30 feet to believe a lie of your choice for 1 minute—Insight save negates 🗣️>
+<False Command,A mouth emitting shadowy words,"Force one creature within 30 feet to reroll its next attack roll or saving throw, must use the new result [[1d20]] 🎭>"
+<Mind Maze,An intricate labyrinth pattern over a glowing orb,"Force one creature within 60 ft. to make a DC 15 Intelligence saving throw or be confused (as the Confusion spell) for 1 minute, once per long rest 🧠>"
+<Whispered Lies,"Two masks, one smiling, one frowning, whispering to each other",Force one target within 30 feet to reroll their next attack roll or saving throw with disadvantage
+<Gilded Tongue,A golden serpent coiled around a mouth,Gain advantage on all Deception checks for 10 minutes 🐍>
+<Silent Footfall,A pair of footprints vanishing in a fog,Gain advantage on Dexterity (Stealth) checks and creatures have disadvantage on Perception checks to detect you for 1 hour 👣>
+<Veil of Falsehood,"A mask split in two halves, one smiling and one frowning",Gain advantage on one Charisma (Deception) check and all creatures must succeed on a DC [[14]] Intelligence saving throw or believe your falsehood for 10 minutes 🎭>
+<Silver Tongue,A silver tongue on a puppet,"Gain advantage on one Charisma (Deception) or (Persuasion) check, usable once per short rest 🗣>"
+<Silver Tongue,A silver serpent coiling around a set of lips,Gain advantage on one Charisma (Deception) or Persuasion check made in the next 10 minutes 🐍>
+<Silver Tongue,A mouth woven from silver threads,Gain advantage on one Deception or Persuasion check and roll a [[1d8]] temporary hit points 💬>
+<Silver Tongue,A silver serpent coiled around a tongue,Gain advantage on Persuasion and Deception checks for 1 hour 🐍>
+<Veil of Shadows,An obscured face behind a swirling mist,"Gain advantage on Stealth checks for the next 10 minutes, and creatures have disadvantage on Perception checks to spot you 👤>"
+<Chameleon Cloak,A cloak blending into the environment perfectly,Gain advantage on Stealth checks for the next hour as you blend into surroundings 🦎>
+<Shadow Puppet,A dark hand manipulating a marionette,Gain control of one target's movement for 1 round
+<Veil of Lies,A swirling mist obscuring a face,Gain invisibility and silence for 1 minute or until you attack or cast a spell 🤐>
+<Veil of Whispers,"A shadowy figure with fingers pressed to lips, surrounded by swirling mist","Grants invisibility for 1 minute or until you attack or cast a spell, advantage on stealth checks during this time 👤>"
+<Veil of Shadows,A swirling dark mist enveloping a cloaked figure,"Grants invisibility for 1 minute or until you attack or cast a spell, usable once per short rest 🕶️>"
+<Veil of Whispers,A shadowy figure with a swirling mist partially obscuring their face,"Grants invisibility to you or one ally for 1 minute or until you attack or cast a spell, advantage on Stealth checks during this time 🕶️>"
+<Veil of Whispers,A shadowy figure cloaked in swirling mists,Grants you advantage on Stealth checks and causes enemies to have disadvantage on Perception checks to detect you until your next turn 👤>
+<Veil of Whispers,A translucent masked face obscured by swirling smoke,Grants you advantage on Stealth checks and you can cast the *Minor Illusion* cantrip at will for 1 hour 🕶>
+<Mirror’s Gambit,"A hand holding a deceptive, shifting mask","Once per long rest, create an illusory double of yourself that distracts enemies, imposing disadvantage on attack rolls against you for 1 minute 🎭>"
+<Mask of a Thousand Faces,"A shifting, featureless mask","Once per long rest, you can cast Disguise Self on yourself without using a spell slot, lasting 1 hour 🦹>"
+<False Tongue,A tongue made of twisting shadows,"Once per long rest, you can reroll any one charisma (deception) check with advantage, sending a lie that is hard to doubt 👅>"
+<False Tongue,A snake coiling around a silver tongue,"Once per short rest, cast a charm effect that causes a creature to believe a single statement you make until they succeed a DC 15 Wisdom saving throw 🐍>"
+<Mirror's Jest,A twisted mask reflecting a distorted face,"Once per short rest, force a creature you can see to reroll one attack roll or saving throw with disadvantage, must use new roll 🎭>"
+<Mirror's Rebuke,A cracked mirror reflecting a distorted face,"Once per short rest, when hit by an attack, you can force the attacker to make a DC [[15]] Wisdom save or be blinded until the end of their next turn 🪞>"
+<Whispered Misdirection,A shadowy figure pointing behind an unsuspecting character,"Once per short rest, you can force one creature to reroll its attack roll or ability check and use the new roll instead 🌀>"
+<Mask of Many Faces,A theatrical mask shifting between expressions,"Once within the next hour, cast Disguise Self without expending a spell slot, altering your appearance including voice and mannerisms 🤡>"
+<Silver Tongue,A serpent coiled around a golden tongue,"Once within the next hour, gain advantage on any Deception check or Charisma saving throw involving speech 🐍>"
+<Mirror Mask,A cracked reflective mask showing multiple faces,"Once within the next hour, when targeted by a creature, you can force them to reroll their attack with disadvantage and you gain invisibility until the start of your next turn 🪞>"
+<Echo of Lies,A faint voice whispering from nowhere,"Once within the next hour, you can cast the *minor illusion* cantrip without requiring concentration, and your illusion sounds convincingly real 🎭>"
+<Whispering Shadows,Shadowy tendrils emitting faint voices,"Target a creature within 30 feet to make a DC 15 Wisdom saving throw or be distracted, granting disadvantage on their next attack roll or saving throw 🖤>"
+<Hoodwink,A cartoonish jester with a hand over its eyes,Target an enemy within 60 feet who must make a DC 14 Intelligence saving throw or have their next attack roll made with disadvantage 🤡>
+<Echo Step,A shadowy footprint that fades behind the subject,Target can teleport up to 30 feet to an unoccupied space they can see once within the next minute 💨>
+<Veil of Whispers,A shadowed figure wearing a mask that blends into the darkness,"Target gains invisibility for 1 minute or until they make an attack or cast a spell, advantage on Stealth checks while invisible 👤>"
+<Whispered Doubt,A whispering mouth with faint echoes around,Target must succeed a DC [[14]] Wisdom saving throw or be unable to take reactions until the end of their next turn 🤫>
+<Tongue-Tied,A mouth sealed by glowing threads,Target must succeed on a DC [[15]] Constitution saving throw or be unable to speak or cast spells with verbal components for 1 minute 🤐>
+<False Footing,A pair of footprints fading into mist behind a cloaked figure,Target must succeed on a DC [[15]] Wisdom saving throw or lose their next attack as their sense of direction becomes warped 👣>
+<Whispered Falsehood,A smiling mouth with a tongue slipping out like smoke,"Target must succeed on a DC 15 Wisdom saving throw or be charmed, believing your next spoken lie for 1 hour 💬>"
+<Whispered Falsehood,"A mouth silently emitting faint, glowing words","Target must succeed on a DC 15 Wisdom saving throw or believe a false statement you speak for 10 minutes, affecting their decisions 🤥>"
+<Mirror's Glance,A shattered mirror reflecting a distorted face,"Target must succeed on a DC 15 Wisdom saving throw or see an illusory double of themselves that moves independently for 1 minute, granting disadvantage on attack rolls and ability checks 🤡>"
+<Whispered Doubt,A shadowy figure whispering into a captive's ear,Target must succeed on a Wisdom saving throw or treat the next 10 minutes of all their perception checks as if they have disadvantage 🤫>
+<False Step,A foot slipping into an illusory pit,"Teleport up to 15 feet to an unoccupied space you can see, leaving behind a blinding illusion that grants disadvantage on opportunity attacks until your next turn 🌀>"
+<Mirage Step,A pair of feet leaving ghostly afterimages,Teleport up to 30 feet to an unoccupied space you can see
+<Flickerstep,A blur of footsteps fading away,Teleport up to 30 feet to an unoccupied space you can see and become invisible until the start of your next turn 🌪️>
+<Mirror Step,A figure stepping through a cracked mirror,"Teleport up to 30 feet to an unoccupied space you can see as an illusion distracts enemies around your departure and arrival points, giving disadvantage on attacks against you until the start of your next turn ✨>"
+<Mirrorstep,A figure stepping through a shimmering mirror,Teleport up to 30 feet to an unoccupied space you can see that is lightly obscured or in dim light 🌫️>
+<Shadow Step,"A pair of dark, ethereal footprints","Teleport up to 30 feet to an unoccupied space you can see within dim light or darkness, leaving behind a fading illusion of yourself for 1 round 👣>"
+<Mirage Step,A blurred figure stepping through a veil,"Teleport up to 30 feet to an unoccupied space you can see, leaving behind a fleeting illusion that distracts enemies, granting disadvantage on opportunity attacks until your next turn 🌫️>"
+<Mirage Step,A footprint vanishing into thin air,"Teleport up to 30 feet to an unoccupied space you can see, leaving behind a harmless illusion of yourself fading away 🦶>"
+<Mirage Step,A shadowy figure stepping through a broken mirror,"Teleport up to 30 feet to an unoccupied space you can see, leaving behind an illusory double that lasts until the start of your next turn 👣>"
+<Echo Step,A shadowy figure splitting into two blurry images,"Teleport up to 30 feet to an unoccupied space you can see, leaving behind an illusory double that lasts until your next turn 🚶‍♂️>"
+<Mind Maze,An open book with labyrinth patterns flowing from its pages,Trap all creatures in a 15-foot radius to treat all terrain as difficult and have disadvantage on Perception checks for 1 minute 🧠>
+<Silent Charade,A masked jester with a finger over their lips,"You and allies in a 20-foot radius move silently, gain advantage on Stealth checks for 10 minutes 🤫>"
+<Veil of Shadows,A cloaked figure blending into a foggy background,You and up to three allies gain advantage on Stealth checks for 1 hour or until you attack or cast a spell 🌫️>
+<Veil of the Trickster,"A swirling mask half smiling, half frowning","You and up to three allies within 15 feet gain advantage on all stealth and deception checks for 1 hour, and can briefly become invisible once during that time for up to 1 minute (ends early if you attack or cast a spell) 🎭>"
+<Veil of Shadows,A swirling dark mist enveloping a lone figure,"You and up to three willing creatures within 10 feet are shrouded in magical darkness for 1 minute, unable to be seen but can see out of the darkness as normal 🌑>"
+<Veil of Whispers,A translucent mask half covering a face,"You become invisible and silently mimic the voice of any creature within 30 feet for up to one minute, or until you attack or cast a spell 🎭>"
+<Veil of Falsehood,A swirling mist obscuring a shadowy figure,You become invisible for 1 minute or until you attack or cast a spell 🌀>
+<Veil of Whispers,A swirling mist cloaking a figure,"You become invisible for 1 minute or until you attack or cast a spell, once per long rest 👻>"
+<Veil of Shadows,"A swirling cloud of smoke with faint, shifting faces",You become invisible to the naked eye for 1 minute or until you attack/make a spell attack
+<Veil of Shadows,A swirling dark mist enveloping a figure,You become invisible until the start of your next turn or until you attack or cast a spell 🌫️>
+<Mirror Slip,A cracked glass reflecting a shadowy figure,"You become invisible until the start of your next turn or until you attack or cast a spell, gaining advantage on the next Deception check you make 👤>"
+<Veil of Shadows,A swirling wisp of dark mist enveloping a figure,"You become invisible until the start of your next turn or until you attack or cast a spell, perfect for slipping away unnoticed 👤>"
+<Veil of Shadows,A swirling black mist enveloping a person,"You become invisible until you attack or cast a spell, or for up to 1 minute 🕶️>"
+<Mask of Many Faces,A blank theatrical mask,"You can cast *disguise self* at will without expending a spell slot, allowing you to assume any humanoid appearance for 1 hour 🎭>"
+<Silver Tongue,A serpent coiled around a silver forked tongue,"You can cast *Friends* spell at will for the next hour, and gain +5 bonus to Persuasion checks 🐍>"
+<Slip Away,A figure dissolving into smoke,You can cast *misty step* once without expending a spell slot
+<Whisper of Shadows,A swirling shadow whispering into an ear,You can cast *Silence* centered on a creature within 30 feet
+<Silent Confession,A folded letter with a sealed wax stamp,"You can cast *Suggestion* once without using a spell slot, requiring a DC [[14]] Wisdom save to resist, usable once per long rest 🤫>"
+<Tongue of Lies,A serpent-like tongue whispering secrets,"You can cast Disguise Self at will for 1 hour without expending a spell slot, and advantage on Deception checks during this time 🐍>"
+<Veil of Whispers,A shadowy figure speaking with a blurred mouth,You can cast Disguise Self at will for the next hour without using a spell slot 🎭>
+<Veil of Untruths,A smiling mask flickering in and out of visibility,"You can cast Disguise Self at will, and creatures have disadvantage on saving throws against your illusions for 10 minutes 🎭>"
+<Whispering Veil,A shadowy figure melting into a misty cloud,You can cast Disguise Self on yourself at will for 1 hour without expending a spell slot 🎭>
+<Silent Whisper,A shadowy figure covering their mouth while a faint wisp of smoke drifts away,"You can cast silence centered on a creature for 1 minute, no save, once per long rest 🤫>"
+<Tongue of Serpents,A serpentine tongue flickering with deceit,You can cast Suggestion once within the next hour without using a spell slot
+<The Puppetmaster,Strings attached to a marionette hand,"You can command one creature within 30 feet to repeat a simple action (like move or speak a phrase) on their next turn, no save, once per long rest 🕹️>"
+<False Promise,A glowing contract with shifting words,"You can create a one-minute illusion that convinces a target they heard or saw something you say, requiring a DC [[15 + your proficiency bonus]] Insight saving throw to disbelieve 📜>"
+<Veil of Lies,A dark cloak swirling with shifting images,"You can impose disadvantage on the next attack roll or perception check against one creature within 30 ft., once per short rest 🎭>"
+<Ephemeral Footsteps,Fading footprints leading into darkness,"You can teleport up to 30 feet to an unoccupied space you can see, leaving behind illusory duplicates that vanish after 1 turn 🦶>"
+<Misleading Glance,A pair of eyes looking over their shoulder,You can use a bonus action to impose disadvantage on the next attack roll against you this turn by redirecting the attacker's focus 🎯>
+<Veil of Lies,A veil made of shifting smoke,You cast *Disguise Self* on yourself that also alters your voice
+<Whispered Facade,A masked face fading into shadows,"You cast an illusory duplicate of yourself that moves independently for 1 minute, causing attackers to have disadvantage on attack rolls against you until the duplicate is destroyed or duration ends 🎭>"
+<False Trail,"A winding path of glowing, misleading footprints","You cast Pass Without Trace on yourself and one ally within 30 feet, lasting 1 hour, stealth checks increased by +10 🕵️>"
+<Silent Gambit,A playing card half-hidden behind a masked face,"You cast silence centered on yourself, extending the effect to a 10-foot radius for up to 10 minutes, during which you can move silently and cannot be overheard 🤫>"
+<Chaos Vein,A twisting serpent made of smoke,You cause a magical confusion in an area 15-ft radius
+<Twisting Paths,A labyrinthine maze made of twisting roads,"You cause all creatures within a 15-foot radius to become disoriented, treating all movement as difficult terrain and attacks against targets in the area have disadvantage for 1 round 🔀>"
+<False Trail,A winding path covered in scattered leaves,"You create a 20-foot radius area of illusory terrain that obscures vision and leaves false footprints for 10 minutes, granting enemies disadvantage on Perception checks to track anyone passing through 👣>"
+<Whispered Shadow,A shadowy figure whispering into an ear,"You create a minor illusion to distract one creature within 30 feet, giving it disadvantage on its next attack roll or saving throw 🕶>"
+<False Echo,An ethereal mouth whispering into silence,"You create a perfect illusionary sound or phrase audible only to one target within 60 feet, distracting them and imposing disadvantage on their next attack or skill check 👂>"
+<Echoing Lie,A whispering mouth surrounded by shadowy waves,"You create a silent, illusory duplicate of yourself that mimics your movements for 1 minute, causing attackers to have disadvantage on attacks against you 🎭>"
+<Veil of Smoke,A swirling black smoke forming a mask,"You create an illusory disguise that changes your appearance for 1 hour or until you dismiss it, granting advantage on deception checks 🎭>"
+<Mirror Misdirection,Two identical faceless figures leaning away from each other,"You create an illusory double of yourself that mimics your movements within 30 feet for 1 minute, imposing disadvantage on attack rolls against you 🚶‍♂️>"
+<False Reflection,A mirror showing a distorted face,"You create an illusory double that mimics your actions for 1 minute, drawing enemy attacks to it with a +2 bonus to AC"
+<Mirror Veil,A shimmering face split into multiple reflections,You create illusory duplicates of yourself that impose disadvantage on attack rolls against you until your next turn 🪞>
+<Mirror’s Jest,A cracked mirror reflecting multiple distorted faces,"You create illusory duplicates of yourself that last for 1 minute, granting attackers disadvantage on attack rolls against you"
+<False Trail,A winding path of fading footprints,"You create illusory footprints leading away from your location for 10 minutes, causing anyone tracking you within 60 feet to follow the false trail instead 🚶>"
+<Web of Lies,A tangled spider web with colors shifting,You ensnare one creature in an illusory web causing them to be restrained by their mistrust and confusion
+<Echoes of Truth,Ghostly faces whispering in a circle,"You force each creature of your choice in a 15-foot radius to question their own senses, imposing disadvantage on attack rolls and ability checks until the start of your next turn 🌀>"
+<False Command,A twisted tongue extending from a closed mouth,"You force one creature to make a Charisma saving throw or obey a simple spoken command on their turn, lasting 1 round only, concentration not required 🔮>"
+<Siren's Deceit,"A glowing, seductive smile with cracked lips",You force one creature to make a DC 15 Charisma saving throw or be charmed and unable to distinguish friend from foe for 1 minute
+<Echoing Lie,A mouth emitting colorful sound waves,"You force one creature within 60 feet to repeat the last sentence they said in a distracting echo, imposing disadvantage on their next attack or spell cast 📢>"
+<Liar’s Gambit,Two cards crossing in midair each emitting sparks,You force one creature you can see to make a Charisma saving throw or repeat its last action without any additional reaction or bonus action 🎲>
+<Mask of Falsehood,A smiling mask reflecting a different face,You gain advantage on all Deception checks for 1 hour and can cast Disguise Self once within that time 🃏>
+<Gilded Tongue,A golden serpent coiling around a silver tongue,"You gain advantage on all Deception checks for the next hour, and can cast the *Suggestion* spell once without expending a spell slot 🐍>"
+<Whispering Veil,A shadowy figure blending into a swirling mist,You gain advantage on all Stealth checks for 1 hour and cannot be tracked by nonmagical means 🕶>
+<Veil of Whispers,A shadowy veil draping over a figure’s face,You gain advantage on all Stealth checks for the next 10 minutes as whispers mask your presence 👤>
+<Silver Tongue,A silver tongue wrapped around a serpent,You gain advantage on Deception and Persuasion checks for the next hour or until you fail one of those checks 🐍>
+<Whispered Mask,A swirling veil of mist hiding a face,You gain advantage on Deception checks and can cast Disguise Self at will for 1 hour 🎭>
+<Mask of Many Faces,A mask with shifting faces,You gain advantage on Deception checks for the next hour and can cast Disguise Self once during that time without using a spell slot 🎭>
+<Silent Step,A footstep leaving no trace on a cracked floor,"You gain advantage on Dexterity (Stealth) checks for 10 minutes, blending into shadows and noises around you 👣>"
+<Veil of Facades,A swirling mist enveloping a masked face,You gain advantage on Stealth and Deception checks for 1 hour 👺>
+<Veil of Whispers,A masked face surrounded by swirling smoke,You gain advantage on Stealth checks and can cast *Minor Illusion* at will for 1 hour 🎭>
+<Veil of Whispered Lies,A blurred face half-hidden in shadow,You gain advantage on Stealth checks and can cast Disguise Self once within the next hour 🎭>
+<Cloak of Lies,A swirling cloak made of mist and shadow,You gain advantage on Stealth checks and the ability to cast *Silent Image* centered on yourself once per long rest 🤫>
+<Veil of Whispers,A shadowy figure with a mouth sewn shut,You gain advantage on Stealth checks for 1 hour and can't be tracked by scent 👤>
+<Mirage Veil,A swirling mist concealing a figure's face,You gain advantage on Stealth checks for 1 hour as illusions cloak your presence 🌫️>
+<Silver Tongue,A mouth with a silver tongue flicking out,You gain advantage on the next Persuasion or Deception check you make within 10 minutes 🗣️>
+<Veil of Falsehood,A swirling mist obscuring a shadowy figure,"You gain invisibility for [[1d4+1]] rounds or until you attack or cast a spell, allowing you to silently slip past foes 🕶>"
+<Veil of Shadows,A swirling mist enveloping a lone figure,"You gain invisibility until you make an attack or cast a spell, or for up to 1 minute, concentration not required 🌫️>"
+<Veil of Falsehood,A swirling mist enveloping a masked face,"You gain the ability to cast *disguise self* at will for the next hour, and advantage on deception checks during that time 🎭>"
+<Whispered Falsehood,An open mouth with wisps of smoke emerging,"You implant a convincing lie into one creature's mind, causing them to believe a falsehood of your choice for 10 minutes"
+<Mirror Mask,A silver mask reflecting multiple distorted faces,"You may cast *Disguise Self* on yourself or an ally within 30 feet at will for 10 minutes, causing others to have disadvantage on Insight checks to see through the illusion 🎭>"
+<False Promise,A silver tongue wrapped around a locked scroll,You may reroll one failed Charisma (Deception) check
+<Eyes of Deceit,An eye reflecting two different images,You may see through any illusion or invisibility within 60 feet and automatically succeed on the next one deception check you make 👁️>
+<Silent Whisper,A shadowy mouth near an ear,"You plant a false memory in one creature’s mind, causing them to believe one lie you choose for 1 hour, requiring a DC [[15]] Wisdom saving throw to disbelieve 🤫>"
+<Whispered Fabrication,A mouth whispering out shadowy tendrils,"You select one creature in sight, forcing them to question reality"
+<Shadowstep Mirage,Dark footsteps glowing faintly on the ground,"You teleport up to 30 feet to an unoccupied space you can see, leaving behind an illusory double that lasts until the start of your next turn, distracting enemies and granting advantage on your next stealth check 🦶>"
