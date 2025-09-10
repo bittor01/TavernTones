@@ -1,0 +1,81 @@
+Chaotic Planar Encounters
+d100	Encounter
+01-08	1d6 bariaur wanderers*
+09-16	1 monodrone that has gone rogue and seeks the meaning of the multiverse
+17-24	1d6 swarms of sunflies*
+25-31	1d4 red slaadi
+32-38	1 swarm of cranium rat squeakers.* Roll a die. If the number is even, these cranium rats have set up a tiny shop. If the number is odd, these cranium rats have also set up a tiny shop but are con artists.
+39-46	1d6 pteranodons
+47-55	1d4 Mercykiller bloodhounds* tracking a planar criminal
+56-62	1d8 berserker petitioners
+63-72	A rift-like portal connecting to a random plane
+73-79	1 ettin with two different animal heads
+80-85	1 green slaad disguised as a lost explorer from the Material Plane
+86-90	1d6 vrocks seeking to dragoon captives into the Blood War
+91-97	A location the characters passed hours ago
+98-00	1 chaotic empyrean seeking companions to undertake a mighty quest
+Evil Planar Encounters
+d100	Encounter
+01-07	1d6 vargouille reflections*
+08-16	1 night hag selling 2d6 larvae (see the Dungeon Master's Guide)
+17-23	1d4 razorvine blights*
+24-31	A force of 3d10 hobgoblins and 1 hobgoblin warlord
+32-38	1 gnoll fang of Yeenoghu and 2d6 gnolls
+39-47	1 ultroloth and 1d4 mezzoloths
+48-53	1 darkweaver* that calls from its shadowy lair
+54-63	A portal to a Lower Plane that whispers sinister promises
+64-69	1 shator demodand* seeking its lost prisoners
+70-77	2d6 nightmares
+78-84	1 githyanki knight mounted on 1 young red dragon
+85-91	1 lich in a sinister walking citadel
+92-98	A Blood War battlefield where 1 marilith general leads demons against 1 ice devil general and its devils
+99-00	1 baernaloth* with a sinister magic item
+Good Planar Encounters
+d100	Encounter
+01-09	1 sunfly* carrying a tiny dessert
+10-16	1 lantern archon* leading a group of 2d4 commoner petitioners who are prone to getting lost
+17-22	1d6 musteval guardinals* on a secret mission
+23-28	1 time dragon wyrmling*
+29-35	1d4 hound archons,* each with a mastiff tracking dog
+36-41	A friendly, awakened swarm of bats
+42-48	1d4 cloud giants on a floating island
+49-56	1 druid studying an inert, magical animal sculpture made of thousands of tanzanite crystals
+57-63	1 treant comprised of cacti, coral, or mushrooms
+64-70	1 avoral guardinal* seeking a lost animal petitioner
+71-80	A portal to an Upper Plane that beckons with promises of eternal peace and comfort
+81-87	1 gold dragon (your choice of young, adult, or ancient)
+88-95	1 planar incarnate (Celestial form)
+96-00	1 solar angel sent to bestow a blessing (see the Dungeon Master's Guide) on a character
+Lawful Planar Encounters
+d100	Encounter
+01-06	A warden archon* guarding a portal to a dangerous plane
+07-13	1 imp who claims to speak for an archdevil
+14-21	1d6 Hands of Havoc fire starters*
+22-29	1 maelephant*
+30-36	1 flumph petitioner that's excited to learn about the planes
+37-42	1 decaton modron* and 2d6 quadrones on their way back to Mechanus
+43-48	1 guardian naga storyteller
+49-54	1 gynosphinx who guards secret wisdom
+55-61	1d6 knights on a quest across the planes
+62-69	1 nonaton modron* in a walking citadel that looks like a giant modron
+70-76	1d4 couatls
+77-84	1 Mind's Eye matter smith* testing a new invention
+85-90	1 beholder petitioner scheming against a rival who's still alive
+91-97	1 pit fiend who claims to speak for an archdevil
+98-00	1 hexton modron* leading a march of hundreds of lesser modrons
+Neutral Planar Encounters
+d100	Encounter
+01-07	1d6 thri-kreen looking for a way back to their Material Plane home
+08-15	A mysterious being who communicates via 1 cranium rat squeaker*
+16-22	1d4 Society of Sensation muses* undertaking increasingly daring feats
+23-31	1 smoke mephit carrying challenges between archmage rivals
+32-38	1 eater of knowledge*
+39-46	2d12 commoner petitioners fleeing 1d4 farastu demodands* and 1 kelubar demodand*
+47-55	1 cuprilach rilmani* on an assassination mission
+56-64	1 equinal guardinal* messenger
+65-71	1d4 githzerai travelers*
+72-79	1 kolyarut* seeking a contract breaker
+80-86	1 aurumach rilmani*
+87-92	1 githzerai futurist* with a warning about a character's future
+93-98	1 flameskull claiming to be the famed planar explorer Morte
+99-00	1 ancient time dragon* (50 percent chance the time dragon is from the past, 50 percent chance it's from the future)
