@@ -1,0 +1,356 @@
+{
+    "100 Sailing Conditions": [
+        {
+            "1": "2",
+            "An unfavorable wind blowing the ship towards shore. Sailing into the wind means tacking, which is hard and exhausting work for the crew and navigator.": "A Blue sea dragon demands tribute, Gold, Valuables, or Blood"
+        },
+        {
+            "1": "3",
+            "An unfavorable wind blowing the ship towards shore. Sailing into the wind means tacking, which is hard and exhausting work for the crew and navigator.": "A Crate with a cures Crown made of blue scales and golden thorns"
+        }
+    ],
+    "3\tA Crate with a cures Crown made of blue scales and golden thorns": [
+        {
+            "4": "5",
+            "A Floating bottle with a Treasure map inside! (DC 18 to spot)": "A Floating Treasure chest filled with GOLD! PAYDAY! (Dex DC 17 to catch) (STR DC 15 to lift it out)"
+        },
+        {
+            "4": "6",
+            "A Floating bottle with a Treasure map inside! (DC 18 to spot)": "A large sea creature surfaces nearby"
+        }
+    ],
+    "6\tA large sea creature surfaces nearby": [
+        {
+            "7": "8",
+            "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!": "A marshy isthmus blocks the way ahead, the crew may have to get out and pull the ship across"
+        },
+        {
+            "7": "9",
+            "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!": "A mass of bubbles and cavitation beneath the ship cause it sink suddenly, before the bubbles cease and the now swamped vessel and crew must struggle to the surface."
+        },
+        {
+            "7": "10",
+            "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!": "A Merchant ship who is willing to trade goods!"
+        },
+        {
+            "7": "11",
+            "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!": "A pre-existing naval battle between two opposing fleets. Dare they try to navigate around them, or will they push forwards and into the crossfire?"
+        },
+        {
+            "7": "12",
+            "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!": "A tear in the Material Plane leading to the Elemental Plane of Water, causing more and more water to violently pour into the sea along with whatever creatures may follow... These could be the roughest waves seen to date!"
+        },
+        {
+            "7": "13",
+            "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!": "Ahead of the ship you can see a massive storm event. The distance to it and its size are indiscernible, but it looks like a hurricane, and the sudden choppy wake only confirms it."
+        },
+        {
+            "7": "14",
+            "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!": "An Aquamarine Sea Dragon appears, and, with cooperation, blesses the crew"
+        },
+        {
+            "7": "15",
+            "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!": "An unexpected desert island (Very small) In the distance, with an NPC trying to flag the ship (DC 18 perception)"
+        },
+        {
+            "7": "16",
+            "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!": "Beautiful sunset, no clouds, decent winds but not very fast"
+        },
+        {
+            "7": "17",
+            "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!": "Castaways on a lifeboat needing help,"
+        },
+        {
+            "7": "18",
+            "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!": "Choppy grey waters that elude to a storm despite a mostly clear sky"
+        }
+    ],
+    "18\tChoppy grey waters that elude to a storm despite a mostly clear sky": [
+        {
+            "19": "20",
+            "Choppy seas on a sunny day. Tritons and Kuo-ta wage battle just beneath the surface.": "Clear skies wind against"
+        }
+    ],
+    "20\tClear skies wind against": [],
+    "21\tClear sunny skies no wind": [],
+    "22\tCloudy and Rainy with capsizable waves": [],
+    "23\tCloudy and Rainy with Favorable winds": [],
+    "24\tCloudy and the wind is running away with the ship": [
+        {
+            "25": "26",
+            "Cloudy with choppy seas, struggle to maintain direction": "Cold air, travel waters become half ocean half ice sludge; impedes travel to a slow pace"
+        },
+        {
+            "25": "27",
+            "Cloudy with choppy seas, struggle to maintain direction": "Crimson floods the sky and the moon seems closer than usual. The water seems to be behaving... for now."
+        },
+        {
+            "25": "28",
+            "Cloudy with choppy seas, struggle to maintain direction": "Dark night, not a star in the sky - making night time navigation difficult"
+        },
+        {
+            "25": "29",
+            "Cloudy with choppy seas, struggle to maintain direction": "Dark, cloudy sky and cold air. Dark shadows swim beneath what at first glance appears to be an empty ocean"
+        },
+        {
+            "25": "30",
+            "Cloudy with choppy seas, struggle to maintain direction": "Doldrums - scorching heat, clear sky, no wind whatsoever. Better have packed fresh water."
+        },
+        {
+            "25": "31",
+            "Cloudy with choppy seas, struggle to maintain direction": "Foggy and no wind to guide direction"
+        }
+    ],
+    "31\tFoggy and no wind to guide direction": [],
+    "32\tFrenzy of flying fish feeding in fog upon which the frequency and size of the fish increases over time eventually overwhelming even the largest ships as the fattest whale sized flying fish slap down onto the decks": [
+        {
+            "33": "34",
+            "glowing woman appears in front of the ship. (Ghost Encounter)": "Green waters that move unnaturally, it's unclear if it really is water or not"
+        },
+        {
+            "33": "35",
+            "glowing woman appears in front of the ship. (Ghost Encounter)": "Heavy winds creating a waterspout"
+        }
+    ],
+    "35\tHeavy winds creating a waterspout": [
+        {
+            "36": "37",
+            "In the middle of the deep the water becomes still; Lilly pads grow on the surface and the water is rich with vegetation and life.. the water is sweet and pleasant to drink": "Incredibly cold and slightly snowy, poor visibility"
+        },
+        {
+            "36": "38",
+            "In the middle of the deep the water becomes still; Lilly pads grow on the surface and the water is rich with vegetation and life.. the water is sweet and pleasant to drink": "It is overcast but otherwise calm, but the air is filled with static and occasionally lightning strikes in the distance."
+        },
+        {
+            "36": "39",
+            "In the middle of the deep the water becomes still; Lilly pads grow on the surface and the water is rich with vegetation and life.. the water is sweet and pleasant to drink": "Jagged rocky spires suddenly jutting out of the ocean, corpses of boats litter them - requires expert and slow movement"
+        },
+        {
+            "36": "40",
+            "In the middle of the deep the water becomes still; Lilly pads grow on the surface and the water is rich with vegetation and life.. the water is sweet and pleasant to drink": "Clear skies and favorable wind."
+        },
+        {
+            "36": "41",
+            "In the middle of the deep the water becomes still; Lilly pads grow on the surface and the water is rich with vegetation and life.. the water is sweet and pleasant to drink": "Lightning strikes the water up ahead."
+        },
+        {
+            "36": "42",
+            "In the middle of the deep the water becomes still; Lilly pads grow on the surface and the water is rich with vegetation and life.. the water is sweet and pleasant to drink": "Mega waves sweeping across the deck of the boat"
+        }
+    ],
+    "42\tMega waves sweeping across the deck of the boat": [
+        {
+            "43": "44",
+            "Patches of the sea start bubbling, causing boats to sink": "Progressively larger icebergs float by, nearly hitting your ship, Mementos from each characters past bob up to the surface, yet when reached for, they reveal themselves as mirages. DC 12 DEX check to avoid falling in."
+        },
+        {
+            "43": "45",
+            "Patches of the sea start bubbling, causing boats to sink": "Sargasaum. No wind or current, seaweed and garbage everywhere"
+        },
+        {
+            "43": "46",
+            "Patches of the sea start bubbling, causing boats to sink": "Scorching hot and stale winds"
+        }
+    ],
+    "46\tScorching hot and stale winds": [
+        {
+            "47": "48",
+            "Scratching sounds coming from outside the hull, heard below decks": "Shallow reefs or rocks make travel dangerous."
+        },
+        {
+            "47": "49",
+            "Scratching sounds coming from outside the hull, heard below decks": "Stormy the winds rip the sails"
+        }
+    ],
+    "49\tStormy the winds rip the sails": [
+        {
+            "50": "51",
+            "Stormy, un-tamable winds": "Suddenly a meteor strikes the ocean not even 200 ft. ahead of the ship. The massive energy from the impact suddenly creates a massive tidal wave like effect and heats the water so it burns to the touch."
+        },
+        {
+            "50": "52",
+            "Stormy, un-tamable winds": "Sunny with light winds moving into sandbars"
+        }
+    ],
+    "52\tSunny with light winds moving into sandbars": [
+        {
+            "53": "54",
+            "Sunny, but with a light rain and a cold breeze": "The air is thick and humid, so much so that you can see the misty vapors as the light wind moves it."
+        },
+        {
+            "53": "55",
+            "Sunny, but with a light rain and a cold breeze": "The boat sails past jetsam from a carnival boat"
+        }
+    ],
+    "55\tThe boat sails past jetsam from a carnival boat": [],
+    "56\tThe boat sails past thousands of dead fish": [
+        {
+            "57": "58",
+            "The boatswain spies a spectral ship off the port bow!": "The party is visited by a god of chaos, and is willing to play a game, for a fee"
+        },
+        {
+            "57": "59",
+            "The boatswain spies a spectral ship off the port bow!": "The sea and air taste sweet, not salty"
+        },
+        {
+            "57": "60",
+            "The boatswain spies a spectral ship off the port bow!": "The sea is unusually calm, flat as far as the eye can see, makes a perfect reflection of the sky"
+        },
+        {
+            "57": "61",
+            "The boatswain spies a spectral ship off the port bow!": "The seas are brimming with fish and life, dolphins accompany the boat as it glides though the water"
+        },
+        {
+            "57": "62",
+            "The boatswain spies a spectral ship off the port bow!": "The water Begins to smell of rotten eggs (Con save)"
+        },
+        {
+            "57": "63",
+            "The boatswain spies a spectral ship off the port bow!": "The water exudes a greenish mist, but is otherwise calm as one would expect from good weather at sea."
+        },
+        {
+            "57": "64",
+            "The boatswain spies a spectral ship off the port bow!": "The water is abnormally glassy, like an untouched lake."
+        },
+        {
+            "57": "65",
+            "The boatswain spies a spectral ship off the port bow!": "The water is abnormally salty and the ship seems unstably buoyant."
+        },
+        {
+            "57": "66",
+            "The boatswain spies a spectral ship off the port bow!": "The water seems normal. Fish are jumping out of the water in delight of the clear skies."
+        },
+        {
+            "57": "67",
+            "The boatswain spies a spectral ship off the port bow!": "The water seems to be accelerating towards port side. With careful inspection through a spyglass, you can see a large whirlpool in the distance."
+        },
+        {
+            "57": "68",
+            "The boatswain spies a spectral ship off the port bow!": "The water seems to be... boiling?"
+        },
+        {
+            "57": "69",
+            "The boatswain spies a spectral ship off the port bow!": "The water suddenly goes silent and stops moving as the boat slides through the wake"
+        }
+    ],
+    "69\tThe water suddenly goes silent and stops moving as the boat slides through the wake": [
+        {
+            "70": "71",
+            "There are a suspicious amount of fish in these waters, almost as if they\u2019re fleeing something": "There is a mirage of boats floating upside down beneath the water"
+        }
+    ],
+    "71\tThere is a mirage of boats floating upside down beneath the water": [
+        {
+            "72": "73",
+            "They are visited by a god one of the party members worship and is blessed.": "Unfavorable winds or currents requiring 'kedging' (using rowboats, ropes, pulleys, poles, and anchors to move the ship manually)."
+        },
+        {
+            "72": "74",
+            "They are visited by a god one of the party members worship and is blessed.": "You find a Derelict ship that's better than theirs, with no crew on board."
+        },
+        {
+            "72": "75",
+            "They are visited by a god one of the party members worship and is blessed.": "You hear arrhythmic soft thumps against the hull of the ship. Looking overboard is a sea of floating lifeless bodies."
+        },
+        {
+            "72": "76",
+            "They are visited by a god one of the party members worship and is blessed.": "\u201cWhat\u2019s that singing I hear off in the distance?\u201d"
+        },
+        {
+            "72": "77",
+            "They are visited by a god one of the party members worship and is blessed.": "A twenty-meter tall wave crashes into the hull of the ship, dealing 2d10 bludgeoning damage to the ship and players. (Players can make a DC 18 Dexterity saving throw to half the damage to themselves)."
+        },
+        {
+            "72": "78",
+            "They are visited by a god one of the party members worship and is blessed.": "The water in a 100-meter radius of the boat turns into magic ice which can be broken with either a DC 22 Strength check or the use of a damaging 1st-level spell or higher."
+        },
+        {
+            "72": "79",
+            "They are visited by a god one of the party members worship and is blessed.": "Gale-force winds push you to your location at four times the traveling speed of your vessel for one hour. Each hour, any player on the top of the deck has to make a DC 10 Dexterity saving throw in order to no be thrown off the ship."
+        },
+        {
+            "72": "80",
+            "They are visited by a god one of the party members worship and is blessed.": "An airship (see Unearthed Arcana: Of Ships and the Sea for star block) flies overhead and shoots a ballista (3d10 piercing damage) at your vessel."
+        },
+        {
+            "72": "81",
+            "They are visited by a god one of the party members worship and is blessed.": "Strange magnetic ore in the coral reefs causes the compass to spin in circles."
+        },
+        {
+            "72": "82",
+            "They are visited by a god one of the party members worship and is blessed.": "Several large ships seem to be chasing a smaller ship."
+        },
+        {
+            "72": "83",
+            "They are visited by a god one of the party members worship and is blessed.": "Water in the area starts freezing, creating chunks of ice."
+        },
+        {
+            "72": "84",
+            "They are visited by a god one of the party members worship and is blessed.": "You spot a ship circling a giant whirlpool. The ship cant quite seem to get enough speed to break free from the whirlpools grip."
+        },
+        {
+            "72": "85",
+            "They are visited by a god one of the party members worship and is blessed.": "A forest of giant kelp starts brushing against the bottom of the ship."
+        },
+        {
+            "72": "86",
+            "They are visited by a god one of the party members worship and is blessed.": "Discover a strong ocean current. Bonus points to speed if traveling in the same direction."
+        },
+        {
+            "72": "87",
+            "They are visited by a god one of the party members worship and is blessed.": "Some titanic sized creature surfaces underneath the ship, lifting the ship out of the water. The creature is large enough to not have even noticed the ship or it's crew."
+        },
+        {
+            "72": "88",
+            "They are visited by a god one of the party members worship and is blessed.": "A sea monster leaps from the water and lands on the deck. It keeps pacing along the deck and stares over the rails while shivering."
+        },
+        {
+            "72": "89",
+            "They are visited by a god one of the party members worship and is blessed.": "Hundreds of sea birds start landing on the deck."
+        },
+        {
+            "72": "90",
+            "They are visited by a god one of the party members worship and is blessed.": "You spy a derelict ship. Upon closer inspection, it looks like the entire crew was massacred by something."
+        },
+        {
+            "72": "91",
+            "They are visited by a god one of the party members worship and is blessed.": "You spy a large tower in the middle of the sea. As you get closer, you see several docks around it with several ships already docked. The tower is the entrance to an underwater city."
+        },
+        {
+            "72": "92",
+            "They are visited by a god one of the party members worship and is blessed.": "You see a group of Sauhaugin riding towards you atop a pack of sharks. You're under attack!"
+        },
+        {
+            "72": "93",
+            "They are visited by a god one of the party members worship and is blessed.": "You here a mysterious scratching from below deck. Further investigation reveals that it's coming from underneath the ship."
+        },
+        {
+            "72": "94",
+            "They are visited by a god one of the party members worship and is blessed.": "It is raining cats and dogs. All the meowing and barking is going to get annoying very quickly. The cats and dogs that land on deck seem ready to go to war."
+        },
+        {
+            "72": "95",
+            "They are visited by a god one of the party members worship and is blessed.": "A water elemental emerges from the sea, attacking you and screaming about pollution."
+        },
+        {
+            "72": "96",
+            "They are visited by a god one of the party members worship and is blessed.": "A group of sea elves swims up beside your ship, inviting you to visit an underwater city."
+        },
+        {
+            "72": "97",
+            "They are visited by a god one of the party members worship and is blessed.": "A school of killer whales use their collective strength to push your ship off course. It seems like they want you to follow them."
+        },
+        {
+            "72": "98",
+            "They are visited by a god one of the party members worship and is blessed.": "You are sailing into a lot of large rocks and many wrecked ships. This is a ship graveyard."
+        },
+        {
+            "72": "99",
+            "They are visited by a god one of the party members worship and is blessed.": "A mesmerizing song on the wind beckons to you. Sailors must save or jump overboard and swim toward what each of them imagines is the source."
+        },
+        {
+            "72": "100",
+            "They are visited by a god one of the party members worship and is blessed.": "Perfect weather. All clear."
+        }
+    ]
+}

@@ -1,0 +1,228 @@
+{
+    "Winter": [
+        {
+            "d100": "1",
+            "Weather": "Blizzard/Thunderstorm",
+            "min_roll": 1,
+            "max_roll": 1
+        },
+        {
+            "d100": "2-20",
+            "Weather": "Snow/Rain",
+            "min_roll": 2,
+            "max_roll": 20
+        },
+        {
+            "d100": "21-30",
+            "Weather": "Freezing Cold",
+            "min_roll": 21,
+            "max_roll": 30
+        },
+        {
+            "d100": "31-40",
+            "Weather": "Heavy Clouds",
+            "min_roll": 31,
+            "max_roll": 40
+        },
+        {
+            "d100": "41-60",
+            "Weather": "Light Clouds",
+            "min_roll": 41,
+            "max_roll": 60
+        },
+        {
+            "d100": "61-99",
+            "Weather": "Clear Skies",
+            "min_roll": 61,
+            "max_roll": 99
+        },
+        {
+            "d100": "100",
+            "Weather": "Strange Phenomena",
+            "min_roll": 100,
+            "max_roll": 100
+        }
+    ],
+    "Spring": [
+        {
+            "d100": "1-2",
+            "Weather": "Thunderstorm",
+            "min_roll": 1,
+            "max_roll": 2
+        },
+        {
+            "d100": "3-5",
+            "Weather": "Heavy Rain",
+            "min_roll": 3,
+            "max_roll": 5
+        },
+        {
+            "d100": "6-20",
+            "Weather": "Rain",
+            "min_roll": 6,
+            "max_roll": 20
+        },
+        {
+            "d100": "21-50",
+            "Weather": "Light Clouds",
+            "min_roll": 21,
+            "max_roll": 50
+        },
+        {
+            "d100": "51-80",
+            "Weather": "Clear Skies",
+            "min_roll": 51,
+            "max_roll": 80
+        },
+        {
+            "d100": "81-90",
+            "Weather": "High Winds",
+            "min_roll": 81,
+            "max_roll": 90
+        },
+        {
+            "d100": "91-99",
+            "Weather": "Scorching Heat",
+            "min_roll": 91,
+            "max_roll": 99
+        },
+        {
+            "d100": "100",
+            "Weather": "Strange Phenomena",
+            "min_roll": 100,
+            "max_roll": 100
+        }
+    ],
+    "Summer": [
+        {
+            "d100": "1",
+            "Weather": "Thunderstorm",
+            "min_roll": 1,
+            "max_roll": 1
+        },
+        {
+            "d100": "2-5",
+            "Weather": "Rain",
+            "min_roll": 2,
+            "max_roll": 5
+        },
+        {
+            "d100": "6-30",
+            "Weather": "Light Clouds",
+            "min_roll": 6,
+            "max_roll": 30
+        },
+        {
+            "d100": "31-80",
+            "Weather": "Clear Skies",
+            "min_roll": 31,
+            "max_roll": 80
+        },
+        {
+            "d100": "81-85",
+            "Weather": "High Winds",
+            "min_roll": 81,
+            "max_roll": 85
+        },
+        {
+            "d100": "86-99",
+            "Weather": "Scorching Heat",
+            "min_roll": 86,
+            "max_roll": 99
+        },
+        {
+            "d100": "100",
+            "Weather": "Strange Phenomena",
+            "min_roll": 100,
+            "max_roll": 100
+        }
+    ],
+    "Fall": [
+        {
+            "d100": "1-2",
+            "Weather": "Thunderstorm",
+            "min_roll": 1,
+            "max_roll": 2
+        },
+        {
+            "d100": "3-10",
+            "Weather": "Snow/Rain",
+            "min_roll": 3,
+            "max_roll": 10
+        },
+        {
+            "d100": "11-20",
+            "Weather": "Heavy Clouds",
+            "min_roll": 11,
+            "max_roll": 20
+        },
+        {
+            "d100": "21-50",
+            "Weather": "Light Clouds",
+            "min_roll": 21,
+            "max_roll": 50
+        },
+        {
+            "d100": "51-70",
+            "Weather": "Clear Skies",
+            "min_roll": 51,
+            "max_roll": 70
+        },
+        {
+            "d100": "71-90",
+            "Weather": "High Winds",
+            "min_roll": 71,
+            "max_roll": 90
+        },
+        {
+            "d100": "91-99",
+            "Weather": "Scorching Heat",
+            "min_roll": 91,
+            "max_roll": 99
+        },
+        {
+            "d100": "100",
+            "Weather": "Strange Phenomena",
+            "min_roll": 100,
+            "max_roll": 100
+        }
+    ],
+    "Strange Phenomena": [
+        {
+            "d6": "1",
+            "Phenomena": "Ashfall",
+            "min_roll": 1,
+            "max_roll": 1
+        },
+        {
+            "d6": "2",
+            "Phenomena": "Solar Eclipse",
+            "min_roll": 2,
+            "max_roll": 2
+        },
+        {
+            "d6": "3",
+            "Phenomena": "Strange Lights",
+            "min_roll": 3,
+            "max_roll": 3
+        },
+        {
+            "d6": "4",
+            "Phenomena": "Meteor Shower",
+            "min_roll": 4,
+            "max_roll": 4
+        },
+        {
+            "d6": "5",
+            "Phenomena": "Malevolent Storm",
+            "min_roll": 5,
+            "max_roll": 5
+        },
+        {
+            "d6": "6",
+            "Phenomena": "Wild Magic Storm",
+            "min_roll": 6,
+            "max_roll": 6
+        }
+    ]
+}

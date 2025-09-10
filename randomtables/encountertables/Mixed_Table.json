@@ -1,0 +1,52 @@
+{
+    "Weather Table": [
+        {
+            "roll": "1",
+            "description": "Blizzard/Thunderstorm"
+        },
+        {
+            "roll": "100",
+            "description": "Strange Phenomena"
+        },
+        {
+            "roll": "100",
+            "description": "Strange Phenomena"
+        },
+        {
+            "roll": "1",
+            "description": "Thunderstorm"
+        },
+        {
+            "roll": "100",
+            "description": "Strange Phenomena"
+        },
+        {
+            "roll": "100",
+            "description": "Strange Phenomena"
+        },
+        {
+            "roll": "1",
+            "description": "Ashfall"
+        },
+        {
+            "roll": "2",
+            "description": "Solar Eclipse"
+        },
+        {
+            "roll": "3",
+            "description": "Strange Lights"
+        },
+        {
+            "roll": "4",
+            "description": "Meteor Shower"
+        },
+        {
+            "roll": "5",
+            "description": "Malevolent Storm"
+        },
+        {
+            "roll": "6",
+            "description": "Wild Magic Storm"
+        }
+    ]
+}
