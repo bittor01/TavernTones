@@ -1,0 +1,17 @@
+[
+  {
+    "text": "Hostile",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Indifferent",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Friendly",
+    "unique": false,
+    "used": []
+  }
+]

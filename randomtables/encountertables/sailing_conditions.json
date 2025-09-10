@@ -1,404 +1,502 @@
-{
-    "Sailing Conditions": [
-        {
-            "roll": 1,
-            "description": "An unfavorable wind blowing the ship towards shore. Sailing into the wind means tacking, which is hard and exhausting work for the crew and navigator."
-        },
-        {
-            "roll": 2,
-            "description": "A Blue sea dragon demands tribute, Gold, Valuables, or Blood"
-        },
-        {
-            "roll": 3,
-            "description": "A Crate with a cures Crown made of blue scales and golden thorns"
-        },
-        {
-            "roll": 4,
-            "description": "A Floating bottle with a Treasure map inside! (DC 18 to spot)"
-        },
-        {
-            "roll": 5,
-            "description": "A Floating Treasure chest filled with GOLD! PAYDAY! (Dex DC 17 to catch) (STR DC 15 to lift it out)"
-        },
-        {
-            "roll": 6,
-            "description": "A large sea creature surfaces nearby"
-        },
-        {
-            "roll": 7,
-            "description": "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!"
-        },
-        {
-            "roll": 8,
-            "description": "A marshy isthmus blocks the way ahead, the crew may have to get out and pull the ship across"
-        },
-        {
-            "roll": 9,
-            "description": "A mass of bubbles and cavitation beneath the ship cause it sink suddenly, before the bubbles cease and the now swamped vessel and crew must struggle to the surface."
-        },
-        {
-            "roll": 10,
-            "description": "A Merchant ship who is willing to trade goods!"
-        },
-        {
-            "roll": 11,
-            "description": "A pre-existing naval battle between two opposing fleets. Dare they try to navigate around them, or will they push forwards and into the crossfire?"
-        },
-        {
-            "roll": 12,
-            "description": "A tear in the Material Plane leading to the Elemental Plane of Water, causing more and more water to violently pour into the sea along with whatever creatures may follow... These could be the roughest waves seen to date!"
-        },
-        {
-            "roll": 13,
-            "description": "Ahead of the ship you can see a massive storm event. The distance to it and its size are indiscernible, but it looks like a hurricane, and the sudden choppy wake only confirms it."
-        },
-        {
-            "roll": 14,
-            "description": "An Aquamarine Sea Dragon appears, and, with cooperation, blesses the crew"
-        },
-        {
-            "roll": 15,
-            "description": "An unexpected desert island (Very small) In the distance, with an NPC trying to flag the ship (DC 18 perception)"
-        },
-        {
-            "roll": 16,
-            "description": "Beautiful sunset, no clouds, decent winds but not very fast"
-        },
-        {
-            "roll": 17,
-            "description": "Castaways on a lifeboat needing help,"
-        },
-        {
-            "roll": 18,
-            "description": "Choppy grey waters that elude to a storm despite a mostly clear sky"
-        },
-        {
-            "roll": 19,
-            "description": "Choppy seas on a sunny day. Tritons and Kuo-ta wage battle just beneath the surface."
-        },
-        {
-            "roll": 20,
-            "description": "Clear skies wind against"
-        },
-        {
-            "roll": 21,
-            "description": "Clear sunny skies no wind"
-        },
-        {
-            "roll": 22,
-            "description": "Cloudy and Rainy with capsizable waves"
-        },
-        {
-            "roll": 23,
-            "description": "Cloudy and Rainy with Favorable winds"
-        },
-        {
-            "roll": 24,
-            "description": "Cloudy and the wind is running away with the ship"
-        },
-        {
-            "roll": 25,
-            "description": "Cloudy with choppy seas, struggle to maintain direction"
-        },
-        {
-            "roll": 26,
-            "description": "Cold air, travel waters become half ocean half ice sludge; impedes travel to a slow pace"
-        },
-        {
-            "roll": 27,
-            "description": "Crimson floods the sky and the moon seems closer than usual. The water seems to be behaving... for now."
-        },
-        {
-            "roll": 28,
-            "description": "Dark night, not a star in the sky - making night time navigation difficult"
-        },
-        {
-            "roll": 29,
-            "description": "Dark, cloudy sky and cold air. Dark shadows swim beneath what at first glance appears to be an empty ocean"
-        },
-        {
-            "roll": 30,
-            "description": "Doldrums - scorching heat, clear sky, no wind whatsoever. Better have packed fresh water."
-        },
-        {
-            "roll": 31,
-            "description": "Foggy and no wind to guide direction"
-        },
-        {
-            "roll": 32,
-            "description": "Frenzy of flying fish feeding in fog upon which the frequency and size of the fish increases over time eventually overwhelming even the largest ships as the fattest whale sized flying fish slap down onto the decks"
-        },
-        {
-            "roll": 33,
-            "description": "glowing woman appears in front of the ship. (Ghost Encounter)"
-        },
-        {
-            "roll": 34,
-            "description": "Green waters that move unnaturally, it's unclear if it really is water or not"
-        },
-        {
-            "roll": 35,
-            "description": "Heavy winds creating a waterspout"
-        },
-        {
-            "roll": 36,
-            "description": "In the middle of the deep the water becomes still; Lilly pads grow on the surface and the water is rich with vegetation and life.. the water is sweet and pleasant to drink"
-        },
-        {
-            "roll": 37,
-            "description": "Incredibly cold and slightly snowy, poor visibility"
-        },
-        {
-            "roll": 38,
-            "description": "It is overcast but otherwise calm, but the air is filled with static and occasionally lightning strikes in the distance."
-        },
-        {
-            "roll": 39,
-            "description": "Jagged rocky spires suddenly jutting out of the ocean, corpses of boats litter them - requires expert and slow movement"
-        },
-        {
-            "roll": 40,
-            "description": "Clear skies and favorable wind."
-        },
-        {
-            "roll": 41,
-            "description": "Lightning strikes the water up ahead."
-        },
-        {
-            "roll": 42,
-            "description": "Mega waves sweeping across the deck of the boat"
-        },
-        {
-            "roll": 43,
-            "description": "Patches of the sea start bubbling, causing boats to sink"
-        },
-        {
-            "roll": 44,
-            "description": "Progressively larger icebergs float by, nearly hitting your ship, Mementos from each characters past bob up to the surface, yet when reached for, they reveal themselves as mirages. DC 12 DEX check to avoid falling in."
-        },
-        {
-            "roll": 45,
-            "description": "Sargasaum. No wind or current, seaweed and garbage everywhere"
-        },
-        {
-            "roll": 46,
-            "description": "Scorching hot and stale winds"
-        },
-        {
-            "roll": 47,
-            "description": "Scratching sounds coming from outside the hull, heard below decks"
-        },
-        {
-            "roll": 48,
-            "description": "Shallow reefs or rocks make travel dangerous."
-        },
-        {
-            "roll": 49,
-            "description": "Stormy the winds rip the sails"
-        },
-        {
-            "roll": 50,
-            "description": "Stormy, un-tamable winds"
-        },
-        {
-            "roll": 51,
-            "description": "Suddenly a meteor strikes the ocean not even 200 ft. ahead of the ship. The massive energy from the impact suddenly creates a massive tidal wave like effect and heats the water so it burns to the touch."
-        },
-        {
-            "roll": 52,
-            "description": "Sunny with light winds moving into sandbars"
-        },
-        {
-            "roll": 53,
-            "description": "Sunny, but with a light rain and a cold breeze"
-        },
-        {
-            "roll": 54,
-            "description": "The air is thick and humid, so much so that you can see the misty vapors as the light wind moves it."
-        },
-        {
-            "roll": 55,
-            "description": "The boat sails past jetsam from a carnival boat"
-        },
-        {
-            "roll": 56,
-            "description": "The boat sails past thousands of dead fish"
-        },
-        {
-            "roll": 57,
-            "description": "The boatswain spies a spectral ship off the port bow!"
-        },
-        {
-            "roll": 58,
-            "description": "The party is visited by a god of chaos, and is willing to play a game, for a fee"
-        },
-        {
-            "roll": 59,
-            "description": "The sea and air taste sweet, not salty"
-        },
-        {
-            "roll": 60,
-            "description": "The sea is unusually calm, flat as far as the eye can see, makes a perfect reflection of the sky"
-        },
-        {
-            "roll": 61,
-            "description": "The seas are brimming with fish and life, dolphins accompany the boat as it glides though the water"
-        },
-        {
-            "roll": 62,
-            "description": "The water Begins to smell of rotten eggs (Con save)"
-        },
-        {
-            "roll": 63,
-            "description": "The water exudes a greenish mist, but is otherwise calm as one would expect from good weather at sea."
-        },
-        {
-            "roll": 64,
-            "description": "The water is abnormally glassy, like an untouched lake."
-        },
-        {
-            "roll": 65,
-            "description": "The water is abnormally salty and the ship seems unstably buoyant."
-        },
-        {
-            "roll": 66,
-            "description": "The water seems normal. Fish are jumping out of the water in delight of the clear skies."
-        },
-        {
-            "roll": 67,
-            "description": "The water seems to be accelerating towards port side. With careful inspection through a spyglass, you can see a large whirlpool in the distance."
-        },
-        {
-            "roll": 68,
-            "description": "The water seems to be... boiling?"
-        },
-        {
-            "roll": 69,
-            "description": "The water suddenly goes silent and stops moving as the boat slides through the wake"
-        },
-        {
-            "roll": 70,
-            "description": "There are a suspicious amount of fish in these waters, almost as if they\u2019re fleeing something"
-        },
-        {
-            "roll": 71,
-            "description": "There is a mirage of boats floating upside down beneath the water"
-        },
-        {
-            "roll": 72,
-            "description": "They are visited by a god one of the party members worship and is blessed."
-        },
-        {
-            "roll": 73,
-            "description": "Unfavorable winds or currents requiring 'kedging' (using rowboats, ropes, pulleys, poles, and anchors to move the ship manually)."
-        },
-        {
-            "roll": 74,
-            "description": "You find a Derelict ship that's better than theirs, with no crew on board."
-        },
-        {
-            "roll": 75,
-            "description": "You hear arrhythmic soft thumps against the hull of the ship. Looking overboard is a sea of floating lifeless bodies."
-        },
-        {
-            "roll": 76,
-            "description": "\u201cWhat\u2019s that singing I hear off in the distance?\u201d"
-        },
-        {
-            "roll": 77,
-            "description": "A twenty-meter tall wave crashes into the hull of the ship, dealing 2d10 bludgeoning damage to the ship and players. (Players can make a DC 18 Dexterity saving throw to half the damage to themselves)."
-        },
-        {
-            "roll": 78,
-            "description": "The water in a 100-meter radius of the boat turns into magic ice which can be broken with either a DC 22 Strength check or the use of a damaging 1st-level spell or higher."
-        },
-        {
-            "roll": 79,
-            "description": "Gale-force winds push you to your location at four times the traveling speed of your vessel for one hour. Each hour, any player on the top of the deck has to make a DC 10 Dexterity saving throw in order to no be thrown off the ship."
-        },
-        {
-            "roll": 80,
-            "description": "An airship (see Unearthed Arcana: Of Ships and the Sea for star block) flies overhead and shoots a ballista (3d10 piercing damage) at your vessel."
-        },
-        {
-            "roll": 81,
-            "description": "Strange magnetic ore in the coral reefs causes the compass to spin in circles."
-        },
-        {
-            "roll": 82,
-            "description": "Several large ships seem to be chasing a smaller ship."
-        },
-        {
-            "roll": 83,
-            "description": "Water in the area starts freezing, creating chunks of ice."
-        },
-        {
-            "roll": 84,
-            "description": "You spot a ship circling a giant whirlpool. The ship cant quite seem to get enough speed to break free from the whirlpools grip."
-        },
-        {
-            "roll": 85,
-            "description": "A forest of giant kelp starts brushing against the bottom of the ship."
-        },
-        {
-            "roll": 86,
-            "description": "Discover a strong ocean current. Bonus points to speed if traveling in the same direction."
-        },
-        {
-            "roll": 87,
-            "description": "Some titanic sized creature surfaces underneath the ship, lifting the ship out of the water. The creature is large enough to not have even noticed the ship or it's crew."
-        },
-        {
-            "roll": 88,
-            "description": "A sea monster leaps from the water and lands on the deck. It keeps pacing along the deck and stares over the rails while shivering."
-        },
-        {
-            "roll": 89,
-            "description": "Hundreds of sea birds start landing on the deck."
-        },
-        {
-            "roll": 90,
-            "description": "You spy a derelict ship. Upon closer inspection, it looks like the entire crew was massacred by something."
-        },
-        {
-            "roll": 91,
-            "description": "You spy a large tower in the middle of the sea. As you get closer, you see several docks around it with several ships already docked. The tower is the entrance to an underwater city."
-        },
-        {
-            "roll": 92,
-            "description": "You see a group of Sauhaugin riding towards you atop a pack of sharks. You're under attack!"
-        },
-        {
-            "roll": 93,
-            "description": "You here a mysterious scratching from below deck. Further investigation reveals that it's coming from underneath the ship."
-        },
-        {
-            "roll": 94,
-            "description": "It is raining cats and dogs. All the meowing and barking is going to get annoying very quickly. The cats and dogs that land on deck seem ready to go to war."
-        },
-        {
-            "roll": 95,
-            "description": "A water elemental emerges from the sea, attacking you and screaming about pollution."
-        },
-        {
-            "roll": 96,
-            "description": "A group of sea elves swims up beside your ship, inviting you to visit an underwater city."
-        },
-        {
-            "roll": 97,
-            "description": "A school of killer whales use their collective strength to push your ship off course. It seems like they want you to follow them."
-        },
-        {
-            "roll": 98,
-            "description": "You are sailing into a lot of large rocks and many wrecked ships. This is a ship graveyard."
-        },
-        {
-            "roll": 99,
-            "description": "A mesmerizing song on the wind beckons to you. Sailors must save or jump overboard and swim toward what each of them imagines is the source."
-        },
-        {
-            "roll": 100,
-            "description": "Perfect weather. All clear."
-        }
-    ]
-}
+[
+  {
+    "text": "An unfavorable wind blowing the ship towards shore. Sailing into the wind means tacking, which is hard and exhausting work for the crew and navigator.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A Blue sea dragon demands tribute, Gold, Valuables, or Blood",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A Crate with a cures Crown made of blue scales and golden thorns",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A Floating bottle with a Treasure map inside! (DC 18 to spot)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A Floating Treasure chest filled with GOLD! PAYDAY! (Dex DC 17 to catch) (STR DC 15 to lift it out)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A large sea creature surfaces nearby",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A marshy isthmus blocks the way ahead, the crew may have to get out and pull the ship across",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A mass of bubbles and cavitation beneath the ship cause it sink suddenly, before the bubbles cease and the now swamped vessel and crew must struggle to the surface.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A Merchant ship who is willing to trade goods!",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A pre-existing naval battle between two opposing fleets. Dare they try to navigate around them, or will they push forwards and into the crossfire?",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A tear in the Material Plane leading to the Elemental Plane of Water, causing more and more water to violently pour into the sea along with whatever creatures may follow... These could be the roughest waves seen to date!",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ahead of the ship you can see a massive storm event. The distance to it and its size are indiscernible, but it looks like a hurricane, and the sudden choppy wake only confirms it.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "An Aquamarine Sea Dragon appears, and, with cooperation, blesses the crew",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "An unexpected desert island (Very small) In the distance, with an NPC trying to flag the ship (DC 18 perception)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Beautiful sunset, no clouds, decent winds but not very fast",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Castaways on a lifeboat needing help,",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Choppy grey waters that elude to a storm despite a mostly clear sky",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Choppy seas on a sunny day. Tritons and Kuo-ta wage battle just beneath the surface.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Clear skies wind against",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Clear sunny skies no wind",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloudy and Rainy with capsizable waves",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloudy and Rainy with Favorable winds",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloudy and the wind is running away with the ship",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloudy with choppy seas, struggle to maintain direction",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cold air, travel waters become half ocean half ice sludge; impedes travel to a slow pace",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crimson floods the sky and the moon seems closer than usual. The water seems to be behaving... for now.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dark night, not a star in the sky - making night time navigation difficult",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dark, cloudy sky and cold air. Dark shadows swim beneath what at first glance appears to be an empty ocean",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Doldrums - scorching heat, clear sky, no wind whatsoever. Better have packed fresh water.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Foggy and no wind to guide direction",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Frenzy of flying fish feeding in fog upon which the frequency and size of the fish increases over time eventually overwhelming even the largest ships as the fattest whale sized flying fish slap down onto the decks",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "glowing woman appears in front of the ship. (Ghost Encounter)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Green waters that move unnaturally, it's unclear if it really is water or not",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Heavy winds creating a waterspout",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "In the middle of the deep the water becomes still; Lilly pads grow on the surface and the water is rich with vegetation and life.. the water is sweet and pleasant to drink",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Incredibly cold and slightly snowy, poor visibility",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "It is overcast but otherwise calm, but the air is filled with static and occasionally lightning strikes in the distance.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Jagged rocky spires suddenly jutting out of the ocean, corpses of boats litter them - requires expert and slow movement",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Clear skies and favorable wind.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lightning strikes the water up ahead.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mega waves sweeping across the deck of the boat",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Patches of the sea start bubbling, causing boats to sink",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Progressively larger icebergs float by, nearly hitting your ship, Mementos from each characters past bob up to the surface, yet when reached for, they reveal themselves as mirages. DC 12 DEX check to avoid falling in.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sargasaum. No wind or current, seaweed and garbage everywhere",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Scorching hot and stale winds",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Scratching sounds coming from outside the hull, heard below decks",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shallow reefs or rocks make travel dangerous.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stormy the winds rip the sails",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stormy, un-tamable winds",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Suddenly a meteor strikes the ocean not even 200 ft. ahead of the ship. The massive energy from the impact suddenly creates a massive tidal wave like effect and heats the water so it burns to the touch.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sunny with light winds moving into sandbars",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sunny, but with a light rain and a cold breeze",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The air is thick and humid, so much so that you can see the misty vapors as the light wind moves it.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The boat sails past jetsam from a carnival boat",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The boat sails past thousands of dead fish",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The boatswain spies a spectral ship off the port bow!",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The party is visited by a god of chaos, and is willing to play a game, for a fee",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The sea and air taste sweet, not salty",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The sea is unusually calm, flat as far as the eye can see, makes a perfect reflection of the sky",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The seas are brimming with fish and life, dolphins accompany the boat as it glides though the water",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The water Begins to smell of rotten eggs (Con save)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The water exudes a greenish mist, but is otherwise calm as one would expect from good weather at sea.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The water is abnormally glassy, like an untouched lake.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The water is abnormally salty and the ship seems unstably buoyant.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The water seems normal. Fish are jumping out of the water in delight of the clear skies.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The water seems to be accelerating towards port side. With careful inspection through a spyglass, you can see a large whirlpool in the distance.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The water seems to be... boiling?",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The water suddenly goes silent and stops moving as the boat slides through the wake",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "There are a suspicious amount of fish in these waters, almost as if they\u2019re fleeing something",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "There is a mirage of boats floating upside down beneath the water",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "They are visited by a god one of the party members worship and is blessed.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Unfavorable winds or currents requiring 'kedging' (using rowboats, ropes, pulleys, poles, and anchors to move the ship manually).",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You find a Derelict ship that's better than theirs, with no crew on board.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You hear arrhythmic soft thumps against the hull of the ship. Looking overboard is a sea of floating lifeless bodies.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "\u201cWhat\u2019s that singing I hear off in the distance?\u201d",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A twenty-meter tall wave crashes into the hull of the ship, dealing 2d10 bludgeoning damage to the ship and players. (Players can make a DC 18 Dexterity saving throw to half the damage to themselves).",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The water in a 100-meter radius of the boat turns into magic ice which can be broken with either a DC 22 Strength check or the use of a damaging 1st-level spell or higher.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gale-force winds push you to your location at four times the traveling speed of your vessel for one hour. Each hour, any player on the top of the deck has to make a DC 10 Dexterity saving throw in order to no be thrown off the ship.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "An airship (see Unearthed Arcana: Of Ships and the Sea for star block) flies overhead and shoots a ballista (3d10 piercing damage) at your vessel.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Strange magnetic ore in the coral reefs causes the compass to spin in circles.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Several large ships seem to be chasing a smaller ship.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Water in the area starts freezing, creating chunks of ice.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You spot a ship circling a giant whirlpool. The ship cant quite seem to get enough speed to break free from the whirlpools grip.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A forest of giant kelp starts brushing against the bottom of the ship.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Discover a strong ocean current. Bonus points to speed if traveling in the same direction.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Some titanic sized creature surfaces underneath the ship, lifting the ship out of the water. The creature is large enough to not have even noticed the ship or it's crew.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A sea monster leaps from the water and lands on the deck. It keeps pacing along the deck and stares over the rails while shivering.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hundreds of sea birds start landing on the deck.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You spy a derelict ship. Upon closer inspection, it looks like the entire crew was massacred by something.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You spy a large tower in the middle of the sea. As you get closer, you see several docks around it with several ships already docked. The tower is the entrance to an underwater city.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You see a group of Sauhaugin riding towards you atop a pack of sharks. You're under attack!",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You here a mysterious scratching from below deck. Further investigation reveals that it's coming from underneath the ship.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "It is raining cats and dogs. All the meowing and barking is going to get annoying very quickly. The cats and dogs that land on deck seem ready to go to war.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A water elemental emerges from the sea, attacking you and screaming about pollution.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A group of sea elves swims up beside your ship, inviting you to visit an underwater city.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A school of killer whales use their collective strength to push your ship off course. It seems like they want you to follow them.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "You are sailing into a lot of large rocks and many wrecked ships. This is a ship graveyard.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "A mesmerizing song on the wind beckons to you. Sailors must save or jump overboard and swim toward what each of them imagines is the source.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Perfect weather. All clear.",
+    "unique": false,
+    "used": []
+  }
+]
