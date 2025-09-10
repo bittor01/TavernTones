@@ -1,0 +1,3937 @@
+[
+  {
+    "text": "+1 All-Purpose Tool",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Amulet of the Devout",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Arcane Grimoire",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Bloodwell Vial",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Dragonhide Belt",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Fate Dealer's Deck",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Rhythm-Maker's Drum",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Wraps of Unarmed Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+2 All-Purpose Tool",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+2 Amulet of the Devout",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+2 Arcane Grimoire",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+2 Bloodwell Vial",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+2 Dragonhide Belt",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+2 Fate Dealer's Deck",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+2 Rhythm-Maker's Drum",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+2 Wraps of Unarmed Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+3 All-Purpose Tool",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+3 Amulet of the Devout",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+3 Arcane Grimoire",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+3 Bloodwell Vial",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+3 Dragonhide Belt",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+3 Fate Dealer's Deck",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+3 Rhythm-Maker's Drum",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+3 Wraps of Unarmed Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Abracadabrus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Absorbing Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Accounting and Valuation of All Things",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Acid Absorbing Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Alchemical Compendium",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Alchemy Jug",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Alchemy Jug (Blue)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Alchemy Jug (Orange)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amber Runestone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amethyst Lodestone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of Appearance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of Betrayal",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of Duplicity",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of Harmony",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of Health",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of Proof against Detection and Location",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of Protection from Turning",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of the Black Skull",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of the Drunkard",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of the Inferno",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of the Planes",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Apparatus of Kwalish",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Arcane Cannon",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Arcane Propulsion Arm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ascendant Dragon Vessel",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ascendant Dragon-Touched Focus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ascendant Scaled Ornament",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Astral Shard",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Astromancy Archive",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Atlas of Endless Horizons",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Azorius Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Baba Yaga's Dancing Broom",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Baba Yaga's Mortar and Pestle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Badge of the Watch",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bag of Beans",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bag of Devouring",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bag of Holding",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bag of Tricks",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bag of Tricks, Gray",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bag of Tricks, Rust",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bag of Tricks, Tan",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Balance Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Balance of Harmony",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Balloon Pack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Banner of the Krig Rune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Barrier Tattoo (Large)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Barrier Tattoo (Medium)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Barrier Tattoo (Small)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Battle Standard of Infernal Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bead of Force",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bead of Nourishment",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bead of Refreshment",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Belashyrra's Beholder Crown",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bell Branch",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Belt of Cloud Giant Strength",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Belt of Dwarvenkind",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Belt of Fire Giant Strength",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Belt of Frost Giant Strength",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Belt of Giant Strength",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Belt of Hill Giant Strength",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Belt of Stone Giant Strength",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Belt of Storm Giant Strength",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bigby's Beneficent Bracelet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Black Chromatic Rose",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Black Crystal Tablet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Black Dragon Mask",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blasted Goggles",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blod Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blood Fury Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blue Chromatic Rose",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blue Dragon Mask",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bobbing Lily Pad",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Book of Exalted Deeds",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Book of Vile Darkness",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Book of Vile Darkness (Variant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boots of Elvenkind",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boots of False Tracks",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boots of Haste",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boots of Levitation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boots of Speed",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boots of Striding and Springing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boots of the Vigilant",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boots of the Winterlands",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boros Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bottle of Boundless Coffee",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bowl of Commanding Water Elementals",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bracelet of Rock Magic",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bracer of Flying Daggers",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bracers of Archery",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bracers of Asmodeus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bracers of Celerity",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bracers of Defense",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Brazier of Commanding Fire Elementals",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Breathing Bubble",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bridle of Capturing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Brooch of Living Essence",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Brooch of Shielding",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Broom of Flying",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Butcher's Bib",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cabal's Ruin",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cabal's Ruin (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cabal's Ruin (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cabal's Ruin (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Candle of Invocation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Candle of the Deep",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cap of Water Breathing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cape of Enlargement",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cape of the Mountebank",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Card Sharp's Deck",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Carpet of Flying",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Carpet of Flying, 3 ft. \u00d7 5 ft.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Carpet of Flying, 4 ft. \u00d7 6 ft.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Carpet of Flying, 5 ft. \u00d7 7 ft.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Carpet of Flying, 6 ft. \u00d7 9 ft.",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cartographer's Map Case",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cauldron of Plenty",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cauldron of Rebirth",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Censer of Controlling Air Elementals",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Charlatan's Die",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Charm of Plant Command",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Chest of Preserving",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Chime of Exile",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Chime of Opening",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Chip of Creation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Chromatic Rose",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Chronolometer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Circlet of Barbed Vision",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Circlet of Barbed Vision (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Circlet of Barbed Vision (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Circlet of Barbed Vision (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Circlet of Blasting",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Circlet of Wisdom",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Claw of the Wyrm Rune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Claws of the Umber Hulk",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cleansing Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloak of Arachnida",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloak of Billowing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloak of Displacement",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloak of Elvenkind",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloak of Invisibility",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloak of Many Fashions",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloak of Protection",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloak of the Bat",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloak of the Manta Ray",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Clockwork Amulet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Clothes of Mending",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Coat of the Crest",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Coiling Grasp Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Coin of Decisionry",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Coin of Delving",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cold Absorbing Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Comet Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Common Glamerweave",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Concertina",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Conch of Teleportation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Condensed Order",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Constantori's Portrait",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cracked Driftglobe",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crook of Rao",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crown of Lies",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crown of the Forest",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crown of the Wrath Bringer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crown of Whirling Comets",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crystal Ball",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crystal Ball (Legendary Version)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crystal Ball of Mind Reading",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crystal Ball of Telepathy",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crystal Ball of True Seeing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crystalline Chronicle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cube of Force",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cube of Summoning",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cubic Gate",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cuddly Strixhaven Mascot",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cursed Luckstone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Daern's Instant Fortress",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Danoth's Visor",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Danoth's Visor (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Danoth's Visor (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Danoth's Visor (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Daoud's Wondrous Lanthorn",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dark Shard Amulet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Decanter of Endless Water",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Deck of Dimensions",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Deck of Illusions",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Deck of Many More Things",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Deck of Many Things",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Deck of Miscellany",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Deck of Oracles",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Deck of Several Things",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Deck of Wild Cards",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Deck of Wonder",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Delver's Claws",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Demonomicon of Iggwilv",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Devastation Orb",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Devastation Orb of Air",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Devastation Orb of Earth",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Devastation Orb of Fire",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Devastation Orb of Water",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dimensional Loop",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dimensional Shackles",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dimir Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dispelling Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Docent",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Documancy Satchel",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dodecahedron of Doom",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Donjon Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Donjon's Sundering Sphere",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Doublet of Dramatic Demise",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Draakhorn",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dragon Vessel",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dragon-Touched Focus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dread Helm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Driftglobe",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Duplicitous Manuscript",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dust of Corrosion",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dust of Deliciousness",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dust of Disappearance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dust of Dryness",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dust of Sneezing and Choking",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eagle Whistle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ear Horn of Hearing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Earring of Message",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Earthboard",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Earworm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Echo Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Efreeti Bottle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elder Cartographer's Glossography",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eldritch Claw Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Essence Shard",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Essence Shard (Air)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Essence Shard (Earth)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Essence Shard (Fire)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Essence Shard (Water)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Gem",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Gem, Blue Sapphire",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Gem, Emerald",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Gem, Red Corundum",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Gem, Yellow Diamond",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Emerald Pen",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Enduring Spellbook",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ersatz Eye",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Euryale Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Everbright Lantern",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eversmoking Bottle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eye and Hand of Vecna",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eye of Vecna",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eyes of Charming",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eyes of Minute Seeing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eyes of the Eagle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Fabulist Gem",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Far Gear",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Far Realm Shard",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Fates Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Feather of Diatryma Summoning",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Feather Token",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Feywild Shard",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Figurine of Wondrous Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Figurine of Wondrous Power, Bronze Griffon",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Figurine of Wondrous Power, Ebony Fly",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Figurine of Wondrous Power, Golden Lions",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Figurine of Wondrous Power, Ivory Goats",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Figurine of Wondrous Power, Marble Elephant",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Figurine of Wondrous Power, Obsidian Steed",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Figurine of Wondrous Power, Onyx Dog",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Figurine of Wondrous Power, Serpentine Owl",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Figurine of Wondrous Power, Silver Raven",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Finder's Goggles",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Fire Absorbing Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Fish Suit",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Flamefriend Lantern",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Flames Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Flying Chariot",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Flying Citadel Helm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Folding Boat",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Fool Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Force Absorbing Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Frog Prince Statuette",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Fulminating Treatise",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Galder's Bubble Pipe",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gauntlets of Flaming Fury",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gauntlets of Ogre Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gauntlets of Rage",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gavel of the Venn Rune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gem Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gem of Brightness",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gem of Seeing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ghost Lantern",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ghost Step Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Glamerweave",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gloves of Missile Snaring",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gloves of Soul Catching",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gloves of Swimming and Climbing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gloves of Thievery",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Glowrune Pigment",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gnomengarde Grenade",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Goggles of Night",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Goggles of Object Reading",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gold Canary Figurine of Wondrous Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Golgari Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Green Chromatic Rose",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Green Dragon Mask",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grimoire Infinitus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grimoire Infinitus (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grimoire Infinitus (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grimoire Infinitus (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gruul Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Guardian Emblem",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Guild Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hag Eye",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hammock of Worlds",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hand of Vecna",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Harkon's Bite",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Harp of Gilded Plenty",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hat of Disguise",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hat of Many Spells",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hat of Vermin",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hat of Wizardry",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Headband of Intellect",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Heart Weaver's Primer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hell Hound Cloak",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of Brilliance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of Comprehending Languages",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of Devil Command",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of Disjunction",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of Perfect Potential",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of Telepathy",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of Teleportation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of the Gods",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of the Scavenger",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of Underwater Action",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Heward's Handy Haversack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Heward's Handy Spice Pouch",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Holy Symbol of Ravenkind",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hook of Fisher's Delight",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horizon Puzzle Cube",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horn of Beckoning Death",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horn of Blasting",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horn of Silent Alarm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horn of the Endless Maze",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horn of Valhalla",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horn of Valhalla, Brass",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horn of Valhalla, Bronze",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horn of Valhalla, Iron",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horn of Valhalla, Silver",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horseshoes of a Zephyr",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horseshoes of Speed",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "House of Cards",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Icon of Ravenloft",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Iggwilv's Cauldron",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Iggwilv's Horn",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Illuminator's Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Illusionist's Bracers",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Imbued Wood (Fernian Ash)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Imbued Wood (Irian Rosewood)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Imbued Wood (Kythrian Manchineel)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Imbued Wood (Lamannian Oak)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Imbued Wood (Mabaran Ebony)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Imbued Wood (Risian Pine)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Imbued Wood (Shavarran Birch)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Imbued Wood (Xorian Wenge)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Imbued Wood Focus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Infernal Amulet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Infernal Puzzle Box",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Infernal Tack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Infiltrator's Key",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Infiltrator's Key (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Infiltrator's Key (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Infiltrator's Key (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ingot of the Skold Rune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Insignia of Claws",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of Illusions",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of Scribing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of the Bards",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of the Bards, Anstruth Harp",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of the Bards, Canaith Mandolin",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of the Bards, Cli Lyre",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of the Bards, Doss Lute",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of the Bards, Fochlucan Bandore",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of the Bards, Mac-Fuirmidh Cittern",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of the Bards, Ollamh Harp",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone of Vitality",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Absorption",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Agility",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Awareness",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Fortitude",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Greater Absorption",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Historical Knowledge",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Insight",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Intellect",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Language Knowledge",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Leadership",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Mastery",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Natural Knowledge",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Protection",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Regeneration",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Religious Knowledge",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Reserve",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Self-Preservation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Strength",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Supreme Intellect",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ioun Stone, Sustenance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Iron Bands of Bilarro",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Iron Flask",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Izzet Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Jester Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Jester's Mask",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Jewel of Three Prayers",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Jewel of Three Prayers (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Jewel of Three Prayers (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Jewel of Three Prayers (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Kagonesti Forest Shroud",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Keoghtom's Ointment",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Key Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Keycharm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Keystone of Creation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Kiss of the Changebringer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Kiss of the Changebringer (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Kiss of the Changebringer (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Kiss of the Changebringer (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Knave's Eye Patch",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Knight Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Kyrzin's Ooze",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lantern of Revealing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lantern of Tracking",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Leonora's Throne of Indolence",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lesser Hammock of Worlds",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Libram of Souls and Flesh",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lifewell Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lightning Absorbing Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Living Gloves",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Living Loot Satchel",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Loadstone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lock of Trickery",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lord's Ensemble",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lorehold Primer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lost Crown of Besilmer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Luba's Tarokka of Souls",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Luxon Beacon",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lyre of Building",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mantle of Spell Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Manual of Bodily Health",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Manual of Clay Golems",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Manual of Flesh Golems",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Manual of Gainful Exercise",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Manual of Golems",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Manual of Iron Golems",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Manual of Quickness of Action",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Manual of Stone Golems",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mask of the Beast",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mask of the Dragon Queen",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Masque Charm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Masquerade Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Medal of Muscle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Medal of the Conch",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Medal of the Horizonback",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Medal of the Maze",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Medal of the Meat Pie",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Medal of the Wetlands",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Medal of Wit",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Medallion of Thoughts",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Memento Mori",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mighty Servant of Leuk-o",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mimir",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Crystal",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Crystal (Careful)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Crystal (Distant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Crystal (Empowered)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Crystal (Extended)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Crystal (Heightened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Crystal (Quickened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Crystal (Subtle)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mindblasting Cap",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mindguard Crown",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mirror of Infinite Transpondence",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mirror of Life Trapping",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mirror of Reflected Pasts",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mirror of the Past",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mistral Mantle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mizzium Apparatus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mizzium Mortar",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Moodmark Paint",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Moon Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mudslick Tower",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Murgaxor's Orb",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mystery Key",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Nature's Mantle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Navigation Orb",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Necklace of Adaptation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Necklace of Fireballs",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Necklace of Prayer Beads",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Necrotic Absorbing Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Night Caller",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Nightfall Pearl",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Nimbus Coronet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Nolzur's Marvelous Pigments",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Obviator's Lenses",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Occultant Abacus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Opal of the Ild Rune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Direction",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Dragonkind",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Gonging",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Shielding",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Shielding (Fernian Basalt)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Shielding (Irian Quartz)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Shielding (Kythrian Skarn)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Shielding (Lamannian Flint)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Shielding (Mabaran Obsidian)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Shielding (Risian Shale)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Shielding (Shavarran Chert)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Shielding (Xorian Marble)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Skoraeus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of the Stein Rune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of the Veil",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Time",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orc Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orcus Figurine",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ornithopter of Flying",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orrery of the Wanderer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orzhov Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Outer Essence Shard",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Outer Essence Shard (Chaotic)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Outer Essence Shard (Evil)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Outer Essence Shard (Good)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Outer Essence Shard (Lawful)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Paper Bird",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pearl of Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pennant of the Vind Rune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Peregrine Mask",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Perfume of Bewitching",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Periapt of Health",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Periapt of Proof against Poison",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Periapt of Wound Closure",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pipe of Remembrance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pipe of Smoke Monsters",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pipes of Haunting",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pipes of the Sewers",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Piwafwi (Cloak of Elvenkind)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Piwafwi of Fire Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pixie Dust",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Planar Key",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Planecaller's Codex",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Platinum Scarf",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Poison Absorbing Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pole of Angling",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pole of Collapsing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Portable Hole",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Portal Compass",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Portfolio Keeper",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pot of Awakening",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prehistoric Figurine of Wondrous Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prehistoric Figurine of Wondrous Power, Carnelian Triceratops",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prehistoric Figurine of Wondrous Power, Jasper Tyrannosaurus Rex",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prehistoric Figurine of Wondrous Power, Kyanite Pteranodon",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prehistoric Figurine of Wondrous Power, Pyrite Plesiosaurus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pressure Capsule",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prismari Primer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prismatic Well",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Professor Orb",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Professor Skant",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Propeller Helm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prosthetic Limb",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Protective Verses",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Psi Crystal",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Psychic Absorbing Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Puzzle Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pyroconverger",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pyxis of Pandemonium",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quaal's Feather Token",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quaal's Feather Token, Anchor",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quaal's Feather Token, Bird",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quaal's Feather Token, Fan",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quaal's Feather Token, Swan Boat",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quaal's Feather Token, Tree",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quaal's Feather Token, Whip",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quandrix Primer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quiver of Ehlonna",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Radiant Absorbing Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rakdos Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Raven's Slumber",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Red Chromatic Rose",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Red Dragon Mask",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Reincarnation Dust",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Residuum Enchanting Slate",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Reveler's Concertina",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rival Coin",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Robe of Eyes",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Robe of Scintillating Colors",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Robe of Serpents",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Robe of Stars",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Robe of Summer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Robe of the Archmagi",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Robe of Useful Items",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rod of Mercurial Form",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rogue Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rogue's Mantle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rope of Climbing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rope of Entanglement",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rope of Mending",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rotor of Return",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ruby of the War Mage",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ruby Weave Gem",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ruin Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ruinstone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Saddle of the Cavalier",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sage Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sage's Mirror",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sanctum Amulet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Scaled Ornament",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Scarab of Protection",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Scissors of Shadow Snipping",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Scribe's Pen",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sekolahian Worshiping Statuette",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Selesnya Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sending Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sending Stones",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sensory Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shadowfell Brand Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shadowfell Shard",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shard of the Ise Rune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shard of Xeluan",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shard Solitaire",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shard Solitaire (Black Sapphire)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shard Solitaire (Diamond)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shard Solitaire (Jacinth)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shard Solitaire (Rainbow Pearl)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shard Solitaire (Ruby)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shield Guardian Amulet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shiftweave",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shrieking Greaves",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Silverquill Primer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Simic Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Siren Song Lyre",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Skull Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Skull Helm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Skull of Selfish Knowledge",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Skysail",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Slippers of Spider Climbing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Slumbering Dragon Vessel",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Slumbering Dragon-Touched Focus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Slumbering Scaled Ornament",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Smokepowder",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Soul Coin",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Soul Coin",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sovereign Glue",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Speaking Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Bottle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem (Amber)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem (Bloodstone)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem (Diamond)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem (Jade)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem (Lapis lazuli)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem (Obsidian)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem (Quartz)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem (Ruby)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem (Star ruby)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem (Topaz)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spelljamming Helm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spellshard",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spellwrought Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spellwrought Tattoo (1st Level)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spellwrought Tattoo (2nd Level)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spellwrought Tattoo (3rd Level)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spellwrought Tattoo (4th Level)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spellwrought Tattoo (5th Level)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spellwrought Tattoo (Cantrip)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sphere of Annihilation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spies' Murmur",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spirit Board",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spyglass of Clairvoyance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Star Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Statuette of Augury",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stirring Dragon Vessel",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stirring Dragon-Touched Focus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stirring Scaled Ornament",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stone of Controlling Earth Elementals",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stone of Creation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stone of Golorr",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stone of Good Luck",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stone of Ill Luck",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stonespeaker Crystal",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stormgirdle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stormgirdle (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stormgirdle (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stormgirdle (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stormrider Boots",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Strixhaven Pennant",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sun Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sunbeam Compass",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tablet of Reawakening",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Talarith",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Talisman of Pure Good",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Talisman of the Sphere",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Talisman of Ultimate Evil",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Talking Doll",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Talons Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tankard of Sobriety",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tasha's Creeping Keelboat",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Teeth of Dahlver-Nar",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Teleportation Tablet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Telescopic Transporter",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The Codicil of White",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The Infernal Machine of Lum the Mad",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Thermal Cube",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Throne Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Thunder Absorbing Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Timepiece of Travel",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Titanstone Knuckles",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Titanstone Knuckles (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Titanstone Knuckles (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Titanstone Knuckles (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tome of Clear Thought",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tome of Leadership and Influence",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tome of the Stilled Tongue",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tome of Understanding",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Travel Alchemical Kit",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Uncommon Glamerweave",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Universal Solvent",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ventilating Lungs",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Verminshroud",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Verminshroud (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Verminshroud (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Verminshroud (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Veteran's Cane",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Vial of Greed",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Void Card",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Voting Kit",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Vox Seeker",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wakened Dragon Vessel",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wakened Dragon-Touched Focus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wakened Scaled Ornament",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wand Sheath",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "War Horn of Valor",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Warrior's Passkey",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Watchful Helm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wayfarer's Boots",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Weird Tank",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Well of Many Worlds",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wheel of Stars",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wheel of Wind and Water",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Whisper Jar",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "White Chromatic Rose",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "White Dragon Mask",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wildspace Orrery",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wind Fan",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Winged Boots",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wings of Flying",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wingwear",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Witchlight Watch",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Witherbloom Primer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wraps of Dyamak",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wraps of Dyamak (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wraps of Dyamak (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wraps of Dyamak (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wraps of Unarmed Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wreath of the Prism",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wreath of the Prism (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wreath of the Prism (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wreath of the Prism (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wyrmreaver Gauntlets",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wyrmskull Throne",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ythryn Mythallar",
+    "unique": false,
+    "used": []
+  }
+]

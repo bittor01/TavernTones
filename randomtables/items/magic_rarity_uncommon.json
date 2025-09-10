@@ -1,0 +1,1337 @@
+[
+  {
+    "text": "+1 All-Purpose Tool",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Ammunition",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Amulet of the Devout",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Arcane Grimoire",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Bloodwell Vial",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Dragonhide Belt",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Moon Sickle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Rhythm-Maker's Drum",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Rod of the Pact Keeper",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Shield (*)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Wand of the War Mage",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Weapon",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Weapon (no damage)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "+1 Wraps of Unarmed Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Adamantine Armor",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Adamantine Weapon",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Alchemy Jug",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Alchemy Jug (Blue)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Alchemy Jug (Orange)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amber Runestone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of Proof against Detection and Location",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of the Drunkard",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Armor of Fungal Spores",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Armor of the Fallen",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Armor of Weightlessness",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Azorius Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Baba Yaga's Dancing Broom",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bag of Holding",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bag of Tricks",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bag of Tricks, Gray",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bag of Tricks, Rust",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bag of Tricks, Tan",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Balance of Harmony",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Balloon Pack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Barrier Tattoo (Small)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blasted Goggles",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blood of the Lycanthrope Antidote",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blood Spear",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bloodrage Greataxe",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boomerang Shield",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boots of Elvenkind",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boots of Striding and Springing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boots of the Vigilant",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boots of the Winterlands",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Boros Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bottled Breath",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bracers of Archery",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Brooch of Living Essence",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Brooch of Shielding",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Broom of Flying",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cap of Water Breathing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Card Sharp's Deck",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Charred Wand of Magic Missiles",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Circlet of Blasting",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Circlet of Human Perfection",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloak of Elvenkind",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloak of Protection",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cloak of the Manta Ray",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Coiling Grasp Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Condensed Order",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cracked Driftglobe",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crown of the Forest",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cursed Luckstone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Decanter of Endless Water",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Deck of Illusions",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Deck of Miscellany",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Deck of Wonder",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dimir Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dried Leech",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Driftglobe",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dust of Corrosion",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dust of Deliciousness",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dust of Disappearance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dust of Dryness",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dust of Sneezing and Choking",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Earworm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Echo Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elder Cartographer's Glossography",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eldritch Claw Tattoo",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Gem",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Gem, Blue Sapphire",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Gem, Emerald",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Gem, Red Corundum",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elemental Gem, Yellow Diamond",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Emerald Pen",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Enspelled Armor (Cantrip)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Enspelled Armor (Level 1)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Enspelled Staff (Cantrip)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Enspelled Staff (Level 1)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Enspelled Weapon (Cantrip)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Enspelled Weapon (Level 1)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eversmoking Bottle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eyes of Charming",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eyes of Minute Seeing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eyes of the Eagle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Fabulist Gem",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Feywild Shard",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Figurine of Wondrous Power, Silver Raven",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Finder's Goggles",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gauntlets of Ogre Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gem of Brightness",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gloves of Missile Snaring",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gloves of Swimming and Climbing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gloves of Thievery",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Goggles of Night",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Goggles of Object Reading",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Golgari Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gruul Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Guardian Emblem",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hag Eye",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Harkon's Bite",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hat of Disguise",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Headband of Intellect",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hellfire Weapon",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of Comprehending Languages",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of Telepathy",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of Underwater Action",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hew",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "House of Cards",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Immovable Rod",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Infernal Puzzle Box",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Insignia of Claws",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of the Bards, Doss Lute",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of the Bards, Fochlucan Bandore",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Instrument of the Bards, Mac-Fuirmidh Cittern",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Izzet Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Javelin of Lightning",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Keoghtom's Ointment",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lantern of Revealing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lightbringer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Living Gloves",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lorehold Primer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mariner's Armor",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mask of the Beast",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Medallion of Thoughts",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Carapace Armor",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Crystal (Careful)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Crystal (Distant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Crystal (Empowered)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mind Crystal (Extended)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mithral Armor",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mizzium Apparatus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mummy Rot Antidote",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Nature's Mantle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Necklace of Adaptation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Night Caller",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Oil of Slipperiness",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orc Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orzhov Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Paper Bird",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pearl of Power",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Periapt of Health",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Periapt of Wound Closure",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Philter of Love",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pipes of Haunting",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pipes of the Sewers",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Piwafwi (Cloak of Elvenkind)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pixie Dust",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Plate of Knight's Fellowship",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Portable Cannonballs",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Portal Compass",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Acid Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Advantage",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Animal Friendship",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Cold Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Fire Breath",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Fire Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Force Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Greater Healing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Growth",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Hill Giant Strength",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Lightning Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Necrotic Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Poison",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Poison Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Polychromy",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Psionic Fortitude",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Psychic Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Pugilism",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Radiant Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Thunder Resistance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Potion of Water Breathing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prehistoric Figurine of Wondrous Power, Pyrite Plesiosaurus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prismari Primer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Propeller Helm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Psi Crystal",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pyroconverger",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quaal's Feather Token, Anchor",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quaal's Feather Token, Fan",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quaal's Feather Token, Tree",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quandrix Primer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quiver of Ehlonna",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rakdos Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rakdos Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Reszur",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Barrels",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Jumping",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Mind Shielding",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Obscuring",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Puzzler's Wit",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Swimming",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of the Orator",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Truth Telling",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Warmth",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Water Walking",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Robe of Serpents",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Robe of Useful Items",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rod of Mercurial Form",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rod of Retribution",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rope of Climbing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Saddle of the Cavalier",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Seeker Dart",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Selesnya Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sending Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sending Stones",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sensory Stone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sentinel Shield",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Serpent Scale Armor",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shatterspike",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shield of the Tortoise",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Silverquill Primer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Simic Guild Signet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Simic Keyrune",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Skyblinder Staff",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sling of Giant Felling",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Slippers of Spider Climbing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Slumbering Dragon Vessel",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Slumbering Dragon's Wrath Weapon",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Slumbering Dragon-Touched Focus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Slumbering Scaled Ornament",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Smokepowder",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Soul Coin",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Soul Coin",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem (Lapis lazuli)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Gem (Obsidian)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Scroll (Level 2)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spell Scroll (Level 3)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spellwrought Tattoo (2nd Level)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spellwrought Tattoo (3rd Level)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spies' Murmur",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Staff of the Adder",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Staff of the Python",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stone of Good Luck",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stone of Ill Luck",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Storm Boomerang",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sword of Vengeance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Thessaltoxin Antidote",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Travel Alchemical Kit",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Trident of Fish Command",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Uncommon Glamerweave",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Vanrak's Mithral Shirt",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wand of Entangle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wand of Magic Detection",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wand of Magic Missiles",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wand of Secrets",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wand of Web",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Weapon of Warning",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wheel of Wind and Water",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wildspace Orrery",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wind Fan",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Winged Ammunition",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Winged Boots",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wingwear",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Winter's Dark Bite",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Witherbloom Primer",
+    "unique": false,
+    "used": []
+  }
+]
