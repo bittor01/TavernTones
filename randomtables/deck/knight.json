@@ -100,5 +100,977 @@
     "depiction": "",
     "effect": "",
     "used": []
+  },
+  {
+    "name": "Order’s Bastion",
+    "depiction": "An iconic round table with knights seated and linked arm in arm",
+    "effect": "All allies within 30 feet gain +1 AC and advantage on Wisdom saving throws for 1 minute 🏰",
+    "used": []
+  },
+  {
+    "name": "Street Protector",
+    "depiction": "A hooded knight warding off danger in a bustling market",
+    "effect": "All allies within 30 feet gain +1 AC and resistance to nonmagical bludgeoning, piercing, and slashing damage until the start of your next turn 🛡️",
+    "used": []
+  },
+  {
+    "name": "Street Defender",
+    "depiction": "A humble armored knight standing protectively in a busy city street",
+    "effect": "All allies within 30 feet gain +1 to AC and advantage on saving throws against being frightened until the end of your next turn 🏙️",
+    "used": []
+  },
+  {
+    "name": "Street Sentinel",
+    "depiction": "A humble armored figure standing watch on a cobblestone street",
+    "effect": "All allies within 30 feet gain +1 to AC and can add a +1 bonus to any Dexterity saving throws for 1 minute 🚓",
+    "used": []
+  },
+  {
+    "name": "Street Guardian",
+    "depiction": "A knight standing vigil over sleeping townsfolk",
+    "effect": "All allies within 30 feet gain +1 to AC and cannot be surprised until your next turn 🛡️",
+    "used": []
+  },
+  {
+    "name": "Lionheart’s Roar",
+    "depiction": "A roaring lion crest emblazoned on a shield",
+    "effect": "All allies within 30 feet gain +1 to attack rolls and saving throws for 1 minute 🦁",
+    "used": []
+  },
+  {
+    "name": "Call to Arms",
+    "depiction": "A knight blowing a war horn atop a castle gate",
+    "effect": "All allies within 30 feet gain +1 to attack rolls and saving throws until the end of your next turn 📯",
+    "used": []
+  },
+  {
+    "name": "Knight's Rally",
+    "depiction": "A group of knights charging into battle with banners flying",
+    "effect": "All allies within 30 feet gain +1d4 to their next saving throw and their movement speed increases by 10 feet until the end of your next turn 🏇",
+    "used": []
+  },
+  {
+    "name": "Arthur's Bulwark",
+    "depiction": "A knight with a glowing shield emblazoned with a crown",
+    "effect": "All allies within 30 feet gain +2 AC and have advantage on saving throws against being frightened for 1 minute 🛡️",
+    "used": []
+  },
+  {
+    "name": "Street Knight's Watch",
+    "depiction": "A humble armored figure standing vigilant in a dark alleyway",
+    "effect": "All allies within 30 feet gain +2 to AC against attacks from creatures of lower CR than the wielder for 1 minute 🏙️",
+    "used": []
+  },
+  {
+    "name": "Protector of the Weak",
+    "depiction": "A humble knight shielding a child from shadowy figures",
+    "effect": "All allies within 30 feet gain +2 to AC against attacks made by enemies that have attacked any ally this turn 🛡️",
+    "used": []
+  },
+  {
+    "name": "Stalwart Defense",
+    "depiction": "A circle of knights locking shields under a stormy sky",
+    "effect": "All allies within 30 feet gain +2 to AC and can add +2 to any one saving throw made before your next turn ends 🛡️",
+    "used": []
+  },
+  {
+    "name": "Guardian of the Streets",
+    "depiction": "A hooded knight standing watch under a lamplit alley",
+    "effect": "All allies within 30 feet gain +2 to AC and resistance to bludgeoning, piercing, and slashing damage from nonmagical weapons until the start of your next turn 🏙️",
+    "used": []
+  },
+  {
+    "name": "Oathkeeper's Guard",
+    "depiction": "A knight standing resolute with shield raised",
+    "effect": "All allies within 30 feet gain +2 to AC and resistance to non-magical bludgeoning, piercing, and slashing damage for 1 minute 🛡️",
+    "used": []
+  },
+  {
+    "name": "Camelot's Ward",
+    "depiction": "A radiant castle gate with spectral knights guarding it",
+    "effect": "All allies within 30 feet gain +2 to AC until the start of your next turn, and resistance to one damage type of their choice 🏰",
+    "used": []
+  },
+  {
+    "name": "Knight’s Rally",
+    "depiction": "A band of armored knights charging forward with raised spears",
+    "effect": "All allies within 30 feet gain +2 to attack rolls and saving throws until the start of your next turn ⚔️",
+    "used": []
+  },
+  {
+    "name": "Streetwatcher's Grace",
+    "depiction": "A humble knight helping a child cross a busy street",
+    "effect": "All allies within 30 feet gain +10 feet to their movement speed and advantage on Dexterity saving throws until your next turn 🏙️",
+    "used": []
+  },
+  {
+    "name": "Vigilant Guard",
+    "depiction": "A knight standing firm on a city street at dusk",
+    "effect": "All allies within 30 feet gain a +2 bonus to AC until the end of their next turn, representing steadfast defense 🏰",
+    "used": []
+  },
+  {
+    "name": "Champion's Rally",
+    "depiction": "A knight raising their sword high as allies gather around",
+    "effect": "All allies within 30 feet gain advantage on attack rolls and saving throws until the start of your next turn ⚔️",
+    "used": []
+  },
+  {
+    "name": "Radiant Valor",
+    "depiction": "A knight bathed in shining light, rallying troops",
+    "effect": "All allies within 30 feet gain advantage on attack rolls and saving throws until the start of your next turn, and regain HP equal to [[1d6+your spellcasting modifier]] ✨",
+    "used": []
+  },
+  {
+    "name": "Lantern of the Watch",
+    "depiction": "A street knight holding a glowing lantern high",
+    "effect": "All allies within 30 feet gain darkvision and +1 to initiative rolls for 10 minutes 🌙",
+    "used": []
+  },
+  {
+    "name": "Lantern of the Watchful Guard",
+    "depiction": "A knight holding a glowing lantern illuminating a dark street",
+    "effect": "All allies within 30 feet gain darkvision and +2 to all perception checks for 1 hour 🏮",
+    "used": []
+  },
+  {
+    "name": "Lantern of the Watchful Knight",
+    "depiction": "A glowing lantern held high by a vigilant knight",
+    "effect": "All allies within 30 feet gain darkvision, advantage on initiative rolls, and cannot be surprised for 10 minutes 🔥",
+    "used": []
+  },
+  {
+    "name": "Lionheart's Courage",
+    "depiction": "A knight with a lion-shaped crest rallying troops",
+    "effect": "All allies within 30 feet gain temporary hit points equal to [[3d8+level]] and have advantage on attack rolls until the start of your next turn 🦁",
+    "used": []
+  },
+  {
+    "name": "Knight's Ward",
+    "depiction": "A knight standing vigilant at a city gate protecting citizens from danger",
+    "effect": "All allies within 30 feet gain temporary hit points equal to your level at the start of each of their turns for the next minute, representing steadfast defense 🛡️",
+    "used": []
+  },
+  {
+    "name": "Guardian’s Embrace",
+    "depiction": "A knight in shining armor wrapping a cloak around a frightened villager",
+    "effect": "All allies within 30 feet gain temporary hit points equal to your proficiency bonus + [[1d8]] for 1 minute 🛡️",
+    "used": []
+  },
+  {
+    "name": "Grace of the Round Table",
+    "depiction": "A circle of knights around a glowing table",
+    "effect": "All allies within 30 feet gain temporary hit points equal to your proficiency bonus + your Charisma modifier for 1 minute 🛡️",
+    "used": []
+  },
+  {
+    "name": "Guardian's Embrace",
+    "depiction": "A knight with arms wide, enveloping a group of villagers",
+    "effect": "All allies within 30 feet gain temporary HP equal to [[3d8 + your proficiency bonus]], lasting 1 minute 🤗",
+    "used": []
+  },
+  {
+    "name": "Armor of the Round Table",
+    "depiction": "An ornate silver shield etched with a circle of knights",
+    "effect": "All allies within 30 feet gain temporary HP equal to your level + [[1d8]] and resistance to one damage type of their choice for 1 minute 🛡️",
+    "used": []
+  },
+  {
+    "name": "Protector of the Innocent",
+    "depiction": "A knight shielding a child on a busy street",
+    "effect": "All allies within 30 feet gain temporary HP equal to your level at the start of their next turn and have advantage on saving throws against being frightened for 1 minute 🛡️",
+    "used": []
+  },
+  {
+    "name": "Chivalric Rally",
+    "depiction": "A group of armored knights charging forward with banners",
+    "effect": "All allies within 30 feet gain temporary HP equal to your proficiency bonus + your Charisma modifier and can use reaction to move 10 feet without provoking opportunity attacks for 1 minute 🐎",
+    "used": []
+  },
+  {
+    "name": "Arthur's Vigil",
+    "depiction": "A regal knight standing sentinel with Excalibur raised",
+    "effect": "All allies within 30 feet gain temporary HP equal to your proficiency bonus + your Charisma modifier, lasting 1 minute ⚔️",
+    "used": []
+  },
+  {
+    "name": "Guardian’s Oath",
+    "depiction": "A knight standing firm before a group of frightened villagers",
+    "effect": "All allies within 30 feet gain temporary HP equal to your proficiency bonus plus [[1d8]] and have resistance to damage until the start of your next turn 🛡️",
+    "used": []
+  },
+  {
+    "name": "Chivalrous Stand",
+    "depiction": "A group of knights standing shoulder to shoulder",
+    "effect": "All allies within 30 feet have advantage on saving throws against being frightened and charmed for 1 minute 🏰",
+    "used": []
+  },
+  {
+    "name": "Guardian of the Forsaken",
+    "depiction": "A knight standing before a group of poor citizens in a rainstorm",
+    "effect": "All allies within 30 feet have resistance to all damage and regain [[2d6]] HP at the start of their turn for 1 round 🛡️",
+    "used": []
+  },
+  {
+    "name": "Knight's Benediction",
+    "depiction": "A knight in shining armor raising a chalice glowing with healing light",
+    "effect": "All allies within 30 feet recover [[2d6+level]] HP and have advantage on their next saving throw within 1 minute ✨",
+    "used": []
+  },
+  {
+    "name": "Lionheart’s Shield",
+    "depiction": "A knight holding a lion-shaped shield glowing with protective magic",
+    "effect": "Allies within 30 feet have their AC increased by 1 and gain resistance to one damage type (chosen when cast) for 1 minute 🦁",
+    "used": []
+  },
+  {
+    "name": "Gallant Charge",
+    "depiction": "A knight raising a lance, charging forward through enemies",
+    "effect": "An ally can move up to double their speed without provoking opportunity attacks and gains advantage on the next melee attack they make this turn 🐎",
+    "used": []
+  },
+  {
+    "name": "Mantle of the Round",
+    "depiction": "A golden cloak inscribed with the emblem of the Round Table",
+    "effect": "An ally gains immunity to being charmed and frightened for 10 minutes and can reroll one failed saving throw during this time 💫",
+    "used": []
+  },
+  {
+    "name": "Street Knight’s Pledge",
+    "depiction": "A knight defending common folk in a bustling medieval street",
+    "effect": "An ally gains the effects of the Sanctuary spell for 1 minute or until they attack or cast a spell, representing the knight’s vow to protect the weak 🙏",
+    "used": []
+  },
+  {
+    "name": "Steelheart's Ward",
+    "depiction": "A sword bent into a heart-shaped guard glowing with a blue aura",
+    "effect": "An ally regains [[2d6+your spellcasting modifier]] HP and gains resistance to psychic damage until the end of your next turn ❤️",
+    "used": []
+  },
+  {
+    "name": "Guardian's Grace",
+    "depiction": "An armored knight holding a glowing shield",
+    "effect": "An ally within 30 feet gains +2 AC and resistance to one damage type of your choice for 1 minute 🛡️",
+    "used": []
+  },
+  {
+    "name": "Knight’s Vigil",
+    "depiction": "A street knight holding a lantern over a dark alley",
+    "effect": "An ally you touch gains +2 bonus to AC and saving throws until your next turn, and when they take damage, you can use your reaction to halve that damage 🕯️",
+    "used": []
+  },
+  {
+    "name": "King's Aegis",
+    "depiction": "A radiant shield emblazoned with a crown",
+    "effect": "An ally you touch gains a +2 bonus to AC and saving throws for 1 minute, symbolizing the protection of a noble king 🛡️",
+    "used": []
+  },
+  {
+    "name": "Charge of the Paladin",
+    "depiction": "A knight on horseback charging into battle, lance extended",
+    "effect": "As a bonus action, grant one ally within 30 feet the ability to move up to their speed without provoking opportunity attacks this turn and gain an extra [[1d6+3]] radiant damage on their next melee attack ⚔️",
+    "used": []
+  },
+  {
+    "name": "Chivalry’s Embrace",
+    "depiction": "A knight in shining armor kneeling with open arms",
+    "effect": "Choose an ally within 30 feet who gains advantage on death saving throws and can reroll one failed saving throw during the next minute 🏰",
+    "used": []
+  },
+  {
+    "name": "Knight's Vigil",
+    "depiction": "An armored knight standing watch under the moonlight with a flaming sword",
+    "effect": "Choose an ally within 30 feet, they gain darkvision 60 ft. and advantage on Perception checks for 1 hour 🌙",
+    "used": []
+  },
+  {
+    "name": "Squire's Aid",
+    "depiction": "A young knight assisting an armored soldier",
+    "effect": "Choose an ally. Until the start of your next turn, when they take damage, reduce it by [[1d10 + your spellcasting modifier]] and they gain +2 to AC until that turn ends 💪",
+    "used": []
+  },
+  {
+    "name": "Round Table Oath",
+    "depiction": "A circular table glowing with ethereal light",
+    "effect": "Choose one ally",
+    "used": []
+  },
+  {
+    "name": "Regal Vow",
+    "depiction": "A noble knight kneeling with sword planted",
+    "effect": "Choose one ally",
+    "used": []
+  },
+  {
+    "name": "Watchful Sentinel",
+    "depiction": "A knight standing steadfast in front of a gate blocking shadowy figures",
+    "effect": "Choose one ally",
+    "used": []
+  },
+  {
+    "name": "Lance of Protection",
+    "depiction": "A gleaming lance pointing forward, light trailing like a comet",
+    "effect": "Choose one ally",
+    "used": []
+  },
+  {
+    "name": "Knight’s Oath",
+    "depiction": "A knight clasping their gauntlet in solemn vow",
+    "effect": "Choose one ally",
+    "used": []
+  },
+  {
+    "name": "Street Ward",
+    "depiction": "A humble knight standing watch over a dark alley",
+    "effect": "Choose one ally in sight",
+    "used": []
+  },
+  {
+    "name": "Knight’s Vow",
+    "depiction": "A stoic knight kneeling before an ally, sword laid on their shoulder",
+    "effect": "Choose one ally to receive the Knight’s Vow, granting them advantage on all saving throws and resistance to all damage types until the start of your next turn 🤺",
+    "used": []
+  },
+  {
+    "name": "Arthur's Boon",
+    "depiction": "A regal knight bestowing a shining emblem on a squire",
+    "effect": "Choose one ally who can add [[1d8+2]] to one attack roll, ability check, or saving throw made before the end of your next turn ✨",
+    "used": []
+  },
+  {
+    "name": "Arthur’s Vow",
+    "depiction": "A knight kneeling before a glowing sword in a stone",
+    "effect": "Choose one ally who can hear you",
+    "used": []
+  },
+  {
+    "name": "Guardian's Oath",
+    "depiction": "A knight kneeling before a wounded comrade",
+    "effect": "Choose one ally who can see you",
+    "used": []
+  },
+  {
+    "name": "King's Safeguard",
+    "depiction": "A regal knight standing sentry outside a castle gate",
+    "effect": "Choose one ally who can’t be reduced below 1 HP until the end of your next turn",
+    "used": []
+  },
+  {
+    "name": "Lionheart's Vow",
+    "depiction": "A knight kneeling before a blazing lion banner",
+    "effect": "Choose one ally who gains advantage on all attack rolls and saving throws until the end of their next turn 🦁",
+    "used": []
+  },
+  {
+    "name": "Arthur's Vow",
+    "depiction": "A solemn knight placing a hand on his sword hilt",
+    "effect": "Choose one ally who gains advantage on all attack rolls and saving throws until the start of your next turn ⚔️",
+    "used": []
+  },
+  {
+    "name": "Valor of the Round Table",
+    "depiction": "A glowing sword with a faint circle of knights in the background",
+    "effect": "Choose one ally who gains advantage on all attack rolls and saving throws until the start of your next turn 🗡️",
+    "used": []
+  },
+  {
+    "name": "Lionheart's Vigil",
+    "depiction": "A proud lion emblazoned on a knight’s surcoat",
+    "effect": "Choose one ally who gains temporary HP equal to [[1d8+3]] and advantage on death saving throws for 1 minute 🦁",
+    "used": []
+  },
+  {
+    "name": "Knight's Vow",
+    "depiction": "A knight kneeling under a full moon, swearing an oath",
+    "effect": "Choose one ally who gains the benefits of the Protector’s Shield: they add your proficiency bonus to all saving throws and gain temporary HP equal to your level for 1 minute 🤝",
+    "used": []
+  },
+  {
+    "name": "Valiant Charge",
+    "depiction": "A knight charging forward with lance gleaming",
+    "effect": "Choose one ally who immediately gains +2 to attack rolls and damage on their next attack, and their movement speed increases by 10 feet this turn 🐎",
+    "used": []
+  },
+  {
+    "name": "Valor’s Embrace",
+    "depiction": "A knight’s gauntleted hand glowing with radiant light",
+    "effect": "Choose one ally within 30 feet, they gain temporary hit points equal to [[1d8+your spellcasting modifier]] and advantage on saving throws until the start of your next turn 🤗",
+    "used": []
+  },
+  {
+    "name": "Shieldbearer's Grace",
+    "depiction": "A knight raising a kite shield to block a hail of arrows",
+    "effect": "Choose one ally within 30 feet. They gain +2 AC and resistance to ranged weapon damage until the start of your next turn 🛡️",
+    "used": []
+  },
+  {
+    "name": "Knight's Oath",
+    "depiction": "A knight kneeling with sword planted in the ground",
+    "effect": "Choose one ally within 30 feet. They gain a +2 bonus to all saving throws and attack rolls until the start of your next turn 🤝",
+    "used": []
+  },
+  {
+    "name": "Guardian's Vigil",
+    "depiction": "A stalwart knight standing watch under starlight",
+    "effect": "Choose one ally within 30 feet. They gain temporary HP equal to [[1d8 + your spellcasting modifier]] and cannot be surprised until your next turn 🌟",
+    "used": []
+  },
+  {
+    "name": "Urban Protector",
+    "depiction": "A city knight in shining armor standing between a child and danger",
+    "effect": "Choose one ally within 30 feet. They gain the ability to impose disadvantage on attack rolls against themselves until the start of your next turn, as you intercept and divert threats ⚔️",
+    "used": []
+  },
+  {
+    "name": "Arthurian Vow",
+    "depiction": "A knight kneeling before a glowing sword in a stone",
+    "effect": "Choose one ally, they gain advantage on attack rolls and saving throws until the end of their next turn 🗡️",
+    "used": []
+  },
+  {
+    "name": "Arthur’s Favor",
+    "depiction": "A shining sword plunged into a stone with a glowing aura",
+    "effect": "Choose one ally: they gain advantage on all attack rolls and saving throws until the start of your next turn ⚔️",
+    "used": []
+  },
+  {
+    "name": "Paragon’s Grace",
+    "depiction": "A knight with an ethereal glow kneeling in a ceremonial hall",
+    "effect": "Choose one ally: they regain [[2d6+your spellcasting modifier]] hit points and are immune to being frightened and charmed for 1 minute ✨",
+    "used": []
+  },
+  {
+    "name": "Honor's Bond",
+    "depiction": "Two knights clasping gauntlets amid a battlefield",
+    "effect": "Choose yourself and one ally within 30 feet",
+    "used": []
+  },
+  {
+    "name": "Radiant Bastion",
+    "depiction": "A heavily armored knight surrounded by a glowing shield",
+    "effect": "Create a radiant shield around one ally that grants them immunity to being frightened and doubles their healing received for 1 minute ✨",
+    "used": []
+  },
+  {
+    "name": "Knightly Benediction",
+    "depiction": "A knight praying with a glowing halo appearing above",
+    "effect": "Each ally within 30 feet can immediately end one condition affecting them (such as blinded, deafened, or poisoned) and gain +1d4 temporary HP ✝️",
+    "used": []
+  },
+  {
+    "name": "Arthur's Bastion",
+    "depiction": "King Arthur's knights forming a protective formation",
+    "effect": "For 1 minute, allies within 30 feet gain +1 to AC and resistance to one damage type of their choice chosen at activation 🏰",
+    "used": []
+  },
+  {
+    "name": "Armor of Camelot",
+    "depiction": "A knight clad in shining armor with a flowing red cape",
+    "effect": "For 1 minute, an ally gains +2 to AC and resistance to all non-magical bludgeoning, piercing, and slashing damage 🛡️",
+    "used": []
+  },
+  {
+    "name": "King's Mantle",
+    "depiction": "An ornate cloak embroidered with a golden lion, draped over a knight",
+    "effect": "For 1 minute, an ally gains resistance to all damage types and emits a calming aura that grants allies within 30 feet +1 to saving throws 🦁",
+    "used": []
+  },
+  {
+    "name": "Squire’s Aid",
+    "depiction": "A young attendant rushing to brace a fallen knight’s shield",
+    "effect": "For 1 minute, each time an ally within 30 feet takes damage, they gain a +2 bonus to all damage rolls against that attacker, usable once per turn ⚔️",
+    "used": []
+  },
+  {
+    "name": "Guardian’s Resolve",
+    "depiction": "A knight standing firm in a crowded street, blocking foes",
+    "effect": "For one ally within 30 feet, the first attack that hits them before your next turn deals no damage, and they can use their reaction to attack the attacker once ⚔️",
+    "used": []
+  },
+  {
+    "name": "Excalibur's Blessing",
+    "depiction": "A glowing sword embedded in stone with light rays shining",
+    "effect": "For one ally, their next weapon attack that hits deals an extra [[2d6]] radiant damage and restores hit points equal to half of that damage dealt to them 💫",
+    "used": []
+  },
+  {
+    "name": "Arthur's Mantle",
+    "depiction": "A radiant cloak emblazoned with a crown and sword",
+    "effect": "For one minute, an ally gains temporary HP equal to your proficiency bonus plus [[1d8]], and gains +2 to saving throws while the cloak is active 👑",
+    "used": []
+  },
+  {
+    "name": "Arthur's Aegis",
+    "depiction": "A shining sword and shield resting atop an ornate stone",
+    "effect": "For one minute, one ally gains resistance to all damage from creatures of evil alignment ⚔️",
+    "used": []
+  },
+  {
+    "name": "Steel Resolve",
+    "depiction": "A knight locking arms with a comrade",
+    "effect": "For the next minute, allies within 30 feet can reroll one failed saving throw per round, but must keep the second result 💪",
+    "used": []
+  },
+  {
+    "name": "Guardian’s Grace",
+    "depiction": "A knight holding a glowing shield in front of a child",
+    "effect": "For the next minute, an ally of your choice within 30 feet gains +2 AC and advantage on saving throws against being frightened 🛡️",
+    "used": []
+  },
+  {
+    "name": "Arthurian Valor",
+    "depiction": "A knight in shining armor raising a glowing round table",
+    "effect": "For the next minute, one ally within 30 feet can add your spellcasting modifier to saving throws and damage rolls, and can reroll one failed saving throw per turn 🏰",
+    "used": []
+  },
+  {
+    "name": "Arthur’s Oath",
+    "depiction": "A knight kneeling before the Round Table",
+    "effect": "For the next minute, one ally within 30 feet gains +2 to AC and cannot be moved against their will by magical effects, symbolizing the protection of Camelot’s ideals ⚔️",
+    "used": []
+  },
+  {
+    "name": "Lancelot's Oath",
+    "depiction": "A knight kneeling before a glowing sword embedded in stone",
+    "effect": "For the next minute, the target ally's weapon attacks deal an extra [[1d6 + your level]] radiant damage to fiends and undead ⚔️",
+    "used": []
+  },
+  {
+    "name": "Arthurian Blessing",
+    "depiction": "A shining sword embedded in stone radiating light",
+    "effect": "Gain advantage on all saving throws and attack rolls for one ally until the start of your next turn, as if touched by the Sword in the Stone ⚔️",
+    "used": []
+  },
+  {
+    "name": "Arthur’s Ward",
+    "depiction": "A knight standing before a castle gate with a glowing sword",
+    "effect": "Grant an ally a protective ward that absorbs [[2d6+your proficiency bonus]] damage before breaking, lasting 10 minutes ⚔️",
+    "used": []
+  },
+  {
+    "name": "Chivalric Ward",
+    "depiction": "A shining knight's gauntlet glowing with a sapphire light",
+    "effect": "Grant an ally the ability to reroll one failed saving throw until your next turn, must be used before the end of their next turn 🔷",
+    "used": []
+  },
+  {
+    "name": "Valiant's Grace",
+    "depiction": "A shining knight helping a wounded comrade rise",
+    "effect": "Grant an ally within 30 feet a burst of vigor, restoring [[1d8+4]] HP and giving advantage on their next attack or saving throw 🏇",
+    "used": []
+  },
+  {
+    "name": "King's Vow",
+    "depiction": "A majestic knight swearing fealty before a throne",
+    "effect": "Grant an ally your unwavering protection: they gain advantage on all saving throws and resistance to all damage until the start of your next turn 🤴",
+    "used": []
+  },
+  {
+    "name": "Lancaster’s Boon",
+    "depiction": "A golden knight holding a glowing lance",
+    "effect": "Grant one ally within 30 feet a bonus to damage rolls equal to your proficiency bonus for one minute and they emit bright light in a 10-foot radius while the effect lasts 🌟",
+    "used": []
+  },
+  {
+    "name": "Street Vigil",
+    "depiction": "A city guard calmly standing watch under a lantern",
+    "effect": "Grants an ally within 30 feet a +2 bonus to AC and resistance to all damage from creatures of CR less than or equal to your character level for 1 minute 🛡️",
+    "used": []
+  },
+  {
+    "name": "Arthur’s Aegis",
+    "depiction": "An ornate shield bearing the emblem of a lion",
+    "effect": "Grants one ally a +2 bonus to AC and immunity to the frightened condition for 1 minute, or until they drop below half their max HP 🦁",
+    "used": []
+  },
+  {
+    "name": "Grail Blessing",
+    "depiction": "A shining chalice glowing with radiant light",
+    "effect": "Heal one ally for [[2d8+4]] HP and grant them temporary hit points equal to your level for 1 minute ✨",
+    "used": []
+  },
+  {
+    "name": "Noble Steed",
+    "depiction": "A majestic horse armored for war",
+    "effect": "Once per long rest, grant an ally within 30 feet a magical mount that appears under their control for 10 minutes, granting +10 speed and advantage on saving throws against being frightened 🐎",
+    "used": []
+  },
+  {
+    "name": "Streetlight Protector",
+    "depiction": "A knight standing in a dim street, warding off shadowy figures",
+    "effect": "Once per long rest, you can grant one ally within 30 feet the ability to impose disadvantage on attack rolls against any creature smaller than themselves until your next turn ends 🚶",
+    "used": []
+  },
+  {
+    "name": "Knight's Resolve",
+    "depiction": "A knight kneeling in prayer holding a sword planted in the ground",
+    "effect": "Once per short rest, you can grant one ally within 30 feet advantage on their next saving throw and resistance to all damage until the end of their next turn ✨",
+    "used": []
+  },
+  {
+    "name": "Ironclad Oath",
+    "depiction": "A knight clasping hands with an elderly villager in solemn vow",
+    "effect": "One ally becomes immune to being frightened and charmed for 1 hour and gains +2 to all saving throws against mind-affecting effects 🦾",
+    "used": []
+  },
+  {
+    "name": "Knight’s Aegis",
+    "depiction": "A knight lifting a shining shield against incoming arrows",
+    "effect": "One ally gains a magical shield that absorbs up to [[2d8+4]] damage before breaking, lasting 1 minute 🛡️",
+    "used": []
+  },
+  {
+    "name": "Shieldbearer's Resolve",
+    "depiction": "A knight raising their shield deflecting arrows",
+    "effect": "One ally gains resistance to nonmagical bludgeoning, piercing, and slashing damage for 1 minute 🛡️",
+    "used": []
+  },
+  {
+    "name": "Lionheart's Grace",
+    "depiction": "A lion-headed knight shining with golden light",
+    "effect": "One ally gains temporary HP equal to your proficiency bonus + [[1d8]] and can add that bonus to their next damage roll before the end of their next turn 🦁",
+    "used": []
+  },
+  {
+    "name": "Chivalrous Ward",
+    "depiction": "A shining shield emblazoned with a lion, glowing with holy light",
+    "effect": "One ally of your choice gains a ward that absorbs up to [[3d6 + your charisma modifier]] damage for 1 minute and grants advantage on saving throws against being frightened or charmed 🦁",
+    "used": []
+  },
+  {
+    "name": "Gallant Step",
+    "depiction": "A knight charging forward on horseback",
+    "effect": "One ally within 30 feet can immediately move up to their speed without provoking opportunity attacks and gains +5 to their next damage roll ⚡",
+    "used": []
+  },
+  {
+    "name": "King's Command",
+    "depiction": "A regal knight with a glowing crown issuing orders",
+    "effect": "One ally within 30 feet can immediately use their reaction to move up to half their speed and make one weapon attack 🏰",
+    "used": []
+  },
+  {
+    "name": "Radiant Oath",
+    "depiction": "A knight kneeling with sword planted, sunlight streaming down",
+    "effect": "One ally within 30 feet gains a bonus to saving throws and spell attack rolls equal to your proficiency bonus for 1 minute ✨",
+    "used": []
+  },
+  {
+    "name": "Templar’s Resolve",
+    "depiction": "A stoic knight clad in shining armor amidst a battlefield",
+    "effect": "One ally within 30 feet gains resistance to all damage types until the start of your next turn and can immediately use their reaction to move up to their speed without provoking opportunity attacks ✨",
+    "used": []
+  },
+  {
+    "name": "Arthur’s Blessing",
+    "depiction": "A regal knight holding a glowing sword over a kneeling squire",
+    "effect": "One ally’s weapon attacks deal an additional [[1d8+your spellcasting modifier]] radiant damage for the next minute 🗡️",
+    "used": []
+  },
+  {
+    "name": "Urban Guardian",
+    "depiction": "A knight in simple armor shielding a busy street",
+    "effect": "Protect one ally within 30 feet: they gain +2 AC and have resistance to all damage for 1 minute, after which they cannot be healed below half their max HP for 10 minutes 🛡️",
+    "used": []
+  },
+  {
+    "name": "Streetwarden's Guard",
+    "depiction": "A plain-clothed knight standing watch over a dark alley",
+    "effect": "Protects an ally by granting them +2 AC and resistance to non-magical bludgeoning, piercing, and slashing damage for 10 minutes 🛡️",
+    "used": []
+  },
+  {
+    "name": "Arthurian Oath",
+    "depiction": "A knight kneeling before a shining sword in a stone",
+    "effect": "Select an ally within 30 feet who may add [[2d6]] to any one saving throw or attack roll they make within the next minute, once 🗡️",
+    "used": []
+  },
+  {
+    "name": "Valiant's Guard",
+    "depiction": "A knight in shining armor standing before a small child",
+    "effect": "Select an ally within 30 feet. They gain temporary hit points equal to [[1d10 + your proficiency modifier]] and cannot be frightened for 1 minute 👊",
+    "used": []
+  },
+  {
+    "name": "Steed of the Protector",
+    "depiction": "A barded warhorse standing strong and stalwart",
+    "effect": "Summon a spectral warhorse that carries one ally within 30 feet to a new position up to 40 feet away and grants them advantage on their next melee attack as the steed inspires their courage 🐎",
+    "used": []
+  },
+  {
+    "name": "Chivalric Charge",
+    "depiction": "A mounted knight charging into battle with banner held high",
+    "effect": "Target ally can immediately use their reaction to move up to half their speed without provoking opportunity attacks and gains +2 to damage on their next weapon attack ⚔️",
+    "used": []
+  },
+  {
+    "name": "Stalwart Step",
+    "depiction": "A knight stepping confidently through a battlefield",
+    "effect": "Target ally can move up to their speed without provoking opportunity attacks before the end of your next turn 🐎",
+    "used": []
+  },
+  {
+    "name": "Armor of the Valiant",
+    "depiction": "A shining knight raising a gleaming shield",
+    "effect": "Target ally gains +3 AC and advantage on saving throws against being frightened for 1 minute 🛡️",
+    "used": []
+  },
+  {
+    "name": "Shieldbearer's Embrace",
+    "depiction": "A knight holding a large shield, protecting a fallen comrade",
+    "effect": "Target ally gains +3 AC and cannot be knocked prone or moved against their will until your next turn ends 🛡️",
+    "used": []
+  },
+  {
+    "name": "Valiant Lance",
+    "depiction": "A shining lance glowing with righteous light",
+    "effect": "Target ally gains a +2 bonus to attack rolls and saving throws for 1 minute, and their first melee hit deals an extra [[1d8 + your spellcasting modifier]] radiant damage ⚔️",
+    "used": []
+  },
+  {
+    "name": "Oathbound Shield",
+    "depiction": "A knight holding a shield engraved with a lion",
+    "effect": "Target ally gains a +3 bonus to AC and cannot be knocked prone for 1 minute 🦁",
+    "used": []
+  },
+  {
+    "name": "Valor's Embrace",
+    "depiction": "A knight in shining armor wrapping a glowing cloak around a grateful villager",
+    "effect": "Target ally gains advantage on all saving throws and resistance to all damage types until the start of your next turn 🛡️",
+    "used": []
+  },
+  {
+    "name": "Lionheart’s Grace",
+    "depiction": "A radiant knight with a lion-shaped shield",
+    "effect": "Target ally gains advantage on all saving throws and resistance to damage until the start of your next turn 🦁",
+    "used": []
+  },
+  {
+    "name": "Knight's Valor",
+    "depiction": "A shining knight raising his sword toward the sky",
+    "effect": "Target ally gains advantage on attack rolls and saving throws until the end of your next turn ⚔️",
+    "used": []
+  },
+  {
+    "name": "Valiant's Boon",
+    "depiction": "A knight kneeling before a squire, bestowing a glowing sigil",
+    "effect": "Target ally gains Advantage on attack rolls and saving throws until the start of your next turn ⚔️",
+    "used": []
+  },
+  {
+    "name": "Lionheart's Boon",
+    "depiction": "A shining knight with a lion crest on his shield",
+    "effect": "Target ally gains advantage on attack rolls and saving throws until the start of your next turn 🦁",
+    "used": []
+  },
+  {
+    "name": "Knight’s Resilience",
+    "depiction": "A knight standing tall despite visible wounds",
+    "effect": "Target ally gains advantage on death saving throws and regains [[2d6]] HP at the start of their next turn ❤️",
+    "used": []
+  },
+  {
+    "name": "Lionheart's Resolve",
+    "depiction": "A knight with a glowing lion crest on his shield",
+    "effect": "Target ally gains advantage on saving throws and all attack rolls until the start of your next turn 🦁",
+    "used": []
+  },
+  {
+    "name": "Knight’s Resolve",
+    "depiction": "A knight gripping the hilt of their sword with determination",
+    "effect": "Target ally gains temporary hit points equal to [[1d12+your level]] and has advantage on saving throws against charm and fear effects for 10 minutes 💪",
+    "used": []
+  },
+  {
+    "name": "Last Stand of the Squire",
+    "depiction": "A young squire stands defiantly in front of a heavy adversary",
+    "effect": "Target ally gains temporary hit points equal to [[2d6+ your level]] and can impose disadvantage on one attack roll made against them before the end of your next turn 🛡️",
+    "used": []
+  },
+  {
+    "name": "Street Knight's Grace",
+    "depiction": "A humble armored figure helping a child cross a busy road",
+    "effect": "Target ally gains the ability to move without provoking opportunity attacks and has advantage on Dexterity saving throws for 1 minute 🚶‍♂️",
+    "used": []
+  },
+  {
+    "name": "Cloak of the White Hart",
+    "depiction": "A knight draped in a white stag cloak, shadows recede around them",
+    "effect": "Target ally has advantage on Stealth checks and gains +5 to Dexterity saving throws until the end of your next turn 🦌",
+    "used": []
+  },
+  {
+    "name": "Street Knight's Blessing",
+    "depiction": "A humble knight offering a glowing shield to a commoner",
+    "effect": "Target ally within 30 feet can roll a d20 and add your proficiency bonus to one saving throw before the end of their next turn, choosing the moment to do so after seeing the roll 🎲",
+    "used": []
+  },
+  {
+    "name": "Valor's Grace",
+    "depiction": "A glowing knight’s helm hovering above an outstretched hand",
+    "effect": "Target ally within 30 feet gains temporary HP equal to [[2d8 + your proficiency bonus]] and can add a +2 bonus to one saving throw they make before your next turn 🛡️",
+    "used": []
+  },
+  {
+    "name": "Sword of the Just",
+    "depiction": "Excalibur gleaming with righteous light",
+    "effect": "Target ally’s melee attacks deal an extra [[1d8]] radiant damage for 1 minute, and on a critical hit this effect stuns the target until the end of their next turn ⚔️",
+    "used": []
+  },
+  {
+    "name": "Paragon's Grace",
+    "depiction": "A shining knight bestowing a blessing",
+    "effect": "Target ally’s movement speed doubles and they gain temporary HP equal to your level for 1 minute 🏇",
+    "used": []
+  },
+  {
+    "name": "Excalibur’s Blessing",
+    "depiction": "A shining sword embedded in a stone",
+    "effect": "Target ally’s weapon attacks deal an additional [[1d8]] radiant damage for the next minute ⚔️",
+    "used": []
+  },
+  {
+    "name": "Arthur’s Boon",
+    "depiction": "A regal knight holding Excalibur aloft, light streaming down",
+    "effect": "Target ally’s weapon attacks deal an extra [[1d6]] radiant damage and they have resistance to fear effects for 1 minute ⚔️",
+    "used": []
+  },
+  {
+    "name": "King Arthur's Blessing",
+    "depiction": "A regal knight placing Excalibur into the stone, light radiating",
+    "effect": "Target ally's weapon attacks score a critical hit on a 19 or 20 for the next minute 👑",
+    "used": []
+  },
+  {
+    "name": "Lance of Valor",
+    "depiction": "A shining lance held aloft by a charging knight",
+    "effect": "Target one ally who hits an enemy this round",
+    "used": []
+  },
+  {
+    "name": "Oathkeeper's Blessing",
+    "depiction": "A knight swearing an oath with sword on a stone",
+    "effect": "The ally gains a +1 bonus to attack rolls, damage rolls, and saving throws for 10 minutes or until they deal damage to a creature that isn’t hostile 🛡️",
+    "used": []
+  },
+  {
+    "name": "Arthur's Blessing",
+    "depiction": "A shining knight with a luminous crown",
+    "effect": "The chosen ally gains advantage on all attack rolls and saving throws until the end of their next turn ⚔️",
+    "used": []
+  },
+  {
+    "name": "Silver Lance",
+    "depiction": "A shining lance glowing with mystical light",
+    "effect": "The next time an ally hits with a melee attack, it deals an additional [[2d6]] radiant damage and knocks the target prone if it fails a Strength save DC 13 ⚡",
+    "used": []
+  },
+  {
+    "name": "Gallant Surge",
+    "depiction": "A knight charging forward with lance and shield",
+    "effect": "The selected ally moves up to their speed instantly and gains temporary HP equal to your level + [[1d8]], lasting 1 minute 🚀",
+    "used": []
+  },
+  {
+    "name": "Vigilant Charge",
+    "depiction": "A mounted knight charging forward with lance lowered",
+    "effect": "The targeted ally gains a bonus to their next melee attack equal to your proficiency bonus and their movement speed increases by 10 feet until the end of their next turn 🐎",
+    "used": []
+  },
+  {
+    "name": "King Arthur's Guard",
+    "depiction": "A legendary knight standing with Excalibur raised high",
+    "effect": "Until the end of your next turn, the chosen ally’s attacks deal an extra [[1d12]] radiant damage and they gain advantage on saving throws against charm and fear effects ✨",
+    "used": []
+  },
+  {
+    "name": "Arthurian Guard",
+    "depiction": "A regal knight in shining armor stands before a crowd of commoners",
+    "effect": "Until the end of your next turn, you and all allies within 30 feet gain +2 AC, and any attack targeting them has disadvantage as you take the blow instead 🏰",
+    "used": []
+  },
+  {
+    "name": "Bulwark of the Fallen",
+    "depiction": "An armored knight shielding a wounded comrade from arrows",
+    "effect": "Until the start of your next turn, choose one ally: damage dealt to them is reduced by [[2d8]] and they regain [[1d6 + your level]] HP 🛡️",
+    "used": []
+  },
+  {
+    "name": "Steadfast Protector",
+    "depiction": "A knight standing firm against a charging enemy",
+    "effect": "Until the start of your next turn, the target ally has advantage on death saving throws and cannot be moved against their will 🚩",
+    "used": []
+  },
+  {
+    "name": "Gallant Parry",
+    "depiction": "A knight skillfully deflecting an arrow with a shining blade",
+    "effect": "When an ally within 30 feet is hit by an attack, you can use your reaction to reduce the damage taken by [[1d10+your spellcasting modifier]] 🛡️",
+    "used": []
+  },
+  {
+    "name": "King's Vigil",
+    "depiction": "A regal knight with a glowing crown",
+    "effect": "You and all allies within 30 feet gain +1 AC and advantage on Wisdom saving throws for 1 minute 👑",
+    "used": []
+  },
+  {
+    "name": "Loyal Charger",
+    "depiction": "A knight on a steed rushing forward with banner unfurled",
+    "effect": "You and one ally within 30 feet each gain +10 feet movement and advantage on opportunity attack rolls until the end of your next turn 🐎",
+    "used": []
+  },
+  {
+    "name": "Chivalrous Charge",
+    "depiction": "A knight on horseback charging with lance lowered",
+    "effect": "You and target ally both gain +10 feet movement and advantage on your next melee attack within 1 minute 🐎",
+    "used": []
+  },
+  {
+    "name": "Chivalric Grace",
+    "depiction": "A knight kneeling to offer mercy to a foe's fallen friend",
+    "effect": "You can remove one condition (such as frightened or stunned) from one ally within 30 feet, cleansing their spirit with the nobility of chivalry ✨",
+    "used": []
+  },
+  {
+    "name": "Lantern of the Lost",
+    "depiction": "A knight holding a glowing lantern in a dark alley",
+    "effect": "You cast this lantern's light on one ally within 30 feet, granting them truesight out to 60 feet and advantage on Stealth checks for 10 minutes 🕯️",
+    "used": []
+  },
+  {
+    "name": "Shieldbearer’s Oath",
+    "depiction": "A knight guarding a commoner from a shadowy threat",
+    "effect": "You grant an ally within 30 feet a shield. Until the start of your next turn, the ally gains +2 AC and any damage they take over [[5 + your spellcasting modifier]] is reflected back to the attacker 🛡️",
+    "used": []
+  },
+  {
+    "name": "Excalibur's Boon",
+    "depiction": "A gleaming sword with runes glowing along its blade",
+    "effect": "You grant an ally within 30 feet advantage on their next attack roll and add [[1d8+2]] radiant damage to the hit ⚔️",
+    "used": []
+  },
+  {
+    "name": "Guardian's Step",
+    "depiction": "A knight stepping firmly forward, blocking a path",
+    "effect": "You grant one ally the ability to move without provoking opportunity attacks for their next turn and gain +2 to AC until then 👣",
+    "used": []
+  },
+  {
+    "name": "Lantern of Valor",
+    "depiction": "A glowing lantern held high by a knight",
+    "effect": "You grant one ally within 30 feet advantage on attack rolls and saving throws until the end of their next turn, and their weapon attacks deal an additional [[1d6]] radiant damage 💡",
+    "used": []
+  },
+  {
+    "name": "Guardian of the Poor",
+    "depiction": "A knight kneeling before a group of street children, offering a loaf of bread",
+    "effect": "You grant one ally within 30 feet the benefits of the *spare the dying* cantrip at will for 1 minute and disadvantage on attack rolls against any ally with less than half max HP ⚔️",
+    "used": []
+  },
+  {
+    "name": "Loyal Steed",
+    "depiction": "A noble horse shining under a sunlit sky",
+    "effect": "You summon a spectral steed that follows an ally, granting them advantage on movement speed checks and saving throws against being restrained or knocked prone for 10 minutes 🐴",
+    "used": []
   }
 ]

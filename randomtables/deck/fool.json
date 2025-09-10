@@ -190,5 +190,905 @@
     "depiction": "",
     "effect": "",
     "used": []
+  },
+  {
+    "name": "Chaos Ballad",
+    "depiction": "A swirling mass of musical notes floating in the air",
+    "effect": "For 5 minutes, all creatures within one mile experience random emotional surges, gaining disadvantage on Insight checks and advantage on Persuasion checks 🔀",
+    "used": []
+  },
+  {
+    "name": "Jester's Gambit",
+    "depiction": "A colorful jester juggling glowing orbs",
+    "effect": "For 1 minute, creatures within one mile must succeed on a DC [[14+d4]] Wisdom save at the start of their turn or be afflicted by the confused condition until their next turn 🤡",
+    "used": []
+  },
+  {
+    "name": "Harlequin's Mirage",
+    "depiction": "A dancing clown surrounded by flickering lights",
+    "effect": "For 1 hour, illusions fill the area within one mile, causing all enemy creatures to suffer disadvantage on attack rolls unless they succeed on a DC [[13+d8]] Intelligence save 🎭",
+    "used": []
+  },
+  {
+    "name": "Patchwork Reality",
+    "depiction": "A quilt made of shifting fabrics and colors",
+    "effect": "For 10 minutes, all terrain within one mile is distorted, causing all cover to shift randomly at the start of each round, and creatures must succeed on a DC [[15+d6]] Dexterity save to avoid falling prone when moving 📍",
+    "used": []
+  },
+  {
+    "name": "Whispering Wind",
+    "depiction": "A swirling gust with tiny glowing whispers",
+    "effect": "All sounds within a mile are carried invisibly and indistinctly, causing disadvantage on Perception checks relying on sound for 30 minutes 🌬️",
+    "used": []
+  },
+  {
+    "name": "Luck’s Pendulum",
+    "depiction": "A swinging pendulum with shifting symbols",
+    "effect": "For 10 minutes, all attack rolls and saving throws by creatures within a mile have advantage or disadvantage, decided randomly each round by a coin flip 🎲",
+    "used": []
+  },
+  {
+    "name": "Jester's Folly",
+    "depiction": "A colorful jester dangling from a crescent moon",
+    "effect": "For 1 hour, all creatures within a mile radius must make a DC [[15]] Wisdom save at the start of their turn or act as if under the confusion spell for that turn 🤡",
+    "used": []
+  },
+  {
+    "name": "Fool’s Gambit",
+    "depiction": "A playing card with a smiling skull",
+    "effect": "Until the card bearer loses concentration, all spells cast within a mile radius have their effects randomly swapped with another spell of equal level happening simultaneously 🔄",
+    "used": []
+  },
+  {
+    "name": "Harlequin’s Grin",
+    "depiction": "A grinning mask with sharp teeth",
+    "effect": "For 1 minute, creatures within a mile radius compelled to laugh uncontrollably, each losing one action per turn unless they succeed a DC [[14]] Charisma save 😂",
+    "used": []
+  },
+  {
+    "name": "Jester's Chuckle",
+    "depiction": "A grinning clown juggling glowing orbs",
+    "effect": "For 1 hour, any creature within one mile that attempts an attack roll or saving throw must succeed on a DC [[15+d4]] Wisdom save or the result is treated as a natural 1 🤡",
+    "used": []
+  },
+  {
+    "name": "Crowd's Whimsy",
+    "depiction": "A crowd of laughing faces blending into the mist",
+    "effect": "For 10 minutes, all creatures within one mile ignore social cues and react only with laughter or tears, imposing disadvantage on Charisma checks 😢😂",
+    "used": []
+  },
+  {
+    "name": "Fool's Gambit",
+    "depiction": "A deck of cards scattered in midair",
+    "effect": "Shuffle this card into the deck—once per day, the next card drawn from any deck has its effect doubled or reversed, chosen at random 🎲",
+    "used": []
+  },
+  {
+    "name": "Pandemonium's Veil",
+    "depiction": "A swirling rainbow storm enveloping a village",
+    "effect": "For 5 minutes, weather and natural phenomena behave unpredictably within one mile: rain falls upwards, fire burns cold, and animals speak gibberish 🌈",
+    "used": []
+  },
+  {
+    "name": "King of Jesters",
+    "depiction": "A crowned clown sitting on a throne of cards",
+    "effect": "You may command one target within one mile to perform a harmless but humiliating act (DC [[14+d6]] Wisdom save to resist) once per hour",
+    "used": []
+  },
+  {
+    "name": "Pandemonium Pulse",
+    "depiction": "A swirling vortex of multicolored light",
+    "effect": "Unleash chaotic energy in a 1-mile radius that causes all spells cast to have wild surges: roll [[d20]] on the Wild Magic Surge table for each spell cast in the area in the next 10 minutes 🌀",
+    "used": []
+  },
+  {
+    "name": "Fool's Fortune",
+    "depiction": "A tattered deck of cards spilling glowing coins",
+    "effect": "Each creature within one mile must roll a d20 and either gain advantage or disadvantage on the next roll or save they make within the next hour (determined randomly by the DM) 🎲",
+    "used": []
+  },
+  {
+    "name": "Mirror of Misstep",
+    "depiction": "A cracked hand mirror showing distorted reflections",
+    "effect": "For 10 minutes, all ranged attacks within one mile have their targets swapped randomly among creatures in the radius, including the attacker’s own allies 🎯",
+    "used": []
+  },
+  {
+    "name": "Laughing Mask",
+    "depiction": "A grinning theatrical mask radiating chaotic energy",
+    "effect": "For 1 minute, all creatures within one mile are overcome with uncontrollable laughter, becoming incapacitated and unable to take actions unless they succeed on a DC [[14]] Constitution save 😂",
+    "used": []
+  },
+  {
+    "name": "Clown’s Chaos",
+    "depiction": "A painted clown face with a wide grin",
+    "effect": "For 10 minutes, all ranged attacks within one mile have their damage dice rolled upside down (e.g., a 6 counts as 1, 5 as 2, etc.) 🎭",
+    "used": []
+  },
+  {
+    "name": "Fool’s Fortune",
+    "depiction": "A tattered card displaying a smiling fool",
+    "effect": "Once pulled, roll [[1d20]] to determine a random beneficial or harmful effect within one mile lasting 5 minutes (effects range from sudden gusts of wind, random teleportations, to bursts of inspiration granting advantage on skill checks) 🎲",
+    "used": []
+  },
+  {
+    "name": "Mirror of Mirth",
+    "depiction": "A hand mirror reflecting a weeping clown",
+    "effect": "All creatures within one mile must succeed on a DC [[13+d6]] Charisma saving throw or begin uncontrollably laughing for 1 minute, incapacitated and unable to take actions 😂",
+    "used": []
+  },
+  {
+    "name": "Card of the Balancing Trick",
+    "depiction": "A jester juggling glowing orbs",
+    "effect": "For 10 minutes, all creatures within one mile must reroll one attack or saving throw of their choice and take the second result instead 🃏",
+    "used": []
+  },
+  {
+    "name": "Jester’s Gambit",
+    "depiction": "A colorful clown flipping a coin",
+    "effect": "The card user can choose one minute during the day to cause a random beneficial or harmful effect affecting all creatures within one mile, determined by rolling a d6: 1-2 = healing [[2d8]] HP, 3-4 = poison condition, 5 = gain advantage on all saves, 6 = disadvantage on all attacks 🤡",
+    "used": []
+  },
+  {
+    "name": "Fool’s Mirage",
+    "depiction": "A blurry, shifting figure dancing on a hill",
+    "effect": "For 10 minutes, visibility within one mile is halved and all ranged attacks beyond 30 feet have disadvantage as the environment flickers and shifts like a mirage 🌫",
+    "used": []
+  },
+  {
+    "name": "Laughing Shadows",
+    "depiction": "A group of shadowy figures laughing and pointing",
+    "effect": "For 5 minutes, all enemies in the radius have disadvantage on attack rolls as unseen laughter distracts them, but allies suffer disadvantage on Stealth checks due to the same laughter 🗣️",
+    "used": []
+  },
+  {
+    "name": "Cacophony of Chaos",
+    "depiction": "A horn blowing clouds of vibrant smoke",
+    "effect": "For 10 minutes, all sound within one mile is distorted causing disadvantage on Perception checks relying on hearing and all verbal spell components have a 50% chance to fail 🔊",
+    "used": []
+  },
+  {
+    "name": "Fool's Luck",
+    "depiction": "A smiling clown flipping a coin",
+    "effect": "Once drawn, the next roll made by any creature within one mile is made with advantage, but after that roll, that creature must succeed on a DC [[15]] Wisdom save or become confused (as the confusion spell) for 1d4 rounds 🎲",
+    "used": []
+  },
+  {
+    "name": "Mirror Mask",
+    "depiction": "A smiling mask split into light and shadow halves",
+    "effect": "For 30 minutes, everyone within a one mile radius swaps appearances randomly, forcing all social checks to be made with disadvantage due to identity confusion 😵",
+    "used": []
+  },
+  {
+    "name": "Carnival of Misrule",
+    "depiction": "A chaotic parade of masked figures and fireworks",
+    "effect": "For 1 hour, all unexplained magical effects within one mile become wild surges, triggering random wild magic effects when a spell is cast or magical ability used 🎆",
+    "used": []
+  },
+  {
+    "name": "Circle of Chaos",
+    "depiction": "A swirling vortex of multicolored smoke",
+    "effect": "For 10 minutes, the environment within one mile becomes wildly unpredictable—dice rolls for movement, damage, or perception checks are all made with disadvantage or advantage, chosen randomly by the DM 🎲",
+    "used": []
+  },
+  {
+    "name": "Mirror Masquerade",
+    "depiction": "A mask with changing faces",
+    "effect": "For 30 minutes, everyone within one mile has their appearance altered randomly each hour, causing confusion and potential social advantage or disadvantage 🪞",
+    "used": []
+  },
+  {
+    "name": "Moonlit Masquerade",
+    "depiction": "A masked ball under a full moon",
+    "effect": "For 30 minutes, everyone within 1 mile gains the effects of Disguise Self altering appearance unpredictably every 10 minutes, causing confusion and mistaken identity 🎭",
+    "used": []
+  },
+  {
+    "name": "Wild Card Gambit",
+    "depiction": "A card burning on one end and freezing on the other",
+    "effect": "Roll a d4: 1-cold snap, area within 1 mile takes [[2d8]] cold damage and movement halved",
+    "used": []
+  },
+  {
+    "name": "Chaos Jester",
+    "depiction": "A mischievous jester juggling glowing orbs",
+    "effect": "For 1 hour, all creatures within 1 mile must succeed a DC [[15]] Wisdom saving throw or behave as if affected by the Confusion spell, shifting randomly between friend and foe 🤡",
+    "used": []
+  },
+  {
+    "name": "Grinning Harlequin",
+    "depiction": "A clown’s face painted with an eerie grin",
+    "effect": "For 10 minutes, all attacks within 1 mile have a 25% chance to instead heal the target for [[1d8+3]] hit points rather than deal damage 🤡",
+    "used": []
+  },
+  {
+    "name": "Fool’s Lottery",
+    "depiction": "A chaotic lottery wheel with colorful numbers",
+    "effect": "Each creature within 1 mile rolls either one boon or one bane condition determined by a coin flip—heads grants advantage on next ability check, tails imposes disadvantage on next save 🎲",
+    "used": []
+  },
+  {
+    "name": "The Jester’s Jest",
+    "depiction": "A grinning jester juggling colorful orbs",
+    "effect": "For 1 hour, all creatures within one mile must succeed on a DC [[15]] Wisdom saving throw or uncontrollably laugh, becoming incapacitated and unable to take reactions for 1d4 rounds 🤡",
+    "used": []
+  },
+  {
+    "name": "Chaos Carnival",
+    "depiction": "A swirling carnival tent appearing in a forest clearing",
+    "effect": "For 10 minutes, the terrain and obstacles within one mile shift randomly every minute, creating confusing and shifting cover and hazards for all creatures 🎪",
+    "used": []
+  },
+  {
+    "name": "Mirror of Madness",
+    "depiction": "A hand mirror reflecting distorted faces",
+    "effect": "Creatures within one mile perceive allies as enemies and vice versa for 10 minutes, requiring DC [[14]] Charisma saves to act normally 🪞",
+    "used": []
+  },
+  {
+    "name": "Prankster’s Wind",
+    "depiction": "A swirling gust carrying colorful ribbons and noises",
+    "effect": "For 1 hour, sound travels backward and speech reversed in meaning within one mile",
+    "used": []
+  },
+  {
+    "name": "Jester’s Mirage",
+    "depiction": "A whimsical jester with shifting, blurred colors",
+    "effect": "For 1 hour, within a 1-mile radius, all creatures must roll a DC [[15+d4]] Wisdom save or see illusions of harmless pranks and tricks causing disadvantage on Perception checks and ranged attacks 🤡",
+    "used": []
+  },
+  {
+    "name": "Whimsy’s Gambit",
+    "depiction": "A colorful wheel spinning wildly",
+    "effect": "For 10 minutes, anyone who enters the 1-mile radius must make a DC [[13+d6]] Dexterity saving throw or randomly teleport within the area, determined by [[1d20]] feet in a random direction 🔄",
+    "used": []
+  },
+  {
+    "name": "Chaos Bell",
+    "depiction": "A cracked handbell emitting shimmering sparks",
+    "effect": "Rings the bell to cause natural terrain in the 1-mile radius to randomly shift and change, creating difficult terrain zones for 10 minutes 🌪️",
+    "used": []
+  },
+  {
+    "name": "Broken Mirror Laugh",
+    "depiction": "A shattered carnival mirror reflecting distorted faces",
+    "effect": "For 30 minutes, creatures in the 1-mile radius hear indistinct laughter that imposes disadvantage on Stealth checks and causes disadvantage on saving throws against being frightened 😈",
+    "used": []
+  },
+  {
+    "name": "Fools’ Feast",
+    "depiction": "A table set with feast that never ends",
+    "effect": "During 1 hour in the 1-mile radius, all food and drink provide double the benefits, but all healing spells have a 50% chance to either heal or harm an equal amount ❤",
+    "used": []
+  },
+  {
+    "name": "Court Jester's Revel",
+    "depiction": "A colorful jester juggling glowing orbs",
+    "effect": "For 1 hour, all creatures within one mile must succeed on a DC [[14+d4]] Wisdom save at the start of each turn or be compelled to perform a random silly action (laugh, dance, or tell jokes) for that turn 🤡",
+    "used": []
+  },
+  {
+    "name": "Pandemonium Burst",
+    "depiction": "A chaotic explosion of multicolored lights in a swirling storm",
+    "effect": "Upon drawing, creatures within one mile gain advantage on attack rolls but also suffer disadvantage on saving throws for 1 minute 🌪",
+    "used": []
+  },
+  {
+    "name": "Fool's Mirage",
+    "depiction": "A large, shimmering illusion of a laughing fool that shifts and warps",
+    "effect": "The environment within one mile appears warped and transformed as if a carnival has sprung up",
+    "used": []
+  },
+  {
+    "name": "Whispering Madness",
+    "depiction": "A swirling mass of colorful, whispering smoke",
+    "effect": "All creatures within one mile must succeed on a DC [[15+d6]] Intelligence saving throw or be affected by short-term madness for 1 minute 🤯",
+    "used": []
+  },
+  {
+    "name": "Chaos Breeze",
+    "depiction": "A swirling vortex of multicolored leaves and sparks",
+    "effect": "For 10 minutes, random minor wild magic surges occur within 1 mile: roll a d8 each round for a random effect such as teleportation, bursts of fire, or strange illusions (effects vary and are DM determined) 🌪️",
+    "used": []
+  },
+  {
+    "name": "Laughing Glass",
+    "depiction": "A cracked mirror with a clown’s wide grin etched into it",
+    "effect": "All creatures within 1 mile hear uncontrollable laughter causing disadvantage on Stealth and Sleight of Hand checks and grants advantage on Deception and Performance checks for 10 minutes 🤡",
+    "used": []
+  },
+  {
+    "name": "Harlequin’s Folly",
+    "depiction": "A painted wooden mask with a mischievous smile",
+    "effect": "For 5 minutes, creatures within 1 mile swap alignment traits randomly (e.g., lawful to chaotic)",
+    "used": []
+  },
+  {
+    "name": "Moonlit Madness",
+    "depiction": "A pale moon illuminating a twisted forest",
+    "effect": "Within one mile, creatures must succeed on a DC [[12+d6]] Wisdom Save or begin acting mad for 1 minute 🌙",
+    "used": []
+  },
+  {
+    "name": "Rogue’s Laughter",
+    "depiction": "A grinning clown mask dripping with painted tears",
+    "effect": "Within one mile for 5 minutes, all creatures hear uncontrollable laughter, granting all saving throws disadvantage but advantage on saving throws against being frightened 🤡",
+    "used": []
+  },
+  {
+    "name": "Pendulum Paradox",
+    "depiction": "A silver pendulum swinging wildly in swirling mist",
+    "effect": "For 1 minute, time flows erratically within one mile—initiative orders are reversed and all speed is halved or doubled (determined by a coin flip) each round ⏳",
+    "used": []
+  },
+  {
+    "name": "Mask of the Merry Prankster",
+    "depiction": "A porcelain mask with a mischievous smile",
+    "effect": "Within 1 mile, all illusions and misleading effects are tripled in duration or range, but all healing effects on allies are halved for 5 minutes 🎭",
+    "used": []
+  },
+  {
+    "name": "Fool's Boon",
+    "depiction": "A hand of playing cards sparkling with light",
+    "effect": "For 10 minutes, all allies in 1 mile regain [[1d4+2]] hit points at the start of their turn while enemies lose [[1d4]] hit points instead 💫",
+    "used": []
+  },
+  {
+    "name": "Mirror Maze",
+    "depiction": "A twisted carnival mirror showing multiple versions of the viewer",
+    "effect": "For 10 minutes, illusions of the drawer appear and move randomly within 1 mile, distracting enemies and granting advantage on stealth checks to allies within range 👥",
+    "used": []
+  },
+  {
+    "name": "Whimsy Wind",
+    "depiction": "A swirling gust carrying multi-colored leaves and petals",
+    "effect": "A chaotic wind affects a 1-mile radius for 5 minutes, causing all ranged weapon attacks to have disadvantage and spells with the range over 30 feet to have a 50% chance to fail 🌬️",
+    "used": []
+  },
+  {
+    "name": "Clown’s Merriment",
+    "depiction": "A clown’s oversized red nose glowing brightly",
+    "effect": "For 1 hour, creatures within 1 mile who fail a DC [[14]] Wis save burst into uncontrollable laughter when trying to speak, disabling verbal spell components and social interaction 🤡",
+    "used": []
+  },
+  {
+    "name": "Chaos Veil",
+    "depiction": "A swirling mist of shifting colors",
+    "effect": "For 10 minutes, all ranged attack rolls made within 1 mile are made at disadvantage due to erratic magical interference 🌪️",
+    "used": []
+  },
+  {
+    "name": "Jester's Jest",
+    "depiction": "A grinning clown juggling colorful balls",
+    "effect": "For 1 minute, creatures within 1 mile must succeed on a DC [[15]] Wisdom save or break into uncontrollable laughter, becoming incapacitated and unable to take actions for 1 round each time they start their turn 🤡",
+    "used": []
+  },
+  {
+    "name": "Whispering Winds",
+    "depiction": "A breezy swirl of ethereal voices",
+    "effect": "All whispers and secret communications within 1 mile are clearly audible to all for 30 minutes, removing stealth from verbal conversation 🕊️",
+    "used": []
+  },
+  {
+    "name": "Lucky Misfortune",
+    "depiction": "A set of dice showing both ones and sixes",
+    "effect": "For 1 hour, any creature within 1 mile that rolls a 1 on an attack or ability check can reroll it but must take the second result, whether good or bad 🎲",
+    "used": []
+  },
+  {
+    "name": "Clown’s Boon",
+    "depiction": "A red-nosed clown handing out balloons",
+    "effect": "For one hour, happiness spreads: creatures within one mile heal [[2d6]] hit points at the start of their turns but must succeed on a DC [[14]] Charisma saving throw or be compelled to tell jokes uncontrollably 🤡",
+    "used": []
+  },
+  {
+    "name": "Topsy-Turvy",
+    "depiction": "An upside down castle floating in the clouds",
+    "effect": "Gravity reverses erratically for 10 minutes in one mile radius causing creatures to fall upward or sideways at random, DC [[16]] Dexterity save to avoid damage from sudden movement 🌪",
+    "used": []
+  },
+  {
+    "name": "Wild Card Chaos",
+    "depiction": "A card exploding into sparks and colors",
+    "effect": "All magic and technology malfunctions unpredictably for one minute within one mile—spells and magical effects have a 50% chance to fail or cause a random wild magic surge ⚡",
+    "used": []
+  },
+  {
+    "name": "Harlequin's Prank",
+    "depiction": "A laughing mask with shifting expressions",
+    "effect": "Once pulled, illusions of harmless trickery appear randomly within 1 mile, causing creatures to waste their actions investigating or reacting for 10 minutes 🤥",
+    "used": []
+  },
+  {
+    "name": "Mirror Mile",
+    "depiction": "An ornate mirror reflecting infinite copies of a clown",
+    "effect": "For 10 minutes, any creature within 1 mile that targets another with a spell or attack has a 50% chance that the effect instead targets themselves or an ally randomly 🎭",
+    "used": []
+  },
+  {
+    "name": "Pandemonium Whistle",
+    "depiction": "A twisted whistle with a smiley face",
+    "effect": "When blown, all creatures within one mile must succeed on a DC [[15+d4]] Wisdom save or uncontrollably burst into laughter for 1 minute, incapacitating them 😆",
+    "used": []
+  },
+  {
+    "name": "Clown's Blessing",
+    "depiction": "A painted red nose glowing softly",
+    "effect": "For 1 hour, all healing spells cast within one mile heal an additional [[1d8]] hit points and all damage dealt is reduced by [[1d6]] 🔴",
+    "used": []
+  },
+  {
+    "name": "Mirror of Misrule",
+    "depiction": "A cracked handheld mirror reflecting multiple distorted faces",
+    "effect": "For 10 minutes, all effects of spells or abilities that originate in the area within one mile target a random creature or location instead of the intended target 🎭",
+    "used": []
+  },
+  {
+    "name": "Wild Card Shuffle",
+    "depiction": "A deck of cards with shifting patterns",
+    "effect": "Draw a card—each card randomly causes either a beneficial or harmful magical effect within one mile for 1 minute (effects include random teleportation, temporary invisibility, confusion, or blessing) 🎴",
+    "used": []
+  },
+  {
+    "name": "Fickle Fortune",
+    "depiction": "A golden coin spinning in the air",
+    "effect": "Flip a coin: on heads, all damage dealt by creatures within one mile is doubled for 1 minute",
+    "used": []
+  },
+  {
+    "name": "Harlequin’s Mirth",
+    "depiction": "A smiling clown mask with glowing eyes",
+    "effect": "For 5 minutes, laughter erupts uncontrollably from all creatures within one mile, causing disadvantage on concentration checks and advantage on saving throws against fear 😆",
+    "used": []
+  },
+  {
+    "name": "Mirrored Time",
+    "depiction": "An hourglass reflecting a twisted face",
+    "effect": "For 1 minute, time seems jumbled within one mile causing all creatures to take their turns in random order, rolled anew each round ⏳",
+    "used": []
+  },
+  {
+    "name": "Chaos Ripple",
+    "depiction": "A swirling vortex of shifting colors",
+    "effect": "For 10 minutes, any magical effect or spell cast within one mile has a 50% chance to change its effect randomly as determined by the DM 🔀",
+    "used": []
+  },
+  {
+    "name": "Fool’s Respite",
+    "depiction": "A glowing card with a smiling, carefree face",
+    "effect": "Grants all creatures within one mile advantage on saving throws against fear and charm effects for 1 hour, but they must speak only nonsense that others can understand for the duration 🤪",
+    "used": []
+  },
+  {
+    "name": "Broken Compass",
+    "depiction": "A cracked compass that spins erratically",
+    "effect": "For 1 hour, all navigation attempts using magic or mundane means within one mile fail or lead to the exact opposite direction intended 🧭",
+    "used": []
+  },
+  {
+    "name": "Whisperwind’s Folly",
+    "depiction": "A swirling breeze carrying faint laughter",
+    "effect": "For 10 minutes, all sound within one mile is muffled and all spoken communication is replaced by unintelligible whispers, but perception checks relying on hearing gain advantage 🌬️",
+    "used": []
+  },
+  {
+    "name": "Silent Laughter",
+    "depiction": "A grinning clown mask floating in the air",
+    "effect": "Within one mile, all laughter is silent and contagious, imposing disadvantage on Stealth checks and advantage on Persuasion checks for 5 minutes 😂",
+    "used": []
+  },
+  {
+    "name": "Mirror's Folly",
+    "depiction": "A cracked handheld mirror reflecting twisted faces",
+    "effect": "For 10 minutes, creatures within one mile see their allies as enemies and enemies as allies, causing confusion and potential friendly fire, DC [[15+d6]] Cha Save to avoid attacking allies 🤡",
+    "used": []
+  },
+  {
+    "name": "Fool’s Breath",
+    "depiction": "A swirling gust of multicolored smoke",
+    "effect": "Release causes a 1-mile radius cloud",
+    "used": []
+  },
+  {
+    "name": "Harlequin’s Mirror",
+    "depiction": "A cracked hand mirror reflecting many faces",
+    "effect": "For the next hour within one mile, illusions created by any source are twice as real, and all creatures have disadvantage on Insight checks to discern lies or illusions 🪞",
+    "used": []
+  },
+  {
+    "name": "Pandemonium Totem",
+    "depiction": "A twisted wooden pole with painted eyes and ribbons",
+    "effect": "Summon creates discord for 10 minutes in a 1-mile radius where all spellcasters roll a [[d20]] on casting to determine if their spell backfires, succeeds, or fizzles (roll 1=backfire, 2-19=success, 20=fizzle) 🎲",
+    "used": []
+  },
+  {
+    "name": "Clown’s Mirth",
+    "depiction": "A painted clown face laughing hysterically",
+    "effect": "For 5 minutes, all creatures within one mile must succeed on a DC [[15+d4]] Wisdom save or burst into uncontrollable laughter, being incapacitated and unable to take actions for 1d4 rounds 🤡",
+    "used": []
+  },
+  {
+    "name": "Unstable Echo",
+    "depiction": "A cracked and flickering image of the user",
+    "effect": "For 10 minutes, any extra damage dealt by or to creatures within one mile is negated, but all healing is doubled (positive or negative effects count) 🌀",
+    "used": []
+  },
+  {
+    "name": "Laughing Jester",
+    "depiction": "A painted wooden jester doll with a permanently grinning face",
+    "effect": "For 1 hour, creatures within one mile must succeed on a DC [[15]] Wisdom saving throw at the start of their turn or be uncontrollably compelled to laugh, having disadvantage on attack rolls and ability checks for that turn 🤡",
+    "used": []
+  },
+  {
+    "name": "Mirrored Prank",
+    "depiction": "Two identical clown masks facing each other",
+    "effect": "For 10 minutes, creatures within one mile find their reflections in any reflective surface replaced by their worst or most embarrassing moments, causing disadvantage on Charisma (Persuasion) checks and advantage on Insight checks against them 🤡",
+    "used": []
+  },
+  {
+    "name": "Chaotic Revelry",
+    "depiction": "A swirling carnival scene filled with confetti and jesters",
+    "effect": "For 5 minutes, all creatures within one mile are affected by a wild magic surge effect (roll on the wild magic table or DM’s chosen random effects) every turn 🎭",
+    "used": []
+  },
+  {
+    "name": "Chaos Wave",
+    "depiction": "A swirling vortex of multicolored smoke",
+    "effect": "Upon drawing, all hostile and friendly creatures within one mile must roll a d20: on 1–10, they are frightened for 1 minute",
+    "used": []
+  },
+  {
+    "name": "Pandemonium's Dance",
+    "depiction": "A group of clowns performing an erratic dance",
+    "effect": "Creatures in one mile must succeed on a DC [[14+d4]] Wisdom save or become charmed by the cardholder, compelled to mimic their movements for 1 minute 🤡",
+    "used": []
+  },
+  {
+    "name": "Circle of Confusion",
+    "depiction": "A tangled ring of multicolored smoke rising from the ground",
+    "effect": "For the next 10 minutes, all creatures within one mile must succeed on a DC [[15]] Wisdom saving throw or be unable to distinguish friend from foe, attacking the nearest creature each turn 🌀",
+    "used": []
+  },
+  {
+    "name": "Bell of Bewilderment",
+    "depiction": "An ornate silver bell with a clown face engraved on it",
+    "effect": "Ringing this bell causes all magic within a one-mile radius to either double in effect or fail altogether, determined by a [[1d2]] roll for each spell cast for 5 minutes 🔔",
+    "used": []
+  },
+  {
+    "name": "Laughing Gas",
+    "depiction": "A grinning clown face exhales colorful smoke",
+    "effect": "All creatures within one mile must make a DC [[14]] Constitution saving throw or be incapacitated with uncontrollable laughter for 1 minute 🤡",
+    "used": []
+  },
+  {
+    "name": "The Fool's Step",
+    "depiction": "A barefoot figure stepping lightly across a field of flowers",
+    "effect": "For one hour, any creature within one mile can teleport up to 30 feet as a bonus action but must finish their turn prone 🌼",
+    "used": []
+  },
+  {
+    "name": "Mirror Mirage",
+    "depiction": "A cracked carnival mirror reflecting multiple distorted images",
+    "effect": "For 10 minutes, illusions of the caster appear randomly within one mile, distracting enemies and imposing disadvantage on attacks against creatures other than the caster 🪞",
+    "used": []
+  },
+  {
+    "name": "Prism of Paradox",
+    "depiction": "A fractured glass prism that refracts sparkling colors",
+    "effect": "Creatures within 1 mile experience random status effects for 10 minutes—roll [[1d6]] on the table: 1=blinded, 2=deafened, 3=charmed, 4=frightened, 5=slowed, 6=hasted ✨",
+    "used": []
+  },
+  {
+    "name": "Clown’s Confetti",
+    "depiction": "A burst of colorful confetti swirling in the air",
+    "effect": "For 1 minute, creatures within 1 mile have disadvantage on attack rolls and spell saves as whimsical laughter disrupts focus 🤡",
+    "used": []
+  },
+  {
+    "name": "Mirage of Madness",
+    "depiction": "A swirling mist filled with floating playing cards",
+    "effect": "For 10 minutes, creatures within 1 mile take psychic damage equal to [[2d8]] at the start of their turn but gain +2 to AC due to illusory doubles 🃏",
+    "used": []
+  },
+  {
+    "name": "Wisdom of the Fool",
+    "depiction": "An open book with blank pages",
+    "effect": "Once pulled, everyone's Intelligence checks within one mile are replaced by their Charisma checks for 1 hour 🤡",
+    "used": []
+  },
+  {
+    "name": "Cursed Laughter",
+    "depiction": "A cracked porcelain clown mask",
+    "effect": "All creatures within one mile hear uncontrollable laughter for 5 minutes, causing disadvantages on Stealth and Concentration checks unless a DC [[14]] Wisdom save is passed 😂",
+    "used": []
+  },
+  {
+    "name": "Serendipity's Edge",
+    "depiction": "A glowing, sharp card with an exclamation mark",
+    "effect": "For 30 minutes, any critical failure or success on ability checks or saving throws within one mile is reversed 🃏",
+    "used": []
+  },
+  {
+    "name": "Chaos Bloom",
+    "depiction": "A vibrant flower exploding with multicolored sparks",
+    "effect": "Plants and fungi within one mile grow uncontrollably, doubling in size and spreading rapidly for 1 hour, making passage difficult but also providing abundant healing herbs 🌸",
+    "used": []
+  },
+  {
+    "name": "Mirror of Misfortune",
+    "depiction": "A cracked hand mirror reflecting a twisted visage",
+    "effect": "For 10 minutes, all ranged attacks within one mile have their damage type changed randomly to fire, cold, lightning, or acid each time they hit 🔮",
+    "used": []
+  },
+  {
+    "name": "The Laughing Fool",
+    "depiction": "A clown’s mask with a wide, eerie grin",
+    "effect": "For 5 minutes, creatures within one mile must succeed on a DC [[14]] Charisma save or be compelled to laugh uncontrollably, unable to take actions other than laughter 😆",
+    "used": []
+  },
+  {
+    "name": "Ripple of Madness",
+    "depiction": "A swirling vortex of colorful smoke",
+    "effect": "For 30 minutes, all creatures within one mile have their alignment shifted one step toward chaotic (e.g., lawful good becomes neutral good) and act unpredictably but not hostilely 🤪",
+    "used": []
+  },
+  {
+    "name": "Carnival Chaos",
+    "depiction": "A swirling carnival tent with flickering lights",
+    "effect": "For 5 minutes, within one mile, every creature’s movement speed is randomly altered each turn—roll a d4 at the start of each creature’s turn (1=half speed, 2=normal, 3=double, 4=teleport 10 feet in a random direction) 🎪",
+    "used": []
+  },
+  {
+    "name": "Inverted Fortunes",
+    "depiction": "A card showing a coin flipped mid-air",
+    "effect": "For 10 minutes, within one mile, all healing spells and effects instead deal damage equal to [[1d8 + spell level]] and all damaging spells heal that much instead 🔄",
+    "used": []
+  },
+  {
+    "name": "Mirthquake",
+    "depiction": "A laughing clown holding a cracked, glowing orb",
+    "effect": "Once pulled, within one mile, all creatures must succeed on a DC [[15+d4]] Wisdom save or be overcome with uncontrollable laughter, becoming incapacitated and prone for 1 minute 😂",
+    "used": []
+  },
+  {
+    "name": "Twisted Reflection",
+    "depiction": "A warped carnival mirror reflecting distorted versions of creatures",
+    "effect": "For 10 minutes, all creatures within one mile see illusions of their own worst fears",
+    "used": []
+  },
+  {
+    "name": "Fickle Breeze",
+    "depiction": "A swirling wind carrying colorful leaves",
+    "effect": "Within one mile, erratic gusts of unpredictable wind rage for the next ten minutes. All ranged attacks are made at disadvantage in the affected area🍃",
+    "used": []
+  },
+  {
+    "name": "Turnabout Whimsy",
+    "depiction": "A twisted carnival mirror reflecting multiple versions of a person",
+    "effect": "For 5 minutes, all creatures within one mile swap positions randomly at the start of their turn as if affected by a confused maneuver, DC [[14]] Wisdom save negates 🤹",
+    "used": []
+  },
+  {
+    "name": "Silent Whispers",
+    "depiction": "A cracked whispering mask exuding eerie silence",
+    "effect": "For 15 minutes, no sound can be produced or heard within one mile except whispers, verbal spells without somatic components are cast at disadvantage 🤫",
+    "used": []
+  },
+  {
+    "name": "Card of Jocular Chaos",
+    "depiction": "A painted jester juggling glowing orbs",
+    "effect": "For 1 hour, creatures within one mile must roll a d4 when making attack rolls or ability checks: 1 - advantage, 2 - disadvantage, 3 - reroll, 4 - success regardless of roll 🎭",
+    "used": []
+  },
+  {
+    "name": "Whispers of the Fool",
+    "depiction": "A whispering wind swirling with faint laughter",
+    "effect": "For 1 hour, all secrets or hidden knowledge within one mile are revealed to creatures with darkvision or truesight, but prone to misinterpret them leading to false conclusions 50% of the time 🕵️",
+    "used": []
+  },
+  {
+    "name": "The Red Nose’s Blessing",
+    "depiction": "A bright red clown nose floating above a painted wooden box",
+    "effect": "The bearer and all creatures within one mile have advantage on Performance and Persuasion checks for 30 minutes, but all stealth checks are made with disadvantage 🤡",
+    "used": []
+  },
+  {
+    "name": "Laughter’s Curse",
+    "depiction": "A sinister grin painted on a cracked mask",
+    "effect": "All creatures within one mile burst into uncontrollable laughter for 1 minute unless they succeed on a DC [[15]] Wisdom saving throw, causing incapacitation and inability to speak 😂",
+    "used": []
+  },
+  {
+    "name": "Clown’s Shadow",
+    "depiction": "A clown with an impossibly long shadow",
+    "effect": "One mile radius sees all shadows behave unpredictably: they may act independently, mimicking or mocking their owners’ last movement, causing disadvantage on Insight checks to read intentions for 1 hour 🃏",
+    "used": []
+  },
+  {
+    "name": "Chaos Flux",
+    "depiction": "A swirling vortex of colors and shapes",
+    "effect": "For 1 minute, all spells cast within one mile randomly change type (DM chooses or roll d8: 1-fire, 2-cold, 3-lightning, 4-thunder, 5-necrotic, 6-radiant, 7-force, 8-acid) but retain their original effect and save DC ⚡",
+    "used": []
+  },
+  {
+    "name": "Twisted Revelry",
+    "depiction": "A carnival tent under a starry sky",
+    "effect": "For 10 minutes, the terrain within one mile is transformed into carnival-like scenery, granting all creatures advantage on Charisma (Performance) checks but disadvantage on Stealth checks 🎪",
+    "used": []
+  },
+  {
+    "name": "Pandemonium's Whisper",
+    "depiction": "A swirling vortex of chaotic colors",
+    "effect": "For 10 minutes, magic within one mile has a 50% chance to produce a random wild magic surge effect whenever a spell is cast 🎲",
+    "used": []
+  },
+  {
+    "name": "Cacophony’s Call",
+    "depiction": "An ancient horn carved with laughing faces",
+    "effect": "When sounded, all sound within one mile is amplified and distorted for 10 minutes, causing disadvantage on Stealth checks and Concentration saving throws involving sound 🗣️",
+    "used": []
+  },
+  {
+    "name": "Mirrored Misstep",
+    "depiction": "A prism reflecting fractured light",
+    "effect": "For 1 minute, all movement within one mile is unpredictably altered—when creatures move, roll [[1d6]]. On a 1-3, their movement direction reverses for that turn, otherwise it proceeds normally 🔄",
+    "used": []
+  },
+  {
+    "name": "Wild Laughter",
+    "depiction": "A grinning clown face emitting radiant sound waves",
+    "effect": "All creatures within one mile must succeed a DC [[14+d4]] Con save or burst into uncontrollable laughter for 1 minute, incapacitated but gaining advantage on all saving throws against being frightened 🤡",
+    "used": []
+  },
+  {
+    "name": "Moonlit Paradox",
+    "depiction": "A silver moon twisted into a spiral",
+    "effect": "For 30 minutes, creatures within one mile perceive time inconsistently, causing initiative order to be randomly shuffled at the start of each combat and a 25% chance of delayed reactions causing the next action to be skipped ⏳",
+    "used": []
+  },
+  {
+    "name": "Veil of Misdirection",
+    "depiction": "A swirling fog of iridescent colors",
+    "effect": "The area in a 1 mile radius is plagued with illusions for the next minute. All creatures in the area suffer disadvantage on Perception checks and ranged attacks for the duration🎭",
+    "used": []
+  },
+  {
+    "name": "Fool’s Coin",
+    "depiction": "A tarnished coin with a smiling face on both sides",
+    "effect": "Flipping this coin causes either a beneficial or detrimental event within one mile based on a luck roll: on heads all allies gain advantage on saving throws for 10 minutes, on tails all enemies gain advantage on attack rolls for 10 minutes, roll [[1d2]] 🎲",
+    "used": []
+  },
+  {
+    "name": "Whims of the Jester",
+    "depiction": "A colorful jester juggling glowing orbs",
+    "effect": "For 5 minutes, one random creature within one mile per round experiences a random condition (confused, frightened, charmed, blinded, or deafened) determined by a roll of [[1d5]] 😊😈🤡",
+    "used": []
+  },
+  {
+    "name": "Echoes of Folly",
+    "depiction": "A whispering clown mask suspended in the air",
+    "effect": "For 10 minutes, all sound within one mile is doubled and echoes, causing disadvantage on Stealth checks and causing verbal spells to require concentration checks DC [[15]] 🎭",
+    "used": []
+  },
+  {
+    "name": "Luck's Gambit",
+    "depiction": "A twisted coin with a smiling and frowning face",
+    "effect": "Once drawn, every creature within one mile must roll a d20 and add [[1d4]] to or subtract [[1d4]] from the result (player's choice) on all attack rolls and saving throws for 10 minutes 🎲",
+    "used": []
+  },
+  {
+    "name": "Moonlit Mirage",
+    "depiction": "A pale, laughing moon with shifting faces",
+    "effect": "For 30 minutes, illusions are indistinguishable from reality within one mile, causing all Insight checks related to perception of reality to be made at disadvantage 🌝",
+    "used": []
+  },
+  {
+    "name": "Dance of Chaos",
+    "depiction": "A swirl of multicolored smoke enveloping a town",
+    "effect": "For 1 hour, all movement within one mile becomes erratic and unpredictable",
+    "used": []
+  },
+  {
+    "name": "Laughing Mirage",
+    "depiction": "A laughing clown face painted on a swirling mist",
+    "effect": "For 10 minutes, illusions manifest randomly in a 1 mile radius—creatures must succeed on a DC [[14]] Intelligence save or believe any sensory illusion is real",
+    "used": []
+  },
+  {
+    "name": "Fool’s Errand",
+    "depiction": "A parchment with a tangled map and a grinning fool",
+    "effect": "For 30 minutes, all navigation and directional magic within 1 mile becomes unreliable—compasses spin wildly and teleportation destinations shift randomly",
+    "used": []
+  },
+  {
+    "name": "Fool’s Whimsy",
+    "depiction": "A swirling pattern of vibrant colors and distorted shapes",
+    "effect": "For 30 minutes, the environment within one mile shifts randomly every 10 minutes, altering terrain features and light levels, causing disadvantage on perception checks relying on sight or sound 🔮",
+    "used": []
+  },
+  {
+    "name": "Prankster’s Gambit",
+    "depiction": "A deck of cards with a smiling clown on the back",
+    "effect": "All creatures within one mile must roll a d20 when they take a long rest: on a 1-5, they suffer 1d6 psychic damage and are confused for 1 minute, on a 6-15 nothing happens, 16-20 they gain advantage on one attack roll or saving throw of their choice before their next long rest 🤡",
+    "used": []
+  },
+  {
+    "name": "Twist of Fate",
+    "depiction": "A twisting carnival ride with vivid lights",
+    "effect": "For 10 minutes, all damage dealt or healing received within one mile is reversed in type—fire damage heals, healing damages, and so forth, to the nearest whole number 🔄",
+    "used": []
+  },
+  {
+    "name": "Harlequin's Gambit",
+    "depiction": "A vibrant jester juggling glowing orbs",
+    "effect": "All creatures in the area must roll a d20 and on an even result gain advantage on their next roll, on an odd result suffer disadvantage on their next roll, lasting until the next dawn 🎭",
+    "used": []
+  },
+  {
+    "name": "Infinite Jest",
+    "depiction": "A swirling vortex of colorful streamers and jesters",
+    "effect": "The cardholder and all allies within the radius regain [[2d8+4]] hit points as they are filled with euphoric energy, but each healed target must succeed on a DC [[13]] Con save or lose their next turn laughing uncontrollably😂",
+    "used": []
+  },
+  {
+    "name": "Chaotic Mirth",
+    "depiction": "A laughing clown holding a horn that emits colorful confetti",
+    "effect": "For 1 hour, any hostile action within the mile radius causes uncontrollable laughter, forcing targets to succeed on a DC [[15]] Wis saving throw or be incapacitated and laughing for 1d4 rounds 🤡",
+    "used": []
+  },
+  {
+    "name": "Fool’s Whisper",
+    "depiction": "A cracked mask with an eerie grin",
+    "effect": "For 30 minutes, all secret or private thoughts within one mile unintentionally become audible whispers, causing disadvantage on Stealth and Deception checks 🤫",
+    "used": []
+  },
+  {
+    "name": "Harlequin's Veil",
+    "depiction": "A colorful patchwork cloak fluttering with mischievous shadows",
+    "effect": "For 10 minutes, creatures of your choice within one mile experience illusions that make them appear as harmless or bizarre creatures, granting advantage on social interactions but causing enemies to hesitate before attacking 🤡",
+    "used": []
+  },
+  {
+    "name": "Chaotic Pulse",
+    "depiction": "A swirling vortex of multicolored light",
+    "effect": "For 1 hour, all magic cast within one mile has a 50% chance to produce a wild magic surge effect determined by the DM at random ✨",
+    "used": []
+  },
+  {
+    "name": "The Laughing Curse",
+    "depiction": "A grinning clown face carved into a bone mask",
+    "effect": "For 10 minutes, all creatures in a 1-mile radius uncontrollably laugh, giving them disadvantage on attack rolls and saving throws but advantage on Charisma (Performance) checks 😂",
+    "used": []
+  },
+  {
+    "name": "Mirror of Fool's Insight",
+    "depiction": "A cracked mirror reflecting a distorted face",
+    "effect": "For 30 minutes, all creatures in a 1-mile radius see false visions causing advantage on Insight checks but disadvantage on Perception (sight) checks 🔮",
+    "used": []
+  },
+  {
+    "name": "Pandemonium Breeze",
+    "depiction": "A swirling, vibrant wind carrying faint laughter",
+    "effect": "For 1 hour, the wind reverses gravity for flickers of seconds randomly on creatures within one mile, forcing a DC [[13]] Dexterity save or fall prone as if pulled upward briefly 🌪️",
+    "used": []
+  },
+  {
+    "name": "Fool's Errand",
+    "depiction": "A winding road twisting into a question mark",
+    "effect": "For the next hour, all travel within one mile is disoriented: creatures navigating must succeed on a DC [[15]] Wisdom (Survival) check or be redirected to a random location within the area 🛤️",
+    "used": []
+  },
+  {
+    "name": "Balancing Act",
+    "depiction": "A tightrope stretched between two distant trees with a clown walking it",
+    "effect": "For 30 minutes, creatures within one mile have their movement affected by wild gravity shifts, forcing them to succeed on DC [[13]] Dexterity saving throws to avoid falling prone when moving more than half their speed 🎪",
+    "used": []
+  },
+  {
+    "name": "Laughing Roulette",
+    "depiction": "A painted card with a laughing skull face",
+    "effect": "When drawn, creatures within one mile must roll a d20: on evens they receive a random beneficial effect (heal [[2d8+4]] hp, advantage on next attack, etc.), on odds they suffer a random hindrance (disadvantage on next save, [[1d6]] psychic damage, etc.) 🎲",
+    "used": []
   }
 ]
