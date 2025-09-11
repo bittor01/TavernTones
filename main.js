@@ -128,6 +128,7 @@ function createGamifyWindow() {
         }
     });
 
+    gamifyWindow.maximize();
     gamifyWindow.loadFile('json-gamify.html');
 
     // Optional: Open DevTools for debugging
@@ -328,6 +329,12 @@ async function ipcloader() {
         // --- All core IPC listeners should be registered after the app is ready ---
         ipcMain.on('open-gamify-tool', createGamifyWindow);
 
+        ipcMain.handle('show-confirm-dialog', async (event, options) => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (!focusedWindow) return { response: options.cancelId || 1 }; // Default to cancel if no window
+            return await dialog.showMessageBox(focusedWindow, options);
+        });
+
         ipcMain.handle('open-task-file-dialog', async () => {
             const { filePaths } = await dialog.showOpenDialog(gamifyWindow, { // gamifyWindow should be the parent
                 title: 'Select Task File',
@@ -378,19 +385,43 @@ async function ipcloader() {
         async function loadTaskData(taskFilePath) {
             try {
                 const data = await fs.readFile(taskFilePath, 'utf8');
-                const taskData = JSON.parse(data);
+                let taskData = JSON.parse(data); // Make mutable
 
-                const { fileIndex, itemIndex } = taskData.progress;
+                let { fileIndex, itemIndex } = taskData.progress;
 
                 if (fileIndex >= taskData.files.length) {
                     return { success: true, taskComplete: true, taskData };
                 }
 
-                const itemFilePath = path.join(__dirname, taskData.files[fileIndex]);
-                const itemFileData = await fs.readFile(itemFilePath, 'utf8');
-                const itemList = JSON.parse(itemFileData);
+                let itemFilePath = path.join(__dirname, taskData.files[fileIndex]);
+                let itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
+
+                // Loop to find the next valid item, skipping empty files
+                while (itemIndex >= itemList.length) {
+                    fileIndex++;
+                    itemIndex = 0;
+
+                    if (fileIndex >= taskData.files.length) {
+                        taskData.progress.fileIndex = fileIndex;
+                        await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+                        return { success: true, taskComplete: true, taskData };
+                    }
+
+                    itemFilePath = path.join(__dirname, taskData.files[fileIndex]);
+                    itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
+                }
+
+                // Update progress in the task file *before* returning
+                taskData.progress.fileIndex = fileIndex;
+                taskData.progress.itemIndex = itemIndex;
+                await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
 
                 const item = itemList[itemIndex];
+                if (!item) {
+                     // This can happen if a file is empty from the start.
+                     // The loop above should handle this, but as a safeguard:
+                    return { success: false, error: "Encountered an empty or invalid file." };
+                }
 
                 // Try to get details if it's a spell, but don't fail if it's not
                 let itemDetails = null;
@@ -477,6 +508,31 @@ async function ipcloader() {
 
             } catch (error) {
                 logToRenderer(`Error in save-and-get-next-spell: ${error}`);
+                return { success: false, error: error.message };
+            }
+        });
+
+        ipcMain.handle('scrap-and-get-next-item', async (event, { taskData, currentItem, taskFilePath }) => {
+            try {
+                const currentItemFilePath = path.join(__dirname, taskData.files[taskData.progress.fileIndex]);
+                let currentItemList = JSON.parse(await fs.readFile(currentItemFilePath, 'utf8'));
+                const itemIndexToRemove = currentItemList.findIndex(item => JSON.stringify(item) === JSON.stringify(currentItem));
+
+                if (itemIndexToRemove === -1) {
+                    throw new Error("Could not find the item to scrap in the file.");
+                }
+
+                currentItemList.splice(itemIndexToRemove, 1);
+                await fs.writeFile(currentItemFilePath, JSON.stringify(currentItemList, null, 2));
+
+                // After removing, the item at the same index is the next one.
+                // We don't need to change the progress. The robust loadTaskData will handle
+                // cases where the index is now out of bounds (e.g., last item deleted)
+                // or the file has become empty.
+                return await loadTaskData(taskFilePath);
+
+            } catch (error) {
+                logToRenderer(`Error in scrap-and-get-next-item: ${error}`);
                 return { success: false, error: error.message };
             }
         });
