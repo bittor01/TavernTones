@@ -14,6 +14,7 @@
   },
   "nextTask": null,
   "ui": {
+    "showDetails": false,
     "titleField": "name",
     "fields": [
       {
@@ -30,13 +31,13 @@
         "key": "depiction",
         "label": "Depiction Text",
         "type": "textarea",
-        "rows": 2
+        "rows": 6
       },
       {
         "key": "effect",
         "label": "Effect Text",
         "type": "textarea",
-        "rows": 4
+        "rows": 12
       }
     ]
   }
