@@ -1,0 +1,362 @@
+[
+  {
+    "text": "Antimatter Rifle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Assault Rifle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Automatic Rifle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Battleaxe",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blowgun",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blunderbuss",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Cannon",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Club",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dagger",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dart",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Double-Barrel Shotgun",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Double-Bladed Scimitar",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Flail",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Flare Gun",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gatling Gun",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Glaive",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Greataxe",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Greatclub",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Greatsword",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Halberd",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hand Crossbow",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Handaxe",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Handgun",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Heavy Crossbow",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hooked Shortspear",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hoopak",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hunting Rifle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hunting Rifle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Iron Ball",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Javelin",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lance",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Laser Pistol",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Laser Rifle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Light Crossbow",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Light Hammer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Light Repeating Crossbow",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Longbow",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Longsword",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mace",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Magnum",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Maul",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Morningstar",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Musket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Musket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Oversized Longbow",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Parlor Gun",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pike",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pistol",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pistol",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Psychic Blade",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pump Shotgun",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quarterstaff",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rapier",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Revolver",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Revolver",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Scimitar",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Semiautomatic Pistol",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shortbow",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shortsword",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shotgun",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sickle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sling",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sniper Rifle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spear",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Staff",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Submachine Gun",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Trident",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "War Pick",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Warhammer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Whip",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wooden Staff",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Yklwa",
+    "unique": false,
+    "used": []
+  }
+]

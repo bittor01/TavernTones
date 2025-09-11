@@ -3,13 +3,15 @@
     "name": "The Prism",
     "depiction": "A beam of light refracting through a prism",
     "effect": "Immediately draw a card of each other suit 🌈",
-    "used": []
+    "used": [],
+    "unique": false
   },
   {
     "name": "Wheel of Fortune",
     "depiction": "A colorful spinning wheel divided into strange symbols",
     "effect": "All creatures in a 1 mile radius suffer from an effect from the wheel. Roll a d6 ||[[d6]]||: 1-Heal [[4d8]] HP and one level of exhaustion, 2-The next crop harvest will have double yields, 3-Grant inspiration, 4-Range of all attacks halved for the next minute, 5-Speed halved for the next minute, 6-Knocked prone) 🎡",
-    "used": []
+    "used": [],
+    "unique": false
   },
   {
     "name": "Mirrored Madness",

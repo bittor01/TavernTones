@@ -1,0 +1,437 @@
+[
+  {
+    "text": "Accounting and Valuation of All Things",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Adze of Annam",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Akmon, Hammer of Purphoros",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Amulet of the Inferno",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Axe of the Dwarvish Lords",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Baba Yaga's Mortar and Pestle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Baba Yaga's Pestle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bigby's Beneficent Bracelet",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blackrazor",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blade of Avernus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blade of Broken Mirrors",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blade of Broken Mirrors (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blade of Broken Mirrors (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blade of Broken Mirrors (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Book of Exalted Deeds",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Book of Vile Darkness",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Book of Vile Darkness (Variant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Chip of Creation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crook of Rao",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crown of Lies",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Daoud's Wondrous Lanthorn",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dekella, Bident of Thassa",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Demonomicon of Iggwilv",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Draakhorn",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ephixis, Bow of Nylea",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eye and Hand of Vecna",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Eye of Vecna",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grovelthrash",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grovelthrash (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grovelthrash (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grovelthrash (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hand of Vecna",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Helm of Perfect Potential",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Iggwilv's Cauldron",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Keystone of Creation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Khrusor, Spear of Heliod",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lash of Shadows",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lash of Shadows (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lash of Shadows (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lash of Shadows (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Luba's Tarokka of Souls",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mace of the Black Crown",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mace of the Black Crown (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mace of the Black Crown (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mace of the Black Crown (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mask of the Dragon Queen",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mastix, Whip of Erebos",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mighty Servant of Leuk-o",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orb of Dragonkind",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Orrery of the Wanderer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ranseur of Torture",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ring of Winter",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rod of Seven Parts",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ruby Rod of Asmodeus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ruin's Wake",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ruin's Wake (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ruin's Wake (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ruin's Wake (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ruinstone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Scourge of Shadow",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Silken Spite",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Silken Spite (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Silken Spite (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Silken Spite (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Staff of the Forgotten One",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stone of Creation",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Stone of Golorr",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sword of Kas",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sword of Zariel",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Teeth of Dahlver-Nar",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The Bloody End",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The Bloody End (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The Bloody End (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The Bloody End (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The Infernal Machine of Lum the Mad",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "True-Ice Shards",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "True-Ice Shards (Dagger)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "True-Ice Shards (Rapier)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wand of Orcus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wave",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Whelm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Will of the Talon",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Will of the Talon (Awakened)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Will of the Talon (Dormant)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Will of the Talon (Exalted)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wrought-Iron Tower",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wyrmskull Throne",
+    "unique": false,
+    "used": []
+  }
+]

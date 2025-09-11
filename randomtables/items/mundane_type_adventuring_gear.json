@@ -1,0 +1,827 @@
+[
+  {
+    "text": "Abacus",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Acid",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Aerenal Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Alchemist's Doom",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Alchemist's Fire",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Antigravity Belt",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Antitoxin",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Argonnessen Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Backpack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ball Bearing",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ball Bearings",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Barrel",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Barrier Peaks Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Basic Fishing Equipment",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Basket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bedroll",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bell",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Black Ghost Orchid Seed",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Black Sap",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blanket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blasting Powder",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Blight Ichor",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Block and Tackle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Book",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bucket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Bullseye Lantern",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Burglar's Pack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Caltrop",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Caltrops",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Candle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Catapult Munition",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Chain",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Chalk (1 piece)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Chest",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Climber's Kit",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Clothing, cold weather",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Common Clothes",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Component Pouch",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Costume",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crampons",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crossbow Bolt Case",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Crowbar",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Diplomat's Pack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Dungeoneer's Pack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Elven Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Entertainer's Pack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Explorer's Pack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Explosive Seed",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Fargab",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Feywild Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Fine Clothes",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Fishing Tackle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Flask",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Frostfell and Everice Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Gate Warden Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Giant Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Glass Bottle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Goose Egg Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grappling Hook",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Grenade Launcher",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hammer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Healer's Kit",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Holy Water",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hooded Lantern",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Horror Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hourglass",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Hunting Trap",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Icewind Dale Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ink",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ink Pen",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Insect Repellent (block of incense)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Insect Repellent (greasy salve)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Iron Pot",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Iron Spike",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Iron Spikes",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Jug",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Keg of Alchemist's Fire",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Khyber Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ladder",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lamp",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lock",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Lorehold Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Magnifying Glass",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Manacles",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Map",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Map or Scroll Case",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Menga leaves (1 ounce)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Merchant's Scale",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mess Kit",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Miner's Pick",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mirror",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Monster Hunter's Pack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Mournland Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Murgaxor's Elixir of Life",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Muroosa Balm",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Narycrash",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Needler Pistol",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Net",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Oil",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Olisuba Leaf",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Paper",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Paralysis Pistol",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Parchment",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Perfume",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pitcher",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Piton",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Planar Philosopher Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pole",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Portable Ram",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pouch",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pride Silk",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Pride Silk Outfit",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Priest's Pack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Prismari Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quandrix Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Quiver",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rain Catcher",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rations",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Robe",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Robot Controller",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Rope",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Ryath Root",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sarlona Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Scholar's Pack",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sealing Wax",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Secondhand Steal Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Shovel",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Signal Whistle",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Signet Ring",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Silk Rope (50 feet)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Silverquill Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sinda berries (10)",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Sledgehammer",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Snowshoes",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Soap",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Soothsalts",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spaceship Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spellbook",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Spyglass",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "String",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tankard",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tent",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The Incantations of Iriolarthas",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Theki Root",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tinderbox",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Tome of Strahd",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Torch",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Traveler's Clothes",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Vial",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Waterskin",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Whetstone",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "White Ghost Orchid Seed",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wildroot",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Willowshade Oil",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Witherbloom Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Writing Kit",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Wukka Nut",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Xen'drik Trinket",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Yahcha",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "Zabou",
+    "unique": false,
+    "used": []
+  }
+]

@@ -13,8 +13,8 @@
     "randomtables/spells/lvl9.json"
   ],
   "progress": {
-    "fileIndex": 3,
-    "itemIndex": 57
+    "fileIndex": 10,
+    "itemIndex": 0
   },
   "nextTask": "deck-editing-task.json",
   "ui": {
