@@ -450,12 +450,14 @@ async function ipcloader() {
         }
 
         ipcMain.handle('load-task-by-path', async (event, filePath) => {
-            const taskPath = path.join(__dirname, filePath);
+            // If the path is absolute (e.g., from a file dialog), use it directly.
+            // Otherwise, join it with the base directory (for internal calls).
+            const taskPath = path.isAbsolute(filePath) ? filePath : path.join(__dirname, filePath);
             return await loadTaskData(taskPath);
         });
 
         ipcMain.handle('get-task-data', async () => {
-            const defaultTaskPath = path.join(__dirname, 'spell-item-types-task.json');
+            const defaultTaskPath = path.join(__dirname, 'deck-editing-task.json');
             return await loadTaskData(defaultTaskPath);
         });
 
