@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dynamicUIContainerEl = document.getElementById('dynamic-ui-container');
     const nextButton = document.getElementById('next-button');
     const undoButton = document.getElementById('undo-button');
+    const scrapButton = document.getElementById('scrap-button');
     const loadTaskButton = document.getElementById('load-task-button');
     const containerEl = document.getElementById('container');
 
@@ -129,8 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateETAsAndProgress();
 
         const title = currentItem[taskData.ui.titleField] || "Unnamed Item";
-        const progressIndicator = `(${taskData.progress.itemIndex + 1} / ${totalItemsInCurrentFile} in File ${taskData.progress.fileIndex + 1})`;
-        titleEl.textContent = `${title} ${progressIndicator}`;
+        titleEl.textContent = title;
 
         if (itemDetails && itemDetails.entries) {
             let html = '';
@@ -302,6 +302,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
         previousItemState = null;
         undoButton.disabled = true;
+
+        render();
+    });
+
+    scrapButton.addEventListener('click', async () => {
+        if (!currentItem) return;
+
+        // Use a native dialog for confirmation
+        const userChoice = await window.electron.ipcRenderer.invoke('show-confirm-dialog', {
+            type: 'warning',
+            title: 'Confirm Scrap',
+            message: 'Are you sure you want to scrap this item?',
+            detail: 'This will permanently delete the item from the JSON file. This action cannot be undone.',
+            buttons: ['Scrap Item', 'Cancel'],
+            defaultId: 1, // Index of the 'Cancel' button
+            cancelId: 1
+        });
+
+        if (userChoice.response === 1) { // User chose 'Cancel'
+            return;
+        }
+
+        const response = await window.electron.ipcRenderer.invoke('scrap-and-get-next-item', {
+            taskData,
+            currentItem,
+            taskFilePath: currentTaskPath
+        });
+
+        if (!response.success) {
+            titleEl.textContent = "Error";
+            detailsEl.textContent = `Failed to scrap item: ${response.error}`;
+            return;
+        }
+
+        // Scrapping doesn't affect the score
+
+        if (response.taskComplete) {
+            await handleTaskCompletion();
+            return;
+        }
+
+        taskData = response.taskData;
+        currentItem = response.spell; // The backend still uses 'spell'
+        itemDetails = response.spellDetails;
+        totalItemsInCurrentFile = response.spellCount;
+
+        previousItemState = null; // Clear previous state as scrap is permanent
+        undoButton.disabled = true; // Cannot undo a scrap
 
         render();
     });
