@@ -518,10 +518,18 @@ async function ipcloader() {
             try {
                 const currentItemFilePath = path.join(__dirname, taskData.files[taskData.progress.fileIndex]);
                 let currentItemList = JSON.parse(await fs.readFile(currentItemFilePath, 'utf8'));
-                const itemIndexToRemove = currentItemList.findIndex(item => JSON.stringify(item) === JSON.stringify(currentItem));
+
+                // Use the title field for a more robust lookup
+                const titleField = taskData.ui.titleField || 'name';
+                const itemIndexToRemove = currentItemList.findIndex(item => item[titleField] === currentItem[titleField]);
 
                 if (itemIndexToRemove === -1) {
-                    throw new Error("Could not find the item to scrap in the file.");
+                    // Fallback for safety, though it's a weak comparison
+                    const fallbackIndex = currentItemList.findIndex(item => JSON.stringify(item) === JSON.stringify(currentItem));
+                    if (fallbackIndex === -1) {
+                        throw new Error(`Could not find the item with ${titleField} "${currentItem[titleField]}" to scrap in the file.`);
+                    }
+                    itemIndexToRemove = fallbackIndex;
                 }
 
                 currentItemList.splice(itemIndexToRemove, 1);
