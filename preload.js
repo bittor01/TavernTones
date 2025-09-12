@@ -32,7 +32,8 @@ contextBridge.exposeInMainWorld('electron', {
           'open-file-dialog', 'get-default-local-folder', 'get-dnd-conditions',
           'load-encounter-dialog', 'search-monsters', 'get-monster-details',
           'get-task-data', 'save-and-get-next-spell', 'undo-and-get-previous-spell',
-          'get-high-score', 'load-task-by-path', 'open-task-file-dialog'
+          'get-high-score', 'load-task-by-path', 'open-task-file-dialog',
+          'scrap-and-get-next-item', 'show-confirm-dialog'
         ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);
