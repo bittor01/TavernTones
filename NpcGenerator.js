@@ -40,17 +40,30 @@ class NpcGenerator {
             return { error: 'Could not load necessary data for generation.' };
         }
 
-        finalRace = options.race === 'random' || !options.race
+        const parseSelection = (selection) => {
+            if (!selection || selection === 'random') return { name: 'random' };
+            const match = selection.match(/(.+) \((.+)\)/);
+            if (match) {
+                return { name: match[1], source: match[2] };
+            }
+            return { name: selection }; // For items without a source, like classes
+        };
+
+        const selectedRace = parseSelection(options.race);
+        const selectedClass = parseSelection(options.class);
+        const selectedBackground = parseSelection(options.background);
+
+        finalRace = selectedRace.name === 'random'
             ? races[Math.floor(Math.random() * races.length)]
-            : races.find(r => r.name === options.race);
+            : races.find(r => r.name === selectedRace.name && r.source === selectedRace.source);
 
-        finalClass = options.class === 'random' || !options.class
+        finalClass = selectedClass.name === 'random'
             ? classes[Math.floor(Math.random() * classes.length)]
-            : classes.find(c => c.name === options.class);
+            : classes.find(c => c.name === selectedClass.name);
 
-        finalBackground = options.background === 'random' || !options.background
+        finalBackground = selectedBackground.name === 'random'
             ? backgrounds[Math.floor(Math.random() * backgrounds.length)]
-            : backgrounds.find(b => b.name === options.background);
+            : backgrounds.find(b => b.name === selectedBackground.name && b.source === selectedBackground.source);
 
         return {
             mode: options.mode || 'idea',

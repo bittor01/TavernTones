@@ -1061,9 +1061,9 @@ client.once('clientReady', async () => {
                 return;
             }
 
-            if (customId === 'vehicle-environment-select') {
+            if (customId === 'vehicle-tag-select') {
                 const selections = vehicleSelections.get(message.id) || {};
-                selections.environment = values[0];
+                selections.tag = values[0];
                 vehicleSelections.set(message.id, selections);
                 await interaction.deferUpdate();
                 return;
@@ -1166,16 +1166,23 @@ client.once('clientReady', async () => {
 
         if (interaction.isButton()) {
             if (interaction.customId === 'trap-proceed-button') {
-                const modal = new ModalBuilder()
-                    .setCustomId(`trap-modal-${interaction.message.id}`)
-                    .setTitle('Trap Environment (Optional)');
-                const environmentInput = new TextInputBuilder()
-                    .setCustomId('environment')
-                    .setLabel("e.g., dungeon, forest, city")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(false);
-                modal.addComponents(new ActionRowBuilder().addComponents(environmentInput));
-                await interaction.showModal(modal);
+                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+                const selections = trapSelections.get(interaction.message.id) || {};
+                const trap = await fiveEToolsParser.generateTrap(selections);
+
+                if (!trap) {
+                    await interaction.editReply({ content: 'Could not find a trap matching your criteria. Please try broadening your search.' });
+                    return;
+                }
+
+                const embed = new EmbedBuilder()
+                    .setColor(0xE74C3C) // Red for traps
+                    .setTitle(`Trap: ${trap.name}`)
+                    .setDescription(formatEntries(trap.entries));
+
+                await interaction.channel.send({ embeds: [embed] });
+                await interaction.editReply({ content: 'Trap generated!' });
+                trapSelections.delete(interaction.message.id);
                 return;
             }
 
@@ -1203,13 +1210,9 @@ client.once('clientReady', async () => {
 
             if (interaction.customId === 'vehicle-proceed-button') {
                 const selections = vehicleSelections.get(interaction.message.id) || {};
-                if (!selections.environment || !selections.style) {
-                    await interaction.reply({ content: 'Please select an environment and an encounter style before proceeding.', flags: [MessageFlags.Ephemeral] });
-                    return;
-                }
 
                 const modal = new ModalBuilder()
-                    .setCustomId(`vehicle-modal|${selections.environment}|${selections.style}`)
+                    .setCustomId(`vehicle-modal|${selections.tag || 'random'}|${selections.style || 'random'}`)
                     .setTitle('Vehicle Encounter Details');
 
                 const totalHpInput = new TextInputBuilder()
@@ -1218,16 +1221,14 @@ client.once('clientReady', async () => {
                     .setStyle(TextInputStyle.Short)
                     .setRequired(true);
 
-                modal.addComponents(new ActionRowBuilder().addComponents(totalHpInput));
+                const numVehiclesInput = new TextInputBuilder()
+                    .setCustomId('numVehicles')
+                    .setLabel("Ideal Number of Vehicles")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
 
-                if (selections.style === 'balanced') {
-                    const numVehiclesInput = new TextInputBuilder()
-                        .setCustomId('numVehicles')
-                        .setLabel("Ideal Number of Vehicles")
-                        .setStyle(TextInputStyle.Short)
-                        .setRequired(true);
-                    modal.addComponents(new ActionRowBuilder().addComponents(numVehiclesInput));
-                }
+                modal.addComponents(new ActionRowBuilder().addComponents(totalHpInput));
+                modal.addComponents(new ActionRowBuilder().addComponents(numVehiclesInput));
 
                 await interaction.showModal(modal);
                 return;
@@ -1366,30 +1367,6 @@ async function _handleNpcGeneration(interaction, selections) {
                 return client.commandHandler.tdaManager.handleAnteModalSubmit(interaction);
             }
 
-            if (interaction.customId.startsWith('trap-modal-')) {
-                const messageId = interaction.customId.replace('trap-modal-', '');
-                const selections = trapSelections.get(messageId) || {};
-                selections.environment = interaction.fields.getTextInputValue('environment');
-
-                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-                const trap = await fiveEToolsParser.generateTrap(selections);
-
-                if (!trap) {
-                    await interaction.editReply({ content: 'Could not find a trap matching your criteria. Please try broadening your search.' });
-                    return;
-                }
-
-                const embed = new EmbedBuilder()
-                    .setColor(0xE74C3C) // Red for traps
-                    .setTitle(`Trap: ${trap.name}`)
-                    .setDescription(formatEntries(trap.entries));
-
-                await interaction.channel.send({ embeds: [embed] });
-                await interaction.editReply({ content: 'Trap generated!' });
-                trapSelections.delete(messageId);
-                return;
-            }
-
             if (interaction.customId.startsWith('npc-modal-')) {
                 const messageId = interaction.customId.replace('npc-modal-', '');
                 const selections = npcSelections.get(messageId) || {};
@@ -1405,16 +1382,17 @@ async function _handleNpcGeneration(interaction, selections) {
                 await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
                 const parts = interaction.customId.split('|');
-                const environment = parts[1];
-                const style = parts[2];
+                const tag = parts[1];
+                let style = parts[2];
 
-                const totalHp = parseInt(interaction.fields.getTextInputValue('totalHp'), 10);
-                let numVehicles = null;
-                if (style === 'balanced') {
-                    numVehicles = parseInt(interaction.fields.getTextInputValue('numVehicles'), 10);
+                if (style === 'random') {
+                    style = ['flagship', 'balanced'][Math.floor(Math.random() * 2)];
                 }
 
-                if (isNaN(totalHp) || totalHp <= 0) {
+                const totalHp = parseInt(interaction.fields.getTextInputValue('totalHp'), 10);
+                const numVehicles = parseInt(interaction.fields.getTextInputValue('numVehicles'), 10);
+
+                if (isNaN(totalHp) || totalHp <= 0 || isNaN(numVehicles) || numVehicles <= 0) {
                     await interaction.editReply({ content: 'Invalid Total HP. Please provide a positive number.' });
                     return;
                 }
@@ -1424,7 +1402,7 @@ async function _handleNpcGeneration(interaction, selections) {
                 }
 
                 const result = await client.commandHandler.vehicleEncounterBuilder.generateEncounter({
-                    environment,
+                    tag,
                     style,
                     totalHp,
                     numVehicles
@@ -1439,7 +1417,7 @@ async function _handleNpcGeneration(interaction, selections) {
                 const summaryEmbed = new EmbedBuilder()
                     .setColor(0x2ECC71)
                     .setTitle(`Vehicle Encounter Generated! (${style})`)
-                    .setDescription(`**Environment:** ${environment}\n**HP Budget:** ${result.totalValue.toLocaleString()} / ${result.budget.toLocaleString()}`)
+                    .setDescription(`**Tag:** ${tag}\n**HP Budget:** ${result.totalValue.toLocaleString()} / ${result.budget.toLocaleString()}`)
                     .addFields({
                         name: 'Vehicles',
                         value: result.encounter.map(v => `• ${v.name} (HP: ${v.hp})`).join('\n') || 'None'

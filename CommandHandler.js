@@ -728,23 +728,31 @@ class CommandHandler {
         const embed = new EmbedBuilder()
             .setColor(0x0099FF)
             .setTitle('Vehicle Encounter Generator')
-            .setDescription('Please select the desired environment and encounter style.');
+            .setDescription('Select your desired options below. Any unselected options will be randomized.');
 
-        const environmentSelect = new StringSelectMenuBuilder()
-            .setCustomId('vehicle-environment-select')
-            .setPlaceholder('Select Environment')
-            .addOptions([
-                { label: 'Land', value: 'land' },
-                { label: 'Air', value: 'air' },
-                { label: 'Naval', value: 'sea' },
-                { label: 'Space', value: 'space' },
-                { label: 'Underground', value: 'burrow' },
-            ]);
+        const vehicles = await this.fiveEToolsParser._loadCategoryData('vehicles');
+        const vehicleTags = new Set();
+        vehicles.forEach(v => {
+            if (v.vehicleType) vehicleTags.add(v.vehicleType);
+            if (v.terrain) v.terrain.forEach(t => vehicleTags.add(t));
+            if (v.speed?.burrow) vehicleTags.add('burrow');
+        });
+
+        const tagOptions = [{ label: 'Any Type', value: 'random', default: true }];
+        [...vehicleTags].sort().forEach(tag => {
+            tagOptions.push({ label: tag.charAt(0).toUpperCase() + tag.slice(1), value: tag });
+        });
+
+        const tagSelect = new StringSelectMenuBuilder()
+            .setCustomId('vehicle-tag-select')
+            .setPlaceholder('Select Vehicle Tag/Type (Optional)')
+            .addOptions(tagOptions);
 
         const styleSelect = new StringSelectMenuBuilder()
             .setCustomId('vehicle-style-select')
             .setPlaceholder('Select Encounter Style')
             .addOptions([
+                { label: 'Any Style (Random)', value: 'random', default: true },
                 { label: 'Flagship Fight', value: 'flagship' },
                 { label: 'Balanced Fight', value: 'balanced' },
             ]);
@@ -754,7 +762,7 @@ class CommandHandler {
             .setLabel('Proceed')
             .setStyle(ButtonStyle.Success);
 
-        const row1 = new ActionRowBuilder().addComponents(environmentSelect);
+        const row1 = new ActionRowBuilder().addComponents(tagSelect);
         const row2 = new ActionRowBuilder().addComponents(styleSelect);
         const row3 = new ActionRowBuilder().addComponents(proceedButton);
 
@@ -776,12 +784,23 @@ class CommandHandler {
             ]);
 
         // Helper to create options for select menus
-        const createOptions = (items, labelField = 'name') => {
+        const createOptions = (items, labelField = 'name', sourceField = 'source') => {
             const options = [{ label: `Any (Random)`, value: 'random' }];
-            options.push(...items.slice(0, 24).map(item => ({
-                label: item[labelField],
-                value: item[labelField]
-            })));
+            const uniqueItems = [];
+            const seen = new Set();
+
+            for (const item of items) {
+                const uniqueKey = `${item[labelField]}_${item[sourceField]}`;
+                if (!seen.has(uniqueKey)) {
+                    seen.add(uniqueKey);
+                    uniqueItems.push(item);
+                }
+            }
+
+            options.push(...uniqueItems.slice(0, 24).map(item => {
+                const label = item[sourceField] ? `${item[labelField]} (${item[sourceField]})` : item[labelField];
+                return { label: label, value: label };
+            }));
             return options;
         };
 
@@ -797,7 +816,7 @@ class CommandHandler {
         const classSelect = new StringSelectMenuBuilder()
             .setCustomId('npc-class-select')
             .setPlaceholder('Select Class')
-            .addOptions(createOptions(classes, 'name'));
+            .addOptions(createOptions(classes, 'name', null));
 
         const backgroundSelect = new StringSelectMenuBuilder()
             .setCustomId('npc-background-select')
@@ -855,6 +874,18 @@ class CommandHandler {
                 { label: 'Simple', value: 'SMPL' },
             ]);
 
+        const environmentSelect = new StringSelectMenuBuilder()
+            .setCustomId('trap-environment-select')
+            .setPlaceholder('Select Environment (Optional)')
+            .addOptions([
+                { label: 'Any Environment', value: 'random' },
+                { label: 'Dungeon / Tomb', value: 'dungeon' },
+                { label: 'Wilderness / Cave', value: 'wilderness' },
+                { label: 'Urban / Building', value: 'urban' },
+                { label: 'Planar / Magical', value: 'planar' },
+                { label: 'Aquatic', value: 'aquatic' },
+            ]);
+
         const proceedButton = new ButtonBuilder()
             .setCustomId('trap-proceed-button')
             .setLabel('Generate')
@@ -863,9 +894,10 @@ class CommandHandler {
         const row1 = new ActionRowBuilder().addComponents(tierSelect);
         const row2 = new ActionRowBuilder().addComponents(threatSelect);
         const row3 = new ActionRowBuilder().addComponents(typeSelect);
-        const row4 = new ActionRowBuilder().addComponents(proceedButton);
+        const row4 = new ActionRowBuilder().addComponents(environmentSelect);
+        const row5 = new ActionRowBuilder().addComponents(proceedButton);
 
-        await message.reply({ embeds: [embed], components: [row1, row2, row3, row4] });
+        await message.reply({ embeds: [embed], components: [row1, row2, row3, row4, row5] });
     }
 }
 

@@ -193,9 +193,18 @@ class FiveEToolsParser {
         if (type && type !== 'random') {
             traps = traps.filter(t => t.trapHazType === type);
         }
-        if (environment && environment.trim() !== '') {
-            const lowerEnv = environment.toLowerCase();
-            traps = traps.filter(t => JSON.stringify(t.entries).toLowerCase().includes(lowerEnv));
+        if (environment && environment !== 'random') {
+            const environmentKeywords = {
+                'dungeon': /dungeon|tomb|crypt|lair|hallway/i,
+                'wilderness': /forest|jungle|swamp|mountain|wilderness|cave/i,
+                'urban': /city|sewer|building|room/i,
+                'planar': /planar|plane|feywild|shadowfell/i,
+                'aquatic': /water|aquatic|ship/i
+            };
+            const regex = environmentKeywords[environment];
+            if (regex) {
+                traps = traps.filter(t => regex.test(JSON.stringify(t.entries)));
+            }
         }
 
         if (traps.length === 0) {
