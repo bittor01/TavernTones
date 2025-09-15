@@ -3,259 +3,134 @@
     "name": "The Prism",
     "depiction": "A beam of light refracting through a prism",
     "effect": "Immediately draw a card of each other suit 🌈",
-    "used": []
+    "used": [],
+    "unique": false
   },
   {
     "name": "Silent Court",
     "depiction": "A circle of courtiers whispering behind a king",
     "effect": "Target creature within 90 feet must make a DC [[2d6+6]] Wisdom Save or be silenced for [[1d4]] rounds. If they fail, they cannot speak or cast spells with verbal components 🤐",
-    "used": []
+    "used": [],
+    "unique": false
   },
   {
     "name": "Archmage's Edict",
     "depiction": "An archmage rebuking a student",
-    "effect": "The next spell that requires you to make a save within a minute is countered unless the caster passes a DC [[2d6+6]] Intelligence Save. If they fail, they take [[2d6]] psychic damage and cannot cast spells until the end of their next turn 🧙‍♂️",
-    "used": []
+    "effect": "The next spell that requires you to make a save within a minute is countered unless the caster passes a DC [[2d6+6]] Intelligence Save. If they fail, they take [[2d6]] psychic damage 🧙‍♂️",
+    "used": [],
+    "unique": false
   },
   {
     "name": "Jester's Wit",
     "depiction": "A jester goading attacks away from a king",
     "effect": "Any number of targets within 60 feet of you have disadvantage on attack rolls against targets other than you for the next [[1d4]] rounds 🤡",
-    "used": []
-  },
-  {
-    "name": "Executioner's Gift",
-    "depiction": "A huge bespoke axe with a royal crest",
-    "effect": "For the next [[1d4]] rounds, a creature within 60 feet of you has advantage on attack rolls and disadvantage on saving throws 🪓",
-    "used": []
-  },
-  {
-    "name": "Court Whispers",
-    "depiction": "Shadowy figures whispering to each other in a darkened hall",
-    "effect": "",
-    "used": []
-  },
-  {
-    "name": "Edict of Silence",
-    "depiction": "A royal decree scroll sealed with wax",
-    "effect": "All enemies within 30 feet fail their next spellcasting attempt unless they pass a Intelligence saving throw 🤫",
-    "used": []
-  },
-  {
-    "name": "Court Jester’s Mockery",
-    "depiction": "A jester pointing and laughing maniacally",
-    "effect": "All enemies within 30 feet have disadvantage on attack rolls against targets other than you until your next turn 🤡",
-    "used": []
+    "used": [],
+    "unique": false
   },
   {
     "name": "Jester's Mockery",
-    "depiction": "A court jester juggling fiery balls",
+    "depiction": "A court jester juggling pins",
     "effect": "All enemies within 30 feet have disadvantage on attack rolls and saving throws until the start of your next turn 🤡",
-    "used": []
+    "used": [],
+    "unique": false
   },
   {
     "name": "Jester’s Curse",
     "depiction": "A sinister joker’s mask floats with shadow and fire",
     "effect": "All enemies within 30 feet have disadvantage on attack rolls until the end of your next turn 🤡",
-    "used": []
+    "used": [],
+    "unique": false
   },
   {
     "name": "Courtly Whisper",
     "depiction": "Shadowy figures whispering secrets around a throne",
-    "effect": "All enemies within 30 feet have disadvantage on Perception checks and Wisdom saving throws for 1 minute or until they succeed on a saving throw 👑",
-    "used": []
+    "effect": "All enemies within 30 feet have disadvantage on Perception checks and Wisdom saving throws for 1 minute 👑",
+    "used": [],
+    "unique": false
   },
   {
     "name": "Fallen Court",
     "depiction": "A broken chessboard with scattered pieces",
     "effect": "All enemies within 30 feet have their movement halved and gain vulnerability to psychic damage for 1 minute ♟️",
-    "used": []
-  },
-  {
-    "name": "Crown of Contempt",
-    "depiction": "A golden crown floating with dark flames",
-    "effect": "All enemies within 30 feet must make a Charisma saving throw or be cursed to have disadvantage on saving throws for 1 minute 🔥",
-    "used": []
+    "used": [],
+    "unique": false
   },
   {
     "name": "Royal Decree",
     "depiction": "A parchment sealed with a regal wax stamp glowing ominously",
-    "effect": "All enemies within 30 feet must make a Charisma saving throw or be unable to take reactions until the end of your next turn 📜",
-    "used": []
-  },
-  {
-    "name": "Court Jester's Mockery",
-    "depiction": "A jester laughing wildly before a throne",
-    "effect": "All enemies within 30 feet must make a Charisma saving throw or have disadvantage on attack rolls and saving throws until the end of their next turn 🤡",
-    "used": []
+    "effect": "All enemies within 30 feet must make a DC [[2d6+6]] Charisma saving throw or be unable to take reactions until the end of your next turn 📜",
+    "used": [],
+    "unique": false
   },
   {
     "name": "Royal Edict",
     "depiction": "A parchment sealed with a royal wax emblem",
-    "effect": "All enemies within 30 feet must make a Charisma saving throw or suffer disadvantage on attack rolls and ability checks until the end of their next turn 🏰",
-    "used": []
+    "effect": "All enemies within 30 feet must make a DC [[2d6+6]] Charisma saving throw or suffer disadvantage on attack rolls and ability checks until the end of their next turn 🏰",
+    "used": [],
+    "unique": false
   },
   {
     "name": "Royal Ire",
     "depiction": "An angry king pointing a finger",
-    "effect": "All enemies within 30 feet must make a Charisma saving throw or suffer disadvantage on attack rolls for 1 minute as the king’s wrath saps their confidence 😠",
-    "used": []
-  },
-  {
-    "name": "Exile's Edict",
-    "depiction": "A scroll bearing the king’s seal cast across an armored knight",
-    "effect": "All enemies within 30 feet must make a Constitution saving throw or be banished to a shadowy realm for 1 round, unable to act or be targeted ⚔️",
-    "used": []
-  },
-  {
-    "name": "Edict of Exile",
-    "depiction": "A royal decree scroll marked with a blood seal",
-    "effect": "All enemies within 30 feet must make a DC [[14]] Charisma saving throw or be banished to a shadowy plane, effectively causing them to be stunned and unable to move until the end of their next turn 🌑",
-    "used": []
-  },
-  {
-    "name": "Court Intrigue",
-    "depiction": "A tapestry showing scheming nobles whispering",
-    "effect": "All enemies within 30 feet must make a DC [[15]] Intelligence saving throw or be confused, acting randomly on their next turn 🤯",
-    "used": []
+    "effect": "All enemies within 30 feet must make a DC [[2d6+6]] Charisma saving throw or suffer disadvantage on attack rolls for 1 minute as the king’s wrath saps their confidence 😠",
+    "used": [],
+    "unique": false
   },
   {
     "name": "Royal Court’s Judgment",
     "depiction": "A grand hall filled with courtiers whispering",
-    "effect": "All enemies within 30 feet must make a DC [[16]] Charisma saving throw or be frightened and have disadvantage on attack rolls until the end of their next turn 👑",
-    "used": []
-  },
-  {
-    "name": "Jester’s Taunt",
-    "depiction": "A mischievous jester mocking a valiant knight",
-    "effect": "All enemies within 30 feet must make a DC 14 Charisma saving throw or be forced to use their reaction on their turn to attack another enemy of the user’s choice 🤡",
-    "used": []
-  },
-  {
-    "name": "Courtly Condemnation",
-    "depiction": "A panel of stern-faced courtiers accusing a villain",
-    "effect": "All enemies within 30 feet must make a DC 14 Charisma saving throw or be frightened until the end of their next turn 🏰",
-    "used": []
+    "effect": "All enemies within 30 feet must make a DC [[2d6+6]] Charisma saving throw or be frightened for [[1d4]] turns 👑",
+    "used": [],
+    "unique": false
   },
   {
     "name": "Jester’s Mockery",
     "depiction": "A grin-faced jester taunting a fallen knight",
-    "effect": "All enemies within 30 feet must make a DC 14 Charisma saving throw or have Disadvantage on attack rolls and ability checks until the start of your next turn 🤡",
-    "used": []
-  },
-  {
-    "name": "Regal Silence",
-    "depiction": "A closed crown beam emitting silence over enemies",
-    "effect": "All enemies within 30 feet must make a DC 14 Constitution saving throw or be muted for 1 minute, unable to cast spells with verbal components 🤐",
-    "used": []
-  },
-  {
-    "name": "King’s Gaze",
-    "depiction": "A stern king staring down his foes",
-    "effect": "All enemies within 30 feet must succeed on a DC [[14]] Wisdom saving throw or have their attack rolls reduced by 2 until the start of your next turn 👑",
-    "used": []
-  },
-  {
-    "name": "Court’s Condemnation",
-    "depiction": "A royal courtroom with an angry king pointing at a trembling subject",
-    "effect": "All enemies within 30 feet must succeed on a DC [[15]] Wisdom saving throw or be frightened and have disadvantage on saving throws for 1 minute 🏰",
-    "used": []
+    "effect": "All enemies within 30 feet must make a DC [[2d6+6]] Charisma saving throw or have Disadvantage on attack rolls and ability checks until the start of your next turn 🤡",
+    "used": [],
+    "unique": false
   },
   {
     "name": "Banished from Court",
     "depiction": "A disgraced noble being escorted out of a grand hall",
-    "effect": "All enemies within 30 feet must succeed on a DC [[16]] Charisma saving throw or have their movement speed halved and be unable to take reactions until the start of your next turn 🚪",
-    "used": []
-  },
-  {
-    "name": "Court’s Scorn",
-    "depiction": "A Jester pointing mockingly while nobles laugh in the background",
-    "effect": "All enemies within 30 feet must succeed on a DC 15 Wisdom saving throw or be frightened until the end of their next turn 🤡",
-    "used": []
-  },
-  {
-    "name": "King's Decree",
-    "depiction": "A royal scepter struck down with radiant light",
-    "effect": "All enemies within 30 feet must succeed on a DC 16 Charisma saving throw or have disadvantage on saving throws for 1 minute ⚡",
-    "used": []
+    "effect": "All enemies within 30 feet must succeed on a DC [[2d6+6]] Charisma saving throw or have their movement speed halved and be unable to take reactions until the start of your next turn 🚪",
+    "used": [],
+    "unique": false
   },
   {
     "name": "Court’s Sentence",
     "depiction": "A king pointing a scepter at an enemy",
-    "effect": "All enemies within 30 feet must succeed on a DC 16 Constitution saving throw or be poisoned for 1 minute 🏰",
-    "used": []
+    "effect": "All enemies within 30 feet must succeed on a DC [[2d6+6]] Constitution saving throw or be poisoned for 1 minute 🏰",
+    "used": [],
+    "unique": false
   },
   {
     "name": "King's Edict",
     "depiction": "A stern king pointing from his throne",
-    "effect": "Choose one creature within 30 feet",
-    "used": []
-  },
-  {
-    "name": "King’s Decree",
-    "depiction": "A regal king points down at a trembling knight",
-    "effect": "Choose one enemy within 30 feet who must roll [[2d6+3]] and subtract that amount from their movement speed and attack rolls until their next turn 👑",
-    "used": []
-  },
-  {
-    "name": "Court of Shadows",
-    "depiction": "Dark figures gather in a royal hall",
-    "effect": "Each enemy within 30 feet has disadvantage on attack rolls and saving throws against being frightened for 1 minute 👑",
-    "used": []
+    "effect": "Choose one creature within 30 feet. That creature must pass a DC [[2d6+6]] Intelligence Save or be exiled to a demiplane for [[1d4]] rounds 🏯",
+    "used": [],
+    "unique": false
   },
   {
     "name": "Court’s Chill",
     "depiction": "A royal court scene with icy breath visible in the air",
-    "effect": "Each enemy within 30 feet has their speed halved and takes [[2d6]] cold damage at the start of their turn for 1 round ❄️",
-    "used": []
-  },
-  {
-    "name": "Royal Rebuke",
-    "depiction": "A jester with a mocking smile pointing at a distressed noble",
-    "effect": "Each enemy within 30 feet must make a Charisma saving throw DC 16 or have disadvantage on attack rolls and ability checks until their next turn 🤡",
-    "used": []
-  },
-  {
-    "name": "King's Rebuke",
-    "depiction": "An ornate scepter striking downwards",
-    "effect": "Each enemy within 30 feet must make a DC [[14]] Charisma saving throw or be frightened for 1 minute 🛡️",
-    "used": []
-  },
-  {
-    "name": "Regal Gaze",
-    "depiction": "King’s eyes glowing with authority",
-    "effect": "Each enemy within 30 feet must make a DC 16 Charisma saving throw or be frightened for 10 seconds 👑",
-    "used": []
-  },
-  {
-    "name": "Royal Command",
-    "depiction": "A king shouting orders with courtiers bowing",
-    "effect": "Each enemy within 30 feet must make a Wisdom saving throw or be frightened for 1 minute. On a successful save, immunity to this effect for 24 hours 🏰",
-    "used": []
-  },
-  {
-    "name": "The King's Men",
-    "depiction": "Shadowy knights bearing royal banners",
-    "effect": "Each enemy within 30 feet takes [[2d6]] psychic damage and must succeed on a DC 15 Intelligence saving throw or be frightened for 1 minute 🏰",
-    "used": []
-  },
-  {
-    "name": "Banisher's Edict",
-    "depiction": "A king pointing towards a gate with guards",
-    "effect": "Enemies within 30 feet must succeed a DC 14 Charisma saving throw or be frightened until the end of the target’s next turn 🏰",
-    "used": []
+    "effect": "Each enemy within 30 feet must pass a DC [[2d6+6]] Dexterity save or have their speed halved and takes [[2d6]] cold damage at the start of their turn for [[1d4]] rounds ❄️",
+    "used": [],
+    "unique": false
   },
   {
     "name": "Crown of Sorrows",
     "depiction": "A golden crown dripping with dark tears",
     "effect": "Enemies within 30 feet take [[2d6]] psychic damage and have disadvantage on saving throws against charm and fear effects for 1 minute 😢",
-    "used": []
+    "used": [],
+    "unique": false
   },
   {
     "name": "Regal Decree",
     "depiction": "An ornate scroll bearing a royal seal",
     "effect": "Forces one enemy to make a Wisdom saving throw or be charmed for 1 minute, unable to take reactions or cast spells that require concentration 🤴",
-    "used": []
+    "used": [],
+    "unique": false
   },
   {
     "name": "Jester’s Rebuke",
