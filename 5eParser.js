@@ -5,10 +5,12 @@ const dataPath = path.join(__dirname, 'reference', '5etoolsdata');
 const categorySources = {
     'spells': { type: 'directory', path: 'spells', key: 'spell' },
     'items': { type: 'file', path: 'items.json', key: 'item' },
+    'classes': { type: 'directory', path: 'class', key: 'class' },
     'bestiary': { type: 'directory', path: 'bestiary', key: 'monster' },
     'feats': { type: 'file', path: 'feats.json', key: 'feat' },
     'backgrounds': { type: 'file', path: 'backgrounds.json', key: 'background' },
     'races': { type: 'file', path: 'races.json', key: 'race' },
+    'traps': { type: 'file', path: 'trapshazards.json', key: 'trap' },
 };
 const searchableCategories = Object.keys(categorySources);
 
@@ -177,6 +179,39 @@ class FiveEToolsParser {
             this.cache.delete(category);
             this.logToRenderer(`[5eParser] Cleared cache for category: ${category}`);
         }
+    }
+
+    async generateTrap({ tier, threat, type, environment }) {
+        let traps = await this._loadCategoryData('traps');
+
+        if (tier && tier !== 'random') {
+            traps = traps.filter(t => t.rating && t.rating.some(r => r.tier === parseInt(tier, 10)));
+        }
+        if (threat && threat !== 'random') {
+            traps = traps.filter(t => t.rating && t.rating.some(r => r.threat.toLowerCase() === threat.toLowerCase()));
+        }
+        if (type && type !== 'random') {
+            traps = traps.filter(t => t.trapHazType === type);
+        }
+        if (environment && environment !== 'random') {
+            const environmentKeywords = {
+                'dungeon': /dungeon|tomb|crypt|lair|hallway/i,
+                'wilderness': /forest|jungle|swamp|mountain|wilderness|cave/i,
+                'urban': /city|sewer|building|room/i,
+                'planar': /planar|plane|feywild|shadowfell/i,
+                'aquatic': /water|aquatic|ship/i
+            };
+            const regex = environmentKeywords[environment];
+            if (regex) {
+                traps = traps.filter(t => regex.test(JSON.stringify(t.entries)));
+            }
+        }
+
+        if (traps.length === 0) {
+            return null; // No trap found with the given criteria
+        }
+
+        return traps[Math.floor(Math.random() * traps.length)];
     }
 }
 

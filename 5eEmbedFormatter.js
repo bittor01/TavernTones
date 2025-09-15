@@ -146,4 +146,4 @@ function format5eResult(item) {
     }
 }
 
-module.exports = { format5eResult };
+module.exports = { format5eResult, formatEntries };

@@ -5,6 +5,8 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, 
 const { shell } = require('electron');
 const axios = require('axios');
 const EncounterBuilder = require('./EncounterBuilder.js');
+const VehicleEncounterBuilder = require('./VehicleEncounterBuilder.js');
+const NpcGenerator = require('./NpcGenerator.js');
 const ThreeDragonAnteManager = require('./ThreeDragonAnte.js');
 
 // These will be initialized in the constructor
@@ -22,6 +24,8 @@ class CommandHandler {
         musicPlayer = musicPlayerInstance;
         this.fiveEToolsParser = fiveEToolsParserInstance;
         this.encounterBuilder = new EncounterBuilder(this.fiveEToolsParser);
+        this.vehicleEncounterBuilder = new VehicleEncounterBuilder(this.fiveEToolsParser);
+        this.npcGenerator = new NpcGenerator(this.fiveEToolsParser, askGPT4All);
         this.tdaManager = new ThreeDragonAnteManager(this.client);
         this.lastResponse = null;
         BOT_ROLE_ID = config.BOT_ROLE_ID;
@@ -694,6 +698,21 @@ class CommandHandler {
                         await this._sendHelpEmbed(message);
                         break;
 
+                    case content.startsWith('!vehicle-encounter'):
+                        logToRenderer('Vehicle Encounter command detected');
+                        await this._handleVehicleEncounter(message);
+                        break;
+
+                    case content.startsWith('!generate-character'):
+                        logToRenderer('Generate Character command detected');
+                        await this._handleGenerateCharacter(message);
+                        break;
+
+                    case content.startsWith('!generate-trap'):
+                        logToRenderer('Generate Trap command detected');
+                        await this._handleGenerateTrap(message);
+                        break;
+
                     default:
                         logToRenderer('No recognized command found.');
                         await this._sendHelpEmbed(message);
@@ -703,6 +722,182 @@ class CommandHandler {
                 logToRenderer('Error processing command: ' + error.message);
             }
         }
+    }
+
+    async _handleVehicleEncounter(message) {
+        const embed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle('Vehicle Encounter Generator')
+            .setDescription('Select your desired options below. Any unselected options will be randomized.');
+
+        const vehicles = await this.fiveEToolsParser._loadCategoryData('vehicles');
+        const vehicleTags = new Set();
+        vehicles.forEach(v => {
+            if (v.vehicleType) vehicleTags.add(v.vehicleType);
+            if (v.terrain) v.terrain.forEach(t => vehicleTags.add(t));
+            if (v.speed?.burrow) vehicleTags.add('burrow');
+        });
+
+        const tagOptions = [{ label: 'Any Type', value: 'random', default: true }];
+        [...vehicleTags].sort().forEach(tag => {
+            tagOptions.push({ label: tag.charAt(0).toUpperCase() + tag.slice(1), value: tag });
+        });
+
+        const tagSelect = new StringSelectMenuBuilder()
+            .setCustomId('vehicle-tag-select')
+            .setPlaceholder('Select Vehicle Tag/Type (Optional)')
+            .addOptions(tagOptions);
+
+        const styleSelect = new StringSelectMenuBuilder()
+            .setCustomId('vehicle-style-select')
+            .setPlaceholder('Select Encounter Style')
+            .addOptions([
+                { label: 'Any Style (Random)', value: 'random', default: true },
+                { label: 'Flagship Fight', value: 'flagship' },
+                { label: 'Balanced Fight', value: 'balanced' },
+            ]);
+
+        const proceedButton = new ButtonBuilder()
+            .setCustomId('vehicle-proceed-button')
+            .setLabel('Proceed')
+            .setStyle(ButtonStyle.Success);
+
+        const row1 = new ActionRowBuilder().addComponents(tagSelect);
+        const row2 = new ActionRowBuilder().addComponents(styleSelect);
+        const row3 = new ActionRowBuilder().addComponents(proceedButton);
+
+        await message.reply({ embeds: [embed], components: [row1, row2, row3] });
+    }
+
+    async _handleGenerateCharacter(message) {
+        const embed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle('NPC & Character Idea Generator')
+            .setDescription('Select your desired options below. Any unselected options will be randomized.');
+
+        const modeSelect = new StringSelectMenuBuilder()
+            .setCustomId('npc-mode-select')
+            .setPlaceholder('Select Mode')
+            .addOptions([
+                { label: 'Character Idea', value: 'idea', default: true },
+                { label: 'NPC (with Stat Block)', value: 'npc' }
+            ]);
+
+        // Helper to create options for select menus
+        const createOptions = (items, labelField = 'name', sourceField = 'source') => {
+            const options = [{ label: `Any (Random)`, value: 'random' }];
+            const uniqueItems = [];
+            const seen = new Set();
+
+            for (const item of items) {
+                const uniqueKey = `${item[labelField]}_${item[sourceField]}`;
+                if (!seen.has(uniqueKey)) {
+                    seen.add(uniqueKey);
+                    uniqueItems.push(item);
+                }
+            }
+
+            options.push(...uniqueItems.slice(0, 24).map(item => {
+                const label = item[sourceField] ? `${item[labelField]} (${item[sourceField]})` : item[labelField];
+                return { label: label, value: label };
+            }));
+            return options;
+        };
+
+        const races = await this.fiveEToolsParser._loadCategoryData('races');
+        const backgrounds = await this.fiveEToolsParser._loadCategoryData('backgrounds');
+        const classes = (await this.fiveEToolsParser._loadCategoryData('classes')).filter(c => !c.name.includes('Sidekick'));
+
+        const raceSelect = new StringSelectMenuBuilder()
+            .setCustomId('npc-race-select')
+            .setPlaceholder('Select Race')
+            .addOptions(createOptions(races));
+
+        const classSelect = new StringSelectMenuBuilder()
+            .setCustomId('npc-class-select')
+            .setPlaceholder('Select Class')
+            .addOptions(createOptions(classes, 'name', null));
+
+        const backgroundSelect = new StringSelectMenuBuilder()
+            .setCustomId('npc-background-select')
+            .setPlaceholder('Select Background')
+            .addOptions(createOptions(backgrounds));
+
+        const proceedButton = new ButtonBuilder()
+            .setCustomId('npc-proceed-button')
+            .setLabel('Generate')
+            .setStyle(ButtonStyle.Success);
+
+        const row1 = new ActionRowBuilder().addComponents(modeSelect);
+        const row2 = new ActionRowBuilder().addComponents(raceSelect);
+        const row3 = new ActionRowBuilder().addComponents(classSelect);
+        const row4 = new ActionRowBuilder().addComponents(backgroundSelect);
+        const row5 = new ActionRowBuilder().addComponents(proceedButton);
+
+        await message.reply({ embeds: [embed], components: [row1, row2, row3, row4, row5] });
+    }
+
+    async _handleGenerateTrap(message) {
+        const embed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle('Trap & Hazard Generator')
+            .setDescription('Select your desired filters below. Any unselected options will be randomized.');
+
+        const tierSelect = new StringSelectMenuBuilder()
+            .setCustomId('trap-tier-select')
+            .setPlaceholder('Select Party Tier (Optional)')
+            .addOptions([
+                { label: 'Any Tier', value: 'random' },
+                { label: 'Tier 1 (Levels 1-4)', value: '1' },
+                { label: 'Tier 2 (Levels 5-10)', value: '2' },
+                { label: 'Tier 3 (Levels 11-16)', value: '3' },
+                { label: 'Tier 4 (Levels 17-20)', value: '4' },
+            ]);
+
+        const threatSelect = new StringSelectMenuBuilder()
+            .setCustomId('trap-threat-select')
+            .setPlaceholder('Select Threat Level (Optional)')
+            .addOptions([
+                { label: 'Any Threat', value: 'random' },
+                { label: 'Setback', value: 'setback' },
+                { label: 'Dangerous', value: 'dangerous' },
+                { label: 'Deadly', value: 'deadly' },
+            ]);
+
+        const typeSelect = new StringSelectMenuBuilder()
+            .setCustomId('trap-type-select')
+            .setPlaceholder('Select Trap Type (Optional)')
+            .addOptions([
+                { label: 'Any Type', value: 'random' },
+                { label: 'Mechanical', value: 'MECH' },
+                { label: 'Magical', value: 'MAG' },
+                { label: 'Simple', value: 'SMPL' },
+            ]);
+
+        const environmentSelect = new StringSelectMenuBuilder()
+            .setCustomId('trap-environment-select')
+            .setPlaceholder('Select Environment (Optional)')
+            .addOptions([
+                { label: 'Any Environment', value: 'random' },
+                { label: 'Dungeon / Tomb', value: 'dungeon' },
+                { label: 'Wilderness / Cave', value: 'wilderness' },
+                { label: 'Urban / Building', value: 'urban' },
+                { label: 'Planar / Magical', value: 'planar' },
+                { label: 'Aquatic', value: 'aquatic' },
+            ]);
+
+        const proceedButton = new ButtonBuilder()
+            .setCustomId('trap-proceed-button')
+            .setLabel('Generate')
+            .setStyle(ButtonStyle.Success);
+
+        const row1 = new ActionRowBuilder().addComponents(tierSelect);
+        const row2 = new ActionRowBuilder().addComponents(threatSelect);
+        const row3 = new ActionRowBuilder().addComponents(typeSelect);
+        const row4 = new ActionRowBuilder().addComponents(environmentSelect);
+        const row5 = new ActionRowBuilder().addComponents(proceedButton);
+
+        await message.reply({ embeds: [embed], components: [row1, row2, row3, row4, row5] });
     }
 }
 

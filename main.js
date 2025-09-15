@@ -15,8 +15,9 @@ console.log('Axios loaded.');
 const BackendAudioPlayer = require('./BackendAudioPlayer.js');
 const CommandHandler = require('./CommandHandler.js');
 const MagicItemGenerator = require('./MagicItemGenerator.js');
+const VehicleEncounterBuilder = require('./VehicleEncounterBuilder.js');
 const FiveEToolsParser = require('./5eParser.js');
-const { format5eResult } = require('./5eEmbedFormatter.js');
+const { format5eResult, formatEntries } = require('./5eEmbedFormatter.js');
 const fs = require('fs').promises;
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
@@ -31,6 +32,9 @@ let initiativeTracker;
 let fiveEToolsParser;
 const maSelections = new Map();
 const encounterSelections = new Map();
+const vehicleSelections = new Map();
+const npcSelections = new Map();
+const trapSelections = new Map();
 
 
 // --- State Management ---
@@ -1039,6 +1043,40 @@ client.once('clientReady', async () => {
         if (interaction.isStringSelectMenu()) {
             const { customId, values, message } = interaction;
 
+            if (customId.startsWith('trap-')) {
+                const selections = trapSelections.get(message.id) || {};
+                const type = customId.split('-')[1];
+                selections[type] = values[0];
+                trapSelections.set(message.id, selections);
+                await interaction.deferUpdate();
+                return;
+            }
+
+            if (customId.startsWith('npc-')) {
+                const selections = npcSelections.get(message.id) || {};
+                const type = customId.split('-')[1];
+                selections[type] = values[0];
+                npcSelections.set(message.id, selections);
+                await interaction.deferUpdate();
+                return;
+            }
+
+            if (customId === 'vehicle-tag-select') {
+                const selections = vehicleSelections.get(message.id) || {};
+                selections.tag = values[0];
+                vehicleSelections.set(message.id, selections);
+                await interaction.deferUpdate();
+                return;
+            }
+
+            if (customId === 'vehicle-style-select') {
+                const selections = vehicleSelections.get(message.id) || {};
+                selections.style = values[0];
+                vehicleSelections.set(message.id, selections);
+                await interaction.deferUpdate();
+                return;
+            }
+
             if (customId === 'encounter-creature-select') {
                 const selections = encounterSelections.get(message.id) || {};
                 selections.creature = values[0];
@@ -1127,6 +1165,75 @@ client.once('clientReady', async () => {
         }
 
         if (interaction.isButton()) {
+            if (interaction.customId === 'trap-proceed-button') {
+                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+                const selections = trapSelections.get(interaction.message.id) || {};
+                const trap = await fiveEToolsParser.generateTrap(selections);
+
+                if (!trap) {
+                    await interaction.editReply({ content: 'Could not find a trap matching your criteria. Please try broadening your search.' });
+                    return;
+                }
+
+                const embed = new EmbedBuilder()
+                    .setColor(0xE74C3C) // Red for traps
+                    .setTitle(`Trap: ${trap.name}`)
+                    .setDescription(formatEntries(trap.entries));
+
+                await interaction.channel.send({ embeds: [embed] });
+                await interaction.editReply({ content: 'Trap generated!' });
+                trapSelections.delete(interaction.message.id);
+                return;
+            }
+
+            if (interaction.customId === 'npc-proceed-button') {
+                const selections = npcSelections.get(interaction.message.id) || {};
+                if (selections.mode === 'npc') {
+                    const modal = new ModalBuilder()
+                        .setCustomId(`npc-modal-${interaction.message.id}`)
+                        .setTitle('NPC Details');
+                    const partyLevelInput = new TextInputBuilder()
+                        .setCustomId('partyLevel')
+                        .setLabel("Average Party Level (1-20)")
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(true);
+                    modal.addComponents(new ActionRowBuilder().addComponents(partyLevelInput));
+                    await interaction.showModal(modal);
+                } else {
+                    // Directly generate character idea
+                    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+                    await _handleNpcGeneration(interaction, selections);
+                    npcSelections.delete(interaction.message.id);
+                }
+                return;
+            }
+
+            if (interaction.customId === 'vehicle-proceed-button') {
+                const selections = vehicleSelections.get(interaction.message.id) || {};
+
+                const modal = new ModalBuilder()
+                    .setCustomId(`vehicle-modal|${selections.tag || 'random'}|${selections.style || 'random'}`)
+                    .setTitle('Vehicle Encounter Details');
+
+                const totalHpInput = new TextInputBuilder()
+                    .setCustomId('totalHp')
+                    .setLabel("Total Vehicle HP Budget")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                const numVehiclesInput = new TextInputBuilder()
+                    .setCustomId('numVehicles')
+                    .setLabel("Ideal Number of Vehicles")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                modal.addComponents(new ActionRowBuilder().addComponents(totalHpInput));
+                modal.addComponents(new ActionRowBuilder().addComponents(numVehiclesInput));
+
+                await interaction.showModal(modal);
+                return;
+            }
+
             if (interaction.customId.startsWith('encounter-proceed-button')) {
                 const parts = interaction.customId.split('|');
                 const selections = encounterSelections.get(interaction.message.id) || {};
@@ -1244,10 +1351,96 @@ client.once('clientReady', async () => {
             }
         }
 
+async function _handleNpcGeneration(interaction, selections) {
+    const result = await client.commandHandler.npcGenerator.generateCharacter(selections);
+    if (result.error) {
+        await interaction.editReply({ content: `Error: ${result.error}` });
+        return;
+    }
+    const embed = formatNpcResult(result);
+    await interaction.channel.send({ embeds: [embed] });
+    await interaction.editReply({ content: 'Generation complete!' });
+}
+
         if (interaction.isModalSubmit()) {
             if (interaction.customId.startsWith('tda_ante_modal')) {
                 return client.commandHandler.tdaManager.handleAnteModalSubmit(interaction);
             }
+
+            if (interaction.customId.startsWith('npc-modal-')) {
+                const messageId = interaction.customId.replace('npc-modal-', '');
+                const selections = npcSelections.get(messageId) || {};
+                selections.partyLevel = parseInt(interaction.fields.getTextInputValue('partyLevel'), 10);
+
+                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+                await _handleNpcGeneration(interaction, selections);
+                npcSelections.delete(messageId);
+                return;
+            }
+
+            if (interaction.customId.startsWith('vehicle-modal|')) {
+                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
+                const parts = interaction.customId.split('|');
+                const tag = parts[1];
+                let style = parts[2];
+
+                if (style === 'random') {
+                    style = ['flagship', 'balanced'][Math.floor(Math.random() * 2)];
+                }
+
+                const totalHp = parseInt(interaction.fields.getTextInputValue('totalHp'), 10);
+                const numVehicles = parseInt(interaction.fields.getTextInputValue('numVehicles'), 10);
+
+                if (isNaN(totalHp) || totalHp <= 0 || isNaN(numVehicles) || numVehicles <= 0) {
+                    await interaction.editReply({ content: 'Invalid Total HP. Please provide a positive number.' });
+                    return;
+                }
+                if (style === 'balanced' && (isNaN(numVehicles) || numVehicles <= 0)) {
+                    await interaction.editReply({ content: 'Invalid Number of Vehicles. Please provide a positive number for a balanced fight.' });
+                    return;
+                }
+
+                const result = await client.commandHandler.vehicleEncounterBuilder.generateEncounter({
+                    tag,
+                    style,
+                    totalHp,
+                    numVehicles
+                });
+
+                if (result.error) {
+                    await interaction.editReply({ content: `Error: ${result.error}` });
+                    return;
+                }
+
+                // Fancier formatting
+                const summaryEmbed = new EmbedBuilder()
+                    .setColor(0x2ECC71)
+                    .setTitle(`Vehicle Encounter Generated! (${style})`)
+                    .setDescription(`**Tag:** ${tag}\n**HP Budget:** ${result.totalValue.toLocaleString()} / ${result.budget.toLocaleString()}`)
+                    .addFields({
+                        name: 'Vehicles',
+                        value: result.encounter.map(v => `• ${v.name} (HP: ${v.hp})`).join('\n') || 'None'
+                    });
+
+                const originalMessage = await interaction.channel.send({ embeds: [summaryEmbed] });
+                const thread = await originalMessage.startThread({
+                    name: `Vehicle Encounter Details (${style})`,
+                    autoArchiveDuration: 60,
+                });
+
+                for (const vehicle of result.encounter) {
+                    const vehicleDetails = `**${vehicle.name}**\n` +
+                                           `AC: ${vehicle.ac}\n` +
+                                           `HP: ${vehicle.hp}\n` +
+                                           `Crew: ${vehicle.capCrew || 'N/A'}`;
+                    await thread.send(vehicleDetails);
+                }
+
+                await interaction.editReply({ content: `Vehicle encounter generated! You can view it here: ${originalMessage.url}` });
+                return;
+            }
+
             if (interaction.customId.startsWith('encounter-modal|')) {
                 await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
@@ -1461,6 +1654,36 @@ setInterval(() => {
     memoryUsage = process.memoryUsage().rss;
     logToRenderer(`Memory usage is ${((memoryUsage - startingMemUse) / 1024 / 1024).toFixed(2)} MB higher than at launch (${(memoryUsage / 1024 / 1024).toFixed(2)} MB total)`);
 }, 60000);
+
+function formatNpcResult(result) {
+    const embed = new EmbedBuilder()
+        .setColor(0x9B59B6) // Purple for NPCs
+        .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name}`)
+        .setDescription(`A **${result.race.name} ${result.class.name}** who was a(n) **${result.background.name}**.`);
+
+    if (result.traits) {
+        embed.addFields({ name: 'Personality Traits', value: `${result.traits[0]}\n-OR-\n${result.traits[1]}` });
+    }
+    if (result.ideal) {
+        embed.addFields({ name: 'Ideal', value: result.ideal });
+    }
+    if (result.bond) {
+        embed.addFields({ name: 'Bond', value: result.bond });
+    }
+    if (result.flaw) {
+        embed.addFields({ name: 'Flaw', value: result.flaw });
+    }
+
+    if (result.mode === 'npc' && result.statblockSuggestions) {
+        const { easy, medium, hard } = result.statblockSuggestions;
+        const statblockValue = `**Easy:** ${easy.name} (CR ${easy.cr})\n` +
+                               `**Medium:** ${medium.name} (CR ${medium.cr})\n` +
+                               `**Hard:** ${hard.name} (CR ${hard.cr})`;
+        embed.addFields({ name: 'Suggested Stat Blocks', value: statblockValue });
+    }
+
+    return embed;
+}
 
 function getHpColor(current, max) {
     if (current <= 0) return '#6c757d'; // Grey

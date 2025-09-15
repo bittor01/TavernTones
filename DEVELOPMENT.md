@@ -260,3 +260,36 @@ This is a list of potential future features, fixes, and improvements.
 6.  **Refactor `!ro` Command**: Improve the user experience of the `!ro` command by replacing the clunky text-based input with an interactive Discord Modal.
 7.  **Investigate New Generators from 5eTools Data**: Explore the `5etoolsdata` directory, specifically files like `loot.json` and `life.json`, to find opportunities for new generators or bot features.
 8.  **Remember Window Positions**: Save the position and size of the main and secondary windows on close and restore them on the next launch.
+
+---
+## Active Development Plan
+
+This section outlines the plan for the features currently under active development.
+
+### Part 1: Cleanup
+1.  Delete the obsolete `hp.html` and `hp.js` files.
+2.  Update `FILE_REFERENCE.md` to remove the "HP Tracker (Legacy)" section.
+
+### Part 2: Vehicle Encounter Generator (`!vehicle-encounter`)
+1.  **Data Analysis**: Analyze `reference/5etoolsdata/vehicles.json` to map vehicle tags to the requested environment categories (`Land`, `Air`, `Naval`, `Space`, `Underground`).
+2.  **Command & UI**: Implement a new `!vehicle-encounter` command in `CommandHandler.js` that triggers a message with dropdowns for `Environment` and `Encounter Style` (`Flagship`/`Balanced`).
+3.  **Modal Input**: Upon proceeding, display a modal to collect `Total HP` and (for "Balanced" style) `Number of Vehicles` from the user.
+4.  **Backend Logic (`Flagship`)**: Implement the logic to find the largest single vehicle that fits the HP budget, then use the remaining HP to add smaller escort vehicles.
+5.  **Backend Logic (`Balanced`)**: Implement the logic to calculate the target HP per vehicle, then find several vehicle options within a +/- 15% range of that target.
+6.  **Output Formatting**: Create a new helper function to format the generated vehicle encounter into a summary embed and a detailed thread, similar to the existing encounter generator.
+
+### Part 3: NPC & Character Idea Generator (`!generate-character`)
+1.  **Data Analysis**: Investigate `races.json` and `languages.json` for name generation data. Analyze `backgrounds.json` to confirm the structure for Traits, Ideals, Bonds, and Flaws.
+2.  **Command & UI**: Implement a new `!generate-character` command in `CommandHandler.js`. The command will feature a primary dropdown for `NPC Mode` or `Character Idea Mode`, along with optional dropdowns for `Race`, `Background`, and `Class`.
+3.  **Backend Logic (Shared)**: Implement the core logic to randomly select from data files if the user does not specify options. Implement the logic to pick two random Traits, Ideals, Bonds, and Flaws.
+4.  **Backend Logic (NPC Mode)**: Add logic to accept a party level from the user and suggest three appropriate humanoid stat blocks (Easy, Medium, Hard CR) from the bestiary.
+5.  **Backend Logic (Name Generation)**: If `races.json` does not contain sufficient data for name generation, implement the two-stage LLM query:
+    -   First, prompt the local LLM to generate a list of suitable names based on character details.
+    -   Second, feed this list back to the LLM and ask it to choose the most appropriate name.
+6.  **Output Formatting**: Format the final character/NPC details into a clear, readable embed.
+
+### Part 4: Trap & Hazard Generator (`!generate-trap`)
+1.  **Command & UI**: Implement a new `!generate-trap` command in `CommandHandler.js` that prompts the user with optional dropdowns for `Party Tier`, `Threat Level`, `Trap Type`, and a text input for `Environment`.
+2.  **Backend Logic**: Implement the filtering logic based on user selections. If a filter is left blank, it will not be applied. The `Environment` filter will perform a case-insensitive text search on the trap's description.
+3.  **Random Selection**: After filtering, randomly select one trap from the remaining pool.
+4.  **Output Formatting**: Create a function to format the selected trap's details into a comprehensive embed, showing its trigger, effects, and countermeasures.
