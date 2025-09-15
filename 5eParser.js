@@ -222,20 +222,110 @@ class FiveEToolsParser {
     }
 
     async getLineages(speciesName, speciesSource) {
-        const raceData = await this._loadCategoryData('races');
-        const lineages = [];
+        const allRaces = await this._loadCategoryData('races');
+        const lineageMap = new Map();
 
-        // Find the base species to check its _versions array
-        const baseSpecies = raceData.find(r => r.name === speciesName && r.source === speciesSource);
-        if (baseSpecies && baseSpecies._versions) {
-            lineages.push(...baseSpecies._versions);
+        const baseSpecies = allRaces.find(r => r.name === speciesName && r.source === speciesSource);
+
+        if (!baseSpecies) {
+            this.logToRenderer(`[5eParser] Could not find base species: ${speciesName} [${speciesSource}]`);
+            return [];
         }
 
-        // Find all subraces that point to this species
-        const subraces = raceData.filter(r => r.raceName === speciesName && r.raceSource === speciesSource);
-        lineages.push(...subraces);
+        // Case 1: Standalone subrace/lineage files (e.g., Githzerai is a subrace of Gith)
+        const standaloneSubraces = allRaces.filter(r => r.raceName === speciesName && r.raceSource === speciesSource);
+        for (const subrace of standaloneSubraces) {
+            lineageMap.set(`${subrace.name}|${subrace.source}`, subrace);
+        }
 
-        return lineages;
+        // Case 2: Subraces defined in a `subraces` array on the base species object (e.g., PHB Elf)
+        if (baseSpecies.subraces) {
+            for (const subraceStub of baseSpecies.subraces) {
+                const fullSubrace = allRaces.find(r => r.name === subraceStub.name && r.source === subraceStub.source);
+                if (fullSubrace) {
+                    lineageMap.set(`${fullSubrace.name}|${fullSubrace.source}`, fullSubrace);
+                }
+            }
+        }
+
+        // Case 3: Lineages defined in a `_versions` array (e.g., XPHB races)
+        if (baseSpecies._versions) {
+            for (const version of baseSpecies._versions) {
+                const fullLineage = allRaces.find(r => r.name === version.name && r.source === version.source);
+                 if (fullLineage) {
+                    lineageMap.set(`${fullLineage.name}|${fullLineage.source}`, fullLineage);
+                }
+            }
+        }
+
+        return Array.from(lineageMap.values());
+    }
+
+    async getBackgrounds() {
+        return await this._loadCategoryData('backgrounds');
+    }
+
+    async getBackgroundTraits(backgroundName, backgroundSource) {
+        const backgrounds = await this._loadCategoryData('backgrounds');
+
+        const findTraitsRecursive = (bg) => {
+            if (!bg) return null;
+
+            // If it's a copy, find the original and recurse
+            if (bg._copy && bg._copy.name && bg._copy.source) {
+                const originalBg = backgrounds.find(b => b.name === bg._copy.name && b.source === bg._copy.source);
+                if (originalBg) {
+                    return findTraitsRecursive(originalBg);
+                }
+            }
+
+            // Otherwise, process this background's entries
+            if (!bg.entries) return null;
+
+            const characteristicsEntry = bg.entries.find(e => e.name === "Suggested Characteristics" && e.type === "entries");
+            if (!characteristicsEntry || !characteristicsEntry.entries) return null;
+
+            const traits = { ideal: null, bond: null, flaw: null };
+            const traitTypes = ["Ideal", "Bond", "Flaw"];
+
+            for (const traitType of traitTypes) {
+                const table = characteristicsEntry.entries.find(e =>
+                    e.type === "table" &&
+                    e.colLabels &&
+                    e.colLabels.length > 1 &&
+                    e.colLabels[1].includes(traitType) // Use .includes() for flexibility (e.g., "Ideal" vs "Athlete Ideals")
+                );
+
+                if (table && table.rows && table.rows.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * table.rows.length);
+                    // The trait text is in the second column of the row. It may contain more objects or strings.
+                    const rawTrait = table.rows[randomIndex][1];
+                    let traitText = '';
+                    if (typeof rawTrait === 'object' && rawTrait.entry) {
+                        traitText = rawTrait.entry;
+                    } else {
+                        traitText = rawTrait;
+                    }
+                    // Basic cleanup to remove 5etools syntax
+                    traitText = traitText.replace(/\{@.*?\|(.*?)\}/g, '$1').replace(/\{@.*? (.*?)\}/g, '$1');
+                    traits[traitType.toLowerCase()] = traitText;
+                } else {
+                    this.logToRenderer(`[5eParser] No table found for trait type '${traitType}' in background '${bg.name}'`);
+                    traits[traitType.toLowerCase()] = `No ${traitType} found.`;
+                }
+            }
+            return traits;
+        };
+
+        const background = backgrounds.find(b => b.name === backgroundName && b.source === backgroundSource);
+        const foundTraits = findTraitsRecursive(background);
+
+        if (foundTraits) {
+            return foundTraits;
+        }
+
+        this.logToRenderer(`[5eParser] Could not find traits for background: ${backgroundName} [${backgroundSource}]`);
+        return { ideal: 'Not found', bond: 'Not found', flaw: 'Not found' };
     }
 
     async getClasses() {

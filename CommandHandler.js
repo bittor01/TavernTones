@@ -1059,7 +1059,7 @@ async function askGPT4All(prompt, model) {
 
     // Sanitize the prompt to prevent command injection
     const sanitizedPrompt = prompt.replace(/"/g, '\\"');
-    const tailPrompt = ' - Thanks for the help!'
+    const tailPrompt = '\n - Thanks for the help!'
     const sanitizedPromptTail = sanitizedPrompt + tailPrompt;
     try {
         const response = await axios.post('http://localhost:4891/v1/chat/completions', {

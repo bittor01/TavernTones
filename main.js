@@ -1431,6 +1431,15 @@ async function _handleNpcGeneration(interaction, selections) {
         await interaction.editReply({ content: `Error: ${result.error}` });
         return;
     }
+
+    // Now, fetch the personality traits using the new parser method
+    if (result.background) {
+        const traits = await fiveEToolsParser.getBackgroundTraits(result.background.name, result.background.source);
+        result.ideal = traits.ideal;
+        result.bond = traits.bond;
+        result.flaw = traits.flaw;
+    }
+
     const embed = formatNpcResult(result);
     await interaction.channel.send({ embeds: [embed] });
     await interaction.editReply({ content: 'Generation complete!' });
@@ -1440,75 +1449,129 @@ async function _updateTrapComponents(interaction, selections) {
     await interaction.deferUpdate();
 
     const allTraps = await fiveEToolsParser._loadCategoryData('traps');
+    const environmentKeywords = {
+        'dungeon': /dungeon|tomb|crypt|lair|hallway/i,
+        'wilderness': /forest|jungle|swamp|mountain|wilderness|cave/i,
+        'urban': /city|sewer|building|room/i,
+        'planar': /planar|plane|feywild|shadowfell/i,
+        'aquatic': /water|aquatic|ship/i
+    };
 
-    const createDropdown = (id, placeholder, allOptions, selectedValue, filterKey) => {
-        const otherSelections = { ...selections };
+    // This function now returns both the component and a flag indicating if a reset happened.
+    const createDropdown = (currentSelections, id, placeholder, allOptions, filterKey) => {
+        let selectionWasReset = false;
+        const selectedValue = currentSelections[filterKey];
+
+        // Determine the set of traps that are possible given all OTHER filters
+        const otherSelections = { ...currentSelections };
         delete otherSelections[filterKey];
 
-        const availableOptions = allOptions.map(opt => {
-            if (opt.value === 'random') return { ...opt, disabled: false };
-
-            let filteredTraps = allTraps;
-            // Filter by all OTHER active selections
-            for (const [key, value] of Object.entries(otherSelections)) {
-                if (value && value !== 'random') {
-                    if (key === 'tier') filteredTraps = filteredTraps.filter(t => t.rating?.some(r => r.tier === parseInt(value)));
-                    else if (key === 'threat') filteredTraps = filteredTraps.filter(t => t.rating?.some(r => r.threat.toLowerCase() === value));
-                    else if (key === 'type') filteredTraps = filteredTraps.filter(t => t.trapHazType === value);
-                }
+        let trapsFilteredByOthers = [...allTraps];
+        for (const [key, value] of Object.entries(otherSelections)) {
+            if (!value || value === 'random') continue;
+             switch (key) {
+                case 'tier':
+                    trapsFilteredByOthers = trapsFilteredByOthers.filter(t => t.rating?.some(r => r.tier === parseInt(value)));
+                    break;
+                case 'threat':
+                    trapsFilteredByOthers = trapsFilteredByOthers.filter(t => t.rating?.some(r => r.threat.toLowerCase() === value));
+                    break;
+                case 'type':
+                    trapsFilteredByOthers = trapsFilteredByOthers.filter(t => t.trapHazType === value);
+                    break;
+                case 'environment':
+                    const regex = environmentKeywords[value];
+                    if (regex) trapsFilteredByOthers = trapsFilteredByOthers.filter(t => regex.test(JSON.stringify(t.entries)));
+                    break;
             }
+        }
 
-            // Now, check if any of the remaining traps match the CURRENT option
+        // For each option in this dropdown, check if it's possible against the pre-filtered list
+        const availableOptions = allOptions.map(opt => {
+            if (opt.value === 'random') return { ...opt, disabled: false, default: opt.value === selectedValue };
+
             let isPossible = false;
-            if (filterKey === 'tier') isPossible = filteredTraps.some(t => t.rating?.some(r => r.tier === parseInt(opt.value)));
-            else if (filterKey === 'threat') isPossible = filteredTraps.some(t => t.rating?.some(r => r.threat.toLowerCase() === opt.value));
-            else if (filterKey === 'type') isPossible = filteredTraps.some(t => t.trapHazType === opt.value);
-            else isPossible = true; // Environment is not strictly enforced by data, so we don't disable
-
+            switch (filterKey) {
+                case 'tier':
+                    isPossible = trapsFilteredByOthers.some(t => t.rating?.some(r => r.tier === parseInt(opt.value)));
+                    break;
+                case 'threat':
+                    isPossible = trapsFilteredByOthers.some(t => t.rating?.some(r => r.threat.toLowerCase() === opt.value));
+                    break;
+                case 'type':
+                    isPossible = trapsFilteredByOthers.some(t => t.trapHazType === opt.value);
+                    break;
+                case 'environment':
+                    const regex = environmentKeywords[opt.value];
+                    isPossible = regex ? trapsFilteredByOthers.some(t => regex.test(JSON.stringify(t.entries))) : false;
+                    break;
+            }
             return { ...opt, default: opt.value === selectedValue, disabled: !isPossible };
         });
 
-        return new StringSelectMenuBuilder()
+        // Check if the current selection has become impossible
+        if (selectedValue && selectedValue !== 'random') {
+            const selectedOption = availableOptions.find(opt => opt.value === selectedValue);
+            if (selectedOption && selectedOption.disabled) {
+                delete currentSelections[filterKey]; // Reset the selection in the mutable state object
+                selectionWasReset = true;
+            }
+        }
+
+        const component = new StringSelectMenuBuilder()
             .setCustomId(id)
             .setPlaceholder(placeholder)
             .addOptions(availableOptions);
+
+        return { component, selectionWasReset };
     };
 
-    const tierOpts = [
-        { label: 'Any Tier', value: 'random' }, { label: 'Tier 1 (Levels 1-4)', value: '1' },
-        { label: 'Tier 2 (Levels 5-10)', value: '2' }, { label: 'Tier 3 (Levels 11-16)', value: '3' },
-        { label: 'Tier 4 (Levels 17-20)', value: '4' }
-    ];
-    const threatOpts = [
-        { label: 'Any Threat', value: 'random' }, { label: 'Setback', value: 'setback' },
-        { label: 'Dangerous', value: 'dangerous' }, { label: 'Deadly', value: 'deadly' }
-    ];
-    const typeOpts = [
-        { label: 'Any Type', value: 'random' }, { label: 'Mechanical', value: 'MECH' },
-        { label: 'Magical', value: 'MAG' }, { label: 'Simple', value: 'SMPL' }
-    ];
-    const envOpts = [
-        { label: 'Any Environment', value: 'random' }, { label: 'Dungeon / Tomb', value: 'dungeon' },
-        { label: 'Wilderness / Cave', value: 'wilderness' }, { label: 'Urban / Building', value: 'urban' },
-        { label: 'Planar / Magical', value: 'planar' }, { label: 'Aquatic', value: 'aquatic' }
-    ];
+    // --- Main Logic ---
+    let wasReset;
+    let buildCount = 0; // Safeguard against infinite loops
+    do {
+        wasReset = false;
+        buildCount++;
 
-    const tierSelect = createDropdown('trap-tier-select', selections.tier ? tierOpts.find(o=>o.value===selections.tier).label : 'Select Party Tier (Optional)', tierOpts, selections.tier, 'tier');
-    const threatSelect = createDropdown('trap-threat-select', selections.threat ? threatOpts.find(o=>o.value===selections.threat).label : 'Select Threat Level (Optional)', threatOpts, selections.threat, 'threat');
-    const typeSelect = createDropdown('trap-type-select', selections.type ? typeOpts.find(o=>o.value===selections.type).label : 'Select Trap Type (Optional)', typeOpts, selections.type, 'type');
-    const environmentSelect = createDropdown('trap-environment-select', selections.environment ? envOpts.find(o=>o.value===selections.environment).label : 'Select Environment (Optional)', envOpts, selections.environment, 'environment');
+        const tierOpts = [ { label: 'Any Tier', value: 'random' }, { label: 'Tier 1 (Levels 1-4)', value: '1' }, { label: 'Tier 2 (Levels 5-10)', value: '2' }, { label: 'Tier 3 (Levels 11-16)', value: '3' }, { label: 'Tier 4 (Levels 17-20)', value: '4' } ];
+        const threatOpts = [ { label: 'Any Threat', value: 'random' }, { label: 'Setback', value: 'setback' }, { label: 'Dangerous', value: 'dangerous' }, { label: 'Deadly', value: 'deadly' } ];
+        const typeOpts = [ { label: 'Any Type', value: 'random' }, { label: 'Mechanical', value: 'MECH' }, { label: 'Magical', value: 'MAG' }, { label: 'Simple', value: 'SMPL' } ];
+        const envOpts = [ { label: 'Any Environment', value: 'random' }, { label: 'Dungeon / Tomb', value: 'dungeon' }, { label: 'Wilderness / Cave', value: 'wilderness' }, { label: 'Urban / Building', value: 'urban' }, { label: 'Planar / Magical', value: 'planar' }, { label: 'Aquatic', value: 'aquatic' } ];
 
-    const proceedButton = new ButtonBuilder().setCustomId('trap-proceed-button').setLabel('Generate').setStyle(ButtonStyle.Success);
+        const allDropdownConfigs = [
+            { id: 'trap-tier-select', placeholder: 'Select Party Tier (Optional)', options: tierOpts, key: 'tier' },
+            { id: 'trap-threat-select', placeholder: 'Select Threat Level (Optional)', options: threatOpts, key: 'threat' },
+            { id: 'trap-type-select', placeholder: 'Select Trap Type (Optional)', options: typeOpts, key: 'type' },
+            { id: 'trap-environment-select', placeholder: 'Select Environment (Optional)', options: envOpts, key: 'environment' }
+        ];
 
-    await interaction.editReply({
-        components: [
-            new ActionRowBuilder().addComponents(tierSelect),
-            new ActionRowBuilder().addComponents(threatSelect),
-            new ActionRowBuilder().addComponents(typeSelect),
-            new ActionRowBuilder().addComponents(environmentSelect),
-            new ActionRowBuilder().addComponents(proceedButton),
-        ]
-    });
+        const components = [];
+        for (const config of allDropdownConfigs) {
+            const result = createDropdown(selections, config.id, config.placeholder, config.options, config.key);
+            components.push(result.component);
+            if (result.selectionWasReset) {
+                wasReset = true;
+            }
+        }
+
+        if (wasReset) {
+            // If a reset occurred, the loop will run again with the updated `selections` object.
+            continue;
+        }
+
+        const proceedButton = new ButtonBuilder().setCustomId('trap-proceed-button').setLabel('Generate').setStyle(ButtonStyle.Success);
+
+        await interaction.editReply({
+            components: [
+                new ActionRowBuilder().addComponents(components[0]),
+                new ActionRowBuilder().addComponents(components[1]),
+                new ActionRowBuilder().addComponents(components[2]),
+                new ActionRowBuilder().addComponents(components[3]),
+                new ActionRowBuilder().addComponents(proceedButton),
+            ]
+        });
+
+    } while (wasReset && buildCount < 5); // Loop if a reset happened, with a safety break
 }
 
 async function _updateNpcComponents(interaction, selections, updateOptions = {}) {
@@ -1597,7 +1660,7 @@ async function _updateNpcComponents(interaction, selections, updateOptions = {})
     }
 
     // --- Background Dropdown ---
-    const backgroundList = await fiveEToolsParser._loadCategoryData('backgrounds');
+    const backgroundList = await fiveEToolsParser.getBackgrounds();
     const backgroundOptions = backgroundList.map(b => ({
         label: `${b.name} (${b.source})`,
         value: `background|${b.name}|${b.source}`
@@ -1944,11 +2007,8 @@ function formatNpcResult(result) {
     const embed = new EmbedBuilder()
         .setColor(0x9B59B6) // Purple for NPCs
         .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name}`)
-        .setDescription(`A **${result.lineage.name || result.species.name} ${result.subclass.name || result.class.name}** who was a(n) **${result.background.name}**.`);
+        .setDescription(`A **${result.lineage?.name || result.species.name} ${result.subclass?.name || result.class.name}** who was a(n) **${result.background.name}**.`);
 
-    if (result.traits) {
-        embed.addFields({ name: 'Personality Traits', value: `${result.traits[0]}\n-OR-\n${result.traits[1]}` });
-    }
     if (result.ideal) {
         embed.addFields({ name: 'Ideal', value: result.ideal });
     }

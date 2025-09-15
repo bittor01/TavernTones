@@ -83,7 +83,12 @@ class DropdownHandler {
 
         // --- Assemble the final options in the correct order ---
 
-        // 1. Add "Previous Page" option if needed
+        // On page 1, pinned items come first.
+        if (currentPage === 1) {
+            finalOptions.push(...this.topPinned);
+        }
+
+        // Add "Previous Page" option if needed (will be at the top on page > 1)
         if (totalPages > 1 && currentPage > 1) {
             finalOptions.push({
                 label: `⬅️ Previous Page (${currentPage - 1}/${totalPages})`,
@@ -91,16 +96,18 @@ class DropdownHandler {
             });
         }
 
-        // 2. Add top-pinned options
-        finalOptions.push(...this.topPinned);
+        // On subsequent pages, pinned items come after "Previous Page"
+        if (currentPage > 1) {
+            finalOptions.push(...this.topPinned);
+        }
 
-        // 3. Add the options for the current page
+        // Add the options for the current page
         finalOptions.push(...pageOptions);
 
-        // 4. Add bottom-pinned options
+        // Add bottom-pinned options
         finalOptions.push(...this.bottomPinned);
 
-        // 5. Add "Next Page" option if needed
+        // Add "Next Page" option if needed
         if (totalPages > 1 && currentPage < totalPages) {
             finalOptions.push({
                 label: `➡️ Next Page (${currentPage + 1}/${totalPages})`,
