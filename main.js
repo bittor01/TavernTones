@@ -1368,51 +1368,50 @@ async function _updateTrapDropdowns(interaction, selections) {
     };
 
     const getValidOptions = (filterKey, currentSelections) => {
-        let possibleTraps = [...allTraps];
-
-        // Progressively filter traps based on OTHER selections
-        for (const [key, value] of Object.entries(currentSelections)) {
-            if (key === filterKey || value === 'random') continue; // Don't filter by the key we're populating
-
-            switch (key) {
-                case 'tier':
-                    possibleTraps = possibleTraps.filter(t => t.rating?.some(r => r.tier === parseInt(value, 10)));
-                    break;
-                case 'threat':
-                    possibleTraps = possibleTraps.filter(t => t.rating?.some(r => r.threat.toLowerCase() === value));
-                    break;
-                case 'type':
-                    possibleTraps = possibleTraps.filter(t => t.trapHazType === value);
-                    break;
-                case 'environment':
-                    const regex = environmentKeywords[value];
-                    if (regex) {
-                        possibleTraps = possibleTraps.filter(t => regex.test(JSON.stringify(t.entries)));
-                    }
-                    break;
-            }
-        }
-
-        // Now, from the possible traps, get all valid values for the target filter key
         const validValues = new Set();
-        for (const trap of possibleTraps) {
-            switch (filterKey) {
-                case 'tier':
-                    trap.rating?.forEach(r => r.tier && validValues.add(r.tier.toString()));
-                    break;
-                case 'threat':
-                    trap.rating?.forEach(r => r.threat && validValues.add(r.threat.toLowerCase()));
-                    break;
-                case 'type':
-                    if (trap.trapHazType) validValues.add(trap.trapHazType);
-                    break;
-                case 'environment':
-                    for (const [env, regex] of Object.entries(environmentKeywords)) {
-                        if (trap.entries && regex.test(JSON.stringify(trap.entries))) {
-                            validValues.add(env);
+        const tier = currentSelections.tier && currentSelections.tier !== 'random' ? parseInt(currentSelections.tier, 10) : null;
+        const threat = currentSelections.threat && currentSelections.threat !== 'random' ? currentSelections.threat.toLowerCase() : null;
+        const type = currentSelections.type && currentSelections.type !== 'random' ? currentSelections.type : null;
+        const environment = currentSelections.environment && currentSelections.environment !== 'random' ? currentSelections.environment : null;
+
+        for (const trap of allTraps) {
+            const typeMatch = !type || filterKey === 'type' || trap.trapHazType === type;
+            const envRegex = environment ? environmentKeywords[environment] : null;
+            const envMatch = !envRegex || filterKey === 'environment' || (trap.entries && envRegex.test(JSON.stringify(trap.entries)));
+
+            if (!typeMatch || !envMatch) continue;
+
+            if (trap.rating) {
+                for (const rating of trap.rating) {
+                    const tierMatch = !tier || filterKey === 'tier' || rating.tier === tier;
+                    const threatMatch = !threat || filterKey === 'threat' || (rating.threat && rating.threat.toLowerCase() === threat);
+
+                    if (tierMatch && threatMatch) {
+                        // This trap is a potential match. Add its properties to the valid sets.
+                        if (filterKey === 'tier') validValues.add(rating.tier.toString());
+                        if (filterKey === 'threat' && rating.threat) validValues.add(rating.threat.toLowerCase());
+                        if (filterKey === 'type' && trap.trapHazType) validValues.add(trap.trapHazType);
+                        if (filterKey === 'environment') {
+                             for (const [env, regex] of Object.entries(environmentKeywords)) {
+                                if (trap.entries && regex.test(JSON.stringify(trap.entries))) {
+                                    validValues.add(env);
+                                }
+                            }
                         }
                     }
-                    break;
+                }
+            } else {
+                 // Handle traps with no rating if tier/threat aren't selected
+                if (!tier && !threat) {
+                    if (filterKey === 'type' && trap.trapHazType) validValues.add(trap.trapHazType);
+                    if (filterKey === 'environment') {
+                        for (const [env, regex] of Object.entries(environmentKeywords)) {
+                            if (trap.entries && regex.test(JSON.stringify(trap.entries))) {
+                                validValues.add(env);
+                            }
+                        }
+                    }
+                }
             }
         }
         return validValues;
@@ -1463,85 +1462,91 @@ async function _handleNpcDropdowns(interaction) {
     const { customId, values, message } = interaction;
     await interaction.deferUpdate();
 
+    // Get current selections or initialize new
     const selections = npcSelections.get(message.id) || {};
-    const [prefix, type, ...rest] = customId.split('-');
-    const selectType = `${type}-${rest[0]}`;
 
-    // Update selections
-    if (values[0] === 'random') {
-        delete selections[selectType.split('-')[0]];
+    // Determine the type of dropdown interacted with
+    const customIdParts = customId.split('-');
+    const selectType = customIdParts[1]; // e.g., 'species', 'class'
+
+    // Update the selection state
+    const selectedValue = values[0];
+    if (selectedValue === 'random') {
+        delete selections[selectType];
+        // If a parent selection is changed to random, clear child selections
+        if (selectType === 'species') delete selections.lineage;
+        if (selectType === 'class') delete selections.subclass;
     } else {
-        selections[selectType.split('-')[0]] = values[0];
+        selections[selectType] = selectedValue;
+        // If a parent selection is changed, clear the old child selection
+        if (selectType === 'species') delete selections.lineage;
+        if (selectType === 'class') delete selections.subclass;
     }
     npcSelections.set(message.id, selections);
 
-    // --- Rebuild all components based on current selections ---
+    // --- Rebuild all components from scratch based on the new state ---
     const newComponents = [];
-    const originalComponents = message.components;
+    const originalComponents = message.components; // Used to get the original handlers
 
-    // Mode Dropdown (always present)
-    newComponents.push(originalComponents[0]);
+    // Find the original handlers from the initial message components
+    // This is brittle; a better approach might be to store handlers or re-create them
+    const modeDropdownRow = originalComponents[0];
+    const speciesDropdownRow = originalComponents[1];
+    const classDropdownRow = originalComponents[2];
+    const backgroundDropdownRow = originalComponents[3];
+    const buttonRow = originalComponents[originalComponents.length - 1]; // Button is always last
 
-    // Species and Lineage Dropdowns
-    const speciesDropdown = originalComponents[1].components[0];
-    newComponents.push(new ActionRowBuilder().addComponents(speciesDropdown));
+    // Add Mode dropdown
+    newComponents.push(modeDropdownRow);
 
+    // Add Species dropdown
+    newComponents.push(speciesDropdownRow);
+
+    // Add Lineage dropdown if a species is selected and has lineages
     if (selections.species && selections.species !== 'random') {
         const [, speciesName, speciesSource] = selections.species.split('|');
         const lineages = await fiveEToolsParser.getLineages(speciesName, speciesSource);
         if (lineages.length > 0) {
-            const lineageOptions = lineages.map(l => ({
-                label: `${l.name} (${l.source})`,
-                value: `lineage|${l.name}|${l.source}`
-            }));
+            const lineageOptions = lineages.map(l => ({ label: `${l.name} (${l.source})`, value: `lineage|${l.name}|${l.source}` }));
             const lineageHandler = new DropdownHandler({
                 customId: 'npc-lineage-select',
                 options: lineageOptions,
                 placeholder: 'Select a Lineage (Optional)',
                 topPinned: [{ label: 'Any Lineage (Random)', value: 'random' }]
             });
-             // Set default if a lineage is already selected
-            const selectedLineageValue = selections.lineage;
-            if (selectedLineageValue) {
-                lineageHandler.setDefault(selectedLineageValue);
+            if (selections.lineage) {
+                lineageHandler.setDefault(selections.lineage);
             }
             newComponents.push(lineageHandler.createActionRow(1));
         }
     }
 
-    // Class and Subclass Dropdowns
-    const classDropdown = originalComponents.find(row => row.components[0].customId.startsWith('npc-class-select')).components[0];
-    newComponents.push(new ActionRowBuilder().addComponents(classDropdown));
+    // Add Class dropdown
+    newComponents.push(classDropdownRow);
 
+    // Add Subclass dropdown if a class is selected and has subclasses
     if (selections.class && selections.class !== 'random') {
         const [, className, classSource] = selections.class.split('|');
         const subclasses = await fiveEToolsParser.getSubclasses(className, classSource);
         if (subclasses.length > 0) {
-            const subclassOptions = subclasses.map(sc => ({
-                label: `${sc.name} (${sc.source})`,
-                value: `subclass|${sc.name}|${sc.source}`
-            }));
+            const subclassOptions = subclasses.map(sc => ({ label: `${sc.name} (${sc.source})`, value: `subclass|${sc.name}|${sc.source}` }));
             const subclassHandler = new DropdownHandler({
                 customId: 'npc-subclass-select',
                 options: subclassOptions,
                 placeholder: 'Select a Subclass (Optional)',
                 topPinned: [{ label: 'Any Subclass (Random)', value: 'random' }]
             });
-             // Set default if a subclass is already selected
-            const selectedSubclassValue = selections.subclass;
-            if (selectedSubclassValue) {
-                subclassHandler.setDefault(selectedSubclassValue);
+            if (selections.subclass) {
+                subclassHandler.setDefault(selections.subclass);
             }
             newComponents.push(subclassHandler.createActionRow(1));
         }
     }
 
-    // Background Dropdown
-    const backgroundDropdown = originalComponents.find(row => row.components[0].customId.startsWith('npc-background-select')).components[0];
-    newComponents.push(new ActionRowBuilder().addComponents(backgroundDropdown));
+    // Add Background dropdown
+    newComponents.push(backgroundDropdownRow);
 
-    // Button
-    const buttonRow = originalComponents.find(row => row.components[0].type === ButtonStyle.Success);
+    // Add Button
     newComponents.push(buttonRow);
 
     await interaction.editReply({ components: newComponents });
@@ -1652,6 +1657,14 @@ async function _handleNpcGeneration(interaction, selections) {
                             { name: 'Hit Points', value: `${vehicle.hp || 'N/A'}`, inline: true },
                             { name: 'Crew', value: `${vehicle.capCrew || 'N/A'}`, inline: true }
                         );
+
+                    if (vehicle.entries) {
+                        let entryString = formatVehicleEntries(vehicle.entries);
+                        if (entryString.length > 3800) { // Keep it safely under the 4096 limit
+                            entryString = entryString.substring(0, 3800) + "\n\n... (rest of the entry was truncated)";
+                        }
+                        statBlockEmbed.setDescription(entryString);
+                    }
 
                     if (vehicle.speed) {
                         const speedString = Object.entries(vehicle.speed)
@@ -1918,6 +1931,33 @@ function formatVehicleAc(vehicle) {
     }
 
     return 'N/A';
+}
+
+function formatVehicleEntries(entries) {
+    if (!entries) return '';
+    let description = '\n';
+
+    for (const entry of entries) {
+        if (typeof entry === 'string') {
+            description += entry.replace(/{@(spell|item|condition|damage|dice|chance|filter|creature) ([^|}]+)\|?[^}]*}/g, '**$2**') + '\n\n';
+        } else if (entry.type === 'list') {
+            description += entry.items.map(item => `• ${formatVehicleEntries([item]).trim()}`).join('\n') + '\n\n';
+        } else if (entry.type === 'table') {
+            if (entry.caption) {
+                description += `**${entry.caption}**\n`;
+            }
+            // Simple markdown table for now
+            description += `| ${entry.colLabels.join(' | ')} |\n`;
+            description += `|${entry.colLabels.map(() => '---').join('|')}|\n`;
+            for (const row of entry.rows) {
+                description += `| ${row.map(cell => formatVehicleEntries([cell]).replace(/\n/g, ' ')).join(' | ')} |\n`;
+            }
+            description += '\n';
+        } else if (entry.name && entry.entries) {
+            description += `**${entry.name}.** ${formatVehicleEntries(entry.entries)}\n`;
+        }
+    }
+    return description;
 }
 
 function formatNpcResult(result) {
