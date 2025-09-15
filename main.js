@@ -9,6 +9,7 @@ console.log('Discord.js Client loaded.');
 const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 console.log('Discord.js Voice loaded.');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
+client.npcDropdownHandlers = new Map();
 console.log('Discord client instantiated.');
 const axios = require('axios');
 console.log('Axios loaded.');
@@ -1462,23 +1463,39 @@ async function _handleNpcDropdowns(interaction) {
     const { customId, values, message } = interaction;
     await interaction.deferUpdate();
 
-    // Get current selections or initialize new
     const selections = npcSelections.get(message.id) || {};
+    const handlers = client.npcDropdownHandlers.get(message.id);
+    if (!handlers) return; // Should not happen if command was just run
 
-    // Determine the type of dropdown interacted with
-    const customIdParts = customId.split('-');
-    const selectType = customIdParts[1]; // e.g., 'species', 'class'
-
-    // Update the selection state
+    const [customIdBase, pageStr] = customId.split('|');
     const selectedValue = values[0];
+
+    // Handle pagination
+    if (selectedValue.startsWith('!prevPage') || selectedValue.startsWith('!nextPage')) {
+        const [action, newPageStr] = selectedValue.split('|');
+        const newPage = parseInt(newPageStr, 10);
+        const handlerKey = customIdBase.split('-')[1]; // species, class, etc.
+        const handler = handlers[handlerKey];
+        if (handler) {
+            const newRow = handler.createActionRow(newPage);
+            const componentIndex = message.components.findIndex(row => row.components[0].customId.startsWith(customIdBase));
+            if (componentIndex !== -1) {
+                const newComponents = [...message.components];
+                newComponents[componentIndex] = newRow;
+                await interaction.editReply({ components: newComponents });
+            }
+        }
+        return;
+    }
+
+    // Handle actual selections
+    const selectType = customIdBase.split('-')[1];
     if (selectedValue === 'random') {
         delete selections[selectType];
-        // If a parent selection is changed to random, clear child selections
         if (selectType === 'species') delete selections.lineage;
         if (selectType === 'class') delete selections.subclass;
     } else {
         selections[selectType] = selectedValue;
-        // If a parent selection is changed, clear the old child selection
         if (selectType === 'species') delete selections.lineage;
         if (selectType === 'class') delete selections.subclass;
     }
@@ -1486,23 +1503,15 @@ async function _handleNpcDropdowns(interaction) {
 
     // --- Rebuild all components from scratch based on the new state ---
     const newComponents = [];
-    const originalComponents = message.components; // Used to get the original handlers
 
-    // Find the original handlers from the initial message components
-    // This is brittle; a better approach might be to store handlers or re-create them
-    const modeDropdownRow = originalComponents[0];
-    const speciesDropdownRow = originalComponents[1];
-    const classDropdownRow = originalComponents[2];
-    const backgroundDropdownRow = originalComponents[3];
-    const buttonRow = originalComponents[originalComponents.length - 1]; // Button is always last
+    // Mode Dropdown (always present)
+    newComponents.push(message.components[0]);
 
-    // Add Mode dropdown
-    newComponents.push(modeDropdownRow);
+    // Species Dropdown
+    handlers.species.setDefault(selections.species);
+    newComponents.push(handlers.species.createActionRow(parseInt(pageStr, 10) || 1));
 
-    // Add Species dropdown
-    newComponents.push(speciesDropdownRow);
-
-    // Add Lineage dropdown if a species is selected and has lineages
+    // Lineage Dropdown
     if (selections.species && selections.species !== 'random') {
         const [, speciesName, speciesSource] = selections.species.split('|');
         const lineages = await fiveEToolsParser.getLineages(speciesName, speciesSource);
@@ -1514,17 +1523,21 @@ async function _handleNpcDropdowns(interaction) {
                 placeholder: 'Select a Lineage (Optional)',
                 topPinned: [{ label: 'Any Lineage (Random)', value: 'random' }]
             });
-            if (selections.lineage) {
-                lineageHandler.setDefault(selections.lineage);
-            }
+            handlers.lineage = lineageHandler; // Store new handler
+            if (selections.lineage) lineageHandler.setDefault(selections.lineage);
             newComponents.push(lineageHandler.createActionRow(1));
+        } else {
+            delete handlers.lineage; // Remove handler if no lineages
         }
+    } else {
+        delete handlers.lineage;
     }
 
-    // Add Class dropdown
-    newComponents.push(classDropdownRow);
+    // Class Dropdown
+    handlers.class.setDefault(selections.class);
+    newComponents.push(handlers.class.createActionRow(1)); // Assume page 1 for now
 
-    // Add Subclass dropdown if a class is selected and has subclasses
+    // Subclass Dropdown
     if (selections.class && selections.class !== 'random') {
         const [, className, classSource] = selections.class.split('|');
         const subclasses = await fiveEToolsParser.getSubclasses(className, classSource);
@@ -1536,19 +1549,24 @@ async function _handleNpcDropdowns(interaction) {
                 placeholder: 'Select a Subclass (Optional)',
                 topPinned: [{ label: 'Any Subclass (Random)', value: 'random' }]
             });
-            if (selections.subclass) {
-                subclassHandler.setDefault(selections.subclass);
-            }
+            handlers.subclass = subclassHandler; // Store new handler
+            if (selections.subclass) subclassHandler.setDefault(selections.subclass);
             newComponents.push(subclassHandler.createActionRow(1));
+        } else {
+            delete handlers.subclass;
         }
+    } else {
+        delete handlers.subclass;
     }
 
-    // Add Background dropdown
-    newComponents.push(backgroundDropdownRow);
+    // Background Dropdown
+    handlers.background.setDefault(selections.background);
+    newComponents.push(handlers.background.createActionRow(1)); // Assume page 1
 
-    // Add Button
-    newComponents.push(buttonRow);
+    // Button
+    newComponents.push(message.components[message.components.length - 1]);
 
+    client.npcDropdownHandlers.set(message.id, handlers); // Resave the updated handlers map
     await interaction.editReply({ components: newComponents });
 }
 

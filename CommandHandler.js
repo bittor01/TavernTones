@@ -856,7 +856,14 @@ class CommandHandler {
             .setStyle(ButtonStyle.Success);
         const buttonRow = new ActionRowBuilder().addComponents(proceedButton);
 
-        await message.reply({ embeds: [embed], components: [modeRow, speciesRow, classRow, backgroundRow, buttonRow] });
+        const reply = await message.reply({ embeds: [embed], components: [modeRow, speciesRow, classRow, backgroundRow, buttonRow] });
+
+        // Store the handlers for this message so we can access them in the interaction handler
+        this.client.npcDropdownHandlers.set(reply.id, {
+            species: speciesHandler,
+            class: classHandler,
+            background: backgroundHandler,
+        });
     }
 
     async _handleGenerateTrap(message) {
