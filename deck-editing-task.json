@@ -9,11 +9,12 @@
     "randomtables/deck/weaver.json"
   ],
   "progress": {
-    "fileIndex": 0,
-    "itemIndex": 2
+    "fileIndex": 1,
+    "itemIndex": 19
   },
   "nextTask": null,
   "ui": {
+    "showDetails": false,
     "titleField": "name",
     "fields": [
       {
@@ -30,13 +31,13 @@
         "key": "depiction",
         "label": "Depiction Text",
         "type": "textarea",
-        "rows": 2
+        "rows": 6
       },
       {
         "key": "effect",
         "label": "Effect Text",
         "type": "textarea",
-        "rows": 4
+        "rows": 12
       }
     ]
   }

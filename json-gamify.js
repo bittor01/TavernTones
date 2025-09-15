@@ -132,18 +132,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = currentItem[taskData.ui.titleField] || "Unnamed Item";
         titleEl.textContent = title;
 
-        if (itemDetails && itemDetails.entries) {
-            let html = '';
-            itemDetails.entries.forEach(entry => {
-                if (typeof entry === 'string') {
-                    html += `<p>${entry.replace(/{@(dice|damage|hit) ([^}]+)}/g, '($2)')}</p>`;
-                } else if (entry.type === 'list') {
-                    html += `<ul>${entry.items.map(item => `<li>${item}</li>`).join('')}</ul>`;
-                }
-            });
-            detailsEl.innerHTML = html;
+        const mainContentEl = document.getElementById('main-content');
+        if (taskData.ui.showDetails === false) {
+            mainContentEl.classList.add('details-hidden');
         } else {
-            detailsEl.innerHTML = `<p><strong>Note: No details found in 5eTools data. This may be a custom entry.</strong></p>`;
+            mainContentEl.classList.remove('details-hidden');
+            if (itemDetails && itemDetails.entries) {
+                let html = '';
+                itemDetails.entries.forEach(entry => {
+                    if (typeof entry === 'string') {
+                        html += `<p>${entry.replace(/{@(dice|damage|hit) ([^}]+)}/g, '($2)')}</p>`;
+                    } else if (entry.type === 'list') {
+                        html += `<ul>${entry.items.map(item => `<li>${item}</li>`).join('')}</ul>`;
+                    }
+                });
+                detailsEl.innerHTML = html;
+            } else {
+                detailsEl.innerHTML = `<p><strong>Note: No details found in 5eTools data. This may be a custom entry.</strong></p>`;
+            }
         }
 
         generateUI(taskData.ui, currentItem);
