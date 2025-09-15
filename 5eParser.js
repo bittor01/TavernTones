@@ -11,6 +11,7 @@ const categorySources = {
     'backgrounds': { type: 'file', path: 'backgrounds.json', key: 'background' },
     'races': { type: 'file', path: 'races.json', key: 'race' },
     'traps': { type: 'file', path: 'trapshazards.json', key: 'trap' },
+    'vehicles': { type: 'file', path: 'vehicles.json', key: 'vehicle' },
 };
 const searchableCategories = Object.keys(categorySources);
 
@@ -212,6 +213,41 @@ class FiveEToolsParser {
         }
 
         return traps[Math.floor(Math.random() * traps.length)];
+    }
+
+    async getSpecies() {
+        const raceData = await this._loadCategoryData('races');
+        // A species is a race entry that does NOT have a `raceName` property, which would mark it as a subrace.
+        return raceData.filter(r => !r.raceName);
+    }
+
+    async getLineages(speciesName, speciesSource) {
+        const raceData = await this._loadCategoryData('races');
+        const lineages = [];
+
+        // Find the base species to check its _versions array
+        const baseSpecies = raceData.find(r => r.name === speciesName && r.source === speciesSource);
+        if (baseSpecies && baseSpecies._versions) {
+            lineages.push(...baseSpecies._versions);
+        }
+
+        // Find all subraces that point to this species
+        const subraces = raceData.filter(r => r.raceName === speciesName && r.raceSource === speciesSource);
+        lineages.push(...subraces);
+
+        return lineages;
+    }
+
+    async getClasses() {
+        const classes = await this._loadCategoryData('classes');
+        // Filter out any entries that are actually subclasses, identified by having a `className` property.
+        return classes.filter(c => !c.className && c.name !== 'Sidekick');
+    }
+
+    async getSubclasses(className, classSource) {
+        const classData = await this._loadCategoryData('classes');
+        // Find all subclasses that belong to the specified base class.
+        return classData.filter(sc => sc.className === className && sc.classSource === classSource);
     }
 }
 

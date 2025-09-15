@@ -7,6 +7,7 @@ const axios = require('axios');
 const EncounterBuilder = require('./EncounterBuilder.js');
 const VehicleEncounterBuilder = require('./VehicleEncounterBuilder.js');
 const NpcGenerator = require('./NpcGenerator.js');
+const DropdownHandler = require('./DropdownHandler.js');
 const ThreeDragonAnteManager = require('./ThreeDragonAnte.js');
 
 // These will be initialized in the constructor
@@ -730,17 +731,22 @@ class CommandHandler {
             .setTitle('Vehicle Encounter Generator')
             .setDescription('Select your desired options below. Any unselected options will be randomized.');
 
-        const vehicles = await this.fiveEToolsParser._loadCategoryData('vehicles');
-        const vehicleTags = new Set();
-        vehicles.forEach(v => {
-            if (v.vehicleType) vehicleTags.add(v.vehicleType);
-            if (v.terrain) v.terrain.forEach(t => vehicleTags.add(t));
-            if (v.speed?.burrow) vehicleTags.add('burrow');
-        });
+        const orderedTags = ['land', 'sea', 'air', 'space', 'SHIP', 'SPELLJAMMER', 'INFWAR', 'OBJECT'];
 
         const tagOptions = [{ label: 'Any Type', value: 'random', default: true }];
-        [...vehicleTags].sort().forEach(tag => {
-            tagOptions.push({ label: tag.charAt(0).toUpperCase() + tag.slice(1), value: tag });
+        orderedTags.forEach(tag => {
+            // A quick mapping for user-friendly labels
+            const labelMap = {
+                'land': 'Land',
+                'sea': 'Sea',
+                'air': 'Air',
+                'space': 'Space',
+                'SHIP': 'Ship',
+                'SPELLJAMMER': 'Spelljammer',
+                'INFWAR': 'Infernal War Machine',
+                'OBJECT': 'Object'
+            };
+            tagOptions.push({ label: labelMap[tag] || tag, value: tag });
         });
 
         const tagSelect = new StringSelectMenuBuilder()
@@ -773,8 +779,9 @@ class CommandHandler {
         const embed = new EmbedBuilder()
             .setColor(0x0099FF)
             .setTitle('NPC & Character Idea Generator')
-            .setDescription('Select your desired options below. Any unselected options will be randomized.');
+            .setDescription('Select your desired options below. Any unselected options will be randomized. Lineage and Subclass will appear after selecting a Species and Class.');
 
+        // --- Mode Dropdown ---
         const modeSelect = new StringSelectMenuBuilder()
             .setCustomId('npc-mode-select')
             .setPlaceholder('Select Mode')
@@ -782,109 +789,95 @@ class CommandHandler {
                 { label: 'Character Idea', value: 'idea', default: true },
                 { label: 'NPC (with Stat Block)', value: 'npc' }
             ]);
+        const modeRow = new ActionRowBuilder().addComponents(modeSelect);
 
-        // Helper to create options for select menus
-        const createOptions = (items, labelField = 'name', sourceField = 'source') => {
-            const options = [{ label: `Any (Random)`, value: 'random' }];
-            const uniqueItems = [];
-            const seen = new Set();
+        // --- Species Dropdown ---
+        const speciesList = await this.fiveEToolsParser.getSpecies();
+        const speciesOptions = speciesList.map(s => ({
+            label: `${s.name} (${s.source})`,
+            value: `species|${s.name}|${s.source}`
+        })).sort((a, b) => a.label.localeCompare(b.label));
 
-            for (const item of items) {
-                const uniqueKey = `${item[labelField]}_${item[sourceField]}`;
-                if (!seen.has(uniqueKey)) {
-                    seen.add(uniqueKey);
-                    uniqueItems.push(item);
-                }
-            }
+        const speciesHandler = new DropdownHandler({
+            customId: 'npc-species-select',
+            options: speciesOptions,
+            placeholder: 'Select a Species (Optional)',
+            topPinned: [{ label: 'Any Species (Random)', value: 'random' }]
+        });
+        const speciesRow = speciesHandler.createActionRow(1);
 
-            options.push(...uniqueItems.slice(0, 24).map(item => {
-                const label = item[sourceField] ? `${item[labelField]} (${item[sourceField]})` : item[labelField];
-                return { label: label, value: label };
-            }));
-            return options;
-        };
+        // --- Class Dropdown ---
+        const classList = await this.fiveEToolsParser.getClasses();
+        const classOptions = classList.map(c => ({
+            label: `${c.name} (${c.source})`,
+            value: `class|${c.name}|${c.source}`
+        })).sort((a, b) => a.label.localeCompare(b.label));
 
-        const races = await this.fiveEToolsParser._loadCategoryData('races');
-        const backgrounds = await this.fiveEToolsParser._loadCategoryData('backgrounds');
-        const classes = (await this.fiveEToolsParser._loadCategoryData('classes')).filter(c => !c.name.includes('Sidekick'));
+        const classHandler = new DropdownHandler({
+            customId: 'npc-class-select',
+            options: classOptions,
+            placeholder: 'Select a Class (Optional)',
+            topPinned: [{ label: 'Any Class (Random)', value: 'random' }]
+        });
+        const classRow = classHandler.createActionRow(1);
 
-        const raceSelect = new StringSelectMenuBuilder()
-            .setCustomId('npc-race-select')
-            .setPlaceholder('Select Race')
-            .addOptions(createOptions(races));
+        // --- Background Dropdown ---
+        const backgroundList = await this.fiveEToolsParser._loadCategoryData('backgrounds');
+        const backgroundOptions = backgroundList.map(b => ({
+            label: `${b.name} (${b.source})`,
+            value: `background|${b.name}|${b.source}`
+        })).sort((a, b) => a.label.localeCompare(b.label));
 
-        const classSelect = new StringSelectMenuBuilder()
-            .setCustomId('npc-class-select')
-            .setPlaceholder('Select Class')
-            .addOptions(createOptions(classes, 'name', null));
+        const backgroundHandler = new DropdownHandler({
+            customId: 'npc-background-select',
+            options: backgroundOptions,
+            placeholder: 'Select a Background (Optional)',
+            topPinned: [{ label: 'Any Background (Random)', value: 'random' }]
+        });
+        const backgroundRow = backgroundHandler.createActionRow(1);
 
-        const backgroundSelect = new StringSelectMenuBuilder()
-            .setCustomId('npc-background-select')
-            .setPlaceholder('Select Background')
-            .addOptions(createOptions(backgrounds));
-
+        // --- Generate Button ---
         const proceedButton = new ButtonBuilder()
             .setCustomId('npc-proceed-button')
             .setLabel('Generate')
             .setStyle(ButtonStyle.Success);
+        const buttonRow = new ActionRowBuilder().addComponents(proceedButton);
 
-        const row1 = new ActionRowBuilder().addComponents(modeSelect);
-        const row2 = new ActionRowBuilder().addComponents(raceSelect);
-        const row3 = new ActionRowBuilder().addComponents(classSelect);
-        const row4 = new ActionRowBuilder().addComponents(backgroundSelect);
-        const row5 = new ActionRowBuilder().addComponents(proceedButton);
-
-        await message.reply({ embeds: [embed], components: [row1, row2, row3, row4, row5] });
+        await message.reply({ embeds: [embed], components: [modeRow, speciesRow, classRow, backgroundRow, buttonRow] });
     }
 
     async _handleGenerateTrap(message) {
         const embed = new EmbedBuilder()
             .setColor(0x0099FF)
             .setTitle('Trap & Hazard Generator')
-            .setDescription('Select your desired filters below. Any unselected options will be randomized.');
+            .setDescription('Select your desired filters below. Dropdowns will update to show valid combinations. Any unselected options will be randomized.');
 
-        const tierSelect = new StringSelectMenuBuilder()
-            .setCustomId('trap-tier-select')
-            .setPlaceholder('Select Party Tier (Optional)')
-            .addOptions([
-                { label: 'Any Tier', value: 'random' },
-                { label: 'Tier 1 (Levels 1-4)', value: '1' },
-                { label: 'Tier 2 (Levels 5-10)', value: '2' },
-                { label: 'Tier 3 (Levels 11-16)', value: '3' },
-                { label: 'Tier 4 (Levels 17-20)', value: '4' },
-            ]);
+        // For the initial display, we show all possible options.
+        // The interaction handler in main.js will be responsible for filtering these lists.
 
-        const threatSelect = new StringSelectMenuBuilder()
-            .setCustomId('trap-threat-select')
-            .setPlaceholder('Select Threat Level (Optional)')
-            .addOptions([
-                { label: 'Any Threat', value: 'random' },
-                { label: 'Setback', value: 'setback' },
-                { label: 'Dangerous', value: 'dangerous' },
-                { label: 'Deadly', value: 'deadly' },
-            ]);
+        const tierOptions = [
+            { label: 'Any Tier', value: 'random' }, { label: 'Tier 1 (Levels 1-4)', value: '1' },
+            { label: 'Tier 2 (Levels 5-10)', value: '2' }, { label: 'Tier 3 (Levels 11-16)', value: '3' },
+            { label: 'Tier 4 (Levels 17-20)', value: '4' }
+        ];
+        const threatOptions = [
+            { label: 'Any Threat', value: 'random' }, { label: 'Setback', value: 'setback' },
+            { label: 'Dangerous', value: 'dangerous' }, { label: 'Deadly', value: 'deadly' }
+        ];
+        const typeOptions = [
+            { label: 'Any Type', value: 'random' }, { label: 'Mechanical', value: 'MECH' },
+            { label: 'Magical', value: 'MAG' }, { label: 'Simple', value: 'SMPL' }
+        ];
+        const environmentOptions = [
+            { label: 'Any Environment', value: 'random' }, { label: 'Dungeon / Tomb', value: 'dungeon' },
+            { label: 'Wilderness / Cave', value: 'wilderness' }, { label: 'Urban / Building', value: 'urban' },
+            { label: 'Planar / Magical', value: 'planar' }, { label: 'Aquatic', value: 'aquatic' }
+        ];
 
-        const typeSelect = new StringSelectMenuBuilder()
-            .setCustomId('trap-type-select')
-            .setPlaceholder('Select Trap Type (Optional)')
-            .addOptions([
-                { label: 'Any Type', value: 'random' },
-                { label: 'Mechanical', value: 'MECH' },
-                { label: 'Magical', value: 'MAG' },
-                { label: 'Simple', value: 'SMPL' },
-            ]);
-
-        const environmentSelect = new StringSelectMenuBuilder()
-            .setCustomId('trap-environment-select')
-            .setPlaceholder('Select Environment (Optional)')
-            .addOptions([
-                { label: 'Any Environment', value: 'random' },
-                { label: 'Dungeon / Tomb', value: 'dungeon' },
-                { label: 'Wilderness / Cave', value: 'wilderness' },
-                { label: 'Urban / Building', value: 'urban' },
-                { label: 'Planar / Magical', value: 'planar' },
-                { label: 'Aquatic', value: 'aquatic' },
-            ]);
+        const tierSelect = new StringSelectMenuBuilder().setCustomId('trap-tier-select').setPlaceholder('Select Party Tier (Optional)').addOptions(tierOptions);
+        const threatSelect = new StringSelectMenuBuilder().setCustomId('trap-threat-select').setPlaceholder('Select Threat Level (Optional)').addOptions(threatOptions);
+        const typeSelect = new StringSelectMenuBuilder().setCustomId('trap-type-select').setPlaceholder('Select Trap Type (Optional)').addOptions(typeOptions);
+        const environmentSelect = new StringSelectMenuBuilder().setCustomId('trap-environment-select').setPlaceholder('Select Environment (Optional)').addOptions(environmentOptions);
 
         const proceedButton = new ButtonBuilder()
             .setCustomId('trap-proceed-button')

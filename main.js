@@ -8,6 +8,7 @@ const { Client, GatewayIntentBits, EmbedBuilder, ModalBuilder, TextInputBuilder,
 console.log('Discord.js Client loaded.');
 const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 console.log('Discord.js Voice loaded.');
+const DropdownHandler = require('./DropdownHandler.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
 console.log('Discord client instantiated.');
 const axios = require('axios');
@@ -1042,22 +1043,42 @@ client.once('clientReady', async () => {
     client.on('interactionCreate', async interaction => {
         if (interaction.isStringSelectMenu()) {
             const { customId, values, message } = interaction;
+            const [customIdBase] = customId.split('|');
 
-            if (customId.startsWith('trap-')) {
-                const selections = trapSelections.get(message.id) || {};
-                const type = customId.split('-')[1];
-                selections[type] = values[0];
-                trapSelections.set(message.id, selections);
-                await interaction.deferUpdate();
+            if (customIdBase.startsWith('trap-')) {
+                const selections = trapSelections.get(interaction.message.id) || {};
+                const type = customIdBase.replace('trap-', '').replace('-select', '');
+
+                if (values[0] === 'random') {
+                    delete selections[type];
+                } else {
+                    selections[type] = values[0];
+                }
+
+                trapSelections.set(interaction.message.id, selections);
+                await _updateTrapComponents(interaction, selections);
                 return;
             }
 
-            if (customId.startsWith('npc-')) {
-                const selections = npcSelections.get(message.id) || {};
-                const type = customId.split('-')[1];
-                selections[type] = values[0];
-                npcSelections.set(message.id, selections);
-                await interaction.deferUpdate();
+            if (customIdBase.startsWith('npc-')) {
+                const selections = npcSelections.get(interaction.message.id) || {};
+                const value = values[0];
+
+                if (value.startsWith('!page_')) {
+                    const newPage = parseInt(value.split('_')[1], 10);
+                    await _updateNpcComponents(interaction, selections, { dropdownToUpdate: customIdBase, newPage: newPage });
+                    return;
+                }
+
+                const type = customIdBase.replace('npc-', '').replace('-select', '');
+                selections[type] = value;
+
+                // If a species/class was changed, reset the sub-selection
+                if (type === 'species') delete selections.lineage;
+                if (type === 'class') delete selections.subclass;
+
+                npcSelections.set(interaction.message.id, selections);
+                await _updateNpcComponents(interaction, selections);
                 return;
             }
 
@@ -1352,7 +1373,18 @@ client.once('clientReady', async () => {
         }
 
 async function _handleNpcGeneration(interaction, selections) {
-    const result = await client.commandHandler.npcGenerator.generateCharacter(selections);
+    // Translate the selections from the interaction into the format NpcGenerator expects
+    const generatorOptions = {
+        mode: selections.mode,
+        species: selections.species,
+        lineage: selections.lineage,
+        class: selections.class,
+        subclass: selections.subclass,
+        background: selections.background,
+        partyLevel: selections.partyLevel,
+    };
+
+    const result = await client.commandHandler.npcGenerator.generateCharacter(generatorOptions);
     if (result.error) {
         await interaction.editReply({ content: `Error: ${result.error}` });
         return;
@@ -1360,6 +1392,191 @@ async function _handleNpcGeneration(interaction, selections) {
     const embed = formatNpcResult(result);
     await interaction.channel.send({ embeds: [embed] });
     await interaction.editReply({ content: 'Generation complete!' });
+}
+
+async function _updateTrapComponents(interaction, selections) {
+    await interaction.deferUpdate();
+
+    const allTraps = await fiveEToolsParser._loadCategoryData('traps');
+
+    const createDropdown = (id, placeholder, allOptions, selectedValue, filterKey) => {
+        const otherSelections = { ...selections };
+        delete otherSelections[filterKey];
+
+        const availableOptions = allOptions.map(opt => {
+            if (opt.value === 'random') return { ...opt, disabled: false };
+
+            let filteredTraps = allTraps;
+            // Filter by all OTHER active selections
+            for (const [key, value] of Object.entries(otherSelections)) {
+                if (value && value !== 'random') {
+                    if (key === 'tier') filteredTraps = filteredTraps.filter(t => t.rating?.some(r => r.tier === parseInt(value)));
+                    else if (key === 'threat') filteredTraps = filteredTraps.filter(t => t.rating?.some(r => r.threat.toLowerCase() === value));
+                    else if (key === 'type') filteredTraps = filteredTraps.filter(t => t.trapHazType === value);
+                }
+            }
+
+            // Now, check if any of the remaining traps match the CURRENT option
+            let isPossible = false;
+            if (filterKey === 'tier') isPossible = filteredTraps.some(t => t.rating?.some(r => r.tier === parseInt(opt.value)));
+            else if (filterKey === 'threat') isPossible = filteredTraps.some(t => t.rating?.some(r => r.threat.toLowerCase() === opt.value));
+            else if (filterKey === 'type') isPossible = filteredTraps.some(t => t.trapHazType === opt.value);
+            else isPossible = true; // Environment is not strictly enforced by data, so we don't disable
+
+            return { ...opt, default: opt.value === selectedValue, disabled: !isPossible };
+        });
+
+        return new StringSelectMenuBuilder()
+            .setCustomId(id)
+            .setPlaceholder(placeholder)
+            .addOptions(availableOptions);
+    };
+
+    const tierOpts = [
+        { label: 'Any Tier', value: 'random' }, { label: 'Tier 1 (Levels 1-4)', value: '1' },
+        { label: 'Tier 2 (Levels 5-10)', value: '2' }, { label: 'Tier 3 (Levels 11-16)', value: '3' },
+        { label: 'Tier 4 (Levels 17-20)', value: '4' }
+    ];
+    const threatOpts = [
+        { label: 'Any Threat', value: 'random' }, { label: 'Setback', value: 'setback' },
+        { label: 'Dangerous', value: 'dangerous' }, { label: 'Deadly', value: 'deadly' }
+    ];
+    const typeOpts = [
+        { label: 'Any Type', value: 'random' }, { label: 'Mechanical', value: 'MECH' },
+        { label: 'Magical', value: 'MAG' }, { label: 'Simple', value: 'SMPL' }
+    ];
+    const envOpts = [
+        { label: 'Any Environment', value: 'random' }, { label: 'Dungeon / Tomb', value: 'dungeon' },
+        { label: 'Wilderness / Cave', value: 'wilderness' }, { label: 'Urban / Building', value: 'urban' },
+        { label: 'Planar / Magical', value: 'planar' }, { label: 'Aquatic', value: 'aquatic' }
+    ];
+
+    const tierSelect = createDropdown('trap-tier-select', selections.tier ? tierOpts.find(o=>o.value===selections.tier).label : 'Select Party Tier (Optional)', tierOpts, selections.tier, 'tier');
+    const threatSelect = createDropdown('trap-threat-select', selections.threat ? threatOpts.find(o=>o.value===selections.threat).label : 'Select Threat Level (Optional)', threatOpts, selections.threat, 'threat');
+    const typeSelect = createDropdown('trap-type-select', selections.type ? typeOpts.find(o=>o.value===selections.type).label : 'Select Trap Type (Optional)', typeOpts, selections.type, 'type');
+    const environmentSelect = createDropdown('trap-environment-select', selections.environment ? envOpts.find(o=>o.value===selections.environment).label : 'Select Environment (Optional)', envOpts, selections.environment, 'environment');
+
+    const proceedButton = new ButtonBuilder().setCustomId('trap-proceed-button').setLabel('Generate').setStyle(ButtonStyle.Success);
+
+    await interaction.editReply({
+        components: [
+            new ActionRowBuilder().addComponents(tierSelect),
+            new ActionRowBuilder().addComponents(threatSelect),
+            new ActionRowBuilder().addComponents(typeSelect),
+            new ActionRowBuilder().addComponents(environmentSelect),
+            new ActionRowBuilder().addComponents(proceedButton),
+        ]
+    });
+}
+
+async function _updateNpcComponents(interaction, selections, updateOptions = {}) {
+    await interaction.deferUpdate();
+
+    const components = [];
+
+    // --- Mode Dropdown ---
+    const modeSelect = new StringSelectMenuBuilder()
+        .setCustomId('npc-mode-select')
+        .setPlaceholder('Select Mode')
+        .addOptions([
+            { label: 'Character Idea', value: 'idea', default: selections.mode === 'idea' },
+            { label: 'NPC (with Stat Block)', value: 'npc', default: selections.mode === 'npc' }
+        ]);
+    components.push(new ActionRowBuilder().addComponents(modeSelect));
+
+    // --- Species Dropdown ---
+    const speciesList = await fiveEToolsParser.getSpecies();
+    const speciesOptions = speciesList.map(s => ({
+        label: `${s.name} (${s.source})`,
+        value: `species|${s.name}|${s.source}`
+    })).sort((a, b) => a.label.localeCompare(b.label));
+    const speciesHandler = new DropdownHandler({
+        customId: 'npc-species-select',
+        options: speciesOptions,
+        placeholder: selections.species ? selections.species.split('|')[1] : 'Select a Species (Optional)',
+        topPinned: [{ label: 'Any Species (Random)', value: 'random' }]
+    });
+    const speciesPage = updateOptions.dropdownToUpdate === 'npc-species-select' ? updateOptions.newPage : 1;
+    components.push(speciesHandler.createActionRow(speciesPage));
+
+    // --- Lineage Dropdown (if species is selected) ---
+    if (selections.species && selections.species !== 'random') {
+        const [, speciesName, speciesSource] = selections.species.split('|');
+        const lineageList = await fiveEToolsParser.getLineages(speciesName, speciesSource);
+        if (lineageList.length > 0) {
+            const lineageOptions = lineageList.map(l => ({
+                label: `${l.name} (${l.source})`,
+                value: `lineage|${l.name}|${l.source}`
+            })).sort((a, b) => a.label.localeCompare(b.label));
+            const lineageHandler = new DropdownHandler({
+                customId: 'npc-lineage-select',
+                options: lineageOptions,
+                placeholder: selections.lineage ? selections.lineage.split('|')[1] : 'Select a Lineage (Optional)',
+                topPinned: [{ label: 'Any Lineage (Random)', value: 'random' }]
+            });
+            const lineagePage = updateOptions.dropdownToUpdate === 'npc-lineage-select' ? updateOptions.newPage : 1;
+            components.push(lineageHandler.createActionRow(lineagePage));
+        }
+    }
+
+    // --- Class Dropdown ---
+    const classList = await fiveEToolsParser.getClasses();
+    const classOptions = classList.map(c => ({
+        label: `${c.name} (${c.source})`,
+        value: `class|${c.name}|${c.source}`
+    })).sort((a, b) => a.label.localeCompare(b.label));
+    const classHandler = new DropdownHandler({
+        customId: 'npc-class-select',
+        options: classOptions,
+        placeholder: selections.class ? selections.class.split('|')[1] : 'Select a Class (Optional)',
+        topPinned: [{ label: 'Any Class (Random)', value: 'random' }]
+    });
+    const classPage = updateOptions.dropdownToUpdate === 'npc-class-select' ? updateOptions.newPage : 1;
+    components.push(classHandler.createActionRow(classPage));
+
+    // --- Subclass Dropdown (if class is selected) ---
+    if (selections.class && selections.class !== 'random') {
+        const [, className, classSource] = selections.class.split('|');
+        const subclass_list = await fiveEToolsParser.getSubclasses(className, classSource);
+        if (subclass_list.length > 0) {
+            const subclassOptions = subclass_list.map(sc => ({
+                label: `${sc.name} (${sc.source})`,
+                value: `subclass|${sc.name}|${sc.source}`
+            })).sort((a, b) => a.label.localeCompare(b.label));
+            const subclassHandler = new DropdownHandler({
+                customId: 'npc-subclass-select',
+                options: subclassOptions,
+                placeholder: selections.subclass ? selections.subclass.split('|')[1] : 'Select a Subclass (Optional)',
+                topPinned: [{ label: 'Any Subclass (Random)', value: 'random' }]
+            });
+            const subclassPage = updateOptions.dropdownToUpdate === 'npc-subclass-select' ? updateOptions.newPage : 1;
+            components.push(subclassHandler.createActionRow(subclassPage));
+        }
+    }
+
+    // --- Background Dropdown ---
+    const backgroundList = await fiveEToolsParser._loadCategoryData('backgrounds');
+    const backgroundOptions = backgroundList.map(b => ({
+        label: `${b.name} (${b.source})`,
+        value: `background|${b.name}|${b.source}`
+    })).sort((a, b) => a.label.localeCompare(b.label));
+    const backgroundHandler = new DropdownHandler({
+        customId: 'npc-background-select',
+        options: backgroundOptions,
+        placeholder: selections.background ? selections.background.split('|')[1] : 'Select a Background (Optional)',
+        topPinned: [{ label: 'Any Background (Random)', value: 'random' }]
+    });
+    const backgroundPage = updateOptions.dropdownToUpdate === 'npc-background-select' ? updateOptions.newPage : 1;
+    components.push(backgroundHandler.createActionRow(backgroundPage));
+
+    // --- Generate Button ---
+    const proceedButton = new ButtonBuilder()
+        .setCustomId('npc-proceed-button')
+        .setLabel('Generate')
+        .setStyle(ButtonStyle.Success);
+    components.push(new ActionRowBuilder().addComponents(proceedButton));
+
+    await interaction.editReply({ components: components.slice(0, 5) }); // Max 5 action rows
 }
 
         if (interaction.isModalSubmit()) {
@@ -1659,7 +1876,7 @@ function formatNpcResult(result) {
     const embed = new EmbedBuilder()
         .setColor(0x9B59B6) // Purple for NPCs
         .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name}`)
-        .setDescription(`A **${result.race.name} ${result.class.name}** who was a(n) **${result.background.name}**.`);
+        .setDescription(`A **${result.lineage.name || result.species.name} ${result.subclass.name || result.class.name}** who was a(n) **${result.background.name}**.`);
 
     if (result.traits) {
         embed.addFields({ name: 'Personality Traits', value: `${result.traits[0]}\n-OR-\n${result.traits[1]}` });
