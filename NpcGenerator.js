@@ -11,8 +11,6 @@ class NpcGenerator {
         const finalOptions = await this._finalizeSelections(options);
         if (finalOptions.error) return finalOptions;
 
-        const personality = this._getPersonalityTraits(finalOptions.background);
-
         let statblockSuggestions = null;
         if (finalOptions.mode === 'npc' && finalOptions.partyLevel) {
             statblockSuggestions = await this._getNpcStatblock(finalOptions.partyLevel);
@@ -20,11 +18,18 @@ class NpcGenerator {
 
         const name = await this._generateName(finalOptions);
 
+        let traits = { ideal: 'N/A', bond: 'N/A', flaw: 'N/A' };
+        if (finalOptions.background) {
+            traits = await this.fiveEToolsParser.getBackgroundTraits(finalOptions.background.name, finalOptions.background.source);
+        }
+
         return {
             ...finalOptions,
-            ...personality,
             statblockSuggestions,
-            name
+            name,
+            ideal: traits.ideal,
+            bond: traits.bond,
+            flaw: traits.flaw
         };
     }
 
@@ -90,36 +95,6 @@ class NpcGenerator {
         };
     }
 
-    _getPersonalityTraits(background) {
-        const personality = { traits: [], ideal: '', bond: '', flaw: '' };
-        if (!background || !background.entries) return personality;
-
-        const findTable = (name) => background.entries.find(e => e.type === 'table' && e.name.toLowerCase().includes(name));
-
-        const traitsTable = findTable('personality traits');
-        if (traitsTable && traitsTable.rows?.length) {
-            personality.traits.push(traitsTable.rows[Math.floor(Math.random() * traitsTable.rows.length)][1]);
-            personality.traits.push(traitsTable.rows[Math.floor(Math.random() * traitsTable.rows.length)][1]);
-        }
-
-        const idealTable = findTable('ideals');
-        if (idealTable && idealTable.rows?.length) {
-            personality.ideal = idealTable.rows[Math.floor(Math.random() * idealTable.rows.length)][1].entry;
-        }
-
-        const bondTable = findTable('bonds');
-        if (bondTable && bondTable.rows?.length) {
-            personality.bond = bondTable.rows[Math.floor(Math.random() * bondTable.rows.length)][1];
-        }
-
-        const flawTable = findTable('flaws');
-        if (flawTable && flawTable.rows?.length) {
-            personality.flaw = flawTable.rows[Math.floor(Math.random() * flawTable.rows.length)][1];
-        }
-
-        return personality;
-    }
-
     _getCrForXp(xp) {
         let closestCr = "0";
         let smallestDiff = Infinity;
@@ -162,10 +137,10 @@ class NpcGenerator {
             const characterDescription = `a ${options.lineage.name || options.species.name} ${options.subclass.name || options.class.name}`;
 
             const prompt1 = `Please provide only a numbered list of 10 fantasy names suitable for ${characterDescription}, with no introduction, conclusion, or other conversational text.`;
-            const nameListResponse = await this.askLlm(prompt1, 're');
+            const nameListResponse = await this.askLlm(prompt1, 're', false);
 
             // Clean up the response to get just the list
-            const nameList = nameListResponse.split('\n').filter(line => /^\d+\.\s/.test(line.trim())).join('\n');
+            let nameList = nameListResponse.split('\n').filter(line => /^\d+\.\s/.test(line.trim())).join('\n');
 
             if (!nameList) {
                  console.log("LLM did not return a valid numbered list for names.");
@@ -174,7 +149,7 @@ class NpcGenerator {
             }
 
             const prompt2 = `From the following list, choose the single most fitting name for ${characterDescription} who was a ${options.background.name}. Return only the name itself, with no other text or numbering.\n\nList:\n${nameList}`;
-            const finalNameResponse = await this.askLlm(prompt2, 're');
+            const finalNameResponse = await this.askLlm(prompt2, 're', false);
 
             // Clean up the final response to remove any lingering list numbers or fluff
             return finalNameResponse.split('\n')[0].replace(/^\d+\.\s*/, '').replace(/[^a-zA-Z\s'-]/g, '').trim();

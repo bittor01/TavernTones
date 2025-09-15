@@ -9,7 +9,7 @@ const categorySources = {
     'bestiary': { type: 'directory', path: 'bestiary', key: 'monster' },
     'feats': { type: 'file', path: 'feats.json', key: 'feat' },
     'backgrounds': { type: 'file', path: 'backgrounds.json', key: 'background' },
-    'races': { type: 'file', path: 'races.json', key: 'race' },
+    'races': { type: 'file', path: 'races.json', key: ['race', 'subrace'] },
     'traps': { type: 'file', path: 'trapshazards.json', key: 'trap' },
     'vehicles': { type: 'file', path: 'vehicles.json', key: 'vehicle' },
 };
@@ -41,12 +41,14 @@ class FiveEToolsParser {
         const itemMap = new Map();
 
         const processJsonData = (jsonData) => {
-            const dataKey = sourceInfo.key;
-            if (jsonData[dataKey] && Array.isArray(jsonData[dataKey])) {
-                for (const item of jsonData[dataKey]) {
-                    if (item.name && item.source) {
-                        const uniqueKey = `${item.name}__${item.source}`;
-                        itemMap.set(uniqueKey, item);
+            const dataKeys = Array.isArray(sourceInfo.key) ? sourceInfo.key : [sourceInfo.key];
+            for (const dataKey of dataKeys) {
+                if (jsonData[dataKey] && Array.isArray(jsonData[dataKey])) {
+                    for (const item of jsonData[dataKey]) {
+                        if (item.name && item.source) {
+                            const uniqueKey = `${item.name}__${item.source}`;
+                            itemMap.set(uniqueKey, item);
+                        }
                     }
                 }
             }
@@ -223,42 +225,21 @@ class FiveEToolsParser {
 
     async getLineages(speciesName, speciesSource) {
         const allRaces = await this._loadCategoryData('races');
-        const lineageMap = new Map();
+        // A lineage is a race entry that DOES have a `raceName` property, linking it to a species.
+        // The raceSource check is removed to allow for subraces from other books (e.g. SCAG variants for PHB races).
+        return allRaces.filter(r => r.raceName === speciesName);
+    }
 
-        const baseSpecies = allRaces.find(r => r.name === speciesName && r.source === speciesSource);
+    async getClasses() {
+        const classData = await this._loadCategoryData('classes');
+        // A class is a class entry that does NOT have a `className` property.
+        return classData.filter(c => !c.className);
+    }
 
-        if (!baseSpecies) {
-            this.logToRenderer(`[5eParser] Could not find base species: ${speciesName} [${speciesSource}]`);
-            return [];
-        }
-
-        // Case 1: Standalone subrace/lineage files (e.g., Githzerai is a subrace of Gith)
-        const standaloneSubraces = allRaces.filter(r => r.raceName === speciesName && r.raceSource === speciesSource);
-        for (const subrace of standaloneSubraces) {
-            lineageMap.set(`${subrace.name}|${subrace.source}`, subrace);
-        }
-
-        // Case 2: Subraces defined in a `subraces` array on the base species object (e.g., PHB Elf)
-        if (baseSpecies.subraces) {
-            for (const subraceStub of baseSpecies.subraces) {
-                const fullSubrace = allRaces.find(r => r.name === subraceStub.name && r.source === subraceStub.source);
-                if (fullSubrace) {
-                    lineageMap.set(`${fullSubrace.name}|${fullSubrace.source}`, fullSubrace);
-                }
-            }
-        }
-
-        // Case 3: Lineages defined in a `_versions` array (e.g., XPHB races)
-        if (baseSpecies._versions) {
-            for (const version of baseSpecies._versions) {
-                const fullLineage = allRaces.find(r => r.name === version.name && r.source === version.source);
-                 if (fullLineage) {
-                    lineageMap.set(`${fullLineage.name}|${fullLineage.source}`, fullLineage);
-                }
-            }
-        }
-
-        return Array.from(lineageMap.values());
+    async getSubclasses(className, classSource) {
+        const classData = await this._loadCategoryData('classes');
+        // A subclass is a class entry that DOES have a `className` property.
+        return classData.filter(sc => sc.className === className && sc.classSource === classSource);
     }
 
     async getBackgrounds() {
@@ -289,25 +270,36 @@ class FiveEToolsParser {
             const traitTypes = ["Ideal", "Bond", "Flaw"];
 
             for (const traitType of traitTypes) {
-                const table = characteristicsEntry.entries.find(e =>
-                    e.type === "table" &&
-                    e.colLabels &&
-                    e.colLabels.length > 1 &&
-                    e.colLabels[1].includes(traitType) // Use .includes() for flexibility (e.g., "Ideal" vs "Athlete Ideals")
-                );
+                const table = characteristicsEntry.entries.find(e => {
+                    if (e.type !== "table") return false;
+                    // Check for trait type in caption (e.g., "caption": "Ideals")
+                    if (e.caption && e.caption.toLowerCase().includes(traitType.toLowerCase())) {
+                        return true;
+                    }
+                    // Check for trait type in column labels (e.g., "colLabels": ["d6", "Ideal"])
+                    if (e.colLabels && e.colLabels.length > 1 && e.colLabels[1].toLowerCase().includes(traitType.toLowerCase())) {
+                        return true;
+                    }
+                    return false;
+                });
 
                 if (table && table.rows && table.rows.length > 0) {
                     const randomIndex = Math.floor(Math.random() * table.rows.length);
-                    // The trait text is in the second column of the row. It may contain more objects or strings.
                     const rawTrait = table.rows[randomIndex][1];
-                    let traitText = '';
-                    if (typeof rawTrait === 'object' && rawTrait.entry) {
+                    let traitText = `No trait text found for ${traitType}.`; // Default fallback
+
+                    if (typeof rawTrait === 'object' && rawTrait && rawTrait.entry) {
                         traitText = rawTrait.entry;
-                    } else {
+                    } else if (typeof rawTrait === 'string') {
                         traitText = rawTrait;
+                    } else if (rawTrait) { // If it's some other truthy value (object without .entry)
+                        traitText = JSON.stringify(rawTrait);
                     }
+
                     // Basic cleanup to remove 5etools syntax
-                    traitText = traitText.replace(/\{@.*?\|(.*?)\}/g, '$1').replace(/\{@.*? (.*?)\}/g, '$1');
+                    if (traitText) {
+                       traitText = traitText.replace(/\{@.*?\|(.*?)\}/g, '$1').replace(/\{@.*? (.*?)\}/g, '$1');
+                    }
                     traits[traitType.toLowerCase()] = traitText;
                 } else {
                     this.logToRenderer(`[5eParser] No table found for trait type '${traitType}' in background '${bg.name}'`);
@@ -326,18 +318,6 @@ class FiveEToolsParser {
 
         this.logToRenderer(`[5eParser] Could not find traits for background: ${backgroundName} [${backgroundSource}]`);
         return { ideal: 'Not found', bond: 'Not found', flaw: 'Not found' };
-    }
-
-    async getClasses() {
-        const classes = await this._loadCategoryData('classes');
-        // Filter out any entries that are actually subclasses, identified by having a `className` property.
-        return classes.filter(c => !c.className && c.name !== 'Sidekick');
-    }
-
-    async getSubclasses(className, classSource) {
-        const classData = await this._loadCategoryData('classes');
-        // Find all subclasses that belong to the specified base class.
-        return classData.filter(sc => sc.className === className && sc.classSource === classSource);
     }
 }
 

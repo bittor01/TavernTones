@@ -282,6 +282,19 @@ class CommandHandler {
                             break;
                         }
                         const results = await this.fiveEToolsParser.searchByName('races', query);
+                        // If we find exactly one race, check for lineages
+                        if (results.length === 1 && !results[0].raceName) {
+                            const race = results[0];
+                            const lineages = await this.fiveEToolsParser.getLineages(race.name, race.source);
+                            if (lineages.length > 0) {
+                                const embed = new EmbedBuilder()
+                                    .setColor(0x0099FF)
+                                    .setTitle(`Lineages for ${race.name} (${race.source})`)
+                                    .setDescription(lineages.map(l => `• ${l.name} (${l.source})`).join('\n'));
+                                await message.reply({ embeds: [embed] });
+                                break;
+                            }
+                        }
                         await this._handle5eSearch(message, results, query);
                         break;
                     }
@@ -1051,7 +1064,7 @@ function evaluateDiceRolls(text, diceLimit = 24000) {
     return text;
 }
 
-async function askGPT4All(prompt, model) {
+async function askGPT4All(prompt, model, addSuffix = true) {
     let chatmodel = 'Meta-Llama-3-8B-Instruct.Q4_0.gguf'; // Default to ll model
     if (model === 're') {
         chatmodel = 'qwen2.5-coder-7b-instruct-q4_0.gguf';
@@ -1059,12 +1072,17 @@ async function askGPT4All(prompt, model) {
 
     // Sanitize the prompt to prevent command injection
     const sanitizedPrompt = prompt.replace(/"/g, '\\"');
-    const tailPrompt = '\n - Thanks for the help!'
-    const sanitizedPromptTail = sanitizedPrompt + tailPrompt;
+    let finalPrompt = sanitizedPrompt;
+
+    if (addSuffix) {
+        const tailPrompt = '\n - Thanks for the help!';
+        finalPrompt += tailPrompt;
+    }
+
     try {
         const response = await axios.post('http://localhost:4891/v1/chat/completions', {
             "model": chatmodel,
-            "messages": [{ "role": "user", "content": sanitizedPromptTail }],
+            "messages": [{ "role": "user", "content": finalPrompt }],
             "max_tokens": 8000
         });
 
