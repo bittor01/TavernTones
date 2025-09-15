@@ -55,7 +55,29 @@ class VehicleEncounterBuilder {
         const escortCandidates = allVehicles.filter(v => (v.hp || v.hull?.hp) <= escortTypeHpBudget * 1.15 && (v.hp || v.hull?.hp) >= escortTypeHpBudget * 0.85);
 
         if (escortCandidates.length === 0) {
-            return { error: `Could not find suitable escorts with HP around ${escortTypeHpBudget}.` };
+            let lower = null;
+            let higher = null;
+            let minDiffLower = Infinity;
+            let minDiffHigher = Infinity;
+
+            allVehicles.forEach(v => {
+                const vehicleHp = v.hp || v.hull?.hp;
+                const diff = vehicleHp - escortTypeHpBudget;
+                if (diff < 0 && Math.abs(diff) < minDiffLower) {
+                    minDiffLower = Math.abs(diff);
+                    lower = v;
+                }
+                if (diff > 0 && diff < minDiffHigher) {
+                    minDiffHigher = diff;
+                    higher = v;
+                }
+            });
+
+            return {
+                error: `Could not find suitable escorts with HP around ${escortTypeHpBudget}.`,
+                lower: lower ? { ...lower, hp: lower.hp || lower.hull?.hp } : null,
+                higher: higher ? { ...higher, hp: higher.hp || higher.hull?.hp } : null
+            };
         }
 
         const selectedEscortTypes = [];
@@ -101,7 +123,29 @@ class VehicleEncounterBuilder {
         });
 
         if (candidates.length === 0) {
-            return { error: `Could not find any vehicles between ${Math.round(minHp)} and ${Math.round(maxHp)} HP to build a balanced encounter.` };
+            let lower = null;
+            let higher = null;
+            let minDiffLower = Infinity;
+            let minDiffHigher = Infinity;
+
+            allVehicles.forEach(v => {
+                const vehicleHp = v.hp || v.hull?.hp;
+                const diff = vehicleHp - targetHp;
+                if (diff < 0 && Math.abs(diff) < minDiffLower) {
+                    minDiffLower = Math.abs(diff);
+                    lower = v;
+                }
+                if (diff > 0 && diff < minDiffHigher) {
+                    minDiffHigher = diff;
+                    higher = v;
+                }
+            });
+
+            return {
+                error: `Could not find any vehicles between ${Math.round(minHp)} and ${Math.round(maxHp)} HP.`,
+                lower: lower ? { ...lower, hp: lower.hp || lower.hull?.hp } : null,
+                higher: higher ? { ...higher, hp: higher.hp || higher.hull?.hp } : null
+            };
         }
 
         const selectedTypes = [];

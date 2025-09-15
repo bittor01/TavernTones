@@ -162,7 +162,7 @@ class NpcGenerator {
             const characterDescription = `a ${options.lineage.name || options.species.name} ${options.subclass.name || options.class.name}`;
 
             const prompt1 = `Please provide only a numbered list of 10 fantasy names suitable for ${characterDescription}, with no introduction, conclusion, or other conversational text.`;
-            const nameListResponse = await this.askLlm(prompt1, 'll');
+            const nameListResponse = await this.askLlm(prompt1, 're');
 
             // Clean up the response to get just the list
             const nameList = nameListResponse.split('\n').filter(line => /^\d+\.\s/.test(line.trim())).join('\n');

@@ -16,8 +16,8 @@ class DropdownHandler {
         this.customId = customId;
         this.options = options;
         this.placeholder = placeholder;
-        this.topPinned = topPinned;
-        this.bottomPinned = bottomPinned;
+        this.topPinned = topPinned.map(opt => ({ ...opt, label: `⬆️ ${opt.label}` })); // Add emoji
+        this.bottomPinned = bottomPinned.map(opt => ({ ...opt, label: `⬇️ ${opt.label}` })); // Add emoji
     }
 
     /**
@@ -29,11 +29,8 @@ class DropdownHandler {
         const finalOptions = [];
         const dynamicOptions = [...this.options];
 
-        // Add top-pinned options
-        finalOptions.push(...this.topPinned);
-
         // Determine how many slots are available for dynamic options and navigation
-        const dynamicSlots = MAX_OPTIONS_PER_PAGE - finalOptions.length - this.bottomPinned.length;
+        const dynamicSlots = MAX_OPTIONS_PER_PAGE - this.topPinned.length - this.bottomPinned.length;
 
         let pageOptions = [];
         let totalPages = 1;
@@ -46,40 +43,47 @@ class DropdownHandler {
                 currentPage = 1;
             } else {
                 // Calculate total pages based on a more complex pagination model
-                // Page 1 has 1 extra slot (no "Prev" button)
-                const slotsOnPage1 = dynamicSlots - 1;
-                // Subsequent pages have 2 fewer slots (Prev and Next)
-                const slotsOnMidPages = dynamicSlots - 2;
+                const slotsOnPage1 = dynamicSlots - 1; // No "Prev" button
+                const slotsOnMidPages = dynamicSlots - 2; // "Prev" and "Next" buttons
 
-                if (dynamicOptions.length <= slotsOnPage1) {
+                if (slotsOnPage1 <= 0 || slotsOnMidPages <= 0) {
+                    // Not enough space for pagination, show as much as possible
                     totalPages = 1;
+                    currentPage = 1;
+                    pageOptions = dynamicOptions.slice(0, dynamicSlots);
                 } else {
-                    totalPages = 1 + Math.ceil((dynamicOptions.length - slotsOnPage1) / slotsOnMidPages);
+                    if (dynamicOptions.length <= slotsOnPage1) {
+                        totalPages = 1;
+                    } else {
+                        totalPages = 1 + Math.ceil((dynamicOptions.length - slotsOnPage1) / slotsOnMidPages);
+                    }
+
+                    if (currentPage < 1) currentPage = 1;
+                    if (currentPage > totalPages) currentPage = totalPages;
+
+                    let startIndex = 0;
+                    let slotsForThisPage = 0;
+
+                    if (currentPage > 1) {
+                        startIndex += slotsOnPage1 + (currentPage - 2) * slotsOnMidPages;
+                    }
+
+                    if (currentPage === 1) {
+                        slotsForThisPage = dynamicSlots - (totalPages > 1 ? 1 : 0);
+                    } else if (currentPage < totalPages) {
+                        slotsForThisPage = dynamicSlots - 2;
+                    } else { // Last page
+                        slotsForThisPage = dynamicSlots - 1;
+                    }
+
+                    pageOptions = dynamicOptions.slice(startIndex, startIndex + slotsForThisPage);
                 }
-
-                if (currentPage < 1) currentPage = 1;
-                if (currentPage > totalPages) currentPage = totalPages;
-
-                let startIndex = 0;
-                let slotsForThisPage = 0;
-
-                if (currentPage > 1) {
-                    startIndex += slotsOnPage1 + (currentPage - 2) * slotsOnMidPages;
-                }
-
-                if (currentPage === 1) {
-                    slotsForThisPage = dynamicSlots - (totalPages > 1 ? 1 : 0);
-                } else if (currentPage < totalPages) {
-                    slotsForThisPage = dynamicSlots - 2;
-                } else { // Last page
-                    slotsForThisPage = dynamicSlots - 1;
-                }
-
-                pageOptions = dynamicOptions.slice(startIndex, startIndex + slotsForThisPage);
             }
         }
 
-        // Add "Previous Page" option
+        // --- Assemble the final options in the correct order ---
+
+        // 1. Add "Previous Page" option if needed
         if (totalPages > 1 && currentPage > 1) {
             finalOptions.push({
                 label: `⬅️ Previous Page (${currentPage - 1}/${totalPages})`,
@@ -87,19 +91,22 @@ class DropdownHandler {
             });
         }
 
-        // Add the options for the current page
+        // 2. Add top-pinned options
+        finalOptions.push(...this.topPinned);
+
+        // 3. Add the options for the current page
         finalOptions.push(...pageOptions);
 
-        // Add "Next Page" option
+        // 4. Add bottom-pinned options
+        finalOptions.push(...this.bottomPinned);
+
+        // 5. Add "Next Page" option if needed
         if (totalPages > 1 && currentPage < totalPages) {
             finalOptions.push({
                 label: `➡️ Next Page (${currentPage + 1}/${totalPages})`,
                 value: `!page_${currentPage + 1}`,
             });
         }
-
-        // Add bottom-pinned options
-        finalOptions.push(...this.bottomPinned);
 
         const selectMenu = new StringSelectMenuBuilder()
             .setCustomId(`${this.customId}|page${currentPage}`)

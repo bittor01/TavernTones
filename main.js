@@ -1336,6 +1336,48 @@ client.once('clientReady', async () => {
                 return;
             }
 
+            if (interaction.customId.startsWith('vehicle-rerun')) {
+                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+                const [, tag, name, source, hp] = interaction.customId.split('|');
+
+                // We're just generating a single vehicle, so a "balanced" encounter with numVehicles: 1 works perfectly.
+                const result = await client.commandHandler.vehicleEncounterBuilder.generateEncounter({
+                    tag,
+                    style: 'balanced',
+                    totalHp: parseInt(hp, 10),
+                    numVehicles: 1
+                });
+
+                if (result.error) {
+                    await interaction.editReply({ content: `Error on rerun: ${result.error}` });
+                    return;
+                }
+
+                // This section is duplicated from the successful modal submit, could be refactored.
+                const summaryEmbed = new EmbedBuilder()
+                    .setColor(0x2ECC71)
+                    .setTitle(`Vehicle Encounter Generated! (Balanced)`)
+                    .setDescription(`**Tag:** ${tag}\n**HP Budget:** ${result.totalValue.toLocaleString()} / ${result.budget.toLocaleString()}`)
+                    .addFields({ name: 'Vehicles', value: result.encounter.map(v => `• ${v.name} (HP: ${v.hp})`).join('\n') || 'None' });
+
+                const originalMessage = await interaction.channel.send({ embeds: [summaryEmbed] });
+                const thread = await originalMessage.startThread({
+                    name: `Vehicle Encounter Details (Balanced)`,
+                    autoArchiveDuration: 60,
+                });
+
+                for (const vehicle of result.encounter) {
+                     const fullVehicleData = await fiveEToolsParser.getExact('vehicles', vehicle.name, vehicle.source);
+                     const vehicleDetails = `**${fullVehicleData.name}**\n` +
+                                           `AC: ${fullVehicleData.ac[0].ac || 'N/A'}\n` +
+                                           `HP: ${fullVehicleData.hp.average || 'N/A'}\n` +
+                                           `Crew: ${fullVehicleData.capCrew || 'N/A'}`;
+                    await thread.send(vehicleDetails);
+                }
+                await interaction.editReply({ content: `Vehicle encounter generated! You can view it here: ${originalMessage.url}` });
+                return;
+            }
+
             if (interaction.customId === 'ma-configure-button') {
                 const modal = new ModalBuilder()
                     .setCustomId(`ma-config-modal-${interaction.message.id}`)
@@ -1626,7 +1668,33 @@ async function _updateNpcComponents(interaction, selections, updateOptions = {})
                 });
 
                 if (result.error) {
-                    await interaction.editReply({ content: `Error: ${result.error}` });
+                    let components = [];
+                    let content = `Error: ${result.error}`;
+
+                    if (result.lower || result.higher) {
+                        const buttonRow = new ActionRowBuilder();
+                        content += `\nWould you like to try generating a single-vehicle encounter with the closest option?`;
+                        if (result.lower) {
+                            content += `\n- Closest Lower: ${result.lower.name} (${result.lower.hp} HP)`;
+                            buttonRow.addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId(`vehicle-rerun|${tag}|${result.lower.name}|${result.lower.source}|${result.lower.hp}`)
+                                    .setLabel(`Use ${result.lower.name}`)
+                                    .setStyle(ButtonStyle.Primary)
+                            );
+                        }
+                        if (result.higher) {
+                            content += `\n- Closest Higher: ${result.higher.name} (${result.higher.hp} HP)`;
+                            buttonRow.addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId(`vehicle-rerun|${tag}|${result.higher.name}|${result.higher.source}|${result.higher.hp}`)
+                                    .setLabel(`Use ${result.higher.name}`)
+                                    .setStyle(ButtonStyle.Primary)
+                            );
+                        }
+                        components.push(buttonRow);
+                    }
+                    await interaction.editReply({ content, components });
                     return;
                 }
 
