@@ -88,11 +88,6 @@ These modules encapsulate the core logic for the application's features. They ar
 -   **`json-gamify.css`**: The stylesheet for the Gamify Tool.
 -   **Used By**: Loaded into a separate `BrowserWindow` by `main.js`.
 
-#### HP Tracker (Legacy)
--   **`hp.html`**: The HTML structure for a simple, standalone HP tracking tool.
--   **`hp.js`**: The frontend logic for the HP tracker. It appears to be a separate, likely legacy, tool from the main initiative tracker.
--   **Used By**: Not currently loaded by the application. Could be opened manually.
-
 #### Debugging & Configuration
 -   **`package.json`**: The standard Node.js project file. Defines project metadata, dependencies (`discord.js`, `electron`, etc.), and scripts (`start`).
 -   **`deprep.js`**: A simple script used for debugging. It generates and prints a dependency report for the `@discordjs/voice` library to help diagnose audio-related issues.
