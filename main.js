@@ -1623,10 +1623,15 @@ async function _handleNpcDropdowns(interaction) {
     }
 
     if (handlerKey === 'class') {
+        logToRenderer(`[NPC Dropdown] Class selection triggered. Value: ${selectedValue}`);
         delete selections.subclass;
         if (selectedValue !== 'random') {
             const [, className, classSource] = selectedValue.split('|');
+            logToRenderer(`[NPC Dropdown] Processing class: ${className}, Source: ${classSource}`);
+
             const subclasses = await fiveEToolsParser.getSubclasses(className, classSource);
+            logToRenderer(`[NPC Dropdown] Found ${subclasses.length} subclasses.`);
+
             if (subclasses.length > 0) {
                 const subclassOptions = subclasses.map(sc => ({ label: `${sc.name} (${sc.source})`, value: `subclass|${sc.name}|${sc.source}` }));
                 const subclassHandler = new DropdownHandler({
@@ -1639,7 +1644,14 @@ async function _handleNpcDropdowns(interaction) {
                     ]
                 });
                 handlers.subclass = subclassHandler;
-                if (componentIndex !== -1) newComponents[componentIndex] = subclassHandler.createActionRow(1);
+                logToRenderer(`[NPC Dropdown] Created new subclass dropdown component.`);
+
+                if (componentIndex !== -1) {
+                    newComponents[componentIndex] = subclassHandler.createActionRow(1);
+                    logToRenderer(`[NPC Dropdown] Replaced class dropdown with subclass dropdown in component list.`);
+                } else {
+                    logToRenderer(`[NPC Dropdown] WARNING: Could not find the original class dropdown component to replace.`);
+                }
             }
         }
     }
