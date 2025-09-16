@@ -1715,7 +1715,7 @@ function formatNpcResult(result) {
 
     const embed = new EmbedBuilder()
         .setColor(0x9B59B6) // Purple for NPCs
-        .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name || 'Unknown'}`)
+        .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name || ''}`)
         .setDescription(`**${raceDisplay} ${className} ${backgroundName}**`);
 
     const formatTraitList = (traitArray) => {

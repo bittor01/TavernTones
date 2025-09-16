@@ -80,6 +80,23 @@ These modules encapsulate the core logic for the application's features. They ar
 
 ---
 
+### Data & Reference Directories
+
+These directories contain the JSON data that powers many of the bot's features.
+
+#### `reference/5etoolsdata/`
+-   **Purpose**: This directory contains a vast collection of JSON files sourced from the `5etools` project. It includes data for nearly every aspect of D&D 5e, such as spells, items, monsters, feats, and backgrounds.
+-   **Used By**: `5eParser.js` is the primary module that reads from this directory.
+
+#### `randomtables/`
+-   **Purpose**: This directory contains custom JSON files that are used as weighted tables for various random generation features.
+-   **Subdirectories**:
+    -   **`/origin`**: Contains generic character origin data (traits, ideals, bonds, flaws) extracted from `backgrounds.json`. This is used as a fallback by the `!generate-character` command.
+    -   Other subdirectories contain data for the `!ro` command and `MagicItemGenerator`.
+-   **Used By**: `CommandHandler.js` (for the `!ro` command), `MagicItemGenerator.js`, and `5eParser.js` (for the character generator).
+
+---
+
 ### Standalone Tools & Other Files
 
 #### JSON Gamify Tool
