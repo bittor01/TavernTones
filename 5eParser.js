@@ -283,6 +283,12 @@ class FiveEToolsParser {
                 if (originalBg) return findTraitsRecursive(originalBg);
             }
 
+            // If the current background doesn't have trait entries, check if it's a reprint.
+            if (!bg.entries || !bg.entries.some(e => e.name === "Suggested Characteristics")) {
+                const originalBg = backgrounds.find(b => b.reprintedAs && b.reprintedAs.includes(`${bg.name}|${bg.source}`));
+                if (originalBg) return findTraitsRecursive(originalBg);
+            }
+
             if (!bg.entries) return null;
 
             const characteristicsEntry = bg.entries.find(e => e.name === "Suggested Characteristics" && e.type === "entries");

@@ -52,13 +52,15 @@ class NpcGenerator {
             finalSpecies = allSpecies[Math.floor(Math.random() * allSpecies.length)];
             finalLineage = {}; // No lineage if species is random
         } else {
-            const [, name, source] = options.species.split('|');
-            finalSpecies = allSpecies.find(s => s.name === name && s.source === source);
+            const [, speciesName, speciesSource] = options.species.split('|');
+            finalSpecies = allSpecies.find(s => s.name === speciesName && s.source === speciesSource);
             if (!options.lineage || options.lineage === 'random') {
                  finalLineage = {}; // Randomly select a lineage later if needed, or none
             } else {
                 const [, lineageName, lineageSource] = options.lineage.split('|');
-                finalLineage = allRaces.find(l => l.name === lineageName && l.source === lineageSource) || {};
+                // We must call getLineages here to account for synthetic lineages (e.g. from XPHB)
+                const allPossibleLineages = await this.fiveEToolsParser.getLineages(speciesName, speciesSource);
+                finalLineage = allPossibleLineages.find(l => l.name === lineageName && l.source === lineageSource) || {};
             }
         }
 

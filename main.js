@@ -1690,15 +1690,19 @@ function formatNpcResult(result) {
     // Defensively create display names to prevent crashes
     const speciesName = result.species?.name || 'Unknown Species';
     const lineageName = result.lineage?.name;
-    const className = result.subclass?.name || result.class?.name || 'Unknown Class';
     const backgroundName = result.background?.name || 'Unknown Background';
+
+    // Combine class and subclass name intelligently
+    const baseClassName = result.class?.name || 'Unknown Class';
+    const subclassName = result.subclass?.name;
+    const className = subclassName ? `${subclassName} ${baseClassName}` : baseClassName;
+
 
     // Combine lineage and species name intelligently
     let raceDisplay = speciesName;
-    if (lineageName) {
-        const lineageWords = lineageName.toLowerCase().split(' ');
-        // If the last word of the lineage is the species name (e.g., "High Elf" and "Elf"), just use the lineage name.
-        if (lineageWords[lineageWords.length - 1] === speciesName.toLowerCase()) {
+    if (lineageName && lineageName !== speciesName) {
+        // If the lineage name already contains the species name (e.g., "High Elf" contains "Elf"), just use the lineage name.
+        if (lineageName.toLowerCase().includes(speciesName.toLowerCase())) {
             raceDisplay = lineageName;
         } else {
             // Otherwise, combine them (e.g., "Deep" and "Gnome" -> "Deep Gnome")
@@ -1712,20 +1716,29 @@ function formatNpcResult(result) {
         .setDescription(`A **${raceDisplay} ${className}** who was a(n) **${backgroundName}**.`);
 
     const formatTraitList = (traitArray) => {
-        if (!traitArray || traitArray.length === 0) return 'N/A';
-        return `A. ${traitArray[0]}\nB. ${traitArray[1]}`;
+        if (!traitArray || traitArray.length === 0) return '';
+        let list = `A. ${traitArray[0]}`;
+        if (traitArray.length > 1 && traitArray[1]) {
+            list += `\nB. ${traitArray[1]}`;
+        }
+        return list;
     };
 
-    if (result.trait) {
+    // Helper to check if a trait is valid and should be displayed
+    const isTraitValid = (traitArray) => {
+        return traitArray && traitArray.length > 0 && traitArray[0] && !traitArray[0].toLowerCase().includes('not found');
+    }
+
+    if (isTraitValid(result.trait)) {
         embed.addFields({ name: 'Personality Traits', value: formatTraitList(result.trait) });
     }
-    if (result.ideal) {
+    if (isTraitValid(result.ideal)) {
         embed.addFields({ name: 'Ideal', value: formatTraitList(result.ideal) });
     }
-    if (result.bond) {
+    if (isTraitValid(result.bond)) {
         embed.addFields({ name: 'Bond', value: formatTraitList(result.bond) });
     }
-    if (result.flaw) {
+    if (isTraitValid(result.flaw)) {
         embed.addFields({ name: 'Flaw', value: formatTraitList(result.flaw) });
     }
 
