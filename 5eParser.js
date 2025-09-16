@@ -227,16 +227,16 @@ class FiveEToolsParser {
         const allRaces = await this._loadCategoryData('races');
 
         // Standard check for subraces/lineages defined as separate objects
-        const standardLineages = allRaces.filter(r => r.raceName === speciesName);
+        const standardLineages = allRaces.filter(r => r.raceName === speciesName && r.raceSource === speciesSource);
 
         // Special handling for XPHB-style inline lineage tables
         const inlineLineages = [];
         const baseRace = allRaces.find(r => r.name === speciesName && r.source === speciesSource);
 
         if (baseRace && baseRace.entries) {
-            const lineageEntry = baseRace.entries.find(e => e.name === "Elven Lineage");
+            const lineageEntry = baseRace.entries.find(e => e.name && e.name.includes("Lineage"));
             if (lineageEntry && lineageEntry.entries) {
-                const lineageTable = lineageEntry.entries.find(e => e.type === "table" && e.caption === "Elven Lineages");
+                const lineageTable = lineageEntry.entries.find(e => e.type === "table" && e.caption && e.caption.includes("Lineages"));
                 if (lineageTable && lineageTable.rows) {
                     for (const row of lineageTable.rows) {
                         const lineageName = row[0];

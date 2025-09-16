@@ -1601,10 +1601,13 @@ async function _handleNpcDropdowns(interaction) {
 
     // Handle transforming dropdowns
     if (handlerKey === 'species') {
+        logToRenderer(`[NPC Dropdown] Species selection triggered. Value: ${selectedValue}`);
         delete selections.lineage;
         if (selectedValue !== 'random') {
             const [, speciesName, speciesSource] = selectedValue.split('|');
+            logToRenderer(`[NPC Dropdown] Processing species: ${speciesName}, Source: ${speciesSource}`);
             const lineages = await fiveEToolsParser.getLineages(speciesName, speciesSource);
+            logToRenderer(`[NPC Dropdown] Found ${lineages.length} lineages.`);
             if (lineages.length > 0) {
                 const lineageOptions = lineages.map(l => ({ label: `${l.name} (${l.source})`, value: `lineage|${l.name}|${l.source}` }));
                 const lineageHandler = new DropdownHandler({
