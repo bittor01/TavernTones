@@ -311,14 +311,17 @@ class FiveEToolsParser {
                     const firstIndex = Math.floor(Math.random() * table.rows.length);
                     traits[lookupKey].push(getTraitText(table.rows[firstIndex][1]));
 
-                    if (table.rows.length > 1) {
-                        let secondIndex;
-                        do {
-                            secondIndex = Math.floor(Math.random() * table.rows.length);
-                        } while (secondIndex === firstIndex);
-                        traits[lookupKey].push(getTraitText(table.rows[secondIndex][1]));
-                    } else {
-                        traits[lookupKey].push("No second option available.");
+                    // Only push a second trait if it's a "Personality Trait"
+                    if (lookupKey === 'trait') {
+                        if (table.rows.length > 1) {
+                            let secondIndex;
+                            do {
+                                secondIndex = Math.floor(Math.random() * table.rows.length);
+                            } while (secondIndex === firstIndex);
+                            traits[lookupKey].push(getTraitText(table.rows[secondIndex][1]));
+                        } else {
+                            traits[lookupKey].push("No second option available.");
+                        }
                     }
                 } else {
                     this.logToRenderer(`[5eParser] No table found for trait type '${traitType}' in background '${bg.name}'`);

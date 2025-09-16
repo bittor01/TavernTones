@@ -1687,10 +1687,29 @@ async function _handleNpcGeneration(interaction, selections) {
 }
 
 function formatNpcResult(result) {
+    // Defensively create display names to prevent crashes
+    const speciesName = result.species?.name || 'Unknown Species';
+    const lineageName = result.lineage?.name;
+    const className = result.subclass?.name || result.class?.name || 'Unknown Class';
+    const backgroundName = result.background?.name || 'Unknown Background';
+
+    // Combine lineage and species name intelligently
+    let raceDisplay = speciesName;
+    if (lineageName) {
+        const lineageWords = lineageName.toLowerCase().split(' ');
+        // If the last word of the lineage is the species name (e.g., "High Elf" and "Elf"), just use the lineage name.
+        if (lineageWords[lineageWords.length - 1] === speciesName.toLowerCase()) {
+            raceDisplay = lineageName;
+        } else {
+            // Otherwise, combine them (e.g., "Deep" and "Gnome" -> "Deep Gnome")
+            raceDisplay = `${lineageName} ${speciesName}`;
+        }
+    }
+
     const embed = new EmbedBuilder()
         .setColor(0x9B59B6) // Purple for NPCs
-        .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name}`)
-        .setDescription(`A **${result.lineage ? (result.lineage.name.toLowerCase().includes(result.species.name.toLowerCase()) ? result.lineage.name : `${result.lineage.name} ${result.species.name}`) : result.species.name} ${result.subclass?.name || result.class.name}** who was a(n) **${result.background.name}**.`);
+        .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name || 'Unknown'}`)
+        .setDescription(`A **${raceDisplay} ${className}** who was a(n) **${backgroundName}**.`);
 
     const formatTraitList = (traitArray) => {
         if (!traitArray || traitArray.length === 0) return 'N/A';
