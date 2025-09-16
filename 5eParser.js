@@ -5,7 +5,7 @@ const dataPath = path.join(__dirname, 'reference', '5etoolsdata');
 const categorySources = {
     'spells': { type: 'directory', path: 'spells', key: 'spell' },
     'items': { type: 'file', path: 'items.json', key: 'item' },
-    'classes': { type: 'directory', path: 'class', key: 'class' },
+    'classes': { type: 'directory', path: 'class', key: ['class', 'subclass'] },
     'bestiary': { type: 'directory', path: 'bestiary', key: 'monster' },
     'feats': { type: 'file', path: 'feats.json', key: 'feat' },
     'backgrounds': { type: 'file', path: 'backgrounds.json', key: 'background' },
@@ -225,9 +225,35 @@ class FiveEToolsParser {
 
     async getLineages(speciesName, speciesSource) {
         const allRaces = await this._loadCategoryData('races');
-        // A lineage is a race entry that DOES have a `raceName` property, linking it to a species.
-        // The raceSource check is removed to allow for subraces from other books (e.g. SCAG variants for PHB races).
-        return allRaces.filter(r => r.raceName === speciesName);
+
+        // Standard check for subraces/lineages defined as separate objects
+        const standardLineages = allRaces.filter(r => r.raceName === speciesName);
+
+        // Special handling for XPHB-style inline lineage tables
+        const inlineLineages = [];
+        const baseRace = allRaces.find(r => r.name === speciesName && r.source === speciesSource);
+
+        if (baseRace && baseRace.entries) {
+            const lineageEntry = baseRace.entries.find(e => e.name === "Elven Lineage");
+            if (lineageEntry && lineageEntry.entries) {
+                const lineageTable = lineageEntry.entries.find(e => e.type === "table" && e.caption === "Elven Lineages");
+                if (lineageTable && lineageTable.rows) {
+                    for (const row of lineageTable.rows) {
+                        const lineageName = row[0];
+                        // Create a synthetic lineage object for the dropdown menu
+                        inlineLineages.push({
+                            name: lineageName,
+                            source: speciesSource, // Use the parent's source
+                            raceName: speciesName,
+                            raceSource: speciesSource,
+                        });
+                    }
+                }
+            }
+        }
+
+        // Combine and return both types of lineages
+        return [...standardLineages, ...inlineLineages];
     }
 
     async getClasses() {

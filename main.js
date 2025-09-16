@@ -2137,32 +2137,6 @@ function formatVehicleStatBlockForDiscord(vehicle) {
     return { mainEmbed, longFields };
 }
 
-function formatNpcResult(result) {
-    const embed = new EmbedBuilder()
-        .setColor(0x9B59B6) // Purple for NPCs
-        .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name}`)
-        .setDescription(`A **${result.lineage?.name || result.species.name} ${result.subclass?.name || result.class.name}** who was a(n) **${result.background.name}**.`);
-
-    if (result.ideal) {
-        embed.addFields({ name: 'Ideal', value: result.ideal });
-    }
-    if (result.bond) {
-        embed.addFields({ name: 'Bond', value: result.bond });
-    }
-    if (result.flaw) {
-        embed.addFields({ name: 'Flaw', value: result.flaw });
-    }
-
-    if (result.mode === 'npc' && result.statblockSuggestions) {
-        const { easy, medium, hard } = result.statblockSuggestions;
-        const statblockValue = `**Easy:** ${easy.name} (CR ${easy.cr})\n` +
-                               `**Medium:** ${medium.name} (CR ${medium.cr})\n` +
-                               `**Hard:** ${hard.name} (CR ${hard.cr})`;
-        embed.addFields({ name: 'Suggested Stat Blocks', value: statblockValue });
-    }
-
-    return embed;
-}
 
 function getHpColor(current, max) {
     if (current <= 0) return '#6c757d'; // Grey
