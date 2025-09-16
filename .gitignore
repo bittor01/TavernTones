@@ -5,3 +5,4 @@ node_modules/
 TavernTones.code-workspace
 settings.json
 Thumbs.db
+.vscode/
