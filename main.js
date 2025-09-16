@@ -1690,7 +1690,7 @@ function formatNpcResult(result) {
     const embed = new EmbedBuilder()
         .setColor(0x9B59B6) // Purple for NPCs
         .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name}`)
-        .setDescription(`A **${result.lineage?.name || result.species.name} ${result.subclass?.name || result.class.name}** who was a(n) **${result.background.name}**.`);
+        .setDescription(`A **${result.lineage ? (result.lineage.name.toLowerCase().includes(result.species.name.toLowerCase()) ? result.lineage.name : `${result.lineage.name} ${result.species.name}`) : result.species.name} ${result.subclass?.name || result.class.name}** who was a(n) **${result.background.name}**.`);
 
     const formatTraitList = (traitArray) => {
         if (!traitArray || traitArray.length === 0) return 'N/A';
