@@ -18,7 +18,7 @@ class NpcGenerator {
 
         const name = await this._generateName(finalOptions);
 
-        let traits = { ideal: 'N/A', bond: 'N/A', flaw: 'N/A' };
+        let traits = { trait: ['N/A'], ideal: ['N/A'], bond: ['N/A'], flaw: ['N/A'] };
         if (finalOptions.background) {
             traits = await this.fiveEToolsParser.getBackgroundTraits(finalOptions.background.name, finalOptions.background.source);
         }
@@ -27,6 +27,7 @@ class NpcGenerator {
             ...finalOptions,
             statblockSuggestions,
             name,
+            trait: traits.trait,
             ideal: traits.ideal,
             bond: traits.bond,
             flaw: traits.flaw

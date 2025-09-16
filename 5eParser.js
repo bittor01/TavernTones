@@ -252,58 +252,51 @@ class FiveEToolsParser {
         const findTraitsRecursive = (bg) => {
             if (!bg) return null;
 
-            // If it's a copy, find the original and recurse
             if (bg._copy && bg._copy.name && bg._copy.source) {
                 const originalBg = backgrounds.find(b => b.name === bg._copy.name && b.source === bg._copy.source);
-                if (originalBg) {
-                    return findTraitsRecursive(originalBg);
-                }
+                if (originalBg) return findTraitsRecursive(originalBg);
             }
 
-            // Otherwise, process this background's entries
             if (!bg.entries) return null;
 
             const characteristicsEntry = bg.entries.find(e => e.name === "Suggested Characteristics" && e.type === "entries");
             if (!characteristicsEntry || !characteristicsEntry.entries) return null;
 
-            const traits = { ideal: null, bond: null, flaw: null };
-            const traitTypes = ["Ideal", "Bond", "Flaw"];
+            const traits = { trait: [], ideal: [], bond: [], flaw: [] };
+            const traitTypes = ["Personality Trait", "Ideal", "Bond", "Flaw"];
 
             for (const traitType of traitTypes) {
+                const lookupKey = traitType === "Personality Trait" ? "trait" : traitType.toLowerCase();
                 const table = characteristicsEntry.entries.find(e => {
                     if (e.type !== "table") return false;
-                    // Check for trait type in caption (e.g., "caption": "Ideals")
-                    if (e.caption && e.caption.toLowerCase().includes(traitType.toLowerCase())) {
-                        return true;
-                    }
-                    // Check for trait type in column labels (e.g., "colLabels": ["d6", "Ideal"])
-                    if (e.colLabels && e.colLabels.length > 1 && e.colLabels[1].toLowerCase().includes(traitType.toLowerCase())) {
-                        return true;
-                    }
-                    return false;
+                    const caption = e.caption || (e.colLabels && e.colLabels.length > 1 ? e.colLabels[1] : '');
+                    return caption.toLowerCase().includes(lookupKey);
                 });
 
                 if (table && table.rows && table.rows.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * table.rows.length);
-                    const rawTrait = table.rows[randomIndex][1];
-                    let traitText = `No trait text found for ${traitType}.`; // Default fallback
+                    const getTraitText = (rawTrait) => {
+                        let text = `No trait text found for ${traitType}.`;
+                        if (typeof rawTrait === 'object' && rawTrait && rawTrait.entry) text = rawTrait.entry;
+                        else if (typeof rawTrait === 'string') text = rawTrait;
+                        else if (rawTrait) text = JSON.stringify(rawTrait);
+                        return text.replace(/\{@.*?\|(.*?)\}/g, '$1').replace(/\{@.*? (.*?)\}/g, '$1');
+                    };
 
-                    if (typeof rawTrait === 'object' && rawTrait && rawTrait.entry) {
-                        traitText = rawTrait.entry;
-                    } else if (typeof rawTrait === 'string') {
-                        traitText = rawTrait;
-                    } else if (rawTrait) { // If it's some other truthy value (object without .entry)
-                        traitText = JSON.stringify(rawTrait);
-                    }
+                    const firstIndex = Math.floor(Math.random() * table.rows.length);
+                    traits[lookupKey].push(getTraitText(table.rows[firstIndex][1]));
 
-                    // Basic cleanup to remove 5etools syntax
-                    if (traitText) {
-                       traitText = traitText.replace(/\{@.*?\|(.*?)\}/g, '$1').replace(/\{@.*? (.*?)\}/g, '$1');
+                    if (table.rows.length > 1) {
+                        let secondIndex;
+                        do {
+                            secondIndex = Math.floor(Math.random() * table.rows.length);
+                        } while (secondIndex === firstIndex);
+                        traits[lookupKey].push(getTraitText(table.rows[secondIndex][1]));
+                    } else {
+                        traits[lookupKey].push("No second option available.");
                     }
-                    traits[traitType.toLowerCase()] = traitText;
                 } else {
                     this.logToRenderer(`[5eParser] No table found for trait type '${traitType}' in background '${bg.name}'`);
-                    traits[traitType.toLowerCase()] = `No ${traitType} found.`;
+                    traits[lookupKey] = [`No ${traitType} found.`, `No ${traitType} found.`];
                 }
             }
             return traits;
@@ -312,12 +305,10 @@ class FiveEToolsParser {
         const background = backgrounds.find(b => b.name === backgroundName && b.source === backgroundSource);
         const foundTraits = findTraitsRecursive(background);
 
-        if (foundTraits) {
-            return foundTraits;
-        }
+        if (foundTraits) return foundTraits;
 
         this.logToRenderer(`[5eParser] Could not find traits for background: ${backgroundName} [${backgroundSource}]`);
-        return { ideal: 'Not found', bond: 'Not found', flaw: 'Not found' };
+        return { trait: ['Not found'], ideal: ['Not found'], bond: ['Not found'], flaw: ['Not found'] };
     }
 }
 

@@ -1048,12 +1048,22 @@ client.once('clientReady', async () => {
 
             if (customIdBase.startsWith('trap-')) {
                 const selections = trapSelections.get(interaction.message.id) || {};
-                const type = customIdBase.replace('trap-', '').replace('-select', '');
+                const selectionType = customIdBase.replace('trap-', '').replace('-select', '');
+                const selectedValue = values[0];
 
-                if (values[0] === 'random') {
-                    delete selections[type];
+                // Validate the incoming selection before updating the state
+                const isValid = await _isTrapSelectionValid(selectionType, selectedValue, selections);
+
+                if (!isValid) {
+                    // If not valid, just re-render with the old selections to prevent the invalid state.
+                    await _updateTrapDropdowns(interaction, selections);
+                    return;
+                }
+
+                if (selectedValue === 'random') {
+                    delete selections[selectionType];
                 } else {
-                    selections[type] = values[0];
+                    selections[selectionType] = selectedValue;
                 }
 
                 trapSelections.set(interaction.message.id, selections);
@@ -1369,8 +1379,6 @@ client.once('clientReady', async () => {
 async function _updateTrapDropdowns(interaction, selections) {
     await interaction.deferUpdate();
 
-    logToRenderer(`[Trap Gen] Updating dropdowns. Current selections: ${JSON.stringify(selections)}`);
-
     const allTraps = await fiveEToolsParser._loadCategoryData('traps');
     const environmentKeywords = {
         'dungeon': /dungeon|tomb|crypt|lair|hallway/i,
@@ -1405,8 +1413,6 @@ async function _updateTrapDropdowns(interaction, selections) {
         return true; // No tier/threat filters, so it's a match
     });
 
-    logToRenderer(`[Trap Gen] Found ${possibleTraps.length} possible traps after filtering.`);
-
     // 2. From that filtered list, derive the complete set of all still-possible options.
     const validTiers = new Set();
     const validThreats = new Set();
@@ -1429,11 +1435,6 @@ async function _updateTrapDropdowns(interaction, selections) {
             }
         }
     }
-
-    logToRenderer(`[Trap Gen] Valid Tiers: ${[...validTiers].join(', ')}`);
-    logToRenderer(`[Trap Gen] Valid Threats: ${[...validThreats].join(', ')}`);
-    logToRenderer(`[Trap Gen] Valid Types: ${[...validTypes].join(', ')}`);
-    logToRenderer(`[Trap Gen] Valid Environments: ${[...validEnvironments].join(', ')}`);
 
     // 3. Rebuild all dropdowns, disabling any option not in the valid sets.
     const createDropdown = (id, placeholder, allOptions, selectedValue, validValues) => {
@@ -1470,6 +1471,67 @@ async function _updateTrapDropdowns(interaction, selections) {
             new ActionRowBuilder().addComponents(proceedButton),
         ]
     });
+}
+
+async function _isTrapSelectionValid(selectionType, selectedValue, currentSelections) {
+    if (selectedValue === 'random') return true; // "Any" is always a valid selection.
+
+    const allTraps = await fiveEToolsParser._loadCategoryData('traps');
+    const environmentKeywords = {
+        'dungeon': /dungeon|tomb|crypt|lair|hallway/i,
+        'wilderness': /forest|jungle|swamp|mountain|wilderness|cave/i,
+        'urban': /city|sewer|building|room/i,
+        'planar': /planar|plane|feywild|shadowfell/i,
+        'aquatic': /water|aquatic|ship/i
+    };
+
+    // Create a temporary selections object WITHOUT the key we are currently validating.
+    const tempSelections = { ...currentSelections };
+    delete tempSelections[selectionType];
+
+    const tier = tempSelections.tier && tempSelections.tier !== 'random' ? parseInt(tempSelections.tier, 10) : null;
+    const threat = tempSelections.threat && tempSelections.threat !== 'random' ? tempSelections.threat.toLowerCase() : null;
+    const type = tempSelections.type && tempSelections.type !== 'random' ? tempSelections.type : null;
+    const envRegex = tempSelections.environment && tempSelections.environment !== 'random' ? environmentKeywords[tempSelections.environment] : null;
+
+    const possibleTraps = allTraps.filter(trap => {
+        const typeMatch = !type || trap.trapHazType === type;
+        const envMatch = !envRegex || (trap.entries && envRegex.test(JSON.stringify(trap.entries)));
+        if (!typeMatch || !envMatch) return false;
+        if (tier || threat) {
+            if (!trap.rating) return false;
+            return trap.rating.some(rating => {
+                const tierMatch = !tier || rating.tier === tier;
+                const threatMatch = !threat || (rating.threat && rating.threat.toLowerCase() === threat);
+                return tierMatch && threatMatch;
+            });
+        }
+        return true;
+    });
+
+    const validValues = new Set();
+    for (const trap of possibleTraps) {
+        switch (selectionType) {
+            case 'tier':
+                if (trap.rating) trap.rating.forEach(r => validValues.add(r.tier.toString()));
+                break;
+            case 'threat':
+                if (trap.rating) trap.rating.forEach(r => { if (r.threat) validValues.add(r.threat.toLowerCase()) });
+                break;
+            case 'type':
+                if (trap.trapHazType) validValues.add(trap.trapHazType);
+                break;
+            case 'environment':
+                for (const [env, regex] of Object.entries(environmentKeywords)) {
+                    if (trap.entries && regex.test(JSON.stringify(trap.entries))) {
+                        validValues.add(env);
+                    }
+                }
+                break;
+        }
+    }
+
+    return validValues.has(selectedValue);
 }
 
 async function _handleNpcDropdowns(interaction) {
@@ -1618,14 +1680,22 @@ function formatNpcResult(result) {
         .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name}`)
         .setDescription(`A **${result.lineage?.name || result.species.name} ${result.subclass?.name || result.class.name}** who was a(n) **${result.background.name}**.`);
 
+    const formatTraitList = (traitArray) => {
+        if (!traitArray || traitArray.length === 0) return 'N/A';
+        return `A. ${traitArray[0]}\nB. ${traitArray[1]}`;
+    };
+
+    if (result.trait) {
+        embed.addFields({ name: 'Personality Traits', value: formatTraitList(result.trait) });
+    }
     if (result.ideal) {
-        embed.addFields({ name: 'Ideal', value: result.ideal });
+        embed.addFields({ name: 'Ideal', value: formatTraitList(result.ideal) });
     }
     if (result.bond) {
-        embed.addFields({ name: 'Bond', value: result.bond });
+        embed.addFields({ name: 'Bond', value: formatTraitList(result.bond) });
     }
     if (result.flaw) {
-        embed.addFields({ name: 'Flaw', value: result.flaw });
+        embed.addFields({ name: 'Flaw', value: formatTraitList(result.flaw) });
     }
 
     if (result.mode === 'npc' && result.statblockSuggestions) {
