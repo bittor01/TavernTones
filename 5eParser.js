@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 
 const dataPath = path.join(__dirname, 'reference', '5etoolsdata');
+const randomTablesPath = path.join(__dirname, 'randomtables', 'origin');
 const categorySources = {
     'spells': { type: 'directory', path: 'spells', key: 'spell' },
     'items': { type: 'file', path: 'items.json', key: 'item' },
@@ -335,20 +336,52 @@ class FiveEToolsParser {
                         traits[lookupKey].push(getTraitText(table.rows[firstIndex][1]));
                     }
                 } else {
-                    this.logToRenderer(`[5eParser] No table found for trait type '${traitType}' in background '${bg.name}'`);
-                    traits[lookupKey] = [`No ${traitType} found.`, `No ${traitType} found.`];
+                    return null; // Indicate that traits could not be found
                 }
             }
             return traits;
         };
 
         const background = backgrounds.find(b => b.name === backgroundName && b.source === backgroundSource);
-        const foundTraits = findTraitsRecursive(background);
+        let foundTraits = findTraitsRecursive(background);
 
         if (foundTraits) return foundTraits;
 
-        this.logToRenderer(`[5eParser] Could not find traits for background: ${backgroundName} [${backgroundSource}]`);
-        return { trait: ['Not found'], ideal: ['Not found'], bond: ['Not found'], flaw: ['Not found'] };
+        // Fallback to random tables if no traits are found
+        this.logToRenderer(`[5eParser] Could not find traits for background: ${backgroundName} [${backgroundSource}]. Using fallback tables.`);
+
+        try {
+            const traitData = JSON.parse(await fs.readFile(path.join(randomTablesPath, 'traits.json'), 'utf-8'));
+            const idealData = JSON.parse(await fs.readFile(path.join(randomTablesPath, 'ideals.json'), 'utf-8'));
+            const bondData = JSON.parse(await fs.readFile(path.join(randomTablesPath, 'bonds.json'), 'utf-8'));
+            const flawData = JSON.parse(await fs.readFile(path.join(randomTablesPath, 'flaws.json'), 'utf-8'));
+
+            const fallbackTraits = {
+                trait: [],
+                ideal: [],
+                bond: [],
+                flaw: []
+            };
+
+            const getRandomEntries = (data, count) => {
+                const results = new Set();
+                if (data.length <= count) return data;
+                while(results.size < count) {
+                    results.add(data[Math.floor(Math.random() * data.length)]);
+                }
+                return Array.from(results);
+            }
+
+            fallbackTraits.trait = getRandomEntries(traitData, 2);
+            fallbackTraits.ideal = getRandomEntries(idealData, 2);
+            fallbackTraits.bond = getRandomEntries(bondData, 2);
+            fallbackTraits.flaw = getRandomEntries(flawData, 2);
+
+            return fallbackTraits;
+        } catch (error) {
+            this.logToRenderer(`[5eParser] Error loading fallback trait data: ${error.message}`);
+            return { trait: ['Error loading traits.'], ideal: ['Error loading ideals.'], bond: ['Error loading bonds.'], flaw: ['Error loading flaws.'] };
+        }
     }
 }
 

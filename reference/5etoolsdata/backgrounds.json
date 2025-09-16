@@ -11615,9 +11615,6 @@
 			"name": "Guild Artisan",
 			"source": "PHB",
 			"page": 132,
-			"reprintedAs": [
-				"Artisan|XPHB"
-			],
 			"skillProficiencies": [
 				{
 					"insight": true,
