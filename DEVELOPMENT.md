@@ -233,12 +233,9 @@ The application's data-driven features rely on two key directories:
 
 ## Known Bugs
 
-1.  **Trap Generator Filtering Flawed**: The filtering logic for the `!generate-trap` command is not granular enough. It allows users to select impossible combinations of Tier and Threat because it doesn't validate that both attributes are present on the same rating object within a trap's data.
-2.  **Vehicle Encounter Embeds Incomplete**: The `!vehicle-encounter` command generates embeds that are missing detailed information from the vehicle's `entries` array, such as attacks, control actions, and other descriptive text.
-3.  **Character Generator UI Unstable**: The dropdowns for the `!generate-character` command are not maintaining their state correctly. Selecting an option or changing pages causes other selections to reset, making the command difficult to use.
-4.  **Encounter Builder (`!create en`)**: When building an encounter with a high-CR creature (e.g., CR 21 Lich), the XP calculation is incorrect. The final encounter has a total XP value that is far too low.
-5.  **Soundboard (UI)**: The soundboard UI is blank and does not display the control buttons. It is completely non-functional.
-6.  **Three-Dragon Ante**: See the "Known Issues" listed in the TDA feature description above.
+1.  **Encounter Builder (`!create en`)**: When building an encounter with a high-CR creature (e.g., CR 21 Lich), the XP calculation is incorrect. The final encounter has a total XP value that is far too low.
+2.  **Soundboard (UI)**: The soundboard UI is blank and does not display the control buttons. It is completely non-functional.
+3.  **Three-Dragon Ante**: See the "Known Issues" listed in the TDA feature description above.
 
 ## To-Do List
 

@@ -13,7 +13,7 @@ class NpcGenerator {
 
         let statblockSuggestions = null;
         if (finalOptions.mode === 'npc' && finalOptions.partyLevel) {
-            statblockSuggestions = await this._getNpcStatblock(finalOptions.partyLevel);
+            statblockSuggestions = await this._getNpcStatblock(finalOptions.partyLevel, finalOptions.partySize);
         }
 
         const name = await this._generateName(finalOptions);
@@ -108,13 +108,19 @@ class NpcGenerator {
         return closestCr;
     }
 
-    async _getNpcStatblock(partyLevel) {
+    async _getNpcStatblock(partyLevel, partySize = 4) {
         if (!partyLevel || !xpThresholds[partyLevel]) return null;
 
-        const thresholds = xpThresholds[partyLevel];
-        const easyCr = this._getCrForXp(thresholds.easy);
-        const mediumCr = this._getCrForXp(thresholds.medium);
-        const hardCr = this._getCrForXp(thresholds.hard);
+        const singleCharThresholds = xpThresholds[partyLevel];
+        const partyXpThresholds = {
+            easy: singleCharThresholds.easy * partySize,
+            medium: singleCharThresholds.medium * partySize,
+            hard: singleCharThresholds.hard * partySize,
+        };
+
+        const easyCr = this._getCrForXp(partyXpThresholds.easy);
+        const mediumCr = this._getCrForXp(partyXpThresholds.medium);
+        const hardCr = this._getCrForXp(partyXpThresholds.hard);
 
         const bestiary = await this.fiveEToolsParser._loadCategoryData('bestiary');
         const humanoids = bestiary.filter(m => m.type && (m.type === 'humanoid' || (typeof m.type === 'object' && m.type.type === 'humanoid')));
