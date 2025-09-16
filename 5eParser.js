@@ -227,7 +227,7 @@ class FiveEToolsParser {
         const allRaces = await this._loadCategoryData('races');
 
         // Standard check for subraces/lineages defined as separate objects
-        const standardLineages = allRaces.filter(r => r.raceName === speciesName && r.raceSource === speciesSource);
+        const standardLineages = allRaces.filter(r => r.raceName === speciesName);
 
         // Special handling for XPHB-style inline lineage tables
         const inlineLineages = [];
@@ -265,7 +265,7 @@ class FiveEToolsParser {
     async getSubclasses(className, classSource) {
         const classData = await this._loadCategoryData('classes');
         // A subclass is a class entry that DOES have a `className` property.
-        return classData.filter(sc => sc.className === className && sc.classSource === classSource);
+        return classData.filter(sc => sc.className === className);
     }
 
     async getBackgrounds() {
@@ -291,7 +291,13 @@ class FiveEToolsParser {
 
             if (!bg.entries) return null;
 
-            const characteristicsEntry = bg.entries.find(e => e.name === "Suggested Characteristics" && e.type === "entries");
+            let characteristicsEntry = bg.entries.find(e => e.name === "Suggested Characteristics" && e.type === "entries");
+
+            // Fallback for VRGR backgrounds that use "Horror Characteristics"
+            if (!characteristicsEntry) {
+                characteristicsEntry = bg.entries.find(e => e.name === "Horror Characteristics" && e.type === "section");
+            }
+
             if (!characteristicsEntry || !characteristicsEntry.entries) return null;
 
             const traits = { trait: [], ideal: [], bond: [], flaw: [] };
