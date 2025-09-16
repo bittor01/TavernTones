@@ -2,10 +2,11 @@ const fs = require('fs').promises;
 const path = require('path');
 
 const dataPath = path.join(__dirname, 'reference', '5etoolsdata');
+const randomTablesPath = path.join(__dirname, 'randomtables', 'origin');
 const categorySources = {
     'spells': { type: 'directory', path: 'spells', key: 'spell' },
     'items': { type: 'file', path: 'items.json', key: 'item' },
-    'classes': { type: 'directory', path: 'class', key: 'class' },
+    'classes': { type: 'directory', path: 'class', key: ['class', 'subclass'] },
     'bestiary': { type: 'directory', path: 'bestiary', key: 'monster' },
     'feats': { type: 'file', path: 'feats.json', key: 'feat' },
     'backgrounds': { type: 'file', path: 'backgrounds.json', key: 'background' },
@@ -225,9 +226,35 @@ class FiveEToolsParser {
 
     async getLineages(speciesName, speciesSource) {
         const allRaces = await this._loadCategoryData('races');
-        // A lineage is a race entry that DOES have a `raceName` property, linking it to a species.
-        // The raceSource check is removed to allow for subraces from other books (e.g. SCAG variants for PHB races).
-        return allRaces.filter(r => r.raceName === speciesName);
+
+        // Standard check for subraces/lineages defined as separate objects
+        const standardLineages = allRaces.filter(r => r.raceName === speciesName);
+
+        // Special handling for XPHB-style inline lineage tables
+        const inlineLineages = [];
+        const baseRace = allRaces.find(r => r.name === speciesName && r.source === speciesSource);
+
+        if (baseRace && baseRace.entries) {
+            const lineageEntry = baseRace.entries.find(e => e.name && e.name.includes("Lineage"));
+            if (lineageEntry && lineageEntry.entries) {
+                const lineageTable = lineageEntry.entries.find(e => e.type === "table" && e.caption && e.caption.includes("Lineages"));
+                if (lineageTable && lineageTable.rows) {
+                    for (const row of lineageTable.rows) {
+                        const lineageName = row[0];
+                        // Create a synthetic lineage object for the dropdown menu
+                        inlineLineages.push({
+                            name: lineageName,
+                            source: speciesSource, // Use the parent's source
+                            raceName: speciesName,
+                            raceSource: speciesSource,
+                        });
+                    }
+                }
+            }
+        }
+
+        // Combine and return both types of lineages
+        return [...standardLineages, ...inlineLineages];
     }
 
     async getClasses() {
@@ -239,7 +266,7 @@ class FiveEToolsParser {
     async getSubclasses(className, classSource) {
         const classData = await this._loadCategoryData('classes');
         // A subclass is a class entry that DOES have a `className` property.
-        return classData.filter(sc => sc.className === className && sc.classSource === classSource);
+        return classData.filter(sc => sc.className === className);
     }
 
     async getBackgrounds() {
@@ -252,72 +279,109 @@ class FiveEToolsParser {
         const findTraitsRecursive = (bg) => {
             if (!bg) return null;
 
-            // If it's a copy, find the original and recurse
             if (bg._copy && bg._copy.name && bg._copy.source) {
                 const originalBg = backgrounds.find(b => b.name === bg._copy.name && b.source === bg._copy.source);
-                if (originalBg) {
-                    return findTraitsRecursive(originalBg);
-                }
+                if (originalBg) return findTraitsRecursive(originalBg);
             }
 
-            // Otherwise, process this background's entries
+            // If the current background doesn't have trait entries, check if it's a reprint.
+            if (!bg.entries || !bg.entries.some(e => e.name === "Suggested Characteristics")) {
+                const originalBg = backgrounds.find(b => b.reprintedAs && b.reprintedAs.includes(`${bg.name}|${bg.source}`));
+                if (originalBg) return findTraitsRecursive(originalBg);
+            }
+
             if (!bg.entries) return null;
 
-            const characteristicsEntry = bg.entries.find(e => e.name === "Suggested Characteristics" && e.type === "entries");
+            let characteristicsEntry = bg.entries.find(e => e.name === "Suggested Characteristics" && e.type === "entries");
+
+            // Fallback for VRGR backgrounds that use "Horror Characteristics"
+            if (!characteristicsEntry) {
+                characteristicsEntry = bg.entries.find(e => e.name === "Horror Characteristics" && e.type === "section");
+            }
+
             if (!characteristicsEntry || !characteristicsEntry.entries) return null;
 
-            const traits = { ideal: null, bond: null, flaw: null };
-            const traitTypes = ["Ideal", "Bond", "Flaw"];
+            const traits = { trait: [], ideal: [], bond: [], flaw: [] };
+            const traitTypes = ["Personality Trait", "Ideal", "Bond", "Flaw"];
 
             for (const traitType of traitTypes) {
+                const lookupKey = traitType === "Personality Trait" ? "trait" : traitType.toLowerCase();
                 const table = characteristicsEntry.entries.find(e => {
                     if (e.type !== "table") return false;
-                    // Check for trait type in caption (e.g., "caption": "Ideals")
-                    if (e.caption && e.caption.toLowerCase().includes(traitType.toLowerCase())) {
-                        return true;
-                    }
-                    // Check for trait type in column labels (e.g., "colLabels": ["d6", "Ideal"])
-                    if (e.colLabels && e.colLabels.length > 1 && e.colLabels[1].toLowerCase().includes(traitType.toLowerCase())) {
-                        return true;
-                    }
-                    return false;
+                    const caption = e.caption || (e.colLabels && e.colLabels.length > 1 ? e.colLabels[1] : '');
+                    return caption.toLowerCase().includes(lookupKey);
                 });
 
                 if (table && table.rows && table.rows.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * table.rows.length);
-                    const rawTrait = table.rows[randomIndex][1];
-                    let traitText = `No trait text found for ${traitType}.`; // Default fallback
+                    const getTraitText = (rawTrait) => {
+                        let text = `No trait text found for ${traitType}.`;
+                        if (typeof rawTrait === 'object' && rawTrait && rawTrait.entry) text = rawTrait.entry;
+                        else if (typeof rawTrait === 'string') text = rawTrait;
+                        else if (rawTrait) text = JSON.stringify(rawTrait);
+                        return text.replace(/\{@.*?\|(.*?)\}/g, '$1').replace(/\{@.*? (.*?)\}/g, '$1');
+                    };
 
-                    if (typeof rawTrait === 'object' && rawTrait && rawTrait.entry) {
-                        traitText = rawTrait.entry;
-                    } else if (typeof rawTrait === 'string') {
-                        traitText = rawTrait;
-                    } else if (rawTrait) { // If it's some other truthy value (object without .entry)
-                        traitText = JSON.stringify(rawTrait);
-                    }
+                    const firstIndex = Math.floor(Math.random() * table.rows.length);
+                    traits[lookupKey].push(getTraitText(table.rows[firstIndex][1]));
 
-                    // Basic cleanup to remove 5etools syntax
-                    if (traitText) {
-                       traitText = traitText.replace(/\{@.*?\|(.*?)\}/g, '$1').replace(/\{@.*? (.*?)\}/g, '$1');
+                    // Push a second, different trait for all categories
+                    if (table.rows.length > 1) {
+                        let secondIndex;
+                        do {
+                            secondIndex = Math.floor(Math.random() * table.rows.length);
+                        } while (secondIndex === firstIndex);
+                        traits[lookupKey].push(getTraitText(table.rows[secondIndex][1]));
+                    } else {
+                        // If only one option, it will be the same as the first. This is acceptable.
+                        traits[lookupKey].push(getTraitText(table.rows[firstIndex][1]));
                     }
-                    traits[traitType.toLowerCase()] = traitText;
                 } else {
-                    this.logToRenderer(`[5eParser] No table found for trait type '${traitType}' in background '${bg.name}'`);
-                    traits[traitType.toLowerCase()] = `No ${traitType} found.`;
+                    return null; // Indicate that traits could not be found
                 }
             }
             return traits;
         };
 
         const background = backgrounds.find(b => b.name === backgroundName && b.source === backgroundSource);
-        const foundTraits = findTraitsRecursive(background);
+        let foundTraits = findTraitsRecursive(background);
 
-        if (foundTraits) {
-            return foundTraits;
+        if (foundTraits) return foundTraits;
+
+        // Fallback to random tables if no traits are found
+        this.logToRenderer(`[5eParser] Could not find traits for background: ${backgroundName} [${backgroundSource}]. Using fallback tables.`);
+
+        try {
+            const traitData = JSON.parse(await fs.readFile(path.join(randomTablesPath, 'traits.json'), 'utf-8'));
+            const idealData = JSON.parse(await fs.readFile(path.join(randomTablesPath, 'ideals.json'), 'utf-8'));
+            const bondData = JSON.parse(await fs.readFile(path.join(randomTablesPath, 'bonds.json'), 'utf-8'));
+            const flawData = JSON.parse(await fs.readFile(path.join(randomTablesPath, 'flaws.json'), 'utf-8'));
+
+            const fallbackTraits = {
+                trait: [],
+                ideal: [],
+                bond: [],
+                flaw: []
+            };
+
+            const getRandomEntries = (data, count) => {
+                const results = new Set();
+                if (data.length <= count) return data;
+                while(results.size < count) {
+                    results.add(data[Math.floor(Math.random() * data.length)]);
+                }
+                return Array.from(results);
+            }
+
+            fallbackTraits.trait = getRandomEntries(traitData, 2);
+            fallbackTraits.ideal = getRandomEntries(idealData, 2);
+            fallbackTraits.bond = getRandomEntries(bondData, 2);
+            fallbackTraits.flaw = getRandomEntries(flawData, 2);
+
+            return fallbackTraits;
+        } catch (error) {
+            this.logToRenderer(`[5eParser] Error loading fallback trait data: ${error.message}`);
+            return { trait: ['Error loading traits.'], ideal: ['Error loading ideals.'], bond: ['Error loading bonds.'], flaw: ['Error loading flaws.'] };
         }
-
-        this.logToRenderer(`[5eParser] Could not find traits for background: ${backgroundName} [${backgroundSource}]`);
-        return { ideal: 'Not found', bond: 'Not found', flaw: 'Not found' };
     }
 }
 

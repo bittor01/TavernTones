@@ -233,12 +233,9 @@ The application's data-driven features rely on two key directories:
 
 ## Known Bugs
 
-1.  **Trap Generator Filtering Flawed**: The filtering logic for the `!generate-trap` command is not granular enough. It allows users to select impossible combinations of Tier and Threat because it doesn't validate that both attributes are present on the same rating object within a trap's data.
-2.  **Vehicle Encounter Embeds Incomplete**: The `!vehicle-encounter` command generates embeds that are missing detailed information from the vehicle's `entries` array, such as attacks, control actions, and other descriptive text.
-3.  **Character Generator UI Unstable**: The dropdowns for the `!generate-character` command are not maintaining their state correctly. Selecting an option or changing pages causes other selections to reset, making the command difficult to use.
-4.  **Encounter Builder (`!create en`)**: When building an encounter with a high-CR creature (e.g., CR 21 Lich), the XP calculation is incorrect. The final encounter has a total XP value that is far too low.
-5.  **Soundboard (UI)**: The soundboard UI is blank and does not display the control buttons. It is completely non-functional.
-6.  **Three-Dragon Ante**: See the "Known Issues" listed in the TDA feature description above.
+1.  **Encounter Builder (`!create en`)**: When building an encounter with a high-CR creature (e.g., CR 21 Lich), the XP calculation is incorrect. The final encounter has a total XP value that is far too low.
+2.  **Soundboard (UI)**: The soundboard UI is blank and does not display the control buttons. It is completely non-functional.
+3.  **Three-Dragon Ante**: See the "Known Issues" listed in the TDA feature description above.
 
 ## To-Do List
 
@@ -258,11 +255,14 @@ This is a list of potential future features, fixes, and improvements.
 5.  **LLM Agent (`!ask` command)**:
     -   **Goal**: Evolve the LLM integration into a "Master Control Program" that can use the bot's other features as tools.
     -   **Concept**: A user could make a natural language request like `!ask generate a moderate encounter for 4 level 5 players in a swamp`. The LLM would parse this, identify the correct tool (`EncounterBuilder`), determine the parameters (`partyLevel: 5`, `partySize: 4`, `difficulty: moderate`, `creatureType: ?`), and execute the command. This is a major architectural feature.
+6.  **Generic Fallback Data System**:
+    -   **Goal**: Generalize the fallback system created for background characteristics.
+    -   **Concept**: The `!generate-character` command required a system to pull from a generic pool of traits, ideals, etc., when a chosen background didn't have its own. This involved creating a script to extract this data from `backgrounds.json` into separate files. This concept could be expanded. A generic "data extractor" script and a corresponding "fallback loader" could be created to handle similar situations for other data types (e.g., providing generic actions for monsters that lack them).
 
 ### Quality of Life Improvements
-6.  **Refactor `!ro` Command**: Improve the user experience of the `!ro` command by replacing the clunky text-based input with an interactive Discord Modal.
-7.  **Investigate New Generators from 5eTools Data**: Explore the `5etoolsdata` directory, specifically files like `loot.json` and `life.json`, to find opportunities for new generators or bot features.
-8.  **Remember Window Positions**: Save the position and size of the main and secondary windows on close and restore them on the next launch.
+7.  **Refactor `!ro` Command**: Improve the user experience of the `!ro` command by replacing the clunky text-based input with an interactive Discord Modal.
+8.  **Investigate New Generators from 5eTools Data**: Explore the `5etoolsdata` directory, specifically files like `loot.json` and `life.json`, to find opportunities for new generators or bot features.
+9.  **Remember Window Positions**: Save the position and size of the main and secondary windows on close and restore them on the next launch.
 
 ---
 ## Active Development Plan
@@ -281,17 +281,7 @@ This section outlines the plan for the features currently under active developme
 5.  **Backend Logic (`Balanced`)**: Implement the logic to calculate the target HP per vehicle, then find several vehicle options within a +/- 15% range of that target.
 6.  **Output Formatting**: Create a new helper function to format the generated vehicle encounter into a summary embed and a detailed thread, similar to the existing encounter generator.
 
-### Part 3: NPC & Character Idea Generator (`!generate-character`)
-1.  **Data Analysis**: Investigate `races.json` and `languages.json` for name generation data. Analyze `backgrounds.json` to confirm the structure for Traits, Ideals, Bonds, and Flaws.
-2.  **Command & UI**: Implement a new `!generate-character` command in `CommandHandler.js`. The command will feature a primary dropdown for `NPC Mode` or `Character Idea Mode`, along with optional dropdowns for `Race`, `Background`, and `Class`.
-3.  **Backend Logic (Shared)**: Implement the core logic to randomly select from data files if the user does not specify options. Implement the logic to pick two random Traits, Ideals, Bonds, and Flaws.
-4.  **Backend Logic (NPC Mode)**: Add logic to accept a party level from the user and suggest three appropriate humanoid stat blocks (Easy, Medium, Hard CR) from the bestiary.
-5.  **Backend Logic (Name Generation)**: If `races.json` does not contain sufficient data for name generation, implement the two-stage LLM query:
-    -   First, prompt the local LLM to generate a list of suitable names based on character details.
-    -   Second, feed this list back to the LLM and ask it to choose the most appropriate name.
-6.  **Output Formatting**: Format the final character/NPC details into a clear, readable embed.
-
-### Part 4: Trap & Hazard Generator (`!generate-trap`)
+### Part 3: Trap & Hazard Generator (`!generate-trap`)
 1.  **Command & UI**: Implement a new `!generate-trap` command in `CommandHandler.js` that prompts the user with optional dropdowns for `Party Tier`, `Threat Level`, `Trap Type`, and a text input for `Environment`.
 2.  **Backend Logic**: Implement the filtering logic based on user selections. If a filter is left blank, it will not be applied. The `Environment` filter will perform a case-insensitive text search on the trap's description.
 3.  **Random Selection**: After filtering, randomly select one trap from the remaining pool.

@@ -13,12 +13,12 @@ class NpcGenerator {
 
         let statblockSuggestions = null;
         if (finalOptions.mode === 'npc' && finalOptions.partyLevel) {
-            statblockSuggestions = await this._getNpcStatblock(finalOptions.partyLevel);
+            statblockSuggestions = await this._getNpcStatblock(finalOptions.partyLevel, finalOptions.partySize);
         }
 
         const name = await this._generateName(finalOptions);
 
-        let traits = { ideal: 'N/A', bond: 'N/A', flaw: 'N/A' };
+        let traits = { trait: ['N/A'], ideal: ['N/A'], bond: ['N/A'], flaw: ['N/A'] };
         if (finalOptions.background) {
             traits = await this.fiveEToolsParser.getBackgroundTraits(finalOptions.background.name, finalOptions.background.source);
         }
@@ -27,6 +27,7 @@ class NpcGenerator {
             ...finalOptions,
             statblockSuggestions,
             name,
+            trait: traits.trait,
             ideal: traits.ideal,
             bond: traits.bond,
             flaw: traits.flaw
@@ -51,13 +52,15 @@ class NpcGenerator {
             finalSpecies = allSpecies[Math.floor(Math.random() * allSpecies.length)];
             finalLineage = {}; // No lineage if species is random
         } else {
-            const [, name, source] = options.species.split('|');
-            finalSpecies = allSpecies.find(s => s.name === name && s.source === source);
+            const [, speciesName, speciesSource] = options.species.split('|');
+            finalSpecies = allSpecies.find(s => s.name === speciesName && s.source === speciesSource);
             if (!options.lineage || options.lineage === 'random') {
                  finalLineage = {}; // Randomly select a lineage later if needed, or none
             } else {
                 const [, lineageName, lineageSource] = options.lineage.split('|');
-                finalLineage = allRaces.find(l => l.name === lineageName && l.source === lineageSource) || {};
+                // We must call getLineages here to account for synthetic lineages (e.g. from XPHB)
+                const allPossibleLineages = await this.fiveEToolsParser.getLineages(speciesName, speciesSource);
+                finalLineage = allPossibleLineages.find(l => l.name === lineageName && l.source === lineageSource) || {};
             }
         }
 
@@ -108,13 +111,19 @@ class NpcGenerator {
         return closestCr;
     }
 
-    async _getNpcStatblock(partyLevel) {
+    async _getNpcStatblock(partyLevel, partySize = 4) {
         if (!partyLevel || !xpThresholds[partyLevel]) return null;
 
-        const thresholds = xpThresholds[partyLevel];
-        const easyCr = this._getCrForXp(thresholds.easy);
-        const mediumCr = this._getCrForXp(thresholds.medium);
-        const hardCr = this._getCrForXp(thresholds.hard);
+        const singleCharThresholds = xpThresholds[partyLevel];
+        const partyXpThresholds = {
+            easy: singleCharThresholds.easy * partySize,
+            medium: singleCharThresholds.medium * partySize,
+            hard: singleCharThresholds.hard * partySize,
+        };
+
+        const easyCr = this._getCrForXp(partyXpThresholds.easy);
+        const mediumCr = this._getCrForXp(partyXpThresholds.medium);
+        const hardCr = this._getCrForXp(partyXpThresholds.hard);
 
         const bestiary = await this.fiveEToolsParser._loadCategoryData('bestiary');
         const humanoids = bestiary.filter(m => m.type && (m.type === 'humanoid' || (typeof m.type === 'object' && m.type.type === 'humanoid')));

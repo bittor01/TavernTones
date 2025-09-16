@@ -42,6 +42,9 @@ class CommandHandler {
                 { name: '!ping', value: 'Test to see if the bot is working.' },
                 { name: '!3da or !tda', value: 'Starts a game of Three-Dragon Ante in the current channel.' },
                 { name: '!create en <creature>', value: 'Starts the interactive encounter builder.' },
+                { name: '!generate-character', value: 'Starts the interactive character/NPC generator.' },
+                { name: '!generate-trap', value: 'Starts the interactive trap/hazard generator.' },
+                { name: '!vehicle-encounter', value: 'Starts the interactive vehicle encounter generator.' },
                 { name: '!5e <query>', value: 'Search all 5etools data by name.' },
                 { name: '!spell <query>', value: 'Search for a spell by name.' },
                 { name: '!item <query>', value: 'Search for an item by name.' },
@@ -794,16 +797,6 @@ class CommandHandler {
             .setTitle('NPC & Character Idea Generator')
             .setDescription('Select your desired options below. Any unselected options will be randomized. Lineage and Subclass will appear after selecting a Species and Class.');
 
-        // --- Mode Dropdown ---
-        const modeSelect = new StringSelectMenuBuilder()
-            .setCustomId('npc-mode-select')
-            .setPlaceholder('Select Mode')
-            .addOptions([
-                { label: 'Character Idea', value: 'idea', default: true },
-                { label: 'NPC (with Stat Block)', value: 'npc' }
-            ]);
-        const modeRow = new ActionRowBuilder().addComponents(modeSelect);
-
         // --- Species Dropdown ---
         const speciesList = await this.fiveEToolsParser.getSpecies();
         const speciesOptions = speciesList.map(s => ({
@@ -849,14 +842,20 @@ class CommandHandler {
         });
         const backgroundRow = backgroundHandler.createActionRow(1);
 
-        // --- Generate Button ---
-        const proceedButton = new ButtonBuilder()
-            .setCustomId('npc-proceed-button')
-            .setLabel('Generate')
-            .setStyle(ButtonStyle.Success);
-        const buttonRow = new ActionRowBuilder().addComponents(proceedButton);
+        // --- Generate Buttons ---
+        const ideaButton = new ButtonBuilder()
+            .setCustomId('npc-generate-idea')
+            .setLabel('Generate Character Idea')
+            .setStyle(ButtonStyle.Primary);
 
-        const reply = await message.reply({ embeds: [embed], components: [modeRow, speciesRow, classRow, backgroundRow, buttonRow] });
+        const npcButton = new ButtonBuilder()
+            .setCustomId('npc-generate-npc')
+            .setLabel('Generate NPC (Statblock)')
+            .setStyle(ButtonStyle.Success);
+
+        const buttonRow = new ActionRowBuilder().addComponents(ideaButton, npcButton);
+
+        const reply = await message.reply({ embeds: [embed], components: [speciesRow, classRow, backgroundRow, buttonRow] });
 
         // Store the handlers for this message so we can access them in the interaction handler
         this.client.npcDropdownHandlers.set(reply.id, {
