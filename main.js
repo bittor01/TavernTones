@@ -1369,6 +1369,8 @@ client.once('clientReady', async () => {
 async function _updateTrapDropdowns(interaction, selections) {
     await interaction.deferUpdate();
 
+    logToRenderer(`[Trap Gen] Updating dropdowns. Current selections: ${JSON.stringify(selections)}`);
+
     const allTraps = await fiveEToolsParser._loadCategoryData('traps');
     const environmentKeywords = {
         'dungeon': /dungeon|tomb|crypt|lair|hallway/i,
@@ -1403,6 +1405,8 @@ async function _updateTrapDropdowns(interaction, selections) {
         return true; // No tier/threat filters, so it's a match
     });
 
+    logToRenderer(`[Trap Gen] Found ${possibleTraps.length} possible traps after filtering.`);
+
     // 2. From that filtered list, derive the complete set of all still-possible options.
     const validTiers = new Set();
     const validThreats = new Set();
@@ -1425,6 +1429,11 @@ async function _updateTrapDropdowns(interaction, selections) {
             }
         }
     }
+
+    logToRenderer(`[Trap Gen] Valid Tiers: ${[...validTiers].join(', ')}`);
+    logToRenderer(`[Trap Gen] Valid Threats: ${[...validThreats].join(', ')}`);
+    logToRenderer(`[Trap Gen] Valid Types: ${[...validTypes].join(', ')}`);
+    logToRenderer(`[Trap Gen] Valid Environments: ${[...validEnvironments].join(', ')}`);
 
     // 3. Rebuild all dropdowns, disabling any option not in the valid sets.
     const createDropdown = (id, placeholder, allOptions, selectedValue, validValues) => {
@@ -1473,36 +1482,35 @@ async function _handleNpcDropdowns(interaction) {
 
     const [customIdBase, pageStr] = customId.split('|');
     const selectedValue = values ? values[0] : null;
-
     const newComponents = [...message.components];
 
-    // Handle Back Buttons
-    if (interaction.isButton()) {
-        if (customIdBase === 'npc-back-species') {
-            delete selections.species;
-            delete selections.lineage;
-            const speciesRow = handlers.species.createActionRow(1);
-            const speciesIndex = newComponents.findIndex(row => row.components[0].customId.startsWith('npc-lineage-select'));
-            if (speciesIndex !== -1) newComponents[speciesIndex] = speciesRow;
-        }
-        if (customIdBase === 'npc-back-class') {
-            delete selections.class;
-            delete selections.subclass;
-            const classRow = handlers.class.createActionRow(1);
-            const classIndex = newComponents.findIndex(row => row.components[0].customId.startsWith('npc-subclass-select'));
-            if (classIndex !== -1) newComponents[classIndex] = classRow;
-        }
+    // Handle "Back" selections first
+    if (selectedValue === '!backToSpecies') {
+        delete selections.species;
+        delete selections.lineage;
+        const speciesRow = handlers.species.createActionRow(1);
+        const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith('npc-lineage-select'));
+        if (componentIndex !== -1) newComponents[componentIndex] = speciesRow;
+        npcSelections.set(message.id, selections);
+        await interaction.editReply({ components: newComponents });
+        return;
+    }
+    if (selectedValue === '!backToClass') {
+        delete selections.class;
+        delete selections.subclass;
+        const classRow = handlers.class.createActionRow(1);
+        const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith('npc-subclass-select'));
+        if (componentIndex !== -1) newComponents[componentIndex] = classRow;
         npcSelections.set(message.id, selections);
         await interaction.editReply({ components: newComponents });
         return;
     }
 
-    // Handle Dropdown Selections (including pagination)
-    const handlerKey = customIdBase.split('-')[1];
-    const handler = handlers[handlerKey];
-    const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith(customIdBase));
-
+    // Handle pagination
     if (selectedValue.startsWith('!prevPage') || selectedValue.startsWith('!nextPage')) {
+        const handlerKey = customIdBase.split('-')[1];
+        const handler = handlers[handlerKey];
+        const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith(customIdBase));
         const newPage = parseInt(selectedValue.split('|')[1], 10);
         if (handler && componentIndex !== -1) {
             newComponents[componentIndex] = handler.createActionRow(newPage);
@@ -1512,57 +1520,65 @@ async function _handleNpcDropdowns(interaction) {
     }
 
     // Handle actual selections
+    const handlerKey = customIdBase.split('-')[1];
+    const handler = handlers[handlerKey];
+    const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith(customIdBase));
+
     if (selectedValue === 'random') {
         delete selections[handlerKey];
     } else {
         selections[handlerKey] = selectedValue;
     }
 
-    // Update the default on the handler
     if (handler) {
         handler.setDefault(selectedValue);
-        const currentPage = parseInt(pageStr, 10) || 1;
-        if (componentIndex !== -1) {
-            newComponents[componentIndex] = handler.createActionRow(currentPage);
+        if(componentIndex !== -1) {
+            newComponents[componentIndex] = handler.createActionRow(parseInt(pageStr, 10) || 1);
         }
     }
 
     // Handle transforming dropdowns
     if (handlerKey === 'species') {
-        delete selections.lineage; // Clear lineage when species changes
-        const [, speciesName, speciesSource] = selectedValue.split('|');
-        const lineages = await fiveEToolsParser.getLineages(speciesName, speciesSource);
-        if (lineages.length > 0) {
-            const lineageOptions = lineages.map(l => ({ label: `${l.name} (${l.source})`, value: `lineage|${l.name}|${l.source}` }));
-            const lineageHandler = new DropdownHandler({
-                customId: 'npc-lineage-select',
-                options: lineageOptions,
-                placeholder: 'Select a Lineage (Optional)',
-                topPinned: [{ label: 'Any Lineage (Random)', value: 'random' }]
-            });
-            handlers.lineage = lineageHandler;
-            const backButton = new ButtonBuilder().setCustomId('npc-back-species').setLabel('Back to Species').setStyle(ButtonStyle.Secondary);
-            const lineageRow = new ActionRowBuilder().addComponents(lineageHandler.createActionRow(1).components[0], backButton);
-            if (componentIndex !== -1) newComponents[componentIndex] = lineageRow;
+        delete selections.lineage;
+        if (selectedValue !== 'random') {
+            const [, speciesName, speciesSource] = selectedValue.split('|');
+            const lineages = await fiveEToolsParser.getLineages(speciesName, speciesSource);
+            if (lineages.length > 0) {
+                const lineageOptions = lineages.map(l => ({ label: `${l.name} (${l.source})`, value: `lineage|${l.name}|${l.source}` }));
+                const lineageHandler = new DropdownHandler({
+                    customId: 'npc-lineage-select',
+                    options: lineageOptions,
+                    placeholder: 'Select a Lineage (Optional)',
+                    topPinned: [
+                        { label: 'Back to Species Select', value: '!backToSpecies' },
+                        { label: 'Any Lineage (Random)', value: 'random' }
+                    ]
+                });
+                handlers.lineage = lineageHandler;
+                if (componentIndex !== -1) newComponents[componentIndex] = lineageHandler.createActionRow(1);
+            }
         }
     }
 
     if (handlerKey === 'class') {
-        delete selections.subclass; // Clear subclass when class changes
-        const [, className, classSource] = selectedValue.split('|');
-        const subclasses = await fiveEToolsParser.getSubclasses(className, classSource);
-        if (subclasses.length > 0) {
-            const subclassOptions = subclasses.map(sc => ({ label: `${sc.name} (${sc.source})`, value: `subclass|${sc.name}|${sc.source}` }));
-            const subclassHandler = new DropdownHandler({
-                customId: 'npc-subclass-select',
-                options: subclassOptions,
-                placeholder: 'Select a Subclass (Optional)',
-                topPinned: [{ label: 'Any Subclass (Random)', value: 'random' }]
-            });
-            handlers.subclass = subclassHandler;
-            const backButton = new ButtonBuilder().setCustomId('npc-back-class').setLabel('Back to Class').setStyle(ButtonStyle.Secondary);
-            const subclassRow = new ActionRowBuilder().addComponents(subclassHandler.createActionRow(1).components[0], backButton);
-            if (componentIndex !== -1) newComponents[componentIndex] = subclassRow;
+        delete selections.subclass;
+        if (selectedValue !== 'random') {
+            const [, className, classSource] = selectedValue.split('|');
+            const subclasses = await fiveEToolsParser.getSubclasses(className, classSource);
+            if (subclasses.length > 0) {
+                const subclassOptions = subclasses.map(sc => ({ label: `${sc.name} (${sc.source})`, value: `subclass|${sc.name}|${sc.source}` }));
+                const subclassHandler = new DropdownHandler({
+                    customId: 'npc-subclass-select',
+                    options: subclassOptions,
+                    placeholder: 'Select a Subclass (Optional)',
+                    topPinned: [
+                        { label: 'Back to Class Select', value: '!backToClass' },
+                        { label: 'Any Subclass (Random)', value: 'random' }
+                    ]
+                });
+                handlers.subclass = subclassHandler;
+                if (componentIndex !== -1) newComponents[componentIndex] = subclassHandler.createActionRow(1);
+            }
         }
     }
 
@@ -1703,7 +1719,7 @@ function formatNpcResult(result) {
                     if (postedVehicles.has(vehicle.name)) {
                         continue; // Skip if we've already posted this stat block
                     }
-                    const fullVehicleData = await fiveEToolsParser.getExact('vehicle', vehicle.name, vehicle.source);
+                    const fullVehicleData = await fiveEToolsParser.getExact('vehicles', vehicle.name, vehicle.source);
                     if (fullVehicleData) {
                         const { mainEmbed, longFields } = formatVehicleStatBlockForDiscord(fullVehicleData);
                         await thread.send({ embeds: [mainEmbed] });
