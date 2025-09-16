@@ -9,6 +9,7 @@ console.log('Discord.js Client loaded.');
 const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 console.log('Discord.js Voice loaded.');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
+client.npcDropdownHandlers = new Map();
 console.log('Discord client instantiated.');
 const axios = require('axios');
 console.log('Axios loaded.');
@@ -18,6 +19,7 @@ const MagicItemGenerator = require('./MagicItemGenerator.js');
 const VehicleEncounterBuilder = require('./VehicleEncounterBuilder.js');
 const FiveEToolsParser = require('./5eParser.js');
 const { format5eResult, formatEntries } = require('./5eEmbedFormatter.js');
+const DropdownHandler = require('./DropdownHandler.js');
 const fs = require('fs').promises;
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
@@ -1042,22 +1044,25 @@ client.once('clientReady', async () => {
     client.on('interactionCreate', async interaction => {
         if (interaction.isStringSelectMenu()) {
             const { customId, values, message } = interaction;
+            const [customIdBase] = customId.split('|');
 
-            if (customId.startsWith('trap-')) {
-                const selections = trapSelections.get(message.id) || {};
-                const type = customId.split('-')[1];
-                selections[type] = values[0];
-                trapSelections.set(message.id, selections);
-                await interaction.deferUpdate();
+            if (customIdBase.startsWith('trap-')) {
+                const selections = trapSelections.get(interaction.message.id) || {};
+                const type = customIdBase.replace('trap-', '').replace('-select', '');
+
+                if (values[0] === 'random') {
+                    delete selections[type];
+                } else {
+                    selections[type] = values[0];
+                }
+
+                trapSelections.set(interaction.message.id, selections);
+                await _updateTrapDropdowns(interaction, selections);
                 return;
             }
 
             if (customId.startsWith('npc-')) {
-                const selections = npcSelections.get(message.id) || {};
-                const type = customId.split('-')[1];
-                selections[type] = values[0];
-                npcSelections.set(message.id, selections);
-                await interaction.deferUpdate();
+                await _handleNpcDropdowns(interaction);
                 return;
             }
 
@@ -1351,12 +1356,239 @@ client.once('clientReady', async () => {
             }
         }
 
+async function _updateTrapDropdowns(interaction, selections) {
+    await interaction.deferUpdate();
+
+    const allTraps = await fiveEToolsParser._loadCategoryData('traps');
+    const environmentKeywords = {
+        'dungeon': /dungeon|tomb|crypt|lair|hallway/i,
+        'wilderness': /forest|jungle|swamp|mountain|wilderness|cave/i,
+        'urban': /city|sewer|building|room/i,
+        'planar': /planar|plane|feywild|shadowfell/i,
+        'aquatic': /water|aquatic|ship/i
+    };
+
+    const getValidOptions = (filterKey, currentSelections) => {
+        const validValues = new Set();
+        const tier = currentSelections.tier && currentSelections.tier !== 'random' ? parseInt(currentSelections.tier, 10) : null;
+        const threat = currentSelections.threat && currentSelections.threat !== 'random' ? currentSelections.threat.toLowerCase() : null;
+        const type = currentSelections.type && currentSelections.type !== 'random' ? currentSelections.type : null;
+        const environment = currentSelections.environment && currentSelections.environment !== 'random' ? currentSelections.environment : null;
+
+        for (const trap of allTraps) {
+            const typeMatch = !type || filterKey === 'type' || trap.trapHazType === type;
+            const envRegex = environment ? environmentKeywords[environment] : null;
+            const envMatch = !envRegex || filterKey === 'environment' || (trap.entries && envRegex.test(JSON.stringify(trap.entries)));
+
+            if (!typeMatch || !envMatch) continue;
+
+            if (trap.rating) {
+                for (const rating of trap.rating) {
+                    const tierMatch = !tier || filterKey === 'tier' || rating.tier === tier;
+                    const threatMatch = !threat || filterKey === 'threat' || (rating.threat && rating.threat.toLowerCase() === threat);
+
+                    if (tierMatch && threatMatch) {
+                        // This trap is a potential match. Add its properties to the valid sets.
+                        if (filterKey === 'tier') validValues.add(rating.tier.toString());
+                        if (filterKey === 'threat' && rating.threat) validValues.add(rating.threat.toLowerCase());
+                        if (filterKey === 'type' && trap.trapHazType) validValues.add(trap.trapHazType);
+                        if (filterKey === 'environment') {
+                             for (const [env, regex] of Object.entries(environmentKeywords)) {
+                                if (trap.entries && regex.test(JSON.stringify(trap.entries))) {
+                                    validValues.add(env);
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                 // Handle traps with no rating if tier/threat aren't selected
+                if (!tier && !threat) {
+                    if (filterKey === 'type' && trap.trapHazType) validValues.add(trap.trapHazType);
+                    if (filterKey === 'environment') {
+                        for (const [env, regex] of Object.entries(environmentKeywords)) {
+                            if (trap.entries && regex.test(JSON.stringify(trap.entries))) {
+                                validValues.add(env);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return validValues;
+    };
+
+    const createDropdown = (id, placeholder, allOptions, selectedValue, filterKey) => {
+        const validValues = getValidOptions(filterKey, selections);
+        const availableOptions = allOptions.map(opt => {
+            if (opt.value === 'random') {
+                return { ...opt, disabled: false, default: opt.value === selectedValue };
+            }
+            return {
+                ...opt,
+                default: opt.value === selectedValue,
+                disabled: !validValues.has(opt.value)
+            };
+        });
+        return new StringSelectMenuBuilder()
+            .setCustomId(id)
+            .setPlaceholder(placeholder)
+            .addOptions(availableOptions);
+    };
+
+    const tierOpts = [ { label: 'Any Tier', value: 'random' }, { label: 'Tier 1 (Levels 1-4)', value: '1' }, { label: 'Tier 2 (Levels 5-10)', value: '2' }, { label: 'Tier 3 (Levels 11-16)', value: '3' }, { label: 'Tier 4 (Levels 17-20)', value: '4' } ];
+    const threatOpts = [ { label: 'Any Threat', value: 'random' }, { label: 'Setback', value: 'setback' }, { label: 'Dangerous', value: 'dangerous' }, { label: 'Deadly', value: 'deadly' } ];
+    const typeOpts = [ { label: 'Any Type', value: 'random' }, { label: 'Mechanical', value: 'MECH' }, { label: 'Magical', value: 'MAG' }, { label: 'Simple', value: 'SMPL' } ];
+    const envOpts = [ { label: 'Any Environment', value: 'random' }, { label: 'Dungeon / Tomb', value: 'dungeon' }, { label: 'Wilderness / Cave', value: 'wilderness' }, { label: 'Urban / Building', value: 'urban' }, { label: 'Planar / Magical', value: 'planar' }, { label: 'Aquatic', value: 'aquatic' } ];
+
+    const tierSelect = createDropdown('trap-tier-select', selections.tier ? tierOpts.find(o => o.value === selections.tier).label : 'Select Party Tier (Optional)', tierOpts, selections.tier, 'tier');
+    const threatSelect = createDropdown('trap-threat-select', selections.threat ? threatOpts.find(o => o.value === selections.threat).label : 'Select Threat Level (Optional)', threatOpts, selections.threat, 'threat');
+    const typeSelect = createDropdown('trap-type-select', selections.type ? typeOpts.find(o => o.value === selections.type).label : 'Select Trap Type (Optional)', typeOpts, selections.type, 'type');
+    const environmentSelect = createDropdown('trap-environment-select', selections.environment ? envOpts.find(o => o.value === selections.environment).label : 'Select Environment (Optional)', envOpts, selections.environment, 'environment');
+
+    const proceedButton = new ButtonBuilder().setCustomId('trap-proceed-button').setLabel('Generate').setStyle(ButtonStyle.Success);
+
+    await interaction.editReply({
+        components: [
+            new ActionRowBuilder().addComponents(tierSelect),
+            new ActionRowBuilder().addComponents(threatSelect),
+            new ActionRowBuilder().addComponents(typeSelect),
+            new ActionRowBuilder().addComponents(environmentSelect),
+            new ActionRowBuilder().addComponents(proceedButton),
+        ]
+    });
+}
+
+async function _handleNpcDropdowns(interaction) {
+    const { customId, values, message } = interaction;
+    await interaction.deferUpdate();
+
+    const selections = npcSelections.get(message.id) || {};
+    const handlers = client.npcDropdownHandlers.get(message.id);
+    if (!handlers) return; // Should not happen if command was just run
+
+    const [customIdBase, pageStr] = customId.split('|');
+    const selectedValue = values[0];
+
+    // Handle pagination
+    if (selectedValue.startsWith('!prevPage') || selectedValue.startsWith('!nextPage')) {
+        const [action, newPageStr] = selectedValue.split('|');
+        const newPage = parseInt(newPageStr, 10);
+        const handlerKey = customIdBase.split('-')[1]; // species, class, etc.
+        const handler = handlers[handlerKey];
+        if (handler) {
+            const newRow = handler.createActionRow(newPage);
+            const componentIndex = message.components.findIndex(row => row.components[0].customId.startsWith(customIdBase));
+            if (componentIndex !== -1) {
+                const newComponents = [...message.components];
+                newComponents[componentIndex] = newRow;
+                await interaction.editReply({ components: newComponents });
+            }
+        }
+        return;
+    }
+
+    // Handle actual selections
+    const selectType = customIdBase.split('-')[1];
+    if (selectedValue === 'random') {
+        delete selections[selectType];
+        if (selectType === 'species') delete selections.lineage;
+        if (selectType === 'class') delete selections.subclass;
+    } else {
+        selections[selectType] = selectedValue;
+        if (selectType === 'species') delete selections.lineage;
+        if (selectType === 'class') delete selections.subclass;
+    }
+    npcSelections.set(message.id, selections);
+
+    // --- Rebuild all components from scratch based on the new state ---
+    const newComponents = [];
+
+    // Mode Dropdown (always present)
+    newComponents.push(message.components[0]);
+
+    // Species Dropdown
+    handlers.species.setDefault(selections.species);
+    newComponents.push(handlers.species.createActionRow(parseInt(pageStr, 10) || 1));
+
+    // Lineage Dropdown
+    if (selections.species && selections.species !== 'random') {
+        const [, speciesName, speciesSource] = selections.species.split('|');
+        const lineages = await fiveEToolsParser.getLineages(speciesName, speciesSource);
+        if (lineages.length > 0) {
+            const lineageOptions = lineages.map(l => ({ label: `${l.name} (${l.source})`, value: `lineage|${l.name}|${l.source}` }));
+            const lineageHandler = new DropdownHandler({
+                customId: 'npc-lineage-select',
+                options: lineageOptions,
+                placeholder: 'Select a Lineage (Optional)',
+                topPinned: [{ label: 'Any Lineage (Random)', value: 'random' }]
+            });
+            handlers.lineage = lineageHandler; // Store new handler
+            if (selections.lineage) lineageHandler.setDefault(selections.lineage);
+            newComponents.push(lineageHandler.createActionRow(1));
+        } else {
+            delete handlers.lineage; // Remove handler if no lineages
+        }
+    } else {
+        delete handlers.lineage;
+    }
+
+    // Class Dropdown
+    handlers.class.setDefault(selections.class);
+    newComponents.push(handlers.class.createActionRow(1)); // Assume page 1 for now
+
+    // Subclass Dropdown
+    if (selections.class && selections.class !== 'random') {
+        const [, className, classSource] = selections.class.split('|');
+        const subclasses = await fiveEToolsParser.getSubclasses(className, classSource);
+        if (subclasses.length > 0) {
+            const subclassOptions = subclasses.map(sc => ({ label: `${sc.name} (${sc.source})`, value: `subclass|${sc.name}|${sc.source}` }));
+            const subclassHandler = new DropdownHandler({
+                customId: 'npc-subclass-select',
+                options: subclassOptions,
+                placeholder: 'Select a Subclass (Optional)',
+                topPinned: [{ label: 'Any Subclass (Random)', value: 'random' }]
+            });
+            handlers.subclass = subclassHandler; // Store new handler
+            if (selections.subclass) subclassHandler.setDefault(selections.subclass);
+            newComponents.push(subclassHandler.createActionRow(1));
+        } else {
+            delete handlers.subclass;
+        }
+    } else {
+        delete handlers.subclass;
+    }
+
+    // Background Dropdown
+    handlers.background.setDefault(selections.background);
+    newComponents.push(handlers.background.createActionRow(1)); // Assume page 1
+
+    // Button
+    newComponents.push(message.components[message.components.length - 1]);
+
+    client.npcDropdownHandlers.set(message.id, handlers); // Resave the updated handlers map
+    await interaction.editReply({ components: newComponents });
+}
+
 async function _handleNpcGeneration(interaction, selections) {
-    const result = await client.commandHandler.npcGenerator.generateCharacter(selections);
+    // Translate the selections from the interaction into the format NpcGenerator expects
+    const generatorOptions = {
+        mode: selections.mode,
+        species: selections.species,
+        lineage: selections.lineage,
+        class: selections.class,
+        subclass: selections.subclass,
+        background: selections.background,
+        partyLevel: selections.partyLevel,
+    };
+
+    const result = await client.commandHandler.npcGenerator.generateCharacter(generatorOptions);
     if (result.error) {
         await interaction.editReply({ content: `Error: ${result.error}` });
         return;
     }
+
+    // The result object now contains all necessary information, including traits.
     const embed = formatNpcResult(result);
     await interaction.channel.send({ embeds: [embed] });
     await interaction.editReply({ content: 'Generation complete!' });
@@ -1429,12 +1661,45 @@ async function _handleNpcGeneration(interaction, selections) {
                     autoArchiveDuration: 60,
                 });
 
+                const postedVehicles = new Set();
                 for (const vehicle of result.encounter) {
-                    const vehicleDetails = `**${vehicle.name}**\n` +
-                                           `AC: ${vehicle.ac}\n` +
-                                           `HP: ${vehicle.hp}\n` +
-                                           `Crew: ${vehicle.capCrew || 'N/A'}`;
-                    await thread.send(vehicleDetails);
+                    if (postedVehicles.has(vehicle.name)) {
+                        continue; // Skip if we've already posted this stat block
+                    }
+
+                    const statBlockEmbed = new EmbedBuilder()
+                        .setColor(0x3498DB) // A nice blue for stat blocks
+                        .setTitle(vehicle.name)
+                        .addFields(
+                            { name: 'Armor Class', value: formatVehicleAc(vehicle), inline: true },
+                            { name: 'Hit Points', value: `${vehicle.hp || 'N/A'}`, inline: true },
+                            { name: 'Crew', value: `${vehicle.capCrew || 'N/A'}`, inline: true }
+                        );
+
+                    if (vehicle.entries) {
+                        let entryString = formatVehicleEntries(vehicle.entries);
+                        if (entryString.length > 3800) { // Keep it safely under the 4096 limit
+                            entryString = entryString.substring(0, 3800) + "\n\n... (rest of the entry was truncated)";
+                        }
+                        statBlockEmbed.setDescription(entryString);
+                    }
+
+                    if (vehicle.speed) {
+                        const speedString = Object.entries(vehicle.speed)
+                            .map(([type, val]) => {
+                                if (type === 'note') return null;
+                                const speedVal = typeof val === 'object' ? val.number : val;
+                                return `${type.charAt(0).toUpperCase() + type.slice(1)}: ${speedVal} ft.`;
+                            })
+                            .filter(Boolean)
+                            .join('\n');
+                        if (speedString) {
+                            statBlockEmbed.addFields({ name: 'Speed', value: speedString });
+                        }
+                    }
+
+                    await thread.send({ embeds: [statBlockEmbed] });
+                    postedVehicles.add(vehicle.name);
                 }
 
                 await interaction.editReply({ content: `Vehicle encounter generated! You can view it here: ${originalMessage.url}` });
@@ -1655,15 +1920,70 @@ setInterval(() => {
     logToRenderer(`Memory usage is ${((memoryUsage - startingMemUse) / 1024 / 1024).toFixed(2)} MB higher than at launch (${(memoryUsage / 1024 / 1024).toFixed(2)} MB total)`);
 }, 60000);
 
+function formatVehicleAc(vehicle) {
+    if (!vehicle) return 'N/A';
+
+    // Case 1: Simple numeric AC
+    if (typeof vehicle.ac === 'number') {
+        return vehicle.ac.toString();
+    }
+
+    // Case 2: Array of AC objects
+    if (Array.isArray(vehicle.ac) && vehicle.ac.length > 0) {
+        return vehicle.ac.map(a => {
+            let acStr = a.ac.toString();
+            if (a.from) {
+                acStr += ` (${a.from.join(', ')})`;
+            }
+            return acStr;
+        }).join(', ');
+    }
+
+    // Case 3: AC from hull object
+    if (vehicle.hull && typeof vehicle.hull.ac === 'number') {
+        let acStr = vehicle.hull.ac.toString();
+        if (vehicle.hull.acFrom) {
+            acStr += ` (${vehicle.hull.acFrom.join(', ')})`;
+        }
+        return acStr;
+    }
+
+    return 'N/A';
+}
+
+function formatVehicleEntries(entries) {
+    if (!entries) return '';
+    let description = '\n';
+
+    for (const entry of entries) {
+        if (typeof entry === 'string') {
+            description += entry.replace(/{@(spell|item|condition|damage|dice|chance|filter|creature) ([^|}]+)\|?[^}]*}/g, '**$2**') + '\n\n';
+        } else if (entry.type === 'list') {
+            description += entry.items.map(item => `• ${formatVehicleEntries([item]).trim()}`).join('\n') + '\n\n';
+        } else if (entry.type === 'table') {
+            if (entry.caption) {
+                description += `**${entry.caption}**\n`;
+            }
+            // Simple markdown table for now
+            description += `| ${entry.colLabels.join(' | ')} |\n`;
+            description += `|${entry.colLabels.map(() => '---').join('|')}|\n`;
+            for (const row of entry.rows) {
+                description += `| ${row.map(cell => formatVehicleEntries([cell]).replace(/\n/g, ' ')).join(' | ')} |\n`;
+            }
+            description += '\n';
+        } else if (entry.name && entry.entries) {
+            description += `**${entry.name}.** ${formatVehicleEntries(entry.entries)}\n`;
+        }
+    }
+    return description;
+}
+
 function formatNpcResult(result) {
     const embed = new EmbedBuilder()
         .setColor(0x9B59B6) // Purple for NPCs
         .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name}`)
-        .setDescription(`A **${result.race.name} ${result.class.name}** who was a(n) **${result.background.name}**.`);
+        .setDescription(`A **${result.lineage?.name || result.species.name} ${result.subclass?.name || result.class.name}** who was a(n) **${result.background.name}**.`);
 
-    if (result.traits) {
-        embed.addFields({ name: 'Personality Traits', value: `${result.traits[0]}\n-OR-\n${result.traits[1]}` });
-    }
     if (result.ideal) {
         embed.addFields({ name: 'Ideal', value: result.ideal });
     }

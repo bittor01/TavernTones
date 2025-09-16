@@ -11,8 +11,6 @@ class NpcGenerator {
         const finalOptions = await this._finalizeSelections(options);
         if (finalOptions.error) return finalOptions;
 
-        const personality = this._getPersonalityTraits(finalOptions.background);
-
         let statblockSuggestions = null;
         if (finalOptions.mode === 'npc' && finalOptions.partyLevel) {
             statblockSuggestions = await this._getNpcStatblock(finalOptions.partyLevel);
@@ -20,88 +18,81 @@ class NpcGenerator {
 
         const name = await this._generateName(finalOptions);
 
+        let traits = { ideal: 'N/A', bond: 'N/A', flaw: 'N/A' };
+        if (finalOptions.background) {
+            traits = await this.fiveEToolsParser.getBackgroundTraits(finalOptions.background.name, finalOptions.background.source);
+        }
+
         return {
             ...finalOptions,
-            ...personality,
             statblockSuggestions,
-            name
+            name,
+            ideal: traits.ideal,
+            bond: traits.bond,
+            flaw: traits.flaw
         };
     }
 
     async _finalizeSelections(options) {
-        let finalRace, finalClass, finalBackground;
+        let finalSpecies, finalClass, finalBackground, finalLineage, finalSubclass;
 
-        const races = await this.fiveEToolsParser._loadCategoryData('races');
-        const backgrounds = await this.fiveEToolsParser._loadCategoryData('backgrounds');
-        const classes = (await this.fiveEToolsParser._loadCategoryData('classes'))
-            .filter(c => !c.name.includes('Sidekick')); // Filter out sidekick classes
+        const allSpecies = await this.fiveEToolsParser.getSpecies();
+        const allRaces = await this.fiveEToolsParser._loadCategoryData('races'); // Includes subraces
+        const allBackgrounds = await this.fiveEToolsParser._loadCategoryData('backgrounds');
+        const all_classes = await this.fiveEToolsParser.getClasses();
+        const allSubclasses = await this.fiveEToolsParser._loadCategoryData('classes'); // Includes subclasses
 
-        if (!races.length || !backgrounds.length || !classes.length) {
+        if (!allRaces.length || !allBackgrounds.length || !all_classes.length) {
             return { error: 'Could not load necessary data for generation.' };
         }
 
-        const parseSelection = (selection) => {
-            if (!selection || selection === 'random') return { name: 'random' };
-            const match = selection.match(/(.+) \((.+)\)/);
-            if (match) {
-                return { name: match[1], source: match[2] };
+        // --- Species and Lineage ---
+        if (!options.species || options.species === 'random') {
+            finalSpecies = allSpecies[Math.floor(Math.random() * allSpecies.length)];
+            finalLineage = {}; // No lineage if species is random
+        } else {
+            const [, name, source] = options.species.split('|');
+            finalSpecies = allSpecies.find(s => s.name === name && s.source === source);
+            if (!options.lineage || options.lineage === 'random') {
+                 finalLineage = {}; // Randomly select a lineage later if needed, or none
+            } else {
+                const [, lineageName, lineageSource] = options.lineage.split('|');
+                finalLineage = allRaces.find(l => l.name === lineageName && l.source === lineageSource) || {};
             }
-            return { name: selection }; // For items without a source, like classes
-        };
+        }
 
-        const selectedRace = parseSelection(options.race);
-        const selectedClass = parseSelection(options.class);
-        const selectedBackground = parseSelection(options.background);
+        // --- Class and Subclass ---
+        if (!options.class || options.class === 'random') {
+            finalClass = all_classes[Math.floor(Math.random() * all_classes.length)];
+            finalSubclass = {}; // No subclass if class is random
+        } else {
+            const [, name, source] = options.class.split('|');
+            finalClass = all_classes.find(c => c.name === name && c.source === source);
+            if (!options.subclass || options.subclass === 'random') {
+                finalSubclass = {}; // Randomly select a subclass later if needed, or none
+            } else {
+                const [, subclassName, subclassSource] = options.subclass.split('|');
+                finalSubclass = allSubclasses.find(sc => sc.name === subclassName && sc.source === subclassSource) || {};
+            }
+        }
 
-        finalRace = selectedRace.name === 'random'
-            ? races[Math.floor(Math.random() * races.length)]
-            : races.find(r => r.name === selectedRace.name && r.source === selectedRace.source);
-
-        finalClass = selectedClass.name === 'random'
-            ? classes[Math.floor(Math.random() * classes.length)]
-            : classes.find(c => c.name === selectedClass.name);
-
-        finalBackground = selectedBackground.name === 'random'
-            ? backgrounds[Math.floor(Math.random() * backgrounds.length)]
-            : backgrounds.find(b => b.name === selectedBackground.name && b.source === selectedBackground.source);
+        // --- Background ---
+        if (!options.background || options.background === 'random') {
+            finalBackground = allBackgrounds[Math.floor(Math.random() * allBackgrounds.length)];
+        } else {
+            const [, name, source] = options.background.split('|');
+            finalBackground = allBackgrounds.find(b => b.name === name && b.source === source);
+        }
 
         return {
             mode: options.mode || 'idea',
-            race: finalRace,
+            species: finalSpecies,
+            lineage: finalLineage,
             class: finalClass,
+            subclass: finalSubclass,
             background: finalBackground,
             partyLevel: options.partyLevel
         };
-    }
-
-    _getPersonalityTraits(background) {
-        const personality = { traits: [], ideal: '', bond: '', flaw: '' };
-        if (!background || !background.entries) return personality;
-
-        const findTable = (name) => background.entries.find(e => e.type === 'table' && e.name.toLowerCase().includes(name));
-
-        const traitsTable = findTable('personality traits');
-        if (traitsTable && traitsTable.rows?.length) {
-            personality.traits.push(traitsTable.rows[Math.floor(Math.random() * traitsTable.rows.length)][1]);
-            personality.traits.push(traitsTable.rows[Math.floor(Math.random() * traitsTable.rows.length)][1]);
-        }
-
-        const idealTable = findTable('ideals');
-        if (idealTable && idealTable.rows?.length) {
-            personality.ideal = idealTable.rows[Math.floor(Math.random() * idealTable.rows.length)][1].entry;
-        }
-
-        const bondTable = findTable('bonds');
-        if (bondTable && bondTable.rows?.length) {
-            personality.bond = bondTable.rows[Math.floor(Math.random() * bondTable.rows.length)][1];
-        }
-
-        const flawTable = findTable('flaws');
-        if (flawTable && flawTable.rows?.length) {
-            personality.flaw = flawTable.rows[Math.floor(Math.random() * flawTable.rows.length)][1];
-        }
-
-        return personality;
     }
 
     _getCrForXp(xp) {
@@ -143,13 +134,25 @@ class NpcGenerator {
 
     async _generateName(options) {
         try {
-            const prompt1 = `Generate a list of 10 fantasy names suitable for a ${options.race.name} ${options.class.name}.`;
-            const nameListResponse = await this.askLlm(prompt1, 'll');
+            const characterDescription = `a ${options.lineage.name || options.species.name} ${options.subclass.name || options.class.name}`;
 
-            const prompt2 = `From the following list of names, which one is the most fitting for a ${options.race.name} ${options.class.name} who was a ${options.background.name}?\n\nList:\n${nameListResponse}`;
-            const finalNameResponse = await this.askLlm(prompt2, 're');
+            const prompt1 = `Please provide only a numbered list of 10 fantasy names suitable for ${characterDescription}, with no introduction, conclusion, or other conversational text.`;
+            const nameListResponse = await this.askLlm(prompt1, 're', false);
 
-            return finalNameResponse.split('\n')[0].replace(/[^a-zA-Z\s'-]/g, '').trim();
+            // Clean up the response to get just the list
+            let nameList = nameListResponse.split('\n').filter(line => /^\d+\.\s/.test(line.trim())).join('\n');
+
+            if (!nameList) {
+                 console.log("LLM did not return a valid numbered list for names.");
+                 // Fallback: use the raw response and hope for the best
+                 nameList = nameListResponse;
+            }
+
+            const prompt2 = `From the following list, choose the single most fitting name for ${characterDescription} who was a ${options.background.name}. Return only the name itself, with no other text or numbering.\n\nList:\n${nameList}`;
+            const finalNameResponse = await this.askLlm(prompt2, 're', false);
+
+            // Clean up the final response to remove any lingering list numbers or fluff
+            return finalNameResponse.split('\n')[0].replace(/^\d+\.\s*/, '').replace(/[^a-zA-Z\s'-]/g, '').trim();
         } catch (error) {
             console.log("LLM Name generation failed.", error);
             return "Name Generation Failed";

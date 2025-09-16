@@ -9,8 +9,9 @@ const categorySources = {
     'bestiary': { type: 'directory', path: 'bestiary', key: 'monster' },
     'feats': { type: 'file', path: 'feats.json', key: 'feat' },
     'backgrounds': { type: 'file', path: 'backgrounds.json', key: 'background' },
-    'races': { type: 'file', path: 'races.json', key: 'race' },
+    'races': { type: 'file', path: 'races.json', key: ['race', 'subrace'] },
     'traps': { type: 'file', path: 'trapshazards.json', key: 'trap' },
+    'vehicles': { type: 'file', path: 'vehicles.json', key: 'vehicle' },
 };
 const searchableCategories = Object.keys(categorySources);
 
@@ -40,12 +41,14 @@ class FiveEToolsParser {
         const itemMap = new Map();
 
         const processJsonData = (jsonData) => {
-            const dataKey = sourceInfo.key;
-            if (jsonData[dataKey] && Array.isArray(jsonData[dataKey])) {
-                for (const item of jsonData[dataKey]) {
-                    if (item.name && item.source) {
-                        const uniqueKey = `${item.name}__${item.source}`;
-                        itemMap.set(uniqueKey, item);
+            const dataKeys = Array.isArray(sourceInfo.key) ? sourceInfo.key : [sourceInfo.key];
+            for (const dataKey of dataKeys) {
+                if (jsonData[dataKey] && Array.isArray(jsonData[dataKey])) {
+                    for (const item of jsonData[dataKey]) {
+                        if (item.name && item.source) {
+                            const uniqueKey = `${item.name}__${item.source}`;
+                            itemMap.set(uniqueKey, item);
+                        }
                     }
                 }
             }
@@ -212,6 +215,109 @@ class FiveEToolsParser {
         }
 
         return traps[Math.floor(Math.random() * traps.length)];
+    }
+
+    async getSpecies() {
+        const raceData = await this._loadCategoryData('races');
+        // A species is a race entry that does NOT have a `raceName` property, which would mark it as a subrace.
+        return raceData.filter(r => !r.raceName);
+    }
+
+    async getLineages(speciesName, speciesSource) {
+        const allRaces = await this._loadCategoryData('races');
+        // A lineage is a race entry that DOES have a `raceName` property, linking it to a species.
+        // The raceSource check is removed to allow for subraces from other books (e.g. SCAG variants for PHB races).
+        return allRaces.filter(r => r.raceName === speciesName);
+    }
+
+    async getClasses() {
+        const classData = await this._loadCategoryData('classes');
+        // A class is a class entry that does NOT have a `className` property.
+        return classData.filter(c => !c.className);
+    }
+
+    async getSubclasses(className, classSource) {
+        const classData = await this._loadCategoryData('classes');
+        // A subclass is a class entry that DOES have a `className` property.
+        return classData.filter(sc => sc.className === className && sc.classSource === classSource);
+    }
+
+    async getBackgrounds() {
+        return await this._loadCategoryData('backgrounds');
+    }
+
+    async getBackgroundTraits(backgroundName, backgroundSource) {
+        const backgrounds = await this._loadCategoryData('backgrounds');
+
+        const findTraitsRecursive = (bg) => {
+            if (!bg) return null;
+
+            // If it's a copy, find the original and recurse
+            if (bg._copy && bg._copy.name && bg._copy.source) {
+                const originalBg = backgrounds.find(b => b.name === bg._copy.name && b.source === bg._copy.source);
+                if (originalBg) {
+                    return findTraitsRecursive(originalBg);
+                }
+            }
+
+            // Otherwise, process this background's entries
+            if (!bg.entries) return null;
+
+            const characteristicsEntry = bg.entries.find(e => e.name === "Suggested Characteristics" && e.type === "entries");
+            if (!characteristicsEntry || !characteristicsEntry.entries) return null;
+
+            const traits = { ideal: null, bond: null, flaw: null };
+            const traitTypes = ["Ideal", "Bond", "Flaw"];
+
+            for (const traitType of traitTypes) {
+                const table = characteristicsEntry.entries.find(e => {
+                    if (e.type !== "table") return false;
+                    // Check for trait type in caption (e.g., "caption": "Ideals")
+                    if (e.caption && e.caption.toLowerCase().includes(traitType.toLowerCase())) {
+                        return true;
+                    }
+                    // Check for trait type in column labels (e.g., "colLabels": ["d6", "Ideal"])
+                    if (e.colLabels && e.colLabels.length > 1 && e.colLabels[1].toLowerCase().includes(traitType.toLowerCase())) {
+                        return true;
+                    }
+                    return false;
+                });
+
+                if (table && table.rows && table.rows.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * table.rows.length);
+                    const rawTrait = table.rows[randomIndex][1];
+                    let traitText = `No trait text found for ${traitType}.`; // Default fallback
+
+                    if (typeof rawTrait === 'object' && rawTrait && rawTrait.entry) {
+                        traitText = rawTrait.entry;
+                    } else if (typeof rawTrait === 'string') {
+                        traitText = rawTrait;
+                    } else if (rawTrait) { // If it's some other truthy value (object without .entry)
+                        traitText = JSON.stringify(rawTrait);
+                    }
+
+                    // Basic cleanup to remove 5etools syntax
+                    if (traitText) {
+                       traitText = traitText.replace(/\{@.*?\|(.*?)\}/g, '$1').replace(/\{@.*? (.*?)\}/g, '$1');
+                    }
+                    traits[traitType.toLowerCase()] = traitText;
+                } else {
+                    this.logToRenderer(`[5eParser] No table found for trait type '${traitType}' in background '${bg.name}'`);
+                    traits[traitType.toLowerCase()] = `No ${traitType} found.`;
+                }
+            }
+            return traits;
+        };
+
+        const background = backgrounds.find(b => b.name === backgroundName && b.source === backgroundSource);
+        const foundTraits = findTraitsRecursive(background);
+
+        if (foundTraits) {
+            return foundTraits;
+        }
+
+        this.logToRenderer(`[5eParser] Could not find traits for background: ${backgroundName} [${backgroundSource}]`);
+        return { ideal: 'Not found', bond: 'Not found', flaw: 'Not found' };
     }
 }
 
