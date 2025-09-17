@@ -1,0 +1,151 @@
+Great. Here is the detailed, step-by-step walkthrough of how a game of Three-Dragon Ante would ideally be played on Discord.
+
+Three-Dragon Ante: Step-by-Step Discord Gameplay
+This walkthrough describes the ideal gameplay flow from a player's perspective, assuming all game rules and bot features are fully implemented and functional.
+
+Phase 0: Game Creation & Lobby (Public Channel)
+This is the only part of the game that takes place in a public channel.
+
+Creating the Game:
+
+A player types !3da or !tda in a designated channel.
+Bot Response (Public): The bot creates a new public message with an interactive embed.
+Title: "Three-Dragon Ante Lobby"
+Players: Lists the user who created the game.
+Status: "Waiting for players..."
+Buttons: Join, Leave, Start Game, Cancel Game.
+Dropdown Menu: "Select D&D Special Abilities (Optional)". The options are Bluff, Concentration, Diplomacy, Intimidate, etc.
+Joining and Setup:
+
+Other players click the Join button. The "Players" list in the embed updates automatically.
+Any player in the lobby can select a D&D Special Ability from the dropdown. The bot confirms their choice with an ephemeral message visible only to them (e.g., "You have selected the Concentration ability.").
+The game creator is the only one who can see and use the Start Game and Cancel Game buttons.
+Starting the Game:
+
+Once at least two players have joined, the creator clicks Start Game.
+Bot Response (Public): The lobby embed is updated to a final state.
+Title: "Three-Dragon Ante: Game In Progress"
+Status: "The game has started! Check your DMs to play."
+The buttons and dropdown menu are removed.
+Bot Action (Backend): The bot initializes the game state. Each player is given 50 gold and a hand of 6 cards from the shuffled deck. It then sends the first private message.
+Phase 1: Game Start & Pre-Gambit Setup (DMs)
+From this point forward, all interactions happen in private DMs between each player and the bot.
+
+Receive Initial Hand:
+
+Bot Message (DM to each player):
+"Welcome to Three-Dragon Ante! Here is your starting hand and gold."
+Embed:
+Title: "Your Hand"
+Content: A clear, visual list of the 6 cards in your hand, ideally with their strength and an image for each.
+Footer: "Your Hoard: 50 Gold"
+Optional Card Drafting Phase:
+
+(This assumes the drafting variant is enabled for the game.)
+Bot Message (DM to the starting player):
+"This game includes a card draft. 20 optional cards have been added to the deck. You and your opponents will take turns removing 10 of them."
+Embed: Displays the 20 optional cards.
+Action: A dropdown menu lists all 20 cards. The player selects one to remove.
+This process repeats, rotating through players, until 10 cards have been removed. The bot sends a DM to the active player on their turn. A final summary DM is sent to all players listing the 10 cards that were removed from the game.
+Phase 2: The Gambit Begins - Ante (DMs)
+Choose Ante Card:
+
+Bot Message (DM to each player):
+"A new gambit begins! Choose a card from your hand to ante."
+Embed: Shows your current hand.
+Action: A dropdown menu containing your cards.
+Player Action: You select a card from the dropdown. The bot confirms your choice with a quick message update (e.g., "You have anted the Red Dragon.").
+Ante Resolution:
+
+Once all players have selected their ante card, the bot processes the results and sends a summary to everyone.
+Bot Message (DM to each player):
+Embed Title: "Gambit 1: Ante Results"
+Content:
+"All players have anted. Here are the revealed cards:"
+A list shows each player and the card they anted (e.g., "You anted Red Dragon (Str 10)", "Opponent anted The Fool (Str 3)").
+"The highest strength is 10. All players pay 10 gold to the stakes."
+"Your opponent played the highest unique strength card and is the leader for the first round."
+Game State Update:
+"Your Hoard: 40 Gold"
+"Stakes: 20 Gold" (in a 2-player game)
+"Ante Cards on Table: Red Dragon (Str 10), The Fool (Str 3)"
+Phase 3: The Gambit - Playing Rounds (DMs)
+A gambit consists of at least three rounds.
+
+Leader's Turn:
+
+The bot messages the current leader.
+Bot Message (DM to Leader):
+"It's your turn to play. You are the leader."
+Embed: A full game state summary.
+Your Hand & Hoard: Lists your cards and current gold.
+Your Flight: Shows cards you've played this gambit (empty on round 1).
+Opponent Flights: Shows the cards in each opponent's flight and their hoard size.
+Game Info: Current stakes amount, Ante cards on the table.
+Action: A dropdown menu to choose a card to play.
+Player Action: The leader selects a card. Let's say they play Green Dragon (Str 8).
+Play Resolution (Leader):
+
+The bot processes the play and sends an update to all players.
+Bot Message (DM to all players):
+Embed Title: "Gambit 1, Round 1"
+Content:
+"Opponent (Leader) played Green Dragon (Str 8)."
+"The card's power triggers: The opponent to your left chooses either to give you a weaker evil dragon from his or her hand or to pay you 5 gold."
+A sub-message explains the outcome: "You chose to pay 5 gold."
+Updated Game State (in the same embed): A refreshed view of all player flights and hoards.
+Next Player's Turn:
+
+The bot now messages the next player in order.
+Bot Message (DM to current player):
+"It's your turn to play. The previous card was Green Dragon (Str 8). Your card's power will trigger if its strength is 8 or less."
+Embed: The same full game state summary.
+Action: A dropdown menu to choose a card.
+Player Action: You play Silver Dragon (Str 6).
+Play Resolution (Non-Leader) & Special Flights:
+
+The bot processes the play. Because 6 <= 8, the power triggers.
+Bot Message (DM to all players):
+Embed Title: "Gambit 1, Round 1"
+Content:
+"You played Silver Dragon (Str 6). Its power triggers!"
+"Power: Each player with at least one good dragon in his or her flight draws a card. You and Opponent both draw one card."
+(If applicable) "Special Flight! You played your third Silver Dragon, completing a Color Flight! All opponents pay you 6 gold."
+Updated Game State: Shows updated flights, hoards, and hand sizes.
+End of Round Info: "The round is over. Opponent played the strongest card (8 vs 6) and will be the leader for Round 2."
+Buying Cards:
+
+If a player starts their turn with one or zero cards, the bot handles this automatically.
+Bot Message (DM to that player): "You have only one card left. You must buy new cards. The top card of the deck is a Brass Dragon (Str 5). You pay 5 gold to the stakes and draw until you have four cards in hand."
+Phase 4: End of Gambit & Drawing New Cards (DMs)
+Determining the Winner:
+
+After Round 3 ends (assuming no ties for strongest flight):
+Bot Message (DM to all players):
+Embed Title: "Gambit 1 Over"
+Content:
+"After 3 rounds, the gambit is over."
+"Final Flight Strength: You (22), Opponent (19)."
+"You win the gambit and take the 35 gold from the stakes!"
+Updated Game State: Shows everyone's new, final gold total for the gambit.
+Drawing New Cards:
+
+Bot Message (DM to all players, can be part of the previous message):
+"All flights and ante cards are discarded. Each player draws two new cards."
+A new embed follows immediately, showing each player their new hand and updated gold total, ready for the next gambit's ante phase.
+Phase 5: Game End (Public Channel)
+Triggering the End:
+
+The game ends when, at the conclusion of a gambit, at least one player has 0 gold.
+Final Announcement:
+
+Bot Message (DM to all players): "Your opponent has run out of gold! The game is over."
+Bot Response (Public Channel - updating the original lobby message):
+Title: "Three-Dragon Ante: Game Over!"
+Embed Content:
+"The game has concluded!"
+"Winner: You!"
+Final Standings:
+You: 100 Gold
+Opponent: 0 Gold
+The bot then cleans up the game session.

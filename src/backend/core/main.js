@@ -1042,6 +1042,98 @@ client.once('clientReady', async () => {
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
     client.on('interactionCreate', async interaction => {
+
+        // Add this inside the client.on('interactionCreate', ...)
+        if (interaction.isModalSubmit()) {
+            // ... existing modal handlers
+            
+            if (interaction.customId.startsWith('tda_buy_in_modal')) {
+                return client.commandHandler.tdaManager.handleBuyInModalSubmit(interaction);
+            }
+        }
+
+        if (interaction.isStringSelectMenu()) {
+            // ... existing select menu handlers
+
+            if (interaction.customId.startsWith('tda_kobold_choice_')) {
+                const [_, __, ___, channelId, playerId] = interaction.customId.split('_');
+                const game = client.commandHandler.tdaManager.activeGames.get(channelId);
+                if (!game || game.players.find(p => p.id === interaction.user.id)?.id !== playerId) {
+                    return interaction.reply({ content: 'This is not a valid choice for you.', ephemeral: true });
+                }
+                const player = game.players.find(p => p.id === playerId);
+                const cardIndices = interaction.values; // These are already strings
+                await interaction.update({ content: 'Processing your discard...', embeds: [], components: [] });
+                await client.commandHandler.tdaManager.resolveKoboldChoice(game, player, cardIndices);
+                return;
+            }
+
+            if (interaction.customId.startsWith('tda_brass_choice_give_')) {
+                let game, lastPlayer;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        lastPlayer = p;
+                        break;
+                    }
+                }
+                if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+                const originalPlayerId = interaction.customId.split('_')[4];
+                const originalPlayer = game.players.find(p => p.id === originalPlayerId);
+                if (!originalPlayer) return interaction.reply({ content: 'Could not find the original player.', ephemeral: true });
+
+                const cardIndex = parseInt(interaction.values[0], 10);
+                await interaction.update({ content: 'Processing choice...', embeds: [], components: [] });
+                await client.commandHandler.tdaManager.resolveBrassDragonChoice(game, originalPlayer, lastPlayer, 'give', cardIndex);
+                return;
+            }
+        }
+
+        if (interaction.isButton()) {
+            // ... existing button handlers
+
+            if (interaction.customId.startsWith('tda_sorcerer_choice_')) {
+                const parts = interaction.customId.split('_');
+                const channelId = parts[3];
+                const playerId = parts[4];
+                const cardImage = parts.slice(5).join('_'); // Handle image names with underscores
+
+                const game = client.commandHandler.tdaManager.activeGames.get(channelId);
+                if (!game || game.players.find(p => p.id === interaction.user.id)?.id !== playerId) {
+                    return interaction.reply({ content: 'This is not a valid choice for you.', ephemeral: true });
+                }
+                const player = game.players.find(p => p.id === playerId);
+                await interaction.update({ content: 'Processing your choice...', embeds: [], components: [] });
+                await client.commandHandler.tdaManager.resolveSorcererChoice(game, player, cardImage);
+                return;
+            }
+
+            if (interaction.customId.startsWith('tda_brass_choice_pay_')) {
+                let game, lastPlayer;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        lastPlayer = p;
+                        break;
+                    }
+                }
+                if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+                const originalPlayerId = interaction.customId.split('_')[4];
+                const originalPlayer = game.players.find(p => p.id === originalPlayerId);
+                if (!originalPlayer) return interaction.reply({ content: 'Could not find the original player.', ephemeral: true });
+
+                await interaction.update({ content: 'Processing choice...', embeds: [], components: [] });
+                await client.commandHandler.tdaManager.resolveBrassDragonChoice(game, originalPlayer, lastPlayer, 'pay');
+                return;
+            }
+        }
+
+
+
         if (interaction.isStringSelectMenu()) {
             const { customId, values, message } = interaction;
             const [customIdBase] = customId.split('|');
