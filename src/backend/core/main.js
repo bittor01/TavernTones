@@ -1197,7 +1197,7 @@ client.once('clientReady', async () => {
                     .setDescription(formatEntries(trap.entries));
 
                 await interaction.channel.send({ embeds: [embed] });
-                await interaction.editReply({ content: 'Trap generated!' });
+                await interaction.editReply({ content: 'Trap generated!', embeds: [], components: [] });
                 trapSelections.delete(interaction.message.id);
                 return;
             }
@@ -1686,7 +1686,7 @@ async function _handleNpcGeneration(interaction, selections) {
 
     const embed = formatNpcResult(result);
     await interaction.channel.send({ embeds: [embed] });
-    await interaction.editReply({ content: 'Generation complete!' });
+    await interaction.editReply({ content: 'Generation complete!', embeds: [], components: [] });
 }
 
 function formatNpcResult(result) {
@@ -1857,7 +1857,7 @@ function formatNpcResult(result) {
                     postedVehicles.add(vehicle.name);
                 }
 
-                await interaction.editReply({ content: `Vehicle encounter generated! You can view it here: ${originalMessage.url}` });
+                await interaction.editReply({ content: `Vehicle encounter generated! You can view it here: ${originalMessage.url}`, embeds: [], components: [] });
                 return;
             }
 
@@ -1946,7 +1946,7 @@ function formatNpcResult(result) {
                     }
                 }
 
-                await interaction.editReply({ content: `Encounter generated! You can view it here: ${originalMessage.url}` });
+                await interaction.editReply({ content: `Encounter generated! You can view it here: ${originalMessage.url}`, embeds: [], components: [] });
 
                 return;
             }
@@ -2060,7 +2060,7 @@ function formatNpcResult(result) {
                 }
 
                 maSelections.delete(messageId);
-                await interaction.editReply({ content: `Magic items generated in thread: <#${thread.id}>`, ephemeral: true });
+                await interaction.editReply({ content: `Magic items generated in thread: <#${thread.id}>`, embeds: [], components: [] });
             }
         }
     });
