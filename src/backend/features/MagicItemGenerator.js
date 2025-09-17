@@ -59,7 +59,7 @@ class MagicItemGenerator {
             const randomHit = weightedHitPool[Math.floor(Math.random() * weightedHitPool.length)];
             const { itemType, level } = randomHit;
 
-            const spellFilePath = path.join(__dirname, `randomtables/spells/lvl${level}.json`);
+            const spellFilePath = path.join(__dirname, '../../../randomtables/spells', `lvl${level}.json`);
             if (!fs.existsSync(spellFilePath)) continue;
 
             const allSpells = JSON.parse(fs.readFileSync(spellFilePath, 'utf8'));
