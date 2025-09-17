@@ -1042,6 +1042,34 @@ client.once('clientReady', async () => {
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
     client.on('interactionCreate', async interaction => {
+        // Add this inside the if (interaction.isButton()) { ... } block
+        if (interaction.customId === 'tda_continue_ready' || interaction.customId === 'tda_continue_leave') {
+            let game, player;
+            for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                const p = g.players.find(p => p.id === interaction.user.id);
+                if (p) {
+                    game = g;
+                    player = p;
+                    break;
+                }
+            }
+
+            if (!game) {
+                return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+            }
+
+            if (game.state !== 'continue') {
+                return interaction.reply({ content: 'It is not time to make this choice.', ephemeral: true });
+            }
+
+            const choice = interaction.customId === 'tda_continue_ready' ? 'ready' : 'leave';
+            
+            // Defer update to prevent interaction failure
+            await interaction.deferUpdate();
+            
+            await client.commandHandler.tdaManager.handleContinueChoice(game, player, choice);
+            return;
+        }
 
         // Add this inside the client.on('interactionCreate', ...)
         if (interaction.isModalSubmit()) {
