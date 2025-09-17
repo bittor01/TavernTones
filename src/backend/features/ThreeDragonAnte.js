@@ -139,7 +139,12 @@ const SPECIAL_ABILITIES = [
 class ThreeDragonAnteManager {
     constructor(client) {
         this.client = client;
+        this.ui = null; // Will be set by CommandHandler
         this.activeGames = new Map();
+    }
+
+    setUiManager(uiManager) {
+        this.ui = uiManager;
     }
 
     async handleCommand(message) {
@@ -185,14 +190,14 @@ class ThreeDragonAnteManager {
                 if (game.players.length < 2) return i.reply({ content: 'You need at least 2 players to start.', ephemeral: true });
 
                 const modal = new ModalBuilder()
-                    .setCustomId(`tda_ante_modal_${game.channelId}`)
-                    .setTitle('Set Game Ante');
+                    .setCustomId(`tda_buy_in_modal_${game.channelId}`)
+                    .setTitle('Set Game Buy-in');
                 const anteInput = new TextInputBuilder()
-                    .setCustomId('ante_amount')
-                    .setLabel("Initial Ante (e.g., 1000)")
+                    .setCustomId('buy_in_amount')
+                    .setLabel("Game Buy-in (e.g. 5000)")
                     .setStyle(TextInputStyle.Short)
                     .setRequired(true)
-                    .setPlaceholder('Enter a positive number');
+                    .setPlaceholder('Enter a positive number, will be rounded down to nearest 50');
                 const actionRow = new ActionRowBuilder().addComponents(anteInput);
                 modal.addComponents(actionRow);
                 await i.showModal(modal);
@@ -238,23 +243,28 @@ class ThreeDragonAnteManager {
         return [row1, row2];
     }
 
-    async handleAnteModalSubmit(interaction) {
-        const channelId = interaction.customId.split('_')[3];
+    async handleBuyInModalSubmit(interaction) {
+        const channelId = interaction.customId.split('_')[4];
         const game = this.activeGames.get(channelId);
         if (!game) {
             return interaction.reply({ content: "Could not find an active game for this action.", ephemeral: true });
         }
 
-        const ante = parseInt(interaction.fields.getTextInputValue('ante_amount'));
-        if (isNaN(ante) || ante <= 0) {
-            return interaction.reply({ content: 'Please enter a valid, positive number for the ante.', ephemeral: true });
+        const rawBuyIn = parseInt(interaction.fields.getTextInputValue('buy_in_amount'));
+        if (isNaN(rawBuyIn) || rawBuyIn <= 0) {
+            return interaction.reply({ content: 'Please enter a valid, positive number for the buy-in.', ephemeral: true });
         }
 
-        // Acknowledge the modal and disable the original lobby message components
+        const buyIn = Math.floor(rawBuyIn / 50) * 50;
+        if (buyIn === 0) {
+            return interaction.reply({ content: 'Buy-in must be at least 50.', ephemeral: true });
+        }
+
+        const scalingFactor = buyIn / 50;
+
         try {
             const lobbyMessage = await interaction.channel.messages.fetch(game.lobbyMessageId);
             if (lobbyMessage) {
-                // This stops the original collector
                 const collector = lobbyMessage.createMessageComponentCollector({ time: 1 });
                 collector.stop('game_started');
                 await interaction.update({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game, true) });
@@ -266,86 +276,97 @@ class ThreeDragonAnteManager {
             await interaction.deferUpdate();
         }
 
-        game.initialAnte = ante;
+        game.buyIn = buyIn;
+        game.scalingFactor = scalingFactor;
         game.state = 'starting';
-        game.players.forEach(p => { p.hoard = ante; });
+        game.players.forEach(p => { p.hoard = buyIn; });
 
-        const channel = this.client.channels.cache.get(game.channelId);
-        await channel.send({ content: `The ante has been set to ${ante} GP by ${interaction.user.username}. The card draft will now begin in your DMs.` });
-
-        this._startDrafting(game, channel);
+        await this.ui.createGameBoard(game);
+        await this._startDraft(game);
     }
 
-    async _startDrafting(game, channel) {
+    async _startDraft(game) {
         game.state = 'drafting';
-        game.removedCards = [];
         const optionalCards = DECK_DEFINITION.filter(c => c.optional);
 
-        let draftTurnIndex = 1; // Start with player 2
-        let removedCount = 0;
+        game.players.forEach(p => {
+            p.draftPage = 0;
+            p.draftVotes = [];
+        });
 
-        const nextDraftTurn = async () => {
-            if (removedCount >= 10) {
-                await channel.send({ content: "The card draft is complete! The final deck is being prepared. Dealing hands now..." });
-                this._startGameplay(game, channel);
-                return;
-            }
-
-            const currentPlayerIndex = draftTurnIndex % game.players.length;
-            const currentPlayer = game.players[currentPlayerIndex];
-
-            await channel.send({ content: `It's ${currentPlayer.user.username}'s turn to remove a card.` });
-
-            const availableToDraft = optionalCards.filter(c => !game.removedCards.includes(c));
-            const dmChannel = await currentPlayer.user.createDM();
-
-            const rows = [];
-            let currentRow = new ActionRowBuilder();
-            availableToDraft.forEach((card, index) => {
-                if (currentRow.components.length >= 5) {
-                    rows.push(currentRow);
-                    currentRow = new ActionRowBuilder();
-                }
-                currentRow.addComponents(new ButtonBuilder().setCustomId(`tda_draft_remove_${index}`).setLabel(card.name).setStyle(ButtonStyle.Secondary));
-            });
-            if (currentRow.components.length > 0) rows.push(currentRow);
-
-            const draftMessage = await dmChannel.send({ content: 'It\'s your turn to draft. Please choose one card to **remove** from the deck for this game. You have 2 minutes.', components: rows });
-            const collector = draftMessage.createMessageComponentCollector({ filter: i => i.user.id === currentPlayer.id, time: 120000, max: 1 });
-
-            collector.on('collect', async i => {
-                const cardIndex = parseInt(i.customId.split('_')[3]);
-                const removedCard = availableToDraft[cardIndex];
-                game.removedCards.push(removedCard);
-                removedCount++;
-
-                await i.update({ content: `You have removed **${removedCard.name}**. The draft continues.`, components: [] });
-                await channel.send({ content: `**${currentPlayer.user.username}** has removed the **${removedCard.name}**.` });
-
-                draftTurnIndex++;
-                nextDraftTurn();
-            });
-
-            collector.on('end', (collected, reason) => {
-                if (reason === 'time') {
-                    const removedCard = availableToDraft[0];
-                    game.removedCards.push(removedCard);
-                    removedCount++;
-                    dmChannel.send({ content: `You did not make a selection in time. The **${removedCard.name}** has been removed for you.` });
-                    channel.send({ content: `**${currentPlayer.user.username}** did not choose in time. The **${removedCard.name}** has been removed automatically. The draft continues.` });
-                    draftTurnIndex++;
-                    nextDraftTurn();
-                }
-            });
+        game.draft = {
+            options: optionalCards,
+            votes: {}, // { [card.image]: [playerId, playerId], ... }
+            playersVoted: new Set(),
         };
-        await nextDraftTurn();
+
+        game.gambit = { log: ['The game has started. Please vote on which optional cards to include in the deck.'] };
+
+        // createGameBoard was already called, now we just render the draft state
+        await this.ui.renderBoard(game);
     }
 
-    async _startGameplay(game, channel) {
+    async handleDraftSelection(game, player, selections) {
+        // This just updates the temporary list of votes for the player
+        player.draftVotes = selections;
+    }
+
+    async handleDraftPagination(game, player, page) {
+        player.draftPage = page;
+        await this.ui.renderBoard(game);
+    }
+
+    async handleDraftVote(game, player) {
+        if (game.state !== 'drafting' || game.draft.playersVoted.has(player.id)) {
+            return; // Ignore late or duplicate votes
+        }
+
+        // Record player's votes from their stored selection
+        for (const image of player.draftVotes) {
+            if (!game.draft.votes[image]) {
+                game.draft.votes[image] = [];
+            }
+            game.draft.votes[image].push(player.id);
+        }
+        game.draft.playersVoted.add(player.id);
+        game.gambit.log.push(`${player.user.username} has submitted their votes.`);
+
+        // Check if all players have voted
+        if (game.draft.playersVoted.size === game.players.length) {
+            await this._finalizeDraft(game);
+        } else {
+            await this.ui.renderBoard(game); // Update boards to show who has voted
+        }
+    }
+
+    async _finalizeDraft(game) {
+        const majority = Math.ceil(game.players.length / 2);
+        const includedOptionalCards = [];
+
+        for (const image in game.draft.votes) {
+            if (game.draft.votes[image].length >= majority) {
+                const card = game.draft.options.find(c => c.image === image);
+                if (card) {
+                    includedOptionalCards.push(card);
+                }
+            }
+        }
+
+        game.gambit.log.push('Drafting complete!');
+        if (includedOptionalCards.length > 0) {
+            game.gambit.log.push(`Included cards: ${includedOptionalCards.map(c => c.name).join(', ')}`);
+        } else {
+            game.gambit.log.push('No optional cards were included.');
+        }
+
+        delete game.draft;
+        await this._startGameplay(game, includedOptionalCards);
+    }
+
+    async _startGameplay(game, includedOptionalCards = []) {
         game.state = 'playing';
         const standardCards = DECK_DEFINITION.filter(c => !c.optional);
-        const optionalCards = DECK_DEFINITION.filter(c => c.optional && !game.removedCards.includes(c));
-        game.deck = [...standardCards, ...optionalCards];
+        game.deck = [...standardCards, ...includedOptionalCards];
 
         for (let i = game.deck.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -358,368 +379,188 @@ class ThreeDragonAnteManager {
             player.flight = [];
         });
 
-        await channel.send({ content: "Hands have been dealt. The first gambit will now begin!"});
-        this._startGambit(game, channel);
+        await this._startGambit(game);
     }
 
-    async _startGambit(game, channel) {
+    async _startGambit(game) {
         game.state = 'ante';
+        const existingLog = game.gambit?.log || [];
         game.gambit = {
             number: (game.gambit?.number || 0) + 1,
             antedByPlayer: [],
             antePile: [],
             stakes: 0,
             rounds: [],
+            log: existingLog,
+            leader: game.gambit?.leader
         };
         game.players.forEach(p => {
             p.triggeredStrengthFlights = [];
             p.triggeredColorFlights = [];
+            p.anteCard = null;
         });
-
-        await channel.send(`--- **Gambit ${game.gambit.number} begins!** ---\nPlayers are now choosing their ante cards in their DMs.`);
-
-        const antePromises = game.players.map(player => {
-            return new Promise(async (resolve) => {
-                try {
-                    const dmChannel = await player.user.createDM();
-                    const rows = [];
-                    let currentRow = new ActionRowBuilder();
-                    player.hand.forEach((card, index) => {
-                        if (currentRow.components.length >= 5) { rows.push(currentRow); currentRow = new ActionRowBuilder(); }
-                        currentRow.addComponents(new ButtonBuilder().setCustomId(`tda_ante_${index}`).setLabel(card.name).setStyle(ButtonStyle.Secondary));
-                    });
-                    if (currentRow.components.length > 0) rows.push(currentRow);
-
-                    const anteMessage = await dmChannel.send({ content: 'Choose a card from your hand to ante for this gambit. You have 2 minutes.', components: rows });
-                    const collector = anteMessage.createMessageComponentCollector({ filter: i => i.user.id === player.id, time: 120000, max: 1 });
-
-                    collector.on('collect', async i => {
-                        const cardIndex = parseInt(i.customId.split('_')[2]);
-                        const card = player.hand[cardIndex];
-                        player.hand.splice(cardIndex, 1);
-                        game.gambit.antedByPlayer.push({ card, player });
-                        await i.update({ content: `You have anted the **${card.name}**. Waiting for other players.`, components: [] });
-                        resolve();
-                    });
-
-                    collector.on('end', (collected, reason) => {
-                        if (reason === 'time') {
-                            const card = player.hand[0];
-                            player.hand.splice(0, 1);
-                            game.gambit.antedByPlayer.push({ card, player });
-                            dmChannel.send({ content: `You ran out of time! The **${card.name}** was anted for you.` });
-                            resolve();
-                        }
-                    });
-                } catch (e) {
-                    console.error(`Failed to DM player ${player.user.username}`, e);
-                    channel.send(`Could not DM ${player.user.username}. Auto-anteing their first card.`);
-                    const card = player.hand[0];
-                    player.hand.splice(0, 1);
-                    game.gambit.antedByPlayer.push({ card, player });
-                    resolve();
-                }
-            });
-        });
-
-        await Promise.all(antePromises);
-        game.gambit.antePile.push(...game.gambit.antedByPlayer.map(a => a.card));
-
-        const anteCardText = game.gambit.antedByPlayer.map(ac => `**${ac.player.user.username}** anted a **${ac.card.name}** (Strength ${ac.card.value})`).join('\n');
-        await channel.send({ content: `**Ante Results**\n${anteCardText}` });
-
-        const highestStrength = Math.max(...game.gambit.antedByPlayer.map(ac => ac.card.value));
-        const anteAmount = highestStrength;
-        game.gambit.stakes = 0;
-
-        let paymentText = `The highest ante card has strength ${anteAmount}. All players pay ${anteAmount} gold to the stakes.\n`;
-        game.players.forEach(p => {
-            const payment = Math.min(p.hoard, anteAmount);
-            p.hoard -= payment;
-            game.gambit.stakes += payment;
-            paymentText += `- **${p.user.username}** pays ${payment} gold. (Hoard: ${p.hoard})\n`;
-        });
-        await channel.send({ content: paymentText });
-
-        const strengthCounts = {};
-        game.gambit.antedByPlayer.forEach(ac => { strengthCounts[ac.card.value] = (strengthCounts[ac.card.value] || 0) + 1; });
-
-        let uniqueHighStrength = 0;
-        let leader = null;
-        game.gambit.antedByPlayer.forEach(ac => {
-            if (strengthCounts[ac.card.value] === 1 && ac.card.value > uniqueHighStrength) {
-                uniqueHighStrength = ac.card.value;
-                leader = ac.player;
-            }
-        });
-
-        if (!leader) {
-            await channel.send({ content: "All ante cards were tied! Discarding antes and re-anteing." });
-            game.discardPile.push(...game.gambit.antePile);
-            game.gambit.antePile = [];
-            game.gambit.antedByPlayer = [];
-            game.players.forEach(p => { if (game.deck.length > 0) p.hand.push(game.deck.pop()); });
-            this._startGambit(game, channel);
-            return;
-        }
-
-        game.gambit.leader = leader;
-        game.gambit.currentPlayerId = leader.id;
-        await channel.send({ content: `The leader for the first round is **${leader.user.username}**.` });
-        this._startRound(game, channel);
+        await this.ui.renderBoard(game);
     }
 
-    async _startRound(game, channel) {
-        const roundNumber = game.gambit.rounds.length + 1;
+    async _startRound(game) {
+        const roundNumber = (game.gambit.rounds.length || 0) + 1;
         const round = { number: roundNumber, turns: [] };
         game.gambit.rounds.push(round);
         game.state = 'playing_round';
-        await channel.send(`-- Round ${roundNumber} --`);
+
         const leaderIndex = game.players.findIndex(p => p.id === game.gambit.leader.id);
+        game.gambit.turnOrder = game.players.map((_, i) => game.players[(leaderIndex + i) % game.players.length]);
+        game.gambit.currentPlayerIndex = 0;
 
-        for (let i = 0; i < game.players.length; i++) {
-            const currentPlayerIndex = (leaderIndex + i) % game.players.length;
-            const currentPlayer = game.players[currentPlayerIndex];
-            game.gambit.currentPlayerId = currentPlayer.id;
-            await channel.send({ content: `It's **${currentPlayer.user.username}**'s turn to play.` });
+        await this.ui.renderBoard(game);
+    }
 
-            const lastTurn = round.turns.length > 0 ? round.turns[round.turns.length - 1] : null;
-            const lastPlayedCard = lastTurn ? lastTurn.card : null;
-            const playedCard = await this._getPlayerMove(game, currentPlayer, lastPlayedCard);
-            if (!playedCard) {
-                await channel.send({ content: `Could not get a move from ${currentPlayer.user.username}. The game cannot continue.`});
-                this.activeGames.delete(game.channelId);
-                return;
-            }
+    _findOpponentsByStrength(game, player, findHighest = true) {
+        const opponents = game.players.filter(p => p.id !== player.id);
+        if (opponents.length === 0) return [];
 
-            currentPlayer.flight.push(playedCard);
-            round.turns.push({ player: currentPlayer, card: playedCard });
-            await channel.send({ content: `**${currentPlayer.user.username}** played the **${playedCard.name}** (Strength ${playedCard.value}).` });
-            await this._resolveCardPower(game, currentPlayer, playedCard, channel);
+        const opponentStrengths = opponents.map(p => ({ player: p, strength: p.flight.reduce((sum, card) => sum + card.value, 0) }));
+
+        let targetStrength;
+        if (findHighest) {
+            targetStrength = Math.max(...opponentStrengths.map(os => os.strength));
+        } else {
+            targetStrength = Math.min(...opponentStrengths.map(os => os.strength));
         }
 
-        await channel.send({ content: `-- End of Round ${roundNumber} --` });
-        const roundTurns = round.turns;
-        const strengthCounts = {};
-        roundTurns.forEach(t => { strengthCounts[t.card.value] = (strengthCounts[t.card.value] || 0) + 1; });
-        let uniqueHighStrength = -1;
-        let nextLeader = null;
-        roundTurns.forEach(t => {
-            if (strengthCounts[t.card.value] === 1 && t.card.value > uniqueHighStrength) {
-                uniqueHighStrength = t.card.value;
-                nextLeader = t.player;
-            }
+        return opponentStrengths.filter(os => os.strength === targetStrength).map(os => os.player);
+    }
+
+    async _checkSpecialFlights(game, player) {
+        if (player.flight.length < 3) return;
+
+        // Check for Color Flights
+        const colors = {};
+        player.flight.forEach(card => {
+            if (!colors[card.effect]) colors[card.effect] = 0;
+            colors[card.effect]++;
         });
 
-        if (nextLeader) {
-            game.gambit.leader = nextLeader;
-            await channel.send({ content: `**${nextLeader.user.username}** will be the leader for the next round.` });
-        } else {
-            await channel.send({ content: `**${game.gambit.leader.user.username}** remains the leader.` });
-        }
-
-        let gambitOver = false;
-        if (roundNumber >= 3) {
-            const flightStrengths = game.players.map(p => p.flight.reduce((sum, c) => sum + c.value, 0));
-            if (game.gambit.weakestWins) {
-                const minStrength = Math.min(...flightStrengths);
-                const weakestPlayers = game.players.filter((p, i) => flightStrengths[i] === minStrength);
-                if (weakestPlayers.length === 1) gambitOver = true;
-            } else {
-                const maxStrength = Math.max(...flightStrengths);
-                const strongestPlayers = game.players.filter((p, i) => flightStrengths[i] === maxStrength);
-                if (strongestPlayers.length === 1) gambitOver = true;
+        for (const color in colors) {
+            if (colors[color] >= 3 && !player.triggeredColorFlights.includes(color)) {
+                const stealAmount = Math.min(game.gambit.stakes, 5 * game.scalingFactor);
+                player.hoard += stealAmount;
+                game.gambit.stakes -= stealAmount;
+                player.triggeredColorFlights.push(color);
+                game.gambit.log.push(`**FLIGHT BONUS!** ${player.user.username} completed a flight of ${color} dragons and stole ${stealAmount} gold from the stakes!`);
             }
         }
-        if (game.gambit.stakes <= 0 && roundNumber > 0) {
-            gambitOver = true;
-            await channel.send({ content: "The stakes are empty! The gambit ends." });
-        }
-        if (gambitOver) {
-            this._endGambit(game, channel);
-        } else {
-            this._startRound(game, channel);
+
+        // Check for Strength Flights
+        const strengths = {};
+        player.flight.forEach(card => {
+            if (!strengths[card.value]) strengths[card.value] = 0;
+            strengths[card.value]++;
+        });
+
+        for (const strength in strengths) {
+            if (strengths[strength] >= 3 && !player.triggeredStrengthFlights.includes(strength)) {
+                await this._drawCards(game, player, 1);
+                player.triggeredStrengthFlights.push(strength);
+                game.gambit.log.push(`**FLIGHT BONUS!** ${player.user.username} completed a flight of strength ${strength} dragons and drew a card!`);
+            }
         }
     }
 
-    async _endGambit(game, channel) {
+    async _endGambit(game) {
         game.state = 'scoring';
-        await channel.send({ content: `--- **Gambit ${game.gambit.number} Over** ---` });
         let winner = null;
         const flightStrengths = game.players.map(p => p.flight.reduce((sum, card) => sum + card.value, 0));
 
+        const potentialWinners = [];
         if (game.gambit.weakestWins) {
-            await channel.send({ content: "The Druid was played, so the weakest flight wins!" });
             const minStrength = Math.min(...flightStrengths);
-            const weakestPlayers = game.players.filter((p, i) => flightStrengths[i] === minStrength);
-            if (weakestPlayers.length === 1) winner = weakestPlayers[0];
+            game.players.forEach((p, i) => {
+                if (flightStrengths[i] === minStrength) potentialWinners.push(p);
+            });
         } else {
             const maxStrength = Math.max(...flightStrengths);
-            const strongestPlayers = game.players.filter((p, i) => flightStrengths[i] === maxStrength);
-            if (strongestPlayers.length === 1) winner = strongestPlayers[0];
+            game.players.forEach((p, i) => {
+                if (flightStrengths[i] === maxStrength) potentialWinners.push(p);
+            });
+        }
+
+        const qualifiedWinners = potentialWinners.filter(p => {
+            const hasTiamat = p.flight.some(c => c.effect === 'Tiamat');
+            const hasBahamut = p.flight.some(c => c.effect === 'Bahamut');
+            const hasGood = p.flight.some(c => CARD_EFFECTS.find(e => e.name === c.effect)?.alignment === 'good');
+            const hasEvil = p.flight.some(c => CARD_EFFECTS.find(e => e.name === c.effect)?.alignment === 'evil');
+
+            if ((hasTiamat && hasGood) || (hasBahamut && hasEvil)) {
+                return false;
+            }
+            return true;
+        });
+
+        if (qualifiedWinners.length === 1) {
+            winner = qualifiedWinners[0];
         }
 
         if (winner) {
-            await channel.send({ content: `**${winner.user.username}** has the strongest flight and wins the stakes of ${game.gambit.stakes} GP!` });
             winner.hoard += game.gambit.stakes;
+            game.gambit.log.push(`${winner.user.username} wins the gambit and takes ${game.gambit.stakes} gold!`);
             game.gambit.stakes = 0;
+
+            if (winner.mustGiftGold) {
+                const giftAmount = 3 * game.scalingFactor;
+                for (const opponent of game.players) {
+                    if (opponent.id === winner.id) continue;
+                    const gift = Math.min(winner.hoard, giftAmount);
+                    winner.hoard -= gift;
+                    opponent.hoard += gift;
+                    game.gambit.log.push(`${winner.user.username} gifts ${gift} gold to ${opponent.user.username}.`);
+                }
+                winner.mustGiftGold = false;
+            }
         } else {
-            await channel.send({ content: "There was no winner. The stakes are lost." });
+            game.gambit.log.push('There was no winner. The stakes carry over to the next gambit.');
         }
 
         game.players.forEach(p => {
             game.discardPile.push(...p.flight);
             p.flight = [];
+            p.continueStatus = 'pending';
         });
         game.discardPile.push(...game.gambit.antePile);
         game.gambit.antePile = [];
         game.gambit.antedByPlayer = [];
 
-        const playersWithGold = game.players.filter(p => p.hoard > 0);
-        if (playersWithGold.length < game.players.length) {
-            await channel.send({ content: "A player has run out of gold! The game is over!" });
-            let finalWinner = null;
-            let maxHoard = -1;
-            game.players.forEach(p => {
-                if (p.hoard > maxHoard) {
-                    maxHoard = p.hoard;
-                    finalWinner = p;
-                }
-            });
-            if (finalWinner) {
-                await channel.send({ content: `The winner is **${finalWinner.user.username}** with ${finalWinner.hoard} GP! Congratulations!` });
-            } else {
-                 await channel.send({ content: `The game ended in a draw!` });
+        // Remove players with no gold
+        const playersToRemove = game.players.filter(p => p.hoard <= 0);
+        if (playersToRemove.length > 0) {
+            game.gambit.log.push(playersToRemove.map(p => `${p.user.username} is out of gold and has been removed from the game.`).join('\n'));
+
+            for (const p of playersToRemove) {
+                await this.ui.closeGameBoard(p, 'You ran out of gold and have been removed from the game.');
+                // Track players who left/were removed
+                if (!game.gambit.playersWhoLeft) game.gambit.playersWhoLeft = [];
+                game.gambit.playersWhoLeft.push(p);
             }
-            this.activeGames.delete(game.channelId);
-            return;
+
+            game.players = game.players.filter(p => p.hoard > 0);
         }
 
-        await channel.send({ content: "All players draw two cards." });
+        // Check for game over condition
+        if (game.players.length < 2) {
+            await this._endGame(game);
+            return { gameOver: true, game, gambitWinner: winner };
+        }
+
         for (const p of game.players) {
-            await this._drawCards(game, p, 2, channel);
+            await this._drawCards(game, p, 2);
         }
 
-        await channel.send({ content: "Preparing the next gambit..." });
-        setTimeout(() => { this._startGambit(game, channel); }, 5000);
+        game.state = 'continue';
+        await this.ui.renderBoard(game);
+        return { gameOver: false, game, gambitWinner: winner };
     }
 
-    _generateGameStateEmbed(game, lastPlayedCard = null) {
-        const embed = new EmbedBuilder()
-            .setTitle(`Gambit ${game.gambit.number} - Round ${game.gambit.rounds.length}`)
-            .setColor(0x3498db)
-            .setDescription(`The current stakes are **${game.gambit.stakes} GP**.`);
-
-        game.players.forEach(p => {
-            const flightStrength = p.flight.reduce((sum, card) => sum + card.value, 0);
-            const flightText = p.flight.map(c => c.name).join(', ') || 'No cards yet.';
-            embed.addFields({
-                name: `${p.user.username}'s Flight (Strength: ${flightStrength}) | Hoard: ${p.hoard} GP`,
-                value: flightText,
-            });
-        });
-
-        if (lastPlayedCard) {
-            embed.setImage(`attachment://${lastPlayedCard.image}`);
-            embed.setFooter({ text: `Previous card played: ${lastPlayedCard.name} (Strength ${lastPlayedCard.value})` });
-        }
-
-        return embed;
-    }
-
-    async _drawCards(game, player, amount, channel) {
-        let drawnCards = [];
-        for (let i = 0; i < amount; i++) {
-            if (player.hand.length >= 10) {
-                try { await player.user.createDM().send("Your hand is full (10 cards). You cannot draw any more cards."); } catch (e) {}
-                break;
-            }
-            if (game.deck.length === 0) {
-                if (game.discardPile.length === 0) {
-                    await channel.send({ content: "The deck and discard pile are empty! No more cards can be drawn." });
-                    break;
-                }
-                game.deck = [...game.discardPile];
-                game.discardPile = [];
-                for (let k = game.deck.length - 1; k > 0; k--) {
-                    const l = Math.floor(Math.random() * (k + 1));
-                    [game.deck[k], game.deck[l]] = [game.deck[l], game.deck[k]];
-                }
-                await channel.send({ content: "The discard pile has been shuffled to form a new deck." });
-            }
-            const card = game.deck.pop();
-            player.hand.push(card);
-            drawnCards.push(card);
-        }
-        if (drawnCards.length > 0) {
-           try { await player.user.createDM().send({ content: `You drew: ${drawnCards.map(c => `**${c.name}**`).join(', ')}.` }); } catch(e) {}
-        }
-        return drawnCards.length;
-    }
-
-    async _checkSpecialFlights(game, player, channel) {
-        // Strength Flight
-        const strengthCounts = {};
-        player.flight.forEach(c => { strengthCounts[c.value] = (strengthCounts[c.value] || 0) + 1; });
-        for (const strengthStr in strengthCounts) {
-            const strength = parseInt(strengthStr);
-            if (strengthCounts[strength] >= 3 && !player.triggeredStrengthFlights.includes(strength)) {
-                player.triggeredStrengthFlights.push(strength);
-                const goldAmount = strength * (game.initialAnte / 50);
-                const finalAmount = Math.min(game.gambit.stakes, goldAmount);
-                if (finalAmount > 0) {
-                    game.gambit.stakes -= finalAmount;
-                    player.hoard += finalAmount;
-                    await channel.send({ content: `**${player.user.username}** completed a Strength Flight of ${strength}s! They steal ${finalAmount} GP from the stakes.` });
-                }
-                const cardsTaken = [];
-                while (game.gambit.antePile.length > 0 && player.hand.length < 10) {
-                    cardsTaken.push(game.gambit.antePile.pop());
-                }
-                if (cardsTaken.length > 0) {
-                    player.hand.push(...cardsTaken);
-                    await channel.send({ content: `They also take ${cardsTaken.length} card(s) from the ante pile.` });
-                    try { await player.user.createDM().send({ content: `From your Strength Flight, you took the following from the ante: ${cardsTaken.map(c => c.name).join(', ')}`}); } catch(e){}
-                }
-            }
-        }
-
-        // Color Flight
-        const colorCounts = {};
-        player.flight.forEach(c => {
-            const colors = c.effect === 'Tiamat' ? ['Black', 'Blue', 'Green', 'Red', 'White'] : [c.effect];
-            colors.forEach(color => {
-                const effect = CARD_EFFECTS.find(e => e.name === color);
-                if (effect && (effect.alignment === 'good' || effect.alignment === 'evil')) {
-                    colorCounts[color] = (colorCounts[color] || 0) + 1;
-                }
-            });
-        });
-        for (const color in colorCounts) {
-            if (colorCounts[color] >= 3 && !player.triggeredColorFlights.includes(color)) {
-                player.triggeredColorFlights.push(color);
-                const dragonsOfColor = player.flight.filter(c => c.effect === color || (c.effect === 'Tiamat' && ['Black', 'Blue', 'Green', 'Red', 'White'].includes(color)));
-                dragonsOfColor.sort((a, b) => a.value - b.value);
-                const secondStrongest = dragonsOfColor[dragonsOfColor.length - 2];
-                if (secondStrongest) {
-                    const goldAmount = secondStrongest.value * (game.initialAnte / 50);
-                    if (goldAmount > 0) {
-                        await channel.send({ content: `**${player.user.username}** completed a Color Flight of ${color}s! Each opponent pays them ${goldAmount} GP.` });
-                        for (const opponent of game.players) {
-                            if (opponent.id === player.id) continue;
-                            const payment = Math.min(opponent.hoard, goldAmount);
-                            if (payment > 0) {
-                                opponent.hoard -= payment;
-                                player.hoard += payment;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    async _resolveCardPower(game, player, card, channel, forceTrigger = false) {
+    async _resolveCardPower(game, player, card, forceTrigger = false) {
         const round = game.gambit.rounds[game.gambit.rounds.length - 1];
         const turnIndex = round.turns.length - 1;
         let trigger = false;
@@ -727,430 +568,565 @@ class ThreeDragonAnteManager {
             trigger = true;
         }
         if (!trigger) {
-            await channel.send({ content: `The power of **${card.name}** does not trigger.` });
             return;
         }
-        await channel.send({ content: `The power of **${card.name}** triggers!` });
         const effect = CARD_EFFECTS.find(e => e.name === card.effect);
         if (!effect) return;
+
+        game.gambit.log.push(`The power of the ${card.name} triggers!`);
+
         switch (effect.name) {
-            case 'Copper': {
-                const copperIndex = player.flight.findIndex(c => c === card);
-                if (copperIndex > -1) player.flight.splice(copperIndex, 1);
-                const turnRecord = round.turns.find(t => t.card === card);
-                game.discardPile.push(card);
-                if (game.deck.length === 0) {
-                    if (game.discardPile.length === 0) {
-                        await channel.send({ content: "The deck is empty, so the Copper Dragon has no card to draw."});
-                        break;
-                    }
-                    game.deck = [...game.discardPile];
-                    game.discardPile = [];
-                    for (let k = game.deck.length - 1; k > 0; k--) {
-                        const l = Math.floor(Math.random() * (k + 1));
-                        [game.deck[k], game.deck[l]] = [game.deck[l], game.deck[k]];
-                    }
-                    await channel.send({ content: "The discard pile has been shuffled to form a new deck." });
-                }
-                const newCard = game.deck.pop();
-                player.flight.push(newCard);
-                if (turnRecord) turnRecord.card = newCard;
-                await channel.send({ content: `The Copper Dragon is replaced by a **${newCard.name}**!` });
-                await this._resolveCardPower(game, player, newCard, channel, true);
-                break;
-            }
-            case 'Bronze': {
-                if (game.gambit.antePile.length === 0) {
-                    await channel.send({ content: "There are no ante cards to take." });
-                    break;
-                }
-                const sortedAntes = [...game.gambit.antePile].sort((a, b) => a.value - b.value);
-                const cardsToTake = [];
-                for (let i = 0; i < 2; i++) {
-                    if (sortedAntes.length > 0) {
-                        const weakestAnteCard = sortedAntes.shift();
-                        const originalIndex = game.gambit.antePile.findIndex(c => c === weakestAnteCard);
-                        if (originalIndex > -1) {
-                            const [takenCard] = game.gambit.antePile.splice(originalIndex, 1);
-                            cardsToTake.push(takenCard);
-                        }
-                    }
-                }
-                if (cardsToTake.length > 0) {
-                    let takenNames = [];
-                    for (const c of cardsToTake) {
-                        if (player.hand.length < 10) {
-                            player.hand.push(c);
-                            takenNames.push(c.name);
-                        } else {
-                            game.discardPile.push(c);
-                            try { await player.user.createDM().send(`Your hand was full, so the **${c.name}** from the ante was discarded.`); } catch(e){}
-                        }
-                    }
-                    if (takenNames.length > 0) {
-                        await channel.send({ content: `**${player.user.username}** takes the weakest ante card(s): **${takenNames.join(', ')}**.` });
-                        try { await player.user.createDM().send(`You took the **${takenNames.join(', ')}** from the ante.`); } catch(e){}
-                    }
-                }
-                break;
-            }
-            case 'Black': {
-                const baseAmount = 3;
-                const scaledAmount = baseAmount * (game.initialAnte / 50);
-                const finalAmount = Math.min(game.gambit.stakes, scaledAmount);
-                game.gambit.stakes -= finalAmount;
-                player.hoard += finalAmount;
-                await channel.send({ content: `**${player.user.username}** steals ${finalAmount} GP from the stakes!` });
-                break;
-            }
-            case 'White': {
-                let weakestOpponents = [];
-                let lowestStrength = Infinity;
-                game.players.forEach(p => {
-                    if (p.id === player.id) return;
-                    const pStrength = p.flight.reduce((sum, c) => sum + c.value, 0);
-                    if (pStrength < lowestStrength) {
-                        lowestStrength = pStrength;
-                        weakestOpponents = [p];
-                    } else if (pStrength === lowestStrength) {
-                        weakestOpponents.push(p);
-                    }
-                });
-                if (weakestOpponents.length > 0) {
-                    const baseAmount = 2;
-                    const scaledAmount = baseAmount * (game.initialAnte / 50);
-                    for (const weakPlayer of weakestOpponents) {
-                        const payment = Math.min(weakPlayer.hoard, scaledAmount);
-                        weakPlayer.hoard -= payment;
-                        player.hoard += payment;
-                        await channel.send({ content: `**${weakPlayer.user.username}** is a weakest opponent and pays ${payment} GP to **${player.user.username}**.` });
-                    }
-                } else {
-                    await channel.send({ content: "There are no opponents to target." });
-                }
-                break;
-            }
-            case 'Gold': {
-                const goodDragonsInFlight = player.flight.filter(c => {
+            case 'Brass': {
+                const currentRound = game.gambit.rounds[game.gambit.rounds.length - 1];
+                if (currentRound.turns.length < 1) break;
+
+                const lastTurnPlayerId = currentRound.turns[currentRound.turns.length - 1].player.id;
+                const lastPlayerInTurnOrder = game.gambit.turnOrder.find(p => p.id === lastTurnPlayerId);
+                const lastPlayerIndex = game.gambit.turnOrder.indexOf(lastPlayerInTurnOrder);
+                const previousPlayerIndex = (lastPlayerIndex - 1 + game.players.length) % game.players.length;
+                const lastPlayer = game.gambit.turnOrder[previousPlayerIndex];
+
+                if (lastPlayer.id === player.id) break;
+
+                const strongerGoodDragons = lastPlayer.hand.filter(c => {
                     const cEffect = CARD_EFFECTS.find(e => e.name === c.effect);
-                    return cEffect && cEffect.alignment === 'good';
-                }).length;
-                if (goodDragonsInFlight > 0) {
-                    await channel.send({ content: `**${player.user.username}** will draw ${goodDragonsInFlight} card(s) for the good dragons in their flight.` });
-                    await this._drawCards(game, player, goodDragonsInFlight, channel);
-                }
-                break;
-            }
-            case 'Silver': {
-                const playersToDraw = game.players.filter(p => {
-                    return p.flight.some(c => {
-                        const cEffect = CARD_EFFECTS.find(e => e.name === c.effect);
-                        return cEffect && cEffect.alignment === 'good';
-                    });
+                    return cEffect && cEffect.alignment === 'good' && c.value > card.value;
                 });
-                if (playersToDraw.length > 0) {
-                    await channel.send({ content: `${playersToDraw.map(p => `**${p.user.username}**`).join(', ')} will draw a card for having good dragons in their flight.` });
-                    for (const p of playersToDraw) {
-                        await this._drawCards(game, p, 1, channel);
-                    }
-                }
-                break;
-            }
-            case 'Druid': {
-                game.gambit.weakestWins = true;
-                await channel.send({ content: `**The Druid** has been played! The player with the WEAKEST flight will win this gambit.` });
-                break;
+
+                await this.ui.promptBrassDragonChoice(game, player, lastPlayer, strongerGoodDragons);
+                return true;
             }
             case 'Blue': {
-                const dmChannel = await player.user.createDM();
-                const goldAmount = 1 * (game.initialAnte / 50);
-                const flightSize = player.flight.length;
-                const stakesAmount = flightSize * (game.initialAnte / 50);
-                const takeGoldButton = new ButtonBuilder().setCustomId('tda_blue_take').setLabel(`Take ${goldAmount} GP from each opponent`).setStyle(ButtonStyle.Primary);
-                const addToStakesButton = new ButtonBuilder().setCustomId('tda_blue_stakes').setLabel(`Opponents add ${stakesAmount} GP to stakes`).setStyle(ButtonStyle.Secondary);
-                const choiceRow = new ActionRowBuilder().addComponents(takeGoldButton, addToStakesButton);
-                const choiceMsg = await dmChannel.send({ content: `Your Blue Dragon's power triggers. Choose an effect:`, components: [choiceRow] });
-                const choiceCollector = choiceMsg.createMessageComponentCollector({ filter: i => i.user.id === player.id, time: 120000, max: 1 });
-                const handleChoice = async (choice) => {
-                    if (choice === 'take') {
-                        let totalTaken = 0;
-                        for (const opponent of game.players) {
-                            if (opponent.id === player.id) continue;
-                            const payment = Math.min(opponent.hoard, goldAmount);
-                            opponent.hoard -= payment;
-                            player.hoard += payment;
-                            totalTaken += payment;
-                        }
-                        await channel.send({ content: `**${player.user.username}** uses the Blue Dragon to take a total of ${totalTaken} GP from all opponents.` });
-                    } else { // stakes
-                        let totalAdded = 0;
-                        for (const opponent of game.players) {
-                            if (opponent.id === player.id) continue;
-                            const payment = Math.min(opponent.hoard, stakesAmount);
-                            opponent.hoard -= payment;
-                            game.gambit.stakes += payment;
-                            totalAdded += payment;
-                        }
-                        await channel.send({ content: `**${player.user.username}** uses the Blue Dragon to force opponents to add a total of ${totalAdded} GP to the stakes.` });
-                    }
-                };
-                choiceCollector.on('collect', async i => {
-                    if (i.customId === 'tda_blue_take') {
-                        await i.update({ content: "You chose to take gold from each opponent.", components: [] });
-                        await handleChoice('take');
-                    } else {
-                        await i.update({ content: "You chose to have opponents add to the stakes.", components: [] });
-                        await handleChoice('stakes');
-                    }
-                });
-                choiceCollector.on('end', async (collected, reason) => {
-                    if (reason === 'time') {
-                        await dmChannel.send({ content: "You ran out of time. Defaulting to taking gold from opponents." });
-                        await handleChoice('take');
-                    }
-                });
-                break;
-            }
-            case 'Sorcerer': {
-                const sorcererIndex = player.flight.findIndex(c => c === card);
-                if (sorcererIndex > -1) player.flight.splice(sorcererIndex, 1);
-                const turnRecord = round.turns.find(t => t.card === card);
-                game.discardPile.push(card);
-                const revealedCards = [];
-                for (let i = 0; i < 3; i++) {
-                    if (game.deck.length === 0) {
-                        if (game.discardPile.length === 0) break;
-                        game.deck = [...game.discardPile];
-                        game.discardPile = [];
-                        for (let k = game.deck.length - 1; k > 0; k--) {
-                            const l = Math.floor(Math.random() * (k + 1));
-                            [game.deck[k], game.deck[l]] = [game.deck[l], game.deck[k]];
-                        }
-                    }
-                    if (game.deck.length > 0) revealedCards.push(game.deck.pop());
-                }
-                if (revealedCards.length === 0) {
-                    await channel.send({ content: "Not enough cards to reveal for the Sorcerer's power." });
-                    break;
-                }
-                const dmChannel = await player.user.createDM();
-                if (revealedCards.length === 1) {
-                    const chosenCard = revealedCards[0];
-                    player.flight.push(chosenCard);
-                    if (turnRecord) turnRecord.card = chosenCard;
-                    await channel.send({ content: `The Sorcerer reveals one card: **${chosenCard.name}**, which replaces it.` });
-                    await this._resolveCardPower(game, player, chosenCard, channel, true);
-                    break;
-                }
-                const rows = [new ActionRowBuilder()];
-                revealedCards.forEach((c, index) => {
-                    rows[0].addComponents(new ButtonBuilder().setCustomId(`tda_sorc_choice_${index}`).setLabel(c.name).setStyle(ButtonStyle.Secondary));
-                });
-                const choiceMsg = await dmChannel.send({ content: "Your Sorcerer reveals three cards. Choose one to replace it. The other two will be added to the ante.", components: rows });
-                const choiceCollector = choiceMsg.createMessageComponentCollector({ filter: i => i.user.id === player.id, time: 120000, max: 1 });
-                const handleSorcererChoice = async (choiceIndex) => {
-                    const chosenCard = revealedCards[choiceIndex];
-                    player.flight.push(chosenCard);
-                    if (turnRecord) turnRecord.card = chosenCard;
-                    const others = revealedCards.filter((c, i) => i !== choiceIndex);
-                    game.gambit.antePile.push(...others);
-                    await channel.send({ content: `The Sorcerer is replaced by a **${chosenCard.name}**! The other revealed cards (${others.map(c=>c.name).join(', ')}) are added to the ante.` });
-                    await this._resolveCardPower(game, player, chosenCard, channel, true);
-                };
-                choiceCollector.on('collect', async i => {
-                    const choiceIndex = parseInt(i.customId.split('_')[3]);
-                    await i.update({ content: `You chose the **${revealedCards[choiceIndex].name}**.`, components: [] });
-                    await handleSorcererChoice(choiceIndex);
-                });
-                choiceCollector.on('end', async (collected, reason) => {
-                    if (reason === 'time') {
-                        await dmChannel.send({ content: `You ran out of time. The **${revealedCards[0].name}** was chosen for you.` });
-                        await handleSorcererChoice(0);
-                    }
-                });
-                break;
-            }
-            case 'Red': {
-                let strongestOpponents = [];
-                let highestStrength = -1;
-                game.players.forEach(p => {
-                    if (p.id === player.id) return;
-                    const pStrength = p.flight.reduce((sum, c) => sum + c.value, 0);
-                    if (pStrength > highestStrength) {
-                        highestStrength = pStrength;
-                        strongestOpponents = [p];
-                    } else if (pStrength === highestStrength) {
-                        strongestOpponents.push(p);
-                    }
-                });
-                const target = strongestOpponents.length > 0 ? strongestOpponents[Math.floor(Math.random() * strongestOpponents.length)] : null;
-                if (target) {
-                    const goldAmount = 1 * (game.initialAnte / 50);
-                    const goldPayment = Math.min(target.hoard, goldAmount);
-                    target.hoard -= goldPayment;
-                    player.hoard += goldPayment;
-                    await channel.send({ content: `**${target.user.username}** is a strongest opponent and pays ${goldPayment} GP to **${player.user.username}**.` });
-                    if (target.hand.length > 0) {
-                        const randomIndex = Math.floor(Math.random() * target.hand.length);
-                        const stolenCard = target.hand.splice(randomIndex, 1)[0];
-                        player.hand.push(stolenCard);
-                        await channel.send({ content: `**${player.user.username}** also steals a random card from their hand!` });
-                        try {
-                            await player.user.createDM().send({ content: `You stole the **${stolenCard.name}**.` });
-                            await target.user.createDM().send({ content: `The **${stolenCard.name}** was stolen from your hand!` });
-                        } catch (e) { console.error("Failed to send steal notification DM", e); }
-                    }
-                } else {
-                    await channel.send({ content: "There are no opponents to target." });
-                }
-                break;
+                await this.ui.promptBlueDragonChoice(game, player);
+                return true;
             }
             case 'Green': {
-                const currentPlayerIndex = game.players.findIndex(p => p.id === player.id);
-                const nextPlayer = game.players[(currentPlayerIndex + 1) % game.players.length];
-                await channel.send({ content: `**${player.user.username}**'s Green Dragon targets **${nextPlayer.user.username}**! They must now make a choice in their DMs.` });
+                const currentPlayerIndex = game.gambit.turnOrder.findIndex(p => p.id === player.id);
+                const nextPlayer = game.gambit.turnOrder[(currentPlayerIndex + 1) % game.players.length];
+
                 const weakerEvilDragons = nextPlayer.hand.filter(c => {
                     const cEffect = CARD_EFFECTS.find(e => e.name === c.effect);
                     return cEffect && cEffect.alignment === 'evil' && c.value < card.value;
                 });
-                const dmChannel = await nextPlayer.user.createDM();
-                const goldAmount = 5 * (game.initialAnte / 50);
-                if (weakerEvilDragons.length === 0) {
-                    const payment = Math.min(nextPlayer.hoard, goldAmount);
-                    nextPlayer.hoard -= payment;
-                    player.hoard += payment;
-                    await dmChannel.send({ content: `You have no weaker evil dragons to give away. You automatically pay ${payment} GP.` });
-                    await channel.send({ content: `**${nextPlayer.user.username}** had no weaker evil dragons and was forced to pay **${player.user.username}** ${payment} GP.` });
-                    break;
+
+                await this.ui.promptGreenDragonChoice(game, player, nextPlayer, weakerEvilDragons);
+                return true;
+            }
+            case 'Gold': {
+                const goodDragons = player.flight.filter(c => {
+                    const cEffect = CARD_EFFECTS.find(e => e.name === c.effect);
+                    return cEffect && cEffect.alignment === 'good';
+                });
+                const numToDraw = goodDragons.length;
+                if (numToDraw > 0) {
+                    game.gambit.log.push(`${player.user.username}'s Gold Dragon power lets them draw ${numToDraw} card(s).`);
+                    await this._drawCards(game, player, numToDraw);
                 }
-                const giveCardButton = new ButtonBuilder().setCustomId('tda_green_give').setLabel('Give a Card').setStyle(ButtonStyle.Secondary);
-                const payGoldButton = new ButtonBuilder().setCustomId('tda_green_pay').setLabel(`Pay ${goldAmount} GP`).setStyle(ButtonStyle.Primary);
-                const choiceRow = new ActionRowBuilder().addComponents(giveCardButton, payGoldButton);
-                const choiceMsg = await dmChannel.send({ content: `The Green Dragon's power forces you to choose: give a weaker evil dragon to **${player.user.username}**, or pay them ${goldAmount} GP.`, components: [choiceRow] });
-                const choiceCollector = choiceMsg.createMessageComponentCollector({ filter: i => i.user.id === nextPlayer.id, time: 120000, max: 1 });
-                choiceCollector.on('collect', async i => {
-                    if (i.customId === 'tda_green_pay') {
-                        const payment = Math.min(nextPlayer.hoard, goldAmount);
-                        nextPlayer.hoard -= payment;
-                        player.hoard += payment;
-                        await i.update({ content: `You chose to pay ${payment} GP.`, components: [] });
-                        await channel.send({ content: `**${nextPlayer.user.username}** chose to pay ${payment} GP.` });
-                    } else { // Chose to give a card
-                        if (weakerEvilDragons.length === 1) {
-                            const cardToGive = weakerEvilDragons[0];
-                            const cardIndexInHand = nextPlayer.hand.findIndex(c => c === cardToGive);
-                            if (cardIndexInHand > -1) nextPlayer.hand.splice(cardIndexInHand, 1);
-                            player.hand.push(cardToGive);
-                            await i.update({ content: `You gave the **${cardToGive.name}**.`, components: [] });
-                            await channel.send({ content: `**${nextPlayer.user.username}** gave the **${cardToGive.name}** to **${player.user.username}**.` });
-                        } else {
-                            await i.update({ content: `You chose to give a card. Now, please select which card to give.`, components: [] });
-                            const cardChoiceRows = [];
-                            let currentRow = new ActionRowBuilder();
-                            weakerEvilDragons.forEach((c, index) => {
-                                if (currentRow.components.length >= 5) { cardChoiceRows.push(currentRow); currentRow = new ActionRowBuilder(); }
-                                currentRow.addComponents(new ButtonBuilder().setCustomId(`tda_green_give_${index}`).setLabel(c.name).setStyle(ButtonStyle.Danger));
-                            });
-                            if (currentRow.components.length > 0) { cardChoiceRows.push(currentRow); }
-                            const cardChoiceMsg = await dmChannel.send({ content: "Select the card you wish to give:", components: cardChoiceRows });
-                            const cardChoiceCollector = cardChoiceMsg.createMessageComponentCollector({ filter: i2 => i2.user.id === nextPlayer.id, time: 120000, max: 1 });
-                            const handleCardGive = async (cardToGive) => {
-                                const cardIndexInHand = nextPlayer.hand.findIndex(c => c === cardToGive);
-                                if (cardIndexInHand > -1) nextPlayer.hand.splice(cardIndexInHand, 1);
-                                player.hand.push(cardToGive);
-                                await channel.send({ content: `**${nextPlayer.user.username}** gave the **${cardToGive.name}** to **${player.user.username}**.` });
-                            };
-                            cardChoiceCollector.on('collect', async i2 => {
-                                const cardIndex = parseInt(i2.customId.split('_')[3]);
-                                const cardToGive = weakerEvilDragons[cardIndex];
-                                await i2.update({ content: `You gave the **${cardToGive.name}**.`, components: [] });
-                                await handleCardGive(cardToGive);
-                            });
-                            cardChoiceCollector.on('end', async (collected, reason) => {
-                                if (reason === 'time') {
-                                    const cardToGive = weakerEvilDragons[0];
-                                    await dmChannel.send({ content: `You ran out of time. The **${cardToGive.name}** was given automatically.` });
-                                    await handleCardGive(cardToGive);
-                                }
-                            });
-                        }
-                    }
-                });
-                choiceCollector.on('end', (collected, reason) => {
-                    if (reason === 'time') {
-                        const payment = Math.min(nextPlayer.hoard, goldAmount);
-                        nextPlayer.hoard -= payment;
-                        player.hoard += payment;
-                        dmChannel.send({ content: `You ran out of time and automatically paid ${payment} GP.` });
-                        channel.send({ content: `**${nextPlayer.user.username}** ran out of time and paid ${payment} GP.` });
-                    }
-                });
                 break;
             }
+            case 'Silver': {
+                let playersWhoDraw = [];
+                for (const p of game.players) {
+                    const hasGoodDragon = p.flight.some(c => {
+                        const cEffect = CARD_EFFECTS.find(e => e.name === c.effect);
+                        return cEffect && cEffect.alignment === 'good';
+                    });
+                    if (hasGoodDragon) {
+                        playersWhoDraw.push(p);
+                    }
+                }
+
+                if (playersWhoDraw.length > 0) {
+                    game.gambit.log.push(`A Silver Dragon's power is triggered! ${playersWhoDraw.map(p => p.user.username).join(', ')} will draw a card.`);
+                    for (const p of playersWhoDraw) {
+                        await this._drawCards(game, p, 1);
+                    }
+                }
+                break;
+            }
+            case 'Bronze': {
+                if (game.gambit.antePile.length < 2) {
+                    game.gambit.log.push('Not enough cards in the ante pile for the Bronze Dragon\'s power.');
+                    break;
+                }
+                // Sort ante pile by strength ascending
+                game.gambit.antePile.sort((a, b) => a.value - b.value);
+                const weakestTwo = game.gambit.antePile.splice(0, 2);
+                player.hand.push(...weakestTwo);
+                game.gambit.log.push(`${player.user.username} uses the Bronze Dragon's power to take the ${weakestTwo.map(c => c.name).join(' and ')} from the ante pile.`);
+                break;
+            }
+            case 'White': {
+                const weakestOpponents = this._findOpponentsByStrength(game, player, false);
+                if (weakestOpponents.length === 0) break;
+
+                if (weakestOpponents.length === 1) {
+                    const target = weakestOpponents[0];
+                    const payment = Math.min(target.hoard, 2 * game.scalingFactor);
+                    target.hoard -= payment;
+                    player.hoard += payment;
+                    game.gambit.log.push(`${player.user.username}'s White Dragon forces ${target.user.username} to pay ${payment} gold.`);
+                } else {
+                    game.pendingPlayerChoice = {
+                        type: 'WhiteDragonTarget',
+                        player,
+                        options: weakestOpponents
+                    };
+                    await this.ui.promptTargetPlayer(game, player, weakestOpponents, "Choose weakest opponent to take 2 gold from:");
+                    return true;
+                }
+                break;
+            }
+            case 'Red': {
+                const strongestOpponents = this._findOpponentsByStrength(game, player, true);
+                if (strongestOpponents.length === 0) break;
+
+                if (strongestOpponents.length === 1) {
+                    const target = strongestOpponents[0];
+                    const payment = Math.min(target.hoard, 1 * game.scalingFactor);
+                    target.hoard -= payment;
+                    player.hoard += payment;
+                    game.gambit.log.push(`${player.user.username}'s Red Dragon forces ${target.user.username} to pay ${payment} gold.`);
+
+                    if (target.hand.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * target.hand.length);
+                        const stolenCard = target.hand.splice(randomIndex, 1)[0];
+                        player.hand.push(stolenCard);
+                        game.gambit.log.push(`${player.user.username} also steals a random card from ${target.user.username}'s hand.`);
+                    }
+                } else {
+                    game.pendingPlayerChoice = {
+                        type: 'RedDragonTarget',
+                        player,
+                        options: strongestOpponents
+                    };
+                    await this.ui.promptTargetPlayer(game, player, strongestOpponents, "Choose strongest opponent to take 1 gold and a card from:");
+                    return true;
+                }
+                break;
+            }
+            case 'Copper': {
+                const copperCardIndex = player.flight.findIndex(c => c.effect === 'Copper');
+                if (copperCardIndex === -1) break;
+
+                if (game.deck.length === 0) {
+                    game.gambit.log.push('The deck is empty, the Copper Dragon\'s power fails.');
+                    break;
+                }
+
+                const copperCard = player.flight.splice(copperCardIndex, 1)[0];
+                game.discardPile.push(copperCard);
+
+                const newCard = game.deck.shift();
+                player.flight.splice(copperCardIndex, 0, newCard);
+                game.gambit.log.push(`${player.user.username}'s Copper Dragon is discarded and replaced with the ${newCard.name}.`);
+
+                const waitingForInput = await this._resolveCardPower(game, player, newCard, true);
+                // If the new card also requires input, we need to return true up the chain
+                if (waitingForInput) return true;
+
+                break;
+            }
+            case 'Kobold': {
+                if (player.hand.length === 0) {
+                    game.gambit.log.push('Your hand is empty, the Kobold has no effect.');
+                    break;
+                }
+                await this.ui.promptKoboldChoice(game, player);
+                return true; // Pauses game flow
+            }
+            case 'Sorcerer': {
+                if (game.deck.length < 3) {
+                    game.gambit.log.push('Not enough cards in the deck for the Sorcerer\'s power.');
+                    break;
+                }
+                const revealedCards = game.deck.splice(0, 3);
+
+                const sorcererInFlight = player.flight.find(c => c.effect === 'Sorcerer' && !c.markedForReplacement);
+                if (sorcererInFlight) {
+                    sorcererInFlight.markedForReplacement = true;
+                } else {
+                    game.gambit.log.push('Error: Could not find the Sorcerer card to replace.');
+                    game.deck.unshift(...revealedCards); // Return cards to deck
+                    break;
+                }
+
+                const revealedCardData = revealedCards.map(card => {
+                    const effect = CARD_EFFECTS.find(e => e.name === card.effect);
+                    return {
+                        name: card.name,
+                        value: card.value,
+                        text: effect ? effect.text : 'None',
+                        image: card.image
+                    };
+                });
+
+                game.pendingSorcererChoice = {
+                    playerId: player.id,
+                    revealedCards: revealedCards // Still store the full card object for later logic
+                };
+
+                await this.ui.promptSorcererChoice(game, player, revealedCardData);
+                return true; // Pauses game flow
+            }
         }
-        await this._checkSpecialFlights(game, player, channel);
     }
 
-    async _getPlayerMove(game, player, lastPlayedCard = null) {
-        return new Promise(async (resolve) => {
-            try {
-                const dmChannel = await player.user.createDM();
+    async _continueGameFlow(game) {
+        game.gambit.currentPlayerIndex++;
 
-                const embed = this._generateGameStateEmbed(game, lastPlayedCard);
-                const files = [];
-                if (lastPlayedCard) {
-                    files.push(path.join(__dirname, 'resources', 'ThreeDragonAnteImages', lastPlayedCard.image));
-                }
-                await dmChannel.send({ embeds: [embed], files });
-
-                const attachments = player.hand.map(card => ({
-                    attachment: path.join(__dirname, 'resources', 'ThreeDragonAnteImages', card.image),
-                    name: card.image
-                }));
-
-                if (attachments.length > 0) {
-                    await dmChannel.send({ content: "Your hand:", files: attachments });
-                } else {
-                    await dmChannel.send({ content: "You have no cards in your hand!" });
-                    // TODO: Implement logic for forcing a player to buy cards if their hand is empty.
-                    return resolve(null);
-                }
-
-                const rows = [];
-                let currentRow = new ActionRowBuilder();
-                player.hand.forEach((card, index) => {
-                    if (currentRow.components.length >= 5) { rows.push(currentRow); currentRow = new ActionRowBuilder(); }
-                    currentRow.addComponents(new ButtonBuilder().setCustomId(`tda_play_${index}`).setLabel(card.name).setStyle(ButtonStyle.Primary));
-                });
-
-                const components = player.hand.length > 0 ? rows : [];
-                const moveMessage = await dmChannel.send({ content: 'It is your turn. Choose a card to play. You have 3 minutes.', components });
-
-                const collector = moveMessage.createMessageComponentCollector({ filter: i => i.user.id === player.id, time: 180000, max: 1 });
-
-                collector.on('collect', async i => {
-                    const cardIndex = parseInt(i.customId.split('_')[2]);
-                    const card = player.hand[cardIndex];
-                    player.hand.splice(cardIndex, 1);
-                    await i.update({ content: `You played the **${card.name}**.`, components: [] });
-                    resolve(card);
-                });
-
-                collector.on('end', (collected, reason) => {
-                    if (reason === 'time' && player.hand.length > 0) {
-                        const card = player.hand[0];
-                        player.hand.splice(0, 1);
-                        dmChannel.send({ content: `You ran out of time! The **${card.name}** was played for you.` });
-                        resolve(card);
-                    } else if (reason === 'time') {
-                        resolve(null); // Timed out with no cards
-                    }
-                });
-            } catch (e) {
-                console.error(`Failed to get move from ${player.user.username}`, e);
-                resolve(null);
+        if (game.gambit.currentPlayerIndex >= game.players.length) {
+            const roundNumber = game.gambit.rounds.length;
+            let gambitOver = false;
+            if (roundNumber >= 4) {
+                gambitOver = true;
+            } else if (roundNumber === 3 && !game.gambit.playedBronzeWarlord) {
+                gambitOver = true;
             }
-        });
+
+            if (gambitOver) {
+                const { winner } = await this._endGambit(game);
+                game.gambit.log.push(`Gambit ends. ${winner ? winner.user.username + ' wins the stakes!' : 'The stakes are added to the next gambit.'}`);
+                return;
+            } else {
+                if (game.gambit.playedBronzeWarlord && game.gambit.rounds.length === 3) {
+                     game.gambit.log.push(`${game.gambit.playedBronzeWarlord.user.username} played the Bronze Warlord! A fourth round begins.`);
+                }
+                game.gambit.log.push(`Round ${game.gambit.rounds.length} ends. Starting a new round.`);
+                await this._startRound(game);
+                return;
+            }
+        }
+
+        await this.ui.renderBoard(game);
+    }
+
+    async handleAnte(game, player, cardIndex) {
+        if (player.anteCard) {
+            return;
+        }
+        if (!player.hand[cardIndex]) {
+            console.error(`TDA Error: Player ${player.user.username} tried to ante with invalid card index ${cardIndex}`);
+            return;
+        }
+
+        const card = player.hand.splice(cardIndex, 1)[0];
+        player.anteCard = card;
+        game.gambit.antePile.push(card);
+        game.gambit.antedByPlayer.push({ player, card });
+
+        const anteAmount = card.value * game.scalingFactor;
+        player.hoard -= anteAmount;
+        game.gambit.stakes += anteAmount;
+
+        game.gambit.log.push(`${player.user.username} antes with their ${card.name} and pays ${anteAmount} to the stakes.`);
+
+        const allAnted = game.players.every(p => p.anteCard);
+
+        if (allAnted) {
+            this._determineLeader(game);
+            game.gambit.log.push(`The new leader is ${game.gambit.leader.user.username}.`);
+            await this._startRound(game);
+        } else {
+            await this.ui.renderBoard(game);
+        }
+    }
+
+    _determineLeader(game) {
+        let highestAnte = -1;
+        let potentialLeaders = [];
+
+        for (const p of game.players) {
+            if (p.anteCard.value > highestAnte) {
+                highestAnte = p.anteCard.value;
+                potentialLeaders = [p];
+            } else if (p.anteCard.value === highestAnte) {
+                potentialLeaders.push(p);
+            }
+        }
+
+        if (potentialLeaders.length === 1) {
+            game.gambit.leader = potentialLeaders[0];
+        } else {
+            const previousLeader = game.gambit.leader;
+            if (previousLeader && potentialLeaders.some(p => p.id === previousLeader.id)) {
+                game.gambit.leader = previousLeader;
+            } else {
+                game.gambit.leader = potentialLeaders[Math.floor(Math.random() * potentialLeaders.length)];
+            }
+        }
+    }
+
+    async handlePlayCard(game, player, cardIndex) {
+        if (!player.hand[cardIndex]) {
+            console.error(`TDA Error: Player ${player.user.username} tried to play with invalid card index ${cardIndex}`);
+            return;
+        }
+
+        const card = player.hand.splice(cardIndex, 1)[0];
+        player.flight.push(card);
+
+        const currentRound = game.gambit.rounds[game.gambit.rounds.length - 1];
+        currentRound.turns.push({ player, card });
+
+        game.gambit.log.push(`${player.user.username} plays the ${card.name} (Strength ${card.value}).`);
+
+        const waitingForInput = await this._resolveCardPower(game, player, card);
+
+        // This needs to be called after the card power, as powers can alter the flight
+        await this._checkSpecialFlights(game, player);
+
+        if (!waitingForInput) {
+            await this._continueGameFlow(game);
+        }
+    }
+
+    async resolveBlueDragonChoice(game, player, choice) {
+        const goldAmount = 1 * game.scalingFactor;
+        const flightCount = player.flight.length;
+
+        if (choice === 'take') {
+            game.gambit.log.push(`${player.user.username} chose to take gold from opponents.`);
+            for (const opponent of game.players) {
+                if (opponent.id === player.id) continue;
+                const payment = Math.min(opponent.hoard, goldAmount);
+                opponent.hoard -= payment;
+                player.hoard += payment;
+                game.gambit.log.push(`  - ${opponent.user.username} pays ${payment} gold.`);
+            }
+        } else { // choice === 'stakes'
+            const stakeAmount = goldAmount * flightCount;
+            game.gambit.log.push(`${player.user.username} chose to have opponents add to the stakes.`);
+            for (const opponent of game.players) {
+                if (opponent.id === player.id) continue;
+                const payment = Math.min(opponent.hoard, stakeAmount);
+                opponent.hoard -= payment;
+                game.gambit.stakes += payment;
+                game.gambit.log.push(`  - ${opponent.user.username} pays ${payment} gold to the stakes.`);
+            }
+        }
+
+        await this._continueGameFlow(game);
+    }
+
+    async resolveGreenDragonChoice(game, originalPlayer, nextPlayer, choice, cardIndex = null) {
+        if (choice === 'pay') {
+            const goldAmount = 5 * game.scalingFactor;
+            const payment = Math.min(nextPlayer.hoard, goldAmount);
+            nextPlayer.hoard -= payment;
+            originalPlayer.hoard += payment;
+            game.gambit.log.push(`${nextPlayer.user.username} chooses to pay ${originalPlayer.user.username} ${payment} gold.`);
+        } else { // choice === 'give'
+            if (cardIndex === null || !nextPlayer.hand[cardIndex]) {
+                console.error(`TDA Error: Invalid card index ${cardIndex} for Green Dragon choice.`);
+                game.gambit.log.push(`An error occurred with Green Dragon choice. No action taken.`);
+            } else {
+                const card = nextPlayer.hand.splice(cardIndex, 1)[0];
+                originalPlayer.hand.push(card);
+                game.gambit.log.push(`${nextPlayer.user.username} gives the ${card.name} to ${originalPlayer.user.username}.`);
+            }
+        }
+
+        await this._continueGameFlow(game);
+    }
+
+    async resolveBrassDragonChoice(game, originalPlayer, lastPlayer, choice, cardIndex = null) {
+        if (choice === 'pay') {
+            const goldAmount = 5 * game.scalingFactor;
+            const payment = Math.min(lastPlayer.hoard, goldAmount);
+            lastPlayer.hoard -= payment;
+            originalPlayer.hoard += payment;
+            game.gambit.log.push(`${lastPlayer.user.username} chooses to pay ${originalPlayer.user.username} ${payment} gold.`);
+        } else { // choice === 'give'
+            if (cardIndex === null || !lastPlayer.hand[cardIndex]) {
+                console.error(`TDA Error: Invalid card index ${cardIndex} for Brass Dragon choice.`);
+                game.gambit.log.push(`An error occurred with Brass Dragon choice. No action taken.`);
+            } else {
+                const card = lastPlayer.hand.splice(cardIndex, 1)[0];
+                originalPlayer.hand.push(card);
+                game.gambit.log.push(`${lastPlayer.user.username} gives the ${card.name} to ${originalPlayer.user.username}.`);
+            }
+        }
+
+        await this._continueGameFlow(game);
+    }
+
+    async resolveKoboldChoice(game, player, cardIndicesToDiscard) {
+        const numToDiscard = cardIndicesToDiscard.length;
+        if (numToDiscard === 0) {
+            game.gambit.log.push(`${player.user.username} uses the Kobold's power but chooses not to discard any cards.`);
+            await this._continueGameFlow(game);
+            return;
+        }
+
+        cardIndicesToDiscard.sort((a, b) => parseInt(b) - parseInt(a));
+
+        const discardedCards = [];
+        for (const index of cardIndicesToDiscard) {
+            if (player.hand[index]) {
+                discardedCards.push(player.hand.splice(index, 1)[0]);
+            }
+        }
+
+        if (discardedCards.length > 0) {
+            game.discardPile.push(...discardedCards);
+            game.gambit.log.push(`${player.user.username} uses the Kobold's power to discard ${discardedCards.length} card(s).`);
+
+            await this._drawCards(game, player, discardedCards.length);
+            game.gambit.log.push(`${player.user.username} draws ${discardedCards.length} new card(s).`);
+        }
+
+        await this._continueGameFlow(game);
+    }
+
+    async resolveSorcererChoice(game, player, chosenCardImage) {
+        if (!game.pendingSorcererChoice || game.pendingSorcererChoice.playerId !== player.id) {
+            console.error('TDA Error: Mismatched sorcerer choice resolution.');
+            // It's possible for a user to click an old button. Just ignore it.
+            return;
+        }
+        const { revealedCards } = game.pendingSorcererChoice;
+        delete game.pendingSorcererChoice;
+
+        const chosenCard = revealedCards.find(c => c.image === chosenCardImage);
+        const otherCards = revealedCards.filter(c => c.image !== chosenCardImage);
+
+        if (!chosenCard) {
+            console.error(`TDA Error: Could not find chosen card with image ${chosenCardImage}`);
+            game.gambit.log.push('An error occurred with the Sorcerer\'s power.');
+            game.deck.unshift(...revealedCards);
+            await this._continueGameFlow(game);
+            return;
+        }
+
+        const sorcererIndex = player.flight.findIndex(c => c.markedForReplacement);
+        if (sorcererIndex !== -1) {
+            const sorcererCard = player.flight[sorcererIndex];
+            player.flight.splice(sorcererIndex, 1, chosenCard);
+            game.discardPile.push(sorcererCard);
+            delete sorcererCard.markedForReplacement;
+        } else {
+             console.error(`TDA Error: Could not find marked Sorcerer to replace.`);
+             game.gambit.log.push('An error occurred replacing the Sorcerer card.');
+        }
+
+        game.gambit.antePile.push(...otherCards);
+        game.gambit.log.push(`${player.user.username} uses the Sorcerer's power, chooses the ${chosenCard.name}, and adds ${otherCards.length} cards to the ante pile.`);
+
+        const waitingForInput = await this._resolveCardPower(game, player, chosenCard, true);
+
+        if (!waitingForInput) {
+            await this._continueGameFlow(game);
+        }
+    }
+
+    async resolvePlayerTargetChoice(game, choosingPlayer, targetPlayerId) {
+        if (!game.pendingPlayerChoice || game.pendingPlayerChoice.player.id !== choosingPlayer.id) {
+            return; // Invalid state or not the right player
+        }
+
+        const choiceType = game.pendingPlayerChoice.type;
+        const target = game.players.find(p => p.id === targetPlayerId);
+        if (!target) return; // Target not found
+
+        delete game.pendingPlayerChoice;
+
+        if (choiceType === 'WhiteDragonTarget') {
+            const payment = Math.min(target.hoard, 2 * game.scalingFactor);
+            target.hoard -= payment;
+            choosingPlayer.hoard += payment;
+            game.gambit.log.push(`${choosingPlayer.user.username}'s White Dragon forces ${target.user.username} to pay ${payment} gold.`);
+        } else if (choiceType === 'RedDragonTarget') {
+            const payment = Math.min(target.hoard, 1 * game.scalingFactor);
+            target.hoard -= payment;
+            choosingPlayer.hoard += payment;
+            game.gambit.log.push(`${choosingPlayer.user.username}'s Red Dragon forces ${target.user.username} to pay ${payment} gold.`);
+
+            if (target.hand.length > 0) {
+                const randomIndex = Math.floor(Math.random() * target.hand.length);
+                const stolenCard = target.hand.splice(randomIndex, 1)[0];
+                choosingPlayer.hand.push(stolenCard);
+                game.gambit.log.push(`${choosingPlayer.user.username} also steals a random card from ${target.user.username}'s hand.`);
+            }
+        }
+
+        await this._continueGameFlow(game);
+    }
+
+    async handleContinueChoice(game, player, choice) {
+        if (player.continueStatus !== 'pending') {
+            return; // Player has already made a choice
+        }
+
+        if (choice === 'leave') {
+            player.continueStatus = 'left';
+            game.gambit.log.push(`${player.user.username} has left the game.`);
+
+            // Find the player's index and remove them
+            const playerIndex = game.players.findIndex(p => p.id === player.id);
+            if (playerIndex > -1) {
+                game.players.splice(playerIndex, 1);
+            }
+
+            // Close their DM board
+            if (player.dmChannel) {
+                await this.ui.closeGameBoard(player, 'You have left the game.');
+            }
+
+        } else { // choice === 'ready'
+            player.continueStatus = 'ready';
+            game.gambit.log.push(`${player.user.username} is ready for the next gambit.`);
+        }
+
+        // Check for game over
+        if (game.players.length < 2) {
+            await this._endGame(game);
+            return;
+        }
+
+        // Check if all remaining players are ready
+        const allReady = game.players.every(p => p.continueStatus === 'ready');
+
+        if (allReady) {
+            game.gambit.log.push('All players are ready. Starting the next gambit!');
+            // Reset continue status for the next round
+            game.players.forEach(p => p.continueStatus = 'pending');
+            await this._startGambit(game);
+        } else {
+            // If not everyone is ready, just update the boards to show who is ready/left
+            await this.ui.renderBoard(game);
+        }
+    }
+
+    async _endGame(game) {
+        // This is a simplified end game function.
+        // A more robust version would declare a winner if one exists.
+        const winner = game.players.length === 1 ? game.players[0] : null;
+        const gameOverMessage = winner
+            ? `${winner.user.username} is the last player remaining and wins the game!`
+            : 'Not enough players to continue. The game has ended.';
+
+        game.gambit.log.push(gameOverMessage);
+
+        // Notify all original players and close their boards
+        const allOriginalPlayers = [...game.players];
+        const playersWhoLeft = game.gambit.playersWhoLeft || []; // Assuming we track this
+        allOriginalPlayers.push(...playersWhoLeft);
+
+        for(const p of allOriginalPlayers) {
+            if (p.dmChannel) {
+                await this.ui.closeGameBoard(p, `The game has ended. ${gameOverMessage}`);
+            }
+        }
+
+        // Clean up the active game
+        this.activeGames.delete(game.channelId);
+
+        // Send a final message to the main channel
+        const channel = await this.client.channels.fetch(game.channelId);
+        if (channel) {
+            await channel.send(`The game of Three-Dragon Ante has concluded. ${gameOverMessage}`);
+        }
     }
 }
 
