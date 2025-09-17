@@ -1,8 +1,8 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-const dataPath = path.join(__dirname, '../../../resources/5etoolsdata');
-const randomTablesPath = path.join(__dirname, '../../../randomtables/origin');
+const dataPath = path.join(__dirname, '../../resources/5etoolsdata');
+const randomTablesPath = path.join(__dirname, '../../randomtables/origin');
 const categorySources = {
     'spells': { type: 'directory', path: 'spells', key: 'spell' },
     'items': { type: 'file', path: 'items.json', key: 'item' },

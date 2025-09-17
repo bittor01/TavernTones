@@ -1,6 +1,18 @@
 # Discord Bot Documentation
 
-This document describes the Discord bot features of the TavernTones application. For a guide on the DropdownHandler utility, see the bottom of this document.
+This document describes the Discord bot features of the TavernTones application.
+
+## Interaction Model
+
+For commands that require user input via buttons or dropdowns (e.g., `!ma`, `!create en`), the bot uses the following interaction model to keep the channel clean:
+
+1.  The initial command (`!ma`) creates a **public message** containing the interactive components (buttons, dropdowns).
+2.  When the user makes their selections and submits the final action (e.g., clicks "Generate" or submits a modal), the bot immediately edits the original public message to a "Thinking..." state (e.g., `⚙️ Generating items...`) and removes all the interactive components.
+3.  The bot performs the requested action (e.g., generating items) and posts the results in a new message or thread.
+4.  Finally, the bot edits the original message a second time to a "Done" state (e.g., `✅ Generation complete!`), providing a clear confirmation and a clean end to the interaction flow.
+
+---
+For a guide on the DropdownHandler utility, see the bottom of this document.
 
 ---
 

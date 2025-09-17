@@ -3,6 +3,15 @@
 This document consolidates all known bugs, planned features, and active development tasks for the TavernTones project.
 
 ---
+## Completed Tasks
+- **Project Reorganization**: Moved all source code into a `src` directory, created a `scripts` directory, and restructured the `docs` folder.
+- **Interaction Model Refactor**:
+    - Made all interactive command prompts public instead of ephemeral.
+    - Implemented a "Thinking/Done" UX flow where the original public message is edited to show the bot's status, and components are removed after use.
+    - Updated discord.js syntax for ephemeral messages from the deprecated `{ ephemeral: true }` to `{ flags: [MessageFlags.Ephemeral] }`.
+- **Bug Fix**: Corrected all file paths in the codebase after the reorganization, including the critical path to `5etoolsdata` in `5eParser.js`.
+
+---
 
 ## High Priority Fixes & Known Bugs
 
@@ -59,39 +68,11 @@ This document consolidates all known bugs, planned features, and active developm
 ### Quality of Life Improvements
 1.  **Refactor `!ro` Command**: Improve the user experience of the `!ro` command by replacing the clunky text-based input with an interactive Discord Modal.
 2.  **Investigate New Generators from 5eTools Data**: Explore the `5etoolsdata` directory, specifically files like `loot.json` and `life.json`, to find opportunities for new generators or bot features.
-3.  **Remember Window Positions**: Save the position and size of the main and secondary windows on close and restore them on the next launch.
+3.  **Remember Window Positions**: Save the position and size of the main and secondary windows on graceful close and restore them on the next launch.
+4.  **Single Instance Lock**: Prevent more than one instance of the application from running at the same time.
 
 ### Three-Dragon Ante - Not Yet Implemented
 - **Remaining Card Powers**: The powers for the following optional/expansion cards have not been implemented yet:
     - **Legendary Dragons:** `Black Raider`, `Blue Overlord`, `Brass Sultan`, `Bronze Warlord`, `Copper Trickster`, `Gold Monarch`, `Green Schemer`, `Red Destroyer`, `Silver Seer`, `White Hunter`.
     - **Other Mortals/Special Dragons:** `The Princess`, `The Kobold`, `The Wyrmpriest`, `Dracolich`, `Bahamut`, and the two Wyrmlings.
 - **D&D Special Abilities**: While selectable in the UI, the mechanical effects of the 8 special abilities (Bluff, Concentration, etc.) are not yet hooked into the game logic. This is the largest missing feature.
-
----
-
-## Active Development Plan
-
-This section outlines the plan for features that were previously under active development.
-
-### Three-Dragon Ante
-1.  Awaiting user feedback to diagnose the **Gold Scaling** and **Image Path** bugs.
-2.  Once bugs are fixed, proceed with implementing the remaining card powers.
-3.  Implement the mechanical effects of the D&D Special Abilities.
-
-### General Cleanup
-1.  Delete the obsolete `hp.html` and `hp.js` files.
-2.  Update `FILE_REFERENCE.md` to remove the "HP Tracker (Legacy)" section.
-
-### Vehicle Encounter Generator (`!vehicle-encounter`)
-1.  **Data Analysis**: Analyze `resources/5etoolsdata/vehicles.json` to map vehicle tags to the requested environment categories (`Land`, `Air`, `Naval`, `Space`, `Underground`).
-2.  **Command & UI**: Implement a new `!vehicle-encounter` command in `CommandHandler.js` that triggers a message with dropdowns for `Environment` and `Encounter Style` (`Flagship`/`Balanced`).
-3.  **Modal Input**: Upon proceeding, display a modal to collect `Total HP` and (for "Balanced" style) `Number of Vehicles` from the user.
-4.  **Backend Logic (`Flagship`)**: Implement the logic to find the largest single vehicle that fits the HP budget, then use the remaining HP to add smaller escort vehicles.
-5.  **Backend Logic (`Balanced`)**: Implement the logic to calculate the target HP per vehicle, then find several vehicle options within a +/- 15% range of that target.
-6.  **Output Formatting**: Create a new helper function to format the generated vehicle encounter into a summary embed and a detailed thread, similar to the existing encounter generator.
-
-### Trap & Hazard Generator (`!generate-trap`)
-1.  **Command & UI**: Implement a new `!generate-trap` command in `CommandHandler.js` that prompts the user with optional dropdowns for `Party Tier`, `Threat Level`, `Trap Type`, and a text input for `Environment`.
-2.  **Backend Logic**: Implement the filtering logic based on user selections. If a filter is left blank, it will not be applied. The `Environment` filter will perform a case-insensitive text search on the trap's description.
-3.  **Random Selection**: After filtering, randomly select one trap from the remaining pool.
-4.  **Output Formatting**: Create a function to format the selected trap's details into a comprehensive embed, showing its trigger, effects, and countermeasures.

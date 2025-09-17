@@ -1182,12 +1182,12 @@ client.once('clientReady', async () => {
 
         if (interaction.isButton()) {
             if (interaction.customId === 'trap-proceed-button') {
-                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+                await interaction.message.edit({ content: '⚙️ Finding a trap...', embeds: [], components: [] });
                 const selections = trapSelections.get(interaction.message.id) || {};
                 const trap = await fiveEToolsParser.generateTrap(selections);
 
                 if (!trap) {
-                    await interaction.editReply({ content: 'Could not find a trap matching your criteria. Please try broadening your search.' });
+                    await interaction.message.edit({ content: '❌ Could not find a trap matching your criteria. Please try broadening your search.' });
                     return;
                 }
 
@@ -1197,16 +1197,17 @@ client.once('clientReady', async () => {
                     .setDescription(formatEntries(trap.entries));
 
                 await interaction.channel.send({ embeds: [embed] });
-                await interaction.editReply({ content: 'Trap generated!', embeds: [], components: [] });
+                await interaction.message.edit({ content: '✅ Trap generated! View the details in the new public message.' });
                 trapSelections.delete(interaction.message.id);
+                await interaction.deferUpdate();
                 return;
             }
 
             if (interaction.customId === 'npc-generate-idea') {
+                await interaction.message.edit({ content: '⚙️ Generating character...', embeds: [], components: [] });
                 const selections = npcSelections.get(interaction.message.id) || {};
                 selections.mode = 'idea';
-                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-                await _handleNpcGeneration(interaction, selections);
+                await _handleNpcGeneration(interaction, selections, true); // Pass true for a silent defer
                 npcSelections.delete(interaction.message.id);
                 return;
             }
@@ -1665,7 +1666,7 @@ async function _handleNpcDropdowns(interaction) {
 }
 
 
-async function _handleNpcGeneration(interaction, selections) {
+async function _handleNpcGeneration(interaction, selections, silentDefer = false) {
     // Translate the selections from the interaction into the format NpcGenerator expects
     const generatorOptions = {
         mode: selections.mode,
@@ -1680,13 +1681,15 @@ async function _handleNpcGeneration(interaction, selections) {
 
     const result = await client.commandHandler.npcGenerator.generateCharacter(generatorOptions);
     if (result.error) {
-        await interaction.editReply({ content: `Error: ${result.error}` });
+        await interaction.message.edit({ content: `❌ Error: ${result.error}` });
+        if (!silentDefer) await interaction.deferUpdate();
         return;
     }
 
     const embed = formatNpcResult(result);
     await interaction.channel.send({ embeds: [embed] });
-    await interaction.editReply({ content: 'Generation complete!', embeds: [], components: [] });
+    await interaction.message.edit({ content: '✅ Character generated! View the details in the new public message.' });
+    if (!silentDefer) await interaction.deferUpdate();
 }
 
 function formatNpcResult(result) {
@@ -1768,112 +1771,85 @@ function formatNpcResult(result) {
                 selections.partyLevel = parseInt(interaction.fields.getTextInputValue('partyLevel'), 10);
                 selections.partySize = parseInt(interaction.fields.getTextInputValue('partySize'), 10);
 
-
                 if (isNaN(selections.partyLevel) || isNaN(selections.partySize) || selections.partyLevel <= 0 || selections.partySize <= 0) {
                     await interaction.reply({ content: 'Invalid party level or size. Please provide positive numbers.', flags: [MessageFlags.Ephemeral] });
                     return;
                 }
 
-                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-                await _handleNpcGeneration(interaction, selections);
+                await interaction.message.edit({ content: `⚙️ Generating NPC statblock for a level ${selections.partyLevel} party of ${selections.partySize}...`, embeds: [], components: [] });
+                await _handleNpcGeneration(interaction, selections, true);
                 npcSelections.delete(messageId);
                 return;
             }
 
             if (interaction.customId.startsWith('vehicle-modal|')) {
-                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-
                 const parts = interaction.customId.split('|');
-                const tag = parts[1];
                 let style = parts[2];
+                if (style === 'random') style = ['flagship', 'balanced'][Math.floor(Math.random() * 2)];
 
-                if (style === 'random') {
-                    style = ['flagship', 'balanced'][Math.floor(Math.random() * 2)];
-                }
+                await interaction.message.edit({ content: `⚙️ Building a ${style} vehicle encounter...`, embeds: [], components: [] });
 
+                const tag = parts[1];
                 const totalHp = parseInt(interaction.fields.getTextInputValue('totalHp'), 10);
                 const numVehicles = parseInt(interaction.fields.getTextInputValue('numVehicles'), 10);
 
-                if (isNaN(totalHp) || totalHp <= 0 || isNaN(numVehicles) || numVehicles <= 0) {
-                    await interaction.editReply({ content: 'Invalid Total HP. Please provide a positive number.' });
-                    return;
-                }
-                if (style === 'balanced' && (isNaN(numVehicles) || numVehicles <= 0)) {
-                    await interaction.editReply({ content: 'Invalid Number of Vehicles. Please provide a positive number for a balanced fight.' });
+                if (isNaN(totalHp) || totalHp <= 0 || (style === 'balanced' && (isNaN(numVehicles) || numVehicles <= 0))) {
+                    await interaction.message.edit({ content: '❌ Invalid input. Please provide positive numbers for HP and vehicle count.', embeds: [], components: [] });
+                    await interaction.deferUpdate();
                     return;
                 }
 
-                const result = await client.commandHandler.vehicleEncounterBuilder.generateEncounter({
-                    tag,
-                    style,
-                    totalHp,
-                    numVehicles
-                });
+                const result = await client.commandHandler.vehicleEncounterBuilder.generateEncounter({ tag, style, totalHp, numVehicles });
 
                 if (result.error) {
-                    await interaction.editReply({ content: `Error: ${result.error}` });
+                    await interaction.message.edit({ content: `❌ Error: ${result.error}`, embeds: [], components: [] });
+                    await interaction.deferUpdate();
                     return;
                 }
 
-                // Fancier formatting
-                const summaryEmbed = new EmbedBuilder()
-                    .setColor(0x2ECC71)
-                    .setTitle(`Vehicle Encounter Generated! (${style})`)
+                const summaryEmbed = new EmbedBuilder().setColor(0x2ECC71).setTitle(`Vehicle Encounter Generated! (${style})`)
                     .setDescription(`**Tag:** ${tag}\n**HP Budget:** ${result.totalValue.toLocaleString()} / ${result.budget.toLocaleString()}`)
-                    .addFields({
-                        name: 'Vehicles',
-                        value: result.encounter.map(v => `• ${v.name} (HP: ${v.hp})`).join('\n') || 'None'
-                    });
+                    .addFields({ name: 'Vehicles', value: result.encounter.map(v => `• ${v.name} (HP: ${v.hp})`).join('\n') || 'None' });
 
-                const originalMessage = await interaction.channel.send({ embeds: [summaryEmbed] });
-                const thread = await originalMessage.startThread({
-                    name: `Vehicle Encounter Details (${style})`,
-                    autoArchiveDuration: 60,
-                });
+                const newPublicMessage = await interaction.channel.send({ embeds: [summaryEmbed] });
+                const thread = await newPublicMessage.startThread({ name: `Vehicle Encounter Details (${style})`, autoArchiveDuration: 60 });
 
                 const postedVehicles = new Set();
                 for (const vehicle of result.encounter) {
-                    if (postedVehicles.has(vehicle.name)) {
-                        continue; // Skip if we've already posted this stat block
-                    }
+                    if (postedVehicles.has(vehicle.name)) continue;
                     const fullVehicleData = await fiveEToolsParser.getExact('vehicles', vehicle.name, vehicle.source);
                     if (fullVehicleData) {
                         const { mainEmbed, longFields } = formatVehicleStatBlockForDiscord(fullVehicleData);
                         await thread.send({ embeds: [mainEmbed] });
-
-                        if (longFields.length > 0) {
-                            for (const field of longFields) {
-                                const chunks = splitText(field.value, 1024);
-                                for (let i = 0; i < chunks.length; i++) {
-                                    const chunkEmbed = new EmbedBuilder()
-                                        .setColor(0x0099FF)
-                                        .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
-                                        .setDescription(chunks[i]);
-                                    await thread.send({ embeds: [chunkEmbed] });
-                                }
+                        for (const field of longFields) {
+                            const chunks = splitText(field.value, 1024);
+                            for (let i = 0; i < chunks.length; i++) {
+                                const chunkEmbed = new EmbedBuilder().setColor(0x0099FF).setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name).setDescription(chunks[i]);
+                                await thread.send({ embeds: [chunkEmbed] });
                             }
                         }
                     }
                     postedVehicles.add(vehicle.name);
                 }
 
-                await interaction.editReply({ content: `Vehicle encounter generated! You can view it here: ${originalMessage.url}`, embeds: [], components: [] });
+                await interaction.message.edit({ content: `✅ Vehicle encounter generated! View it here: ${newPublicMessage.url}` });
+                await interaction.deferUpdate();
                 return;
             }
 
             if (interaction.customId.startsWith('encounter-modal|')) {
-                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-
                 const parts = interaction.customId.split('|');
                 const encounterType = parts[1];
                 const difficulty = parts.pop();
-
                 const partyLevel = parseInt(interaction.fields.getTextInputValue('partyLevel'), 10);
                 const partySize = parseInt(interaction.fields.getTextInputValue('partySize'), 10);
                 const multiplier = parseFloat(interaction.fields.getTextInputValue('multiplier')) || 1.0;
 
+                await interaction.message.edit({ content: `⚙️ Building a ${difficulty} encounter for ${partySize} level ${partyLevel} players...`, embeds: [], components: [] });
+
                 if (isNaN(partyLevel) || isNaN(partySize) || partyLevel < 1 || partyLevel > 20 || partySize < 1) {
-                    await interaction.editReply({ content: 'Invalid party level or size. Level must be 1-20, and size must be at least 1.' });
+                    await interaction.message.edit({ content: '❌ Invalid party level or size. Level must be 1-20, and size must be at least 1.', embeds: [], components: [] });
+                    await interaction.deferUpdate();
                     return;
                 }
 
@@ -1885,7 +1861,8 @@ function formatNpcResult(result) {
                     const [category, source, name] = creatureValue.split('|');
                     mainCreature = await fiveEToolsParser.getExact(category, name, source);
                     if (!mainCreature) {
-                        await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details for the selected creature.' });
+                        await interaction.message.edit({ content: '❌ Sorry, I couldn\'t retrieve the details for the selected creature.', embeds: [], components: [] });
+                        await interaction.deferUpdate();
                         return;
                     }
                     mainCreature.xp = client.commandHandler.encounterBuilder.crToXp[mainCreature.cr] || 0;
@@ -1899,55 +1876,37 @@ function formatNpcResult(result) {
                 const result = await client.commandHandler.encounterBuilder.generateEncounter(encounterParams);
 
                 if (result.error) {
-                    await interaction.editReply({ content: `Error generating encounter: ${result.error}` });
+                    await interaction.message.edit({ content: `❌ Error generating encounter: ${result.error}`, embeds: [], components: [] });
+                    await interaction.deferUpdate();
                     return;
                 }
 
                 const { encounter, totalXp, xpBudget } = result;
-
-                const summaryEmbed = new EmbedBuilder()
-                    .setColor(0x2ECC71)
-                    .setTitle('Encounter Generated!')
+                const summaryEmbed = new EmbedBuilder().setColor(0x2ECC71).setTitle('Encounter Generated!')
                     .setDescription(`**XP Budget:** ${totalXp.toLocaleString()} / ${xpBudget.toLocaleString()}`)
-                    .addFields({ name: 'Creatures', value: encounter.map(m => {
-                        if (m.isMob) {
-                            return `1x Mob of ${m.count} ${m.name}`;
-                        }
-                        return `${m.count}x ${m.name}`;
-                    }).join('\n') || 'None' });
+                    .addFields({ name: 'Creatures', value: encounter.map(m => (m.isMob ? `1x Mob of ${m.count} ${m.name}` : `${m.count}x ${m.name}`)).join('\n') || 'None' });
 
-                const originalMessage = await interaction.channel.send({ embeds: [summaryEmbed] });
-
-                const threadName = mainCreature
-                    ? `Encounter Details for ${mainCreature.name}`
-                    : `Encounter Details for ${encounterParams.creatureType}`;
-                const thread = await originalMessage.startThread({
-                    name: threadName,
-                    autoArchiveDuration: 60,
-                });
+                const newPublicMessage = await interaction.channel.send({ embeds: [summaryEmbed] });
+                const threadName = mainCreature ? `Encounter Details for ${mainCreature.name}` : `Encounter Details for ${encounterParams.creatureType}`;
+                const thread = await newPublicMessage.startThread({ name: threadName, autoArchiveDuration: 60 });
 
                 for (const monster of encounter) {
                     const fullMonsterData = await fiveEToolsParser.getExact('bestiary', monster.name, monster.source);
                     if (fullMonsterData) {
                         const { mainEmbed, longFields } = formatStatBlockForDiscord(fullMonsterData);
                         await thread.send({ embeds: [mainEmbed] });
-                        if (longFields.length > 0) {
-                            for (const field of longFields) {
-                                const chunks = splitText(field.value, 1024);
-                                for (let i = 0; i < chunks.length; i++) {
-                                    const chunkEmbed = new EmbedBuilder()
-                                        .setColor(0x0099FF)
-                                        .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
-                                        .setDescription(chunks[i]);
-                                    await thread.send({ embeds: [chunkEmbed] });
-                                }
+                        for (const field of longFields) {
+                            const chunks = splitText(field.value, 1024);
+                            for (let i = 0; i < chunks.length; i++) {
+                                const chunkEmbed = new EmbedBuilder().setColor(0x0099FF).setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name).setDescription(chunks[i]);
+                                await thread.send({ embeds: [chunkEmbed] });
                             }
                         }
                     }
                 }
 
-                await interaction.editReply({ content: `Encounter generated! You can view it here: ${originalMessage.url}`, embeds: [], components: [] });
-
+                await interaction.message.edit({ content: `✅ Encounter generated! You can view it here: ${newPublicMessage.url}` });
+                await interaction.deferUpdate();
                 return;
             }
             const parts = interaction.customId.split('-');
@@ -1956,14 +1915,17 @@ function formatNpcResult(result) {
             const messageId = parts[3]; // ma-config-modal-messageId
 
             if (prefix === 'ma' && context === 'config' && messageId) {
-                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
                 const selections = maSelections.get(messageId) || { mode: 'loot', size: 'Average' };
-                logToRenderer(`[MA Command] Passing to generator: ${JSON.stringify(selections)}`);
-
                 const nickname = interaction.fields.getTextInputValue('ma-nickname-input');
                 const numRolls = interaction.fields.getTextInputValue('ma-numrolls-input');
                 const partyLevel = parseInt(interaction.fields.getTextInputValue('ma-partylevel-input'), 10);
+
+                // Immediately edit the original message to show a "thinking" state
+                await interaction.message.edit({
+                    content: `⚙️ Generating ${numRolls} magic items for a level ${partyLevel} party...`,
+                    embeds: [],
+                    components: []
+                });
 
                 const generator = new MagicItemGenerator({ ...selections, numRolls, partyLevel, nickname });
                 const results = generator.generate();
@@ -1972,29 +1934,21 @@ function formatNpcResult(result) {
                 const thread = await interaction.channel.threads.create({
                     name: threadName,
                     autoArchiveDuration: 60,
-                    startMessage: interaction.message,
+                    startMessage: interaction.message, // This will now point to the "Generating..." message
                 });
 
                 // Hit/Miss Grid
                 const { itemTypes } = require('../features/MagicItemData.js');
                 const gridLabelMap = {
-                    "Reusable Item (Gizmo)": "Giz",
-                    "Single-use Scroll/Tablet": "Scr",
-                    "Glyph/Ward/Trap": "GWT",
-                    "Enchanted Ammunition": "Amm",
-                    "Potion": "Pot",
-                    "Poison, Ingested": "Ing",
-                    "Poison, Inhaled": "Inh",
-                    "Poison, Contact": "Con",
-                    "Poison, Injury": "Inj"
+                    "Reusable Item (Gizmo)": "Giz", "Single-use Scroll/Tablet": "Scr", "Glyph/Ward/Trap": "GWT",
+                    "Enchanted Ammunition": "Amm", "Potion": "Pot", "Poison, Ingested": "Ing",
+                    "Poison, Inhaled": "Inh", "Poison, Contact": "Con", "Poison, Injury": "Inj"
                 };
                 let hitMissGrid = '## Hit/Miss Grid\n`Lvl:  0  1  2  3  4  5  6  7  8  9`\n';
                 const hitSet = new Set(results.hits.map(h => `${h.itemType}-${h.level}`));
                 itemTypes.forEach(type => {
                     let line = `**\`${gridLabelMap[type] || type.substring(0, 3)}\`**:`;
-                    for (let i = 0; i < 10; i++) {
-                        line += hitSet.has(`${type}-${i}`) ? ' ✅' : ' ❌';
-                    }
+                    for (let i = 0; i < 10; i++) { line += hitSet.has(`${type}-${i}`) ? ' ✅' : ' ❌'; }
                     hitMissGrid += line + '\n';
                 });
                 await thread.send(hitMissGrid);
@@ -2002,9 +1956,7 @@ function formatNpcResult(result) {
                 // Generated Items
                 if (results.items.length > 0) {
                     const groupedItems = results.items.reduce((acc, item) => {
-                        if (!acc[item.itemType]) {
-                            acc[item.itemType] = [];
-                        }
+                        if (!acc[item.itemType]) { acc[item.itemType] = []; }
                         acc[item.itemType].push(item);
                         return acc;
                     }, {});
@@ -2015,13 +1967,8 @@ function formatNpcResult(result) {
                         for (const item of groupedItems[itemType]) {
                             let line = `**Lvl ${item.level}**: ${item.spellName}`;
                             if (item.price !== null) {
-                                if (typeof item.price === 'number') {
-                                    line += ` - *${item.price} gp*`;
-                                } else {
-                                    line += ` - *${item.price}*`;
-                                }
+                                line += ` - *${typeof item.price === 'number' ? `${item.price} gp` : item.price}*`;
                             }
-
                             if ((itemsMessage + line + '\n').length > 2000) {
                                 await thread.send(itemsMessage);
                                 itemsMessage = '';
@@ -2036,31 +1983,15 @@ function formatNpcResult(result) {
                     await thread.send("No items were generated based on the rolls.");
                 }
 
-                // Disable buttons on original message
-                const originalMessage = interaction.message;
-                if (originalMessage) {
-                    const originalRows = originalMessage.components;
-                    const row1 = new ActionRowBuilder().addComponents(originalRows[0].components);
-                    const row2 = new ActionRowBuilder().addComponents(originalRows[1].components);
-
-                    const configureButton = new ButtonBuilder()
-                        .setCustomId('ma-configure-button')
-                        .setLabel('Generated')
-                        .setStyle(ButtonStyle.Success)
-                        .setDisabled(true);
-
-                    const cancelButton = new ButtonBuilder()
-                        .setCustomId('ma-cancel-button')
-                        .setLabel('Cancel')
-                        .setStyle(ButtonStyle.Secondary)
-                        .setDisabled(true);
-
-                    const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
-                    await originalMessage.edit({ components: [row1, row2, row3] });
-                }
+                // Edit the original message to the "done" state
+                await interaction.message.edit({
+                    content: `✅ Generation complete! View the ${numRolls} magic items in the new thread: <#${thread.id}>`,
+                });
 
                 maSelections.delete(messageId);
-                await interaction.editReply({ content: `Magic items generated in thread: <#${thread.id}>`, embeds: [], components: [] });
+                // We no longer need to reply to the interaction itself, as we've edited the original message.
+                // We just need to acknowledge the interaction so it doesn't time out.
+                await interaction.deferUpdate();
             }
         }
     });
