@@ -116,15 +116,22 @@ class TdaUiManager {
 
         if (game.state === 'drafting') {
             embed.setTitle('Card Draft');
-            const playersVoted = Array.from(game.draft.playersVoted).map(id => game.players.find(p => p.id === id)?.user.username || 'Unknown');
-            let description = 'Vote for the optional cards you would like to include in the deck.\n\n';
-            description += `**Players Voted:** ${playersVoted.length > 0 ? playersVoted.join(', ') : 'None'}`;
+            const currentPlayer = game.players.find(p => p.id === game.draft.turnOrder[game.draft.currentPlayerIndex]);
+            let description = `Players are taking turns removing optional cards from the deck.\nCards removed so far: ${game.draft.removedCount} / 10.\n\n`;
+            if (currentPlayer) {
+                description += `It is currently **${currentPlayer.user.username}'s** turn to choose a card to remove.`;
+            }
             embed.setDescription(description);
         } else {
             embed.setTitle(`Your Hand | Hoard: ${player.hoard}gp`);
             const hand = player.hand || [];
             if (hand.length > 0) {
-                embed.setDescription(hand.map(c => `• ${c.name} (Str ${c.value})`).join('\n'));
+                // The hand is already sorted by the game manager.
+                embed.setDescription(hand.map(c => {
+                    const alignment = this.manager._getCardAlignment(c);
+                    const emoji = alignment === 'good' ? '😇' : alignment === 'evil' ? '😈' : '🧙';
+                    return `• ${emoji} ${c.name} (Str ${c.value})`;
+                }).join('\n'));
             } else {
                 embed.setDescription('Your hand is empty.');
             }
