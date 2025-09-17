@@ -244,33 +244,33 @@ class ThreeDragonAnteManager {
     }
 
     async handleBuyInModalSubmit(interaction) {
-        // Acknowledge the interaction immediately to prevent a timeout.
-        // The user will see a "thinking" state, which is fine.
-        await interaction.deferUpdate();
+        // Acknowledge the interaction immediately with an ephemeral message.
+        await interaction.reply({ content: 'Starting the game...', ephemeral: true });
 
         const channelId = interaction.customId.split('_')[4];
         const game = this.activeGames.get(channelId);
         if (!game) {
-            await interaction.editReply({ content: "Could not find an active game for this action." });
+            await interaction.followUp({ content: "Could not find an active game for this action.", ephemeral: true });
             return;
         }
 
         const rawBuyIn = parseInt(interaction.fields.getTextInputValue('buy_in_amount'));
         if (isNaN(rawBuyIn) || rawBuyIn <= 0) {
-            await interaction.editReply({ content: 'Please enter a valid, positive number for the buy-in.' });
+            await interaction.followUp({ content: 'Please enter a valid, positive number for the buy-in.', ephemeral: true });
             return;
         }
 
         const buyIn = Math.floor(rawBuyIn / 50) * 50;
         if (buyIn === 0) {
-            await interaction.editReply({ content: 'Buy-in must be at least 50.' });
+            await interaction.followUp({ content: 'Buy-in must be at least 50.', ephemeral: true });
             return;
         }
 
         const scalingFactor = buyIn / 50;
 
-        // Since we deferred, we can no longer use the interaction to update the message.
-        // We must fetch the message and edit it directly.
+        // We have acknowledged the interaction. Now we can do our long-running tasks.
+        // We can no longer use the interaction to update the original lobby message.
+        // We must fetch it and edit it directly.
         try {
             const lobbyMessage = await interaction.channel.messages.fetch(game.lobbyMessageId);
             if (lobbyMessage) {
