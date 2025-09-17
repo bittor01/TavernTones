@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { shell } = require('electron');
 const axios = require('axios');
 const EncounterBuilder = require('../backend/features/EncounterBuilder.js');
@@ -99,7 +99,7 @@ class CommandHandler {
             .setTitle(`Search Results for "${query}"`)
             .setDescription(`I found ${results.length} results. Please select one from the dropdown below.`);
 
-        await message.reply({ embeds: [embed], components: [row] });
+        await message.reply({ embeds: [embed], components: [row], flags: [MessageFlags.Ephemeral] });
     }
 
     async _handleEncounterCreatureSearch(message, results, query) {
@@ -147,7 +147,7 @@ class CommandHandler {
             .setTitle(`Encounter Builder`)
             .setDescription(`Found ${results.length} creatures matching "${query}".\nPlease select a creature and a difficulty, then click "Proceed".`);
 
-        await message.reply({ embeds: [embed], components: [row1, row2, row3] });
+        await message.reply({ embeds: [embed], components: [row1, row2, row3], flags: [MessageFlags.Ephemeral] });
     }
 
     async _handleEncounterTypeSearch(message, type) {
@@ -173,7 +173,7 @@ class CommandHandler {
             .setTitle(`Encounter Builder: ${type}`)
             .setDescription(`Building an encounter with the theme "${type}".\nPlease select a difficulty, then click "Proceed".`);
 
-        await message.reply({ embeds: [embed], components: [row1, row2] });
+        await message.reply({ embeds: [embed], components: [row1, row2], flags: [MessageFlags.Ephemeral] });
     }
 
     async handleMessage(message) {
@@ -697,7 +697,7 @@ class CommandHandler {
                         const row2 = new ActionRowBuilder().addComponents(sizeSelect);
                         const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
 
-                        await message.reply({ embeds: [maEmbed], components: [row1, row2, row3] });
+                        await message.reply({ embeds: [maEmbed], components: [row1, row2, row3], flags: [MessageFlags.Ephemeral] });
                         break;
 
                     case content.includes('!pa'):
@@ -788,7 +788,7 @@ class CommandHandler {
         const row2 = new ActionRowBuilder().addComponents(styleSelect);
         const row3 = new ActionRowBuilder().addComponents(proceedButton);
 
-        await message.reply({ embeds: [embed], components: [row1, row2, row3] });
+        await message.reply({ embeds: [embed], components: [row1, row2, row3], flags: [MessageFlags.Ephemeral] });
     }
 
     async _handleGenerateCharacter(message) {
@@ -855,7 +855,7 @@ class CommandHandler {
 
         const buttonRow = new ActionRowBuilder().addComponents(ideaButton, npcButton);
 
-        const reply = await message.reply({ embeds: [embed], components: [speciesRow, classRow, backgroundRow, buttonRow] });
+        const reply = await message.reply({ embeds: [embed], components: [speciesRow, classRow, backgroundRow, buttonRow], flags: [MessageFlags.Ephemeral] });
 
         // Store the handlers for this message so we can access them in the interaction handler
         this.client.npcDropdownHandlers.set(reply.id, {
@@ -909,7 +909,7 @@ class CommandHandler {
         const row4 = new ActionRowBuilder().addComponents(environmentSelect);
         const row5 = new ActionRowBuilder().addComponents(proceedButton);
 
-        await message.reply({ embeds: [embed], components: [row1, row2, row3, row4, row5] });
+        await message.reply({ embeds: [embed], components: [row1, row2, row3, row4, row5], flags: [MessageFlags.Ephemeral] });
     }
 }
 

@@ -1182,7 +1182,7 @@ client.once('clientReady', async () => {
 
         if (interaction.isButton()) {
             if (interaction.customId === 'trap-proceed-button') {
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
                 const selections = trapSelections.get(interaction.message.id) || {};
                 const trap = await fiveEToolsParser.generateTrap(selections);
 
@@ -1205,7 +1205,7 @@ client.once('clientReady', async () => {
             if (interaction.customId === 'npc-generate-idea') {
                 const selections = npcSelections.get(interaction.message.id) || {};
                 selections.mode = 'idea';
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
                 await _handleNpcGeneration(interaction, selections);
                 npcSelections.delete(interaction.message.id);
                 return;
@@ -1770,11 +1770,11 @@ function formatNpcResult(result) {
 
 
                 if (isNaN(selections.partyLevel) || isNaN(selections.partySize) || selections.partyLevel <= 0 || selections.partySize <= 0) {
-                    await interaction.reply({ content: 'Invalid party level or size. Please provide positive numbers.', ephemeral: true });
+                    await interaction.reply({ content: 'Invalid party level or size. Please provide positive numbers.', flags: [MessageFlags.Ephemeral] });
                     return;
                 }
 
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
                 await _handleNpcGeneration(interaction, selections);
                 npcSelections.delete(messageId);
                 return;
