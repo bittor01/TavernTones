@@ -244,36 +244,42 @@ class ThreeDragonAnteManager {
     }
 
     async handleBuyInModalSubmit(interaction) {
+        // Acknowledge the interaction immediately to prevent a timeout.
+        // The user will see a "thinking" state, which is fine.
+        await interaction.deferUpdate();
+
         const channelId = interaction.customId.split('_')[4];
         const game = this.activeGames.get(channelId);
         if (!game) {
-            return interaction.reply({ content: "Could not find an active game for this action.", ephemeral: true });
+            await interaction.editReply({ content: "Could not find an active game for this action." });
+            return;
         }
 
         const rawBuyIn = parseInt(interaction.fields.getTextInputValue('buy_in_amount'));
         if (isNaN(rawBuyIn) || rawBuyIn <= 0) {
-            return interaction.reply({ content: 'Please enter a valid, positive number for the buy-in.', ephemeral: true });
+            await interaction.editReply({ content: 'Please enter a valid, positive number for the buy-in.' });
+            return;
         }
 
         const buyIn = Math.floor(rawBuyIn / 50) * 50;
         if (buyIn === 0) {
-            return interaction.reply({ content: 'Buy-in must be at least 50.', ephemeral: true });
+            await interaction.editReply({ content: 'Buy-in must be at least 50.' });
+            return;
         }
 
         const scalingFactor = buyIn / 50;
 
+        // Since we deferred, we can no longer use the interaction to update the message.
+        // We must fetch the message and edit it directly.
         try {
             const lobbyMessage = await interaction.channel.messages.fetch(game.lobbyMessageId);
             if (lobbyMessage) {
                 const collector = lobbyMessage.createMessageComponentCollector({ time: 1 });
                 collector.stop('game_started');
-                await interaction.update({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game, true) });
-            } else {
-                await interaction.deferUpdate();
+                await lobbyMessage.edit({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game, true) });
             }
         } catch(e) {
             console.error("TDA: Could not find lobby message to disable components.", e);
-            await interaction.deferUpdate();
         }
 
         game.buyIn = buyIn;
