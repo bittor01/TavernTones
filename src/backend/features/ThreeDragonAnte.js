@@ -244,33 +244,32 @@ class ThreeDragonAnteManager {
     }
 
     async handleBuyInModalSubmit(interaction) {
-        // Acknowledge the interaction immediately with an ephemeral message.
-        await interaction.reply({ content: 'Starting the game...', ephemeral: true });
+        // Defer the reply immediately. This is the most robust way to handle
+        // interactions that might take more than a fraction of a second to process.
+        await interaction.deferReply({ ephemeral: true });
 
         const channelId = interaction.customId.split('_')[4];
         const game = this.activeGames.get(channelId);
         if (!game) {
-            await interaction.followUp({ content: "Could not find an active game for this action.", ephemeral: true });
+            await interaction.editReply({ content: "Error: Could not find an active game for this action." });
             return;
         }
 
         const rawBuyIn = parseInt(interaction.fields.getTextInputValue('buy_in_amount'));
         if (isNaN(rawBuyIn) || rawBuyIn <= 0) {
-            await interaction.followUp({ content: 'Please enter a valid, positive number for the buy-in.', ephemeral: true });
+            await interaction.editReply({ content: 'Error: Please enter a valid, positive number for the buy-in.' });
             return;
         }
 
         const buyIn = Math.floor(rawBuyIn / 50) * 50;
         if (buyIn === 0) {
-            await interaction.followUp({ content: 'Buy-in must be at least 50.', ephemeral: true });
+            await interaction.editReply({ content: 'Error: Buy-in must be at least 50.' });
             return;
         }
 
         const scalingFactor = buyIn / 50;
 
         // We have acknowledged the interaction. Now we can do our long-running tasks.
-        // We can no longer use the interaction to update the original lobby message.
-        // We must fetch it and edit it directly.
         try {
             const lobbyMessage = await interaction.channel.messages.fetch(game.lobbyMessageId);
             if (lobbyMessage) {
@@ -281,6 +280,9 @@ class ThreeDragonAnteManager {
         } catch(e) {
             console.error("TDA: Could not find lobby message to disable components.", e);
         }
+
+        // Now that the heavy lifting is about to start, we can edit the reply to let the user know.
+        await interaction.editReply({ content: 'Starting the game and dealing hands...' });
 
         game.buyIn = buyIn;
         game.scalingFactor = scalingFactor;
