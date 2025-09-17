@@ -1,7 +1,40 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const path = require('path');
+const { createCanvas, loadImage } = require('canvas');
 
 class TdaUiManager {
+    async _createDraftPageImage(draftPage) {
+        if (!draftPage || draftPage.length === 0) return null;
+
+        const cardWidth = 250;
+        const cardHeight = 350;
+        const canvasWidth = cardWidth * draftPage.length;
+        const canvasHeight = cardHeight;
+
+        const canvas = createCanvas(canvasWidth, canvasHeight);
+        const ctx = canvas.getContext('2d');
+
+        for (let i = 0; i < draftPage.length; i++) {
+            const card = draftPage[i];
+            try {
+                const imagePath = path.join(__dirname, '..', '..', '..', 'resources', 'threedragonanteimages', card.image);
+                const image = await loadImage(imagePath);
+                ctx.drawImage(image, i * cardWidth, 0, cardWidth, cardHeight);
+            } catch (error) {
+                console.error(`TDA UI Error: Could not load image for ${card.name}: ${error.message}`);
+                // Draw a placeholder if image fails to load
+                ctx.fillStyle = '#2C2F33'; // Discord grey
+                ctx.fillRect(i * cardWidth, 0, cardWidth, cardHeight);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '20px Sans';
+                ctx.textAlign = 'center';
+                ctx.fillText(card.name, i * cardWidth + cardWidth / 2, canvasHeight / 2);
+                ctx.fillText('(Image not found)', i * cardWidth + cardWidth / 2, canvasHeight / 2 + 25);
+            }
+        }
+
+        return canvas.toBuffer('image/png');
+    }
     constructor(client) {
         this.client = client;
         this.manager = null; // Will be set by CommandHandler
@@ -154,13 +187,32 @@ class TdaUiManager {
             const anteEmbed = this._createAnteEmbed(game);
             const playerFlightEmbed = this._createPlayerFlightEmbed(game, player);
             const playerActionEmbed = this._createPlayerActionEmbed(game, player);
+            const components = this.getComponentsForState(game, player);
+            let files = [];
+
+            const isMyTurnInDraft = game.state === 'drafting' && game.draft.turnOrder[game.draft.currentPlayerIndex] === player.id;
+            if (isMyTurnInDraft) {
+                const page = player.draftPage || 0;
+                const cardsPerPage = 5;
+                const startIndex = page * cardsPerPage;
+                const draftPage = game.draft.options.slice(startIndex, startIndex + cardsPerPage);
+
+                if (draftPage.length > 0) {
+                    const imageBuffer = await this._createDraftPageImage(draftPage);
+                    if (imageBuffer) {
+                        files.push({ attachment: imageBuffer, name: 'draft_page.png' });
+                        playerActionEmbed.setImage('attachment://draft_page.png');
+                    }
+                }
+            }
+
 
             try {
                 player.board.logMessage = await dmChannel.send({ embeds: [logEmbed] });
                 player.board.opponentMessages = await Promise.all(opponentEmbeds.map(e => dmChannel.send({ embeds: [e] })));
                 player.board.anteMessage = await dmChannel.send({ embeds: [anteEmbed] });
                 player.board.playerFlightMessage = await dmChannel.send({ embeds: [playerFlightEmbed] });
-                player.board.playerActionMessage = await dmChannel.send({ embeds: [playerActionEmbed], components: this.getComponentsForState(game, player) });
+                player.board.playerActionMessage = await dmChannel.send({ embeds: [playerActionEmbed], components, files });
             } catch (error) {
                 console.error(`Could not send game board to ${player.user.username}`, error);
             }
@@ -169,30 +221,53 @@ class TdaUiManager {
 
     async renderBoard(game) {
         for (const player of game.players) {
-            if (!player.dmChannel || !player.board) continue;
-            try {
-                const logEmbed = this._createLogEmbed(game);
-                await player.board.logMessage.edit({ embeds: [logEmbed] });
+            await this.renderPlayer(game, player);
+        }
+    }
 
-                const opponents = game.players.filter(p => p.id !== player.id);
-                for(let i = 0; i < opponents.length; i++) {
-                    const opponentEmbed = this._createOpponentEmbed(game, opponents[i]);
-                    if (player.board.opponentMessages[i]) {
-                        await player.board.opponentMessages[i].edit({ embeds: [opponentEmbed] });
+    async renderPlayer(game, player) {
+        if (!player.dmChannel || !player.board) return;
+        try {
+            const logEmbed = this._createLogEmbed(game);
+            await player.board.logMessage.edit({ embeds: [logEmbed] });
+
+            const opponents = game.players.filter(p => p.id !== player.id);
+            for (let i = 0; i < opponents.length; i++) {
+                const opponentEmbed = this._createOpponentEmbed(game, opponents[i]);
+                if (player.board.opponentMessages[i]) {
+                    await player.board.opponentMessages[i].edit({ embeds: [opponentEmbed] });
+                }
+            }
+
+            const anteEmbed = this._createAnteEmbed(game);
+            await player.board.anteMessage.edit({ embeds: [anteEmbed] });
+
+            const playerFlightEmbed = this._createPlayerFlightEmbed(game, player);
+            await player.board.playerFlightMessage.edit({ embeds: [playerFlightEmbed] });
+
+            const playerActionEmbed = this._createPlayerActionEmbed(game, player);
+            const components = this.getComponentsForState(game, player);
+            let files = [];
+
+            const isMyTurnInDraft = game.state === 'drafting' && game.draft.turnOrder[game.draft.currentPlayerIndex] === player.id;
+            if (isMyTurnInDraft) {
+                const page = player.draftPage || 0;
+                const cardsPerPage = 5;
+                const startIndex = page * cardsPerPage;
+                const draftPage = game.draft.options.slice(startIndex, startIndex + cardsPerPage);
+
+                if (draftPage.length > 0) {
+                    const imageBuffer = await this._createDraftPageImage(draftPage);
+                    if (imageBuffer) {
+                        files.push({ attachment: imageBuffer, name: 'draft_page.png' });
+                        playerActionEmbed.setImage('attachment://draft_page.png');
                     }
                 }
-
-                const anteEmbed = this._createAnteEmbed(game);
-                await player.board.anteMessage.edit({ embeds: [anteEmbed] });
-
-                const playerFlightEmbed = this._createPlayerFlightEmbed(game, player);
-                await player.board.playerFlightMessage.edit({ embeds: [playerFlightEmbed] });
-
-                const playerActionEmbed = this._createPlayerActionEmbed(game, player);
-                await player.board.playerActionMessage.edit({ embeds: [playerActionEmbed], components: this.getComponentsForState(game, player) });
-            } catch(error) {
-                console.error(`Failed to render board for ${player.user.username}`, error);
             }
+
+            await player.board.playerActionMessage.edit({ embeds: [playerActionEmbed], components, files });
+        } catch (error) {
+            console.error(`Failed to render board for ${player.user.username}`, error);
         }
     }
 
@@ -240,24 +315,18 @@ class TdaUiManager {
         if (cardRow.components.length > 0) components.push(cardRow);
 
         if (game.draft.options.length > cardsPerPage) {
-            const navRow = new ActionRowBuilder();
-            if (page > 0) {
-                navRow.addComponents(
+            const navRow = new ActionRowBuilder()
+                .addComponents(
                     new ButtonBuilder()
                         .setCustomId('tda_draft_page_prev')
                         .setLabel('Previous')
-                        .setStyle(ButtonStyle.Secondary)
-                );
-            }
-            if (endIndex < game.draft.options.length) {
-                navRow.addComponents(
+                        .setStyle(ButtonStyle.Secondary),
                     new ButtonBuilder()
                         .setCustomId('tda_draft_page_next')
                         .setLabel('Next')
                         .setStyle(ButtonStyle.Secondary)
                 );
-            }
-            if (navRow.components.length > 0) components.push(navRow);
+            components.push(navRow);
         }
 
         return components;
@@ -311,23 +380,17 @@ class TdaUiManager {
         components.push(cardRow);
 
         if (player.hand.length > cardsPerPage) {
-            const navRow = new ActionRowBuilder();
-            if (page > 0) {
-                navRow.addComponents(
+            const navRow = new ActionRowBuilder()
+                .addComponents(
                     new ButtonBuilder()
                         .setCustomId('tda_play_page_prev')
                         .setLabel('Previous')
-                        .setStyle(ButtonStyle.Secondary)
-                );
-            }
-            if (endIndex < player.hand.length) {
-                navRow.addComponents(
+                        .setStyle(ButtonStyle.Secondary),
                     new ButtonBuilder()
                         .setCustomId('tda_play_page_next')
                         .setLabel('Next')
                         .setStyle(ButtonStyle.Secondary)
                 );
-            }
             components.push(navRow);
         }
 
@@ -360,23 +423,17 @@ class TdaUiManager {
         components.push(cardRow);
 
         if (player.hand.length > cardsPerPage) {
-            const navRow = new ActionRowBuilder();
-            if (page > 0) {
-                navRow.addComponents(
+            const navRow = new ActionRowBuilder()
+                .addComponents(
                     new ButtonBuilder()
                         .setCustomId('tda_ante_page_prev')
                         .setLabel('Previous')
-                        .setStyle(ButtonStyle.Secondary)
-                );
-            }
-            if (endIndex < player.hand.length) {
-                navRow.addComponents(
+                        .setStyle(ButtonStyle.Secondary),
                     new ButtonBuilder()
                         .setCustomId('tda_ante_page_next')
                         .setLabel('Next')
                         .setStyle(ButtonStyle.Secondary)
                 );
-            }
             components.push(navRow);
         }
 

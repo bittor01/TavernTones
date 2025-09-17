@@ -1445,20 +1445,12 @@ client.once('clientReady', async () => {
                     }
                     if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
 
-                    const context = interaction.customId.split('_')[1];
-                    const direction = interaction.customId.split('_')[3];
-                    const pageProp = context === 'draft' ? 'draftPage' : 'handPage';
-
-                    if (player[pageProp] === undefined) player[pageProp] = 0;
-
-                    if (direction === 'next') {
-                        player[pageProp]++;
-                    } else if (direction === 'prev' && player[pageProp] > 0) {
-                        player[pageProp]--;
-                    }
+                    const context = interaction.customId.split('_')[1]; // e.g., 'draft', 'ante', 'play'
+                    const direction = interaction.customId.split('_')[3]; // 'prev' or 'next'
 
                     await interaction.deferUpdate();
-                    await client.commandHandler.tdaManager.ui.renderBoard(game);
+                    // Delegate the logic to the game manager
+                    await client.commandHandler.tdaManager.handlePagination(game, player, context, direction);
                     return;
                 }
                 if (interaction.customId.startsWith('tda_ante_')) {
