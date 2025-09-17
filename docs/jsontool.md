@@ -1,8 +1,8 @@
-# Gamified JSON Editing Tool
+# JSON Gamify Tool Documentation
 
-This document explains how to configure and create new tasks for the Gamified JSON Editing Tool.
+This document describes the JSON Gamify Tool feature of the TavernTones application.
 
-## Task File Structure
+## How to Configure New Tasks
 
 The tool is driven by a JSON "task file". This file tells the tool which source files to process and keeps track of your progress. To create a new task, you need to create a JSON file with the following structure:
 

@@ -1,6 +1,6 @@
 # 5eTools Data Overview
 
-This document provides an overview of the JSON data files located in the `reference/5etoolsdata/` directory. It describes the purpose of each major file and explores potential new features and tools that could be built using this data.
+This document provides an overview of the JSON data files located in the `resources/5etoolsdata/` directory. It describes the purpose of each major file and explores potential new features and tools that could be built using this data.
 
 ---
 

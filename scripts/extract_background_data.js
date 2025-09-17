@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const backgroundsFilePath = path.join(__dirname, 'reference/5etoolsdata/backgrounds.json');
-const outputDir = path.join(__dirname, 'randomtables/origin');
+const backgroundsFilePath = path.join(__dirname, '../resources/5etoolsdata/backgrounds.json');
+const outputDir = path.join(__dirname, '../randomtables/origin');
 
 if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });

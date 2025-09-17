@@ -1,14 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { shell } = require('electron');
 const axios = require('axios');
-const EncounterBuilder = require('./EncounterBuilder.js');
-const VehicleEncounterBuilder = require('./VehicleEncounterBuilder.js');
-const NpcGenerator = require('./NpcGenerator.js');
+const EncounterBuilder = require('../backend/features/EncounterBuilder.js');
+const VehicleEncounterBuilder = require('../backend/features/VehicleEncounterBuilder.js');
+const NpcGenerator = require('../backend/features/NpcGenerator.js');
 const DropdownHandler = require('./DropdownHandler.js');
-const ThreeDragonAnteManager = require('./ThreeDragonAnte.js');
+const ThreeDragonAnteManager = require('../backend/features/ThreeDragonAnte.js');
 
 // These will be initialized in the constructor
 let logToRenderer;
@@ -376,7 +376,7 @@ class CommandHandler {
 
                     case content.startsWith('!su'):
                         logToRenderer('Surge command detected');
-                        const surgeFilePath = path.join(__dirname, 'randomtables/surge.json');
+                        const surgeFilePath = path.join(__dirname, '../../randomtables/surge.json');
                         const surgeData = JSON.parse(fs.readFileSync(surgeFilePath, 'utf8'));
                         const surgeEffect = getRandomEffect(surgeData, userId);
                         if (surgeEffect) {
@@ -400,7 +400,7 @@ class CommandHandler {
 
                     case content.includes('!sh'):
                         logToRenderer('Shield command detected');
-                        const shieldFilePath = path.join(__dirname, 'randomtables/shield.json');
+                        const shieldFilePath = path.join(__dirname, '../../randomtables/shield.json');
                         const shieldData = JSON.parse(fs.readFileSync(shieldFilePath, 'utf8'));
                         const shieldEffect = getRandomEffect(shieldData, userId);
                         if (shieldEffect) {
@@ -914,7 +914,7 @@ class CommandHandler {
 }
 
 function getValidTableFolders() {
-    const randomTablesPath = path.join(__dirname, 'randomtables');
+    const randomTablesPath = path.join(__dirname, '../../randomtables');
     try {
         const allEntries = fs.readdirSync(randomTablesPath, { withFileTypes: true });
         const directories = allEntries
@@ -929,7 +929,7 @@ function getValidTableFolders() {
 }
 
 async function rollFromTable(folderName, tablesConfig, channelId) {
-    const encounterTablesFolder = path.join(__dirname, 'randomtables', folderName);
+    const encounterTablesFolder = path.join(__dirname, '../../randomtables', folderName);
 
     // 1. Path Generation (done implicitly in step 2)
     // 2. File Existence Check
