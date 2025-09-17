@@ -177,7 +177,7 @@ class ThreeDragonAnteManager {
 
             if (i.customId === 'tda_join') {
                 if (isPlayerInGame) return i.reply({ content: 'You are already in the game.', ephemeral: true });
-                game.players.push({ id: i.user.id, user: i.user, specialAbility: null });
+                game.players.push({ id: i.user.id, user: i.user, specialAbility: null, flight: [] });
             } else if (i.customId === 'tda_leave') {
                 if (!isPlayerInGame) return i.reply({ content: 'You are not in this game.', ephemeral: true });
                 game.players = game.players.filter(p => p.id !== i.user.id);
