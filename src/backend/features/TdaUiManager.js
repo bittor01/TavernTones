@@ -24,10 +24,25 @@ class TdaUiManager {
     // --- Embed Generation ---
 
     _createLogEmbed(game) {
-        return new EmbedBuilder()
+        const embed = new EmbedBuilder()
             .setTitle('Game Log')
             .setColor(0xaaaaaa)
             .setDescription(game.gambit.log.slice(-10).join('\n') || 'Log is empty.');
+
+        if (game.turnExpiresAt) {
+            const secondsRemaining = Math.round((game.turnExpiresAt - Date.now()) / 1000);
+            let currentPlayer;
+            if (game.state === 'drafting') {
+                currentPlayer = game.players.find(p => p.id === game.draft.turnOrder[game.draft.currentPlayerIndex]);
+            } else if (game.gambit?.turnOrder) {
+                currentPlayer = game.gambit.turnOrder[game.gambit.currentPlayerIndex];
+            }
+
+            if (currentPlayer) {
+                embed.setFooter({ text: `Your turn, ${currentPlayer.user.username}! Time remaining: ${secondsRemaining}s` });
+            }
+        }
+        return embed;
     }
 
     _createOpponentEmbed(game, opponent) {
@@ -115,9 +130,6 @@ class TdaUiManager {
             }
         }
 
-        const currentPlayer = game.gambit?.turnOrder ? game.gambit.turnOrder[game.gambit.currentPlayerIndex] : null;
-        const footerText = currentPlayer ? `Turn: ${game.state} | Current Player: ${currentPlayer.user.username}` : `Turn: ${game.state}`;
-        embed.setFooter({ text: footerText });
         return embed;
     }
 
@@ -196,64 +208,50 @@ class TdaUiManager {
     }
 
     getDraftComponents(game, player) {
-        if (game.draft.playersVoted.has(player.id)) {
-            return []; // Player has already voted
-        }
+        const isMyTurn = game.draft.turnOrder[game.draft.currentPlayerIndex] === player.id;
+        if (!isMyTurn) return [];
 
-        const CARDS_PER_PAGE = 20;
         const page = player.draftPage || 0;
-        const startIndex = page * CARDS_PER_PAGE;
-        const endIndex = startIndex + CARDS_PER_PAGE;
-        const pageOptions = game.draft.options.slice(startIndex, endIndex);
+        const cardsPerPage = 5;
+        const startIndex = page * cardsPerPage;
+        const endIndex = startIndex + cardsPerPage;
+        const draftPage = game.draft.options.slice(startIndex, endIndex);
 
-        const options = pageOptions.map(card => ({
-            label: card.name,
-            description: `(Str ${card.value}) ${card.effect}`.substring(0, 100),
-            value: card.image,
-        }));
-
-        const selectMenu = new StringSelectMenuBuilder()
-            .setCustomId(`tda_draft_vote_select_${game.channelId}_${player.id}`)
-            .setPlaceholder(`Select cards to vote for (Page ${page + 1})`)
-            .setMinValues(0)
-            .setMaxValues(options.length)
-            .addOptions(options);
-
-        const row1 = new ActionRowBuilder().addComponents(selectMenu);
-        const components = [row1];
-
-        const row2 = new ActionRowBuilder();
-        if (page > 0) {
-            row2.addComponents(
+        const components = [];
+        const cardRow = new ActionRowBuilder();
+        draftPage.forEach((card, index) => {
+            const alignment = this.manager._getCardAlignment(card);
+            const emoji = alignment === 'good' ? '😇' : alignment === 'evil' ? '😈' : '🧙';
+            cardRow.addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`tda_draft_page_${page - 1}`)
-                    .setLabel('Previous Page')
-                    .setStyle(ButtonStyle.Secondary)
+                    .setCustomId(`tda_draft_remove_${card.image}`)
+                    .setLabel(`${card.name} (Str ${card.value})`)
+                    .setEmoji(emoji)
+                    .setStyle(ButtonStyle.Danger)
             );
-        }
-        if (endIndex < game.draft.options.length) {
-            row2.addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`tda_draft_page_${page + 1}`)
-                    .setLabel('Next Page')
-                    .setStyle(ButtonStyle.Secondary)
-            );
-        }
+        });
+        if (cardRow.components.length > 0) components.push(cardRow);
 
-        // Add a submit button, but only if there are buttons in the pagination row, or if it's the only row.
-        // A separate row for the submit button is cleaner.
-        const row3 = new ActionRowBuilder();
-        row3.addComponents(
-            new ButtonBuilder()
-                .setCustomId('tda_draft_vote_submit')
-                .setLabel('Submit Votes')
-                .setStyle(ButtonStyle.Success)
-        );
-
-        if (row2.components.length > 0) {
-            components.push(row2);
+        if (game.draft.options.length > cardsPerPage) {
+            const navRow = new ActionRowBuilder();
+            if (page > 0) {
+                navRow.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('tda_draft_page_prev')
+                        .setLabel('Previous')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+            }
+            if (endIndex < game.draft.options.length) {
+                navRow.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('tda_draft_page_next')
+                        .setLabel('Next')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+            }
+            if (navRow.components.length > 0) components.push(navRow);
         }
-        components.push(row3);
 
         return components;
     }
@@ -265,9 +263,13 @@ class TdaUiManager {
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
-                    .setCustomId('tda_continue_ready')
-                    .setLabel('Ready for Next Gambit')
+                    .setCustomId('tda_continue_same_deck')
+                    .setLabel('Play Again (Same Deck)')
                     .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId('tda_continue_new_deck')
+                    .setLabel('Play Again (New Deck)')
+                    .setStyle(ButtonStyle.Primary),
                 new ButtonBuilder()
                     .setCustomId('tda_continue_leave')
                     .setLabel('Leave Game')
@@ -277,44 +279,105 @@ class TdaUiManager {
     }
 
     getPlayCardComponents(game, player, isMyTurn) {
-        if (!isMyTurn || player.hand.length === 0) return [];
+        if (!isMyTurn || !player.hand || player.hand.length === 0) return [];
 
-        const rows = [];
-        let currentRow = new ActionRowBuilder();
-        player.hand.forEach((card, index) => {
-            if (currentRow.components.length >= 5) {
-                rows.push(currentRow);
-                currentRow = new ActionRowBuilder();
-            }
-            currentRow.addComponents(
+        const page = player.handPage || 0;
+        const cardsPerPage = 5;
+        const startIndex = page * cardsPerPage;
+        const endIndex = startIndex + cardsPerPage;
+        const handPage = player.hand.slice(startIndex, endIndex);
+
+        const components = [];
+        const cardRow = new ActionRowBuilder();
+        handPage.forEach((card, index) => {
+            const cardIndex = startIndex + index;
+            const alignment = this.manager._getCardAlignment(card);
+            const emoji = alignment === 'good' ? '😇' : alignment === 'evil' ? '😈' : '🧙';
+            cardRow.addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`tda_play_${index}`)
-                    .setLabel(card.name)
+                    .setCustomId(`tda_play_${cardIndex}`)
+                    .setLabel(`${card.name} (Str ${card.value})`)
+                    .setEmoji(emoji)
                     .setStyle(ButtonStyle.Primary)
             );
         });
-        if (currentRow.components.length > 0) rows.push(currentRow);
-        return rows;
+        components.push(cardRow);
+
+        if (player.hand.length > cardsPerPage) {
+            const navRow = new ActionRowBuilder();
+            if (page > 0) {
+                navRow.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('tda_play_page_prev')
+                        .setLabel('Previous')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+            }
+            if (endIndex < player.hand.length) {
+                navRow.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('tda_play_page_next')
+                        .setLabel('Next')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+            }
+            components.push(navRow);
+        }
+
+        return components;
     }
 
     getAnteComponents(game, player) {
-        if (player.anteCard || player.hand.length === 0) return []; // Already anted or no cards to ante
+        if (player.anteCard || !player.hand || player.hand.length === 0) return [];
 
-        const options = player.hand.map((card, index) => ({
-            label: `${card.name} (Str ${card.value})`,
-            description: `Pay ${card.value * game.scalingFactor}gp to the stakes`,
-            value: index.toString()
-        }));
+        const page = player.handPage || 0;
+        const cardsPerPage = 5;
+        const startIndex = page * cardsPerPage;
+        const endIndex = startIndex + cardsPerPage;
+        const handPage = player.hand.slice(startIndex, endIndex);
 
-        const menu = new StringSelectMenuBuilder()
-            .setCustomId('tda_ante_select')
-            .setPlaceholder('Choose a card to ante')
-            .addOptions(options.slice(0, 25)); // Max 25 options
+        const components = [];
+        const cardRow = new ActionRowBuilder();
+        handPage.forEach((card, index) => {
+            const cardIndex = startIndex + index;
+            const alignment = this.manager._getCardAlignment(card);
+            const emoji = alignment === 'good' ? '😇' : alignment === 'evil' ? '😈' : '🧙';
+            cardRow.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`tda_ante_${cardIndex}`)
+                    .setLabel(`${card.name} (Str ${card.value})`)
+                    .setEmoji(emoji)
+                    .setStyle(ButtonStyle.Primary)
+            );
+        });
+        components.push(cardRow);
 
-        return [new ActionRowBuilder().addComponents(menu)];
+        if (player.hand.length > cardsPerPage) {
+            const navRow = new ActionRowBuilder();
+            if (page > 0) {
+                navRow.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('tda_ante_page_prev')
+                        .setLabel('Previous')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+            }
+            if (endIndex < player.hand.length) {
+                navRow.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('tda_ante_page_next')
+                        .setLabel('Next')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+            }
+            components.push(navRow);
+        }
+
+        return components;
     }
 
     async promptBlueDragonChoice(game, player) {
+        this.manager._startTurnTimer(game, player);
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -335,6 +398,7 @@ class TdaUiManager {
     }
 
     async promptGreenDragonChoice(game, originalPlayer, nextPlayer, availableCards) {
+        this.manager._startTurnTimer(game, nextPlayer);
         const components = [];
         const goldAmount = 5 * game.scalingFactor;
 
@@ -371,6 +435,7 @@ class TdaUiManager {
     }
 
     async promptBrassDragonChoice(game, originalPlayer, lastPlayer, availableCards) {
+        this.manager._startTurnTimer(game, lastPlayer);
         const components = [];
         const goldAmount = 5 * game.scalingFactor;
 
@@ -406,6 +471,7 @@ class TdaUiManager {
         });
     }
     async promptKoboldChoice(game, player) {
+        this.manager._startTurnTimer(game, player);
         const dmChannel = await this._getDmChannel(player.id);
         if (!dmChannel) return;
 
@@ -446,6 +512,7 @@ class TdaUiManager {
     }
 
     async promptSorcererChoice(game, player, revealedCardData) {
+        this.manager._startTurnTimer(game, player);
         const dmChannel = await this._getDmChannel(player.id);
         if (!dmChannel) return;
 
@@ -486,6 +553,7 @@ class TdaUiManager {
     }
 
     async promptTargetPlayer(game, player, targets, reason) {
+        this.manager._startTurnTimer(game, player);
         const dmChannel = await this._getDmChannel(player.id);
         if (!dmChannel) return;
 

@@ -1283,17 +1283,6 @@ client.once('clientReady', async () => {
 
             // TDA Handlers
             if (customId.startsWith('tda_')) {
-                if (customId.startsWith('tda_draft_vote_select_')) {
-                    const [_, __, ___, ____, channelId, playerId] = customId.split('_');
-                    const game = client.commandHandler.tdaManager.activeGames.get(channelId);
-                    if (!game || game.players.find(p => p.id === interaction.user.id)?.id !== playerId) {
-                        return interaction.reply({ content: 'This is not a valid choice for you.', ephemeral: true });
-                    }
-                    const player = game.players.find(p => p.id === playerId);
-                    await client.commandHandler.tdaManager.handleDraftSelection(game, player, interaction.values);
-                    await interaction.reply({ content: `You have selected ${interaction.values.length} card(s). Click "Submit Votes" to confirm.`, ephemeral: true });
-                    return;
-                }
                 if (customId.startsWith('tda_target_player_')) {
                     const [_, __, ___, channelId, playerId] = customId.split('_');
                     const game = client.commandHandler.tdaManager.activeGames.get(channelId);
@@ -1448,33 +1437,57 @@ client.once('clientReady', async () => {
         if (interaction.isButton()) {
             // TDA Handlers
             if (interaction.customId.startsWith('tda_')) {
-                if (interaction.customId.startsWith('tda_draft_page_')) {
-                    const page = parseInt(interaction.customId.split('_')[3], 10);
+                if (interaction.customId.includes('_page_')) {
                     let game, player;
                     for (const g of client.commandHandler.tdaManager.activeGames.values()) {
                         const p = g.players.find(p => p.id === interaction.user.id);
                         if (p) { game = g; player = p; break; }
                     }
                     if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+                    const context = interaction.customId.split('_')[1];
+                    const direction = interaction.customId.split('_')[3];
+                    const pageProp = context === 'draft' ? 'draftPage' : 'handPage';
+
+                    if (player[pageProp] === undefined) player[pageProp] = 0;
+
+                    if (direction === 'next') {
+                        player[pageProp]++;
+                    } else if (direction === 'prev' && player[pageProp] > 0) {
+                        player[pageProp]--;
+                    }
+
                     await interaction.deferUpdate();
-                    await client.commandHandler.tdaManager.handleDraftPagination(game, player, page);
+                    await client.commandHandler.tdaManager.ui.renderBoard(game);
                     return;
                 }
-                if (interaction.customId === 'tda_draft_vote_submit') {
+                if (interaction.customId.startsWith('tda_ante_')) {
+                    const cardIndex = parseInt(interaction.customId.split('_')[2], 10);
                     let game, player;
                     for (const g of client.commandHandler.tdaManager.activeGames.values()) {
                         const p = g.players.find(p => p.id === interaction.user.id);
                         if (p) { game = g; player = p; break; }
                     }
                     if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-                    if (game.state !== 'drafting') {
-                        return interaction.reply({ content: 'It is not time to vote.', ephemeral: true });
-                    }
-                    await interaction.update({ content: 'Your vote has been submitted!', components: [] });
-                    await client.commandHandler.tdaManager.handleDraftVote(game, player);
+
+                    await interaction.deferUpdate();
+                    await client.commandHandler.tdaManager.handleAnte(game, player, cardIndex);
                     return;
                 }
-                if (interaction.customId === 'tda_continue_ready' || interaction.customId === 'tda_continue_leave') {
+                if (interaction.customId.startsWith('tda_draft_remove_')) {
+                    const cardImage = interaction.customId.replace('tda_draft_remove_', '');
+                    let game, player;
+                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                        const p = g.players.find(p => p.id === interaction.user.id);
+                        if (p) { game = g; player = p; break; }
+                    }
+                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+                    await interaction.deferUpdate();
+                    await client.commandHandler.tdaManager.handleDraftCardRemoval(game, player, cardImage);
+                    return;
+                }
+                if (interaction.customId.startsWith('tda_continue_')) {
                     let game, player;
                     for (const g of client.commandHandler.tdaManager.activeGames.values()) {
                         const p = g.players.find(p => p.id === interaction.user.id);
@@ -1484,7 +1497,7 @@ client.once('clientReady', async () => {
                     if (game.state !== 'continue') {
                         return interaction.reply({ content: 'It is not time to make this choice.', ephemeral: true });
                     }
-                    const choice = interaction.customId === 'tda_continue_ready' ? 'ready' : 'leave';
+                    const choice = interaction.customId.replace('tda_continue_', '');
                     await interaction.deferUpdate();
                     await client.commandHandler.tdaManager.handleContinueChoice(game, player, choice);
                     return;
