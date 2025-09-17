@@ -244,42 +244,53 @@ class ThreeDragonAnteManager {
     }
 
     async handleBuyInModalSubmit(interaction) {
+        // Defer the reply immediately. This is the most robust way to handle
+        // interactions that might take more than a fraction of a second to process.
+        await interaction.deferReply({ ephemeral: true });
+
         const channelId = interaction.customId.split('_')[4];
         const game = this.activeGames.get(channelId);
         if (!game) {
-            return interaction.reply({ content: "Could not find an active game for this action.", ephemeral: true });
+            await interaction.editReply({ content: "Error: Could not find an active game for this action." });
+            return;
         }
 
         const rawBuyIn = parseInt(interaction.fields.getTextInputValue('buy_in_amount'));
         if (isNaN(rawBuyIn) || rawBuyIn <= 0) {
-            return interaction.reply({ content: 'Please enter a valid, positive number for the buy-in.', ephemeral: true });
+            await interaction.editReply({ content: 'Error: Please enter a valid, positive number for the buy-in.' });
+            return;
         }
 
         const buyIn = Math.floor(rawBuyIn / 50) * 50;
         if (buyIn === 0) {
-            return interaction.reply({ content: 'Buy-in must be at least 50.', ephemeral: true });
+            await interaction.editReply({ content: 'Error: Buy-in must be at least 50.' });
+            return;
         }
 
         const scalingFactor = buyIn / 50;
 
+        // We have acknowledged the interaction. Now we can do our long-running tasks.
         try {
             const lobbyMessage = await interaction.channel.messages.fetch(game.lobbyMessageId);
             if (lobbyMessage) {
                 const collector = lobbyMessage.createMessageComponentCollector({ time: 1 });
                 collector.stop('game_started');
-                await interaction.update({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game, true) });
-            } else {
-                await interaction.deferUpdate();
+                await lobbyMessage.edit({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game, true) });
             }
         } catch(e) {
             console.error("TDA: Could not find lobby message to disable components.", e);
-            await interaction.deferUpdate();
         }
+
+        // Now that the heavy lifting is about to start, we can edit the reply to let the user know.
+        await interaction.editReply({ content: 'Starting the game and dealing hands...' });
 
         game.buyIn = buyIn;
         game.scalingFactor = scalingFactor;
         game.state = 'starting';
         game.players.forEach(p => { p.hoard = buyIn; });
+
+        // Initialize the gambit object so the UI has a log to read from.
+        game.gambit = { log: [] };
 
         await this.ui.createGameBoard(game);
         await this._startDraft(game);
