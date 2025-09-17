@@ -1042,6 +1042,26 @@ client.once('clientReady', async () => {
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
     client.on('interactionCreate', async interaction => {
+        // Add this inside the if (interaction.isStringSelectMenu()) { ... } block
+        if (interaction.customId.startsWith('tda_draft_vote_')) {
+            const [_, __, ___, channelId, playerId] = interaction.customId.split('_');
+            const game = client.commandHandler.tdaManager.activeGames.get(channelId);
+            
+            if (!game || game.players.find(p => p.id === interaction.user.id)?.id !== playerId) {
+                return interaction.reply({ content: 'This is not a valid choice for you.', ephemeral: true });
+            }
+            
+            if (game.state !== 'drafting') {
+                return interaction.reply({ content: 'It is not time to vote.', ephemeral: true });
+            }
+
+            const player = game.players.find(p => p.id === playerId);
+            const votedCardImages = interaction.values;
+
+            await interaction.update({ content: 'Your vote has been submitted!', components: [] });
+            await client.commandHandler.tdaManager.handleDraftVote(game, player, votedCardImages);
+            return;
+        }
         // Add this inside the if (interaction.isButton()) { ... } block
         if (interaction.customId === 'tda_continue_ready' || interaction.customId === 'tda_continue_leave') {
             let game, player;
