@@ -31,8 +31,9 @@ class TdaUiManager {
     }
 
     _createOpponentEmbed(game, opponent) {
-        const flightValue = opponent.flight.reduce((sum, card) => sum + card.value, 0);
-        const handEmoji = '🃏'.repeat(opponent.hand.length) + '⬛'.repeat(10 - opponent.hand.length);
+        const flightValue = (opponent.flight || []).reduce((sum, card) => sum + card.value, 0);
+        const hand = opponent.hand || [];
+        const handEmoji = '🃏'.repeat(hand.length) + '⬛'.repeat(10 - hand.length);
 
         const embed = new EmbedBuilder()
             .setTitle(opponent.user.username)
@@ -79,7 +80,7 @@ class TdaUiManager {
     }
 
     _createPlayerFlightEmbed(game, player) {
-        const flightValue = player.flight.reduce((sum, card) => sum + card.value, 0);
+        const flightValue = (player.flight || []).reduce((sum, card) => sum + card.value, 0);
         const embed = new EmbedBuilder()
             .setTitle(`Your Flight (Value: ${flightValue})`)
             .setColor(0x57F287);
