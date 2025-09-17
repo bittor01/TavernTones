@@ -281,6 +281,9 @@ class ThreeDragonAnteManager {
         game.state = 'starting';
         game.players.forEach(p => { p.hoard = buyIn; });
 
+        // Initialize the gambit object so the UI has a log to read from.
+        game.gambit = { log: [] };
+
         await this.ui.createGameBoard(game);
         await this._startDraft(game);
     }
