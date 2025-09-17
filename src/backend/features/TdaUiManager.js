@@ -31,8 +31,9 @@ class TdaUiManager {
     }
 
     _createOpponentEmbed(game, opponent) {
-        const flightValue = (opponent.flight || []).reduce((sum, card) => sum + card.value, 0);
+        const flight = opponent.flight || [];
         const hand = opponent.hand || [];
+        const flightValue = flight.reduce((sum, card) => sum + card.value, 0);
         const handEmoji = '🃏'.repeat(hand.length) + '⬛'.repeat(10 - hand.length);
 
         const embed = new EmbedBuilder()
@@ -40,12 +41,12 @@ class TdaUiManager {
             .setColor(0x5865F2)
             .addFields(
                 { name: 'Hoard', value: `${opponent.hoard}gp`, inline: true },
-                { name: 'Hand', value: `${handEmoji} (${opponent.hand.length})`, inline: true },
+                { name: 'Hand', value: `${handEmoji} (${hand.length})`, inline: true },
                 { name: 'Flight Value', value: flightValue.toString(), inline: true }
             );
 
-        if (opponent.flight.length > 0) {
-            embed.addFields({ name: 'Flight', value: opponent.flight.map(c => c.name).join(', ') });
+        if (flight.length > 0) {
+            embed.addFields({ name: 'Flight', value: flight.map(c => c.name).join(', ') });
         } else {
             embed.addFields({ name: 'Flight', value: '(empty)' });
         }
@@ -80,13 +81,14 @@ class TdaUiManager {
     }
 
     _createPlayerFlightEmbed(game, player) {
-        const flightValue = (player.flight || []).reduce((sum, card) => sum + card.value, 0);
+        const flight = player.flight || [];
+        const flightValue = flight.reduce((sum, card) => sum + card.value, 0);
         const embed = new EmbedBuilder()
             .setTitle(`Your Flight (Value: ${flightValue})`)
             .setColor(0x57F287);
 
-        if (player.flight.length > 0) {
-            embed.setDescription(player.flight.map(c => `**${c.name}** (Str ${c.value})`).join('\n'));
+        if (flight.length > 0) {
+            embed.setDescription(flight.map(c => `**${c.name}** (Str ${c.value})`).join('\n'));
         } else {
             embed.setDescription('(Your flight is currently empty)');
         }
@@ -105,8 +107,9 @@ class TdaUiManager {
             embed.setDescription(description);
         } else {
             embed.setTitle(`Your Hand | Hoard: ${player.hoard}gp`);
-            if (player.hand.length > 0) {
-                embed.setDescription(player.hand.map(c => `• ${c.name} (Str ${c.value})`).join('\n'));
+            const hand = player.hand || [];
+            if (hand.length > 0) {
+                embed.setDescription(hand.map(c => `• ${c.name} (Str ${c.value})`).join('\n'));
             } else {
                 embed.setDescription('Your hand is empty.');
             }
