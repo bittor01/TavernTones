@@ -9,6 +9,7 @@ const VehicleEncounterBuilder = require('../backend/features/VehicleEncounterBui
 const NpcGenerator = require('../backend/features/NpcGenerator.js');
 const DropdownHandler = require('./DropdownHandler.js');
 const ThreeDragonAnteManager = require('../backend/features/ThreeDragonAnte.js');
+const TdaUiManager = require('../backend/features/TdaUiManager.js');
 
 // These will be initialized in the constructor
 let logToRenderer;
@@ -27,7 +28,14 @@ class CommandHandler {
         this.encounterBuilder = new EncounterBuilder(this.fiveEToolsParser);
         this.vehicleEncounterBuilder = new VehicleEncounterBuilder(this.fiveEToolsParser);
         this.npcGenerator = new NpcGenerator(this.fiveEToolsParser, askGPT4All);
+
+        // --- TDA Setup with Dependency Injection ---
         this.tdaManager = new ThreeDragonAnteManager(this.client);
+        const tdaUiManager = new TdaUiManager(this.client);
+        this.tdaManager.setUiManager(tdaUiManager);
+        tdaUiManager.setGameManager(this.tdaManager);
+        // --- End TDA Setup ---
+
         this.lastResponse = null;
         BOT_ROLE_ID = config.BOT_ROLE_ID;
         DEFAULT_LOCAL_FOLDER = config.DEFAULT_LOCAL_FOLDER;

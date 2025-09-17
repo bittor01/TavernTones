@@ -1250,6 +1250,50 @@ client.once('clientReady', async () => {
             const { customId, values, message } = interaction;
             const [customIdBase] = customId.split('|');
 
+            if (customId.startsWith('tda_green_choice_give_')) {
+                let game, nextPlayer;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        nextPlayer = p;
+                        break;
+                    }
+                }
+                if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+                const originalPlayerId = customId.split('_')[4];
+                const originalPlayer = game.players.find(p => p.id === originalPlayerId);
+                if (!originalPlayer) return interaction.reply({ content: 'Could not find the original player.', ephemeral: true });
+
+                const cardIndex = parseInt(values[0], 10);
+                await interaction.deferUpdate();
+                await client.commandHandler.tdaManager.resolveGreenDragonChoice(game, originalPlayer, nextPlayer, 'give', cardIndex);
+                return;
+            }
+
+            if (customId === 'tda_ante_select') {
+                let game, player;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        player = p;
+                        break;
+                    }
+                }
+
+                if (!game) {
+                    return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+                }
+
+                const cardIndex = parseInt(values[0], 10);
+
+                await interaction.deferUpdate();
+                await client.commandHandler.tdaManager.handleAnte(game, player, cardIndex);
+                return;
+            }
+
             if (customIdBase.startsWith('trap-')) {
                 const selections = trapSelections.get(interaction.message.id) || {};
                 const selectionType = customIdBase.replace('trap-', '').replace('-select', '');
@@ -1385,6 +1429,76 @@ client.once('clientReady', async () => {
         }
 
         if (interaction.isButton()) {
+            if (interaction.customId.startsWith('tda_green_choice_pay_')) {
+                let game, nextPlayer;
+                 for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        nextPlayer = p;
+                        break;
+                    }
+                }
+                if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+                const originalPlayerId = interaction.customId.split('_')[4];
+                const originalPlayer = game.players.find(p => p.id === originalPlayerId);
+                if (!originalPlayer) return interaction.reply({ content: 'Could not find the original player.', ephemeral: true });
+
+                await interaction.deferUpdate();
+                await client.commandHandler.tdaManager.resolveGreenDragonChoice(game, originalPlayer, nextPlayer, 'pay');
+                return;
+            }
+
+            if (interaction.customId.startsWith('tda_blue_choice_')) {
+                let game, player;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        player = p;
+                        break;
+                    }
+                }
+
+                if (!game) {
+                    return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+                }
+
+                const choice = interaction.customId.split('_')[3];
+
+                await interaction.deferUpdate();
+                await client.commandHandler.tdaManager.resolveBlueDragonChoice(game, player, choice);
+                return;
+            }
+
+            if (interaction.customId.startsWith('tda_play_')) {
+                let game, player;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        player = p;
+                        break;
+                    }
+                }
+
+                if (!game) {
+                    return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+                }
+
+                const currentPlayer = game.gambit.turnOrder[game.gambit.currentPlayerIndex];
+                if (!currentPlayer || currentPlayer.id !== player.id) {
+                    return interaction.reply({ content: "It's not your turn to play a card.", ephemeral: true });
+                }
+
+                const cardIndex = parseInt(interaction.customId.split('_')[2], 10);
+
+                await interaction.deferUpdate();
+                await client.commandHandler.tdaManager.handlePlayCard(game, player, cardIndex);
+                return;
+            }
+
             if (interaction.customId === 'trap-proceed-button') {
                 await interaction.message.edit({ content: '⚙️ Finding a trap...', embeds: [], components: [] });
                 const selections = trapSelections.get(interaction.message.id) || {};
