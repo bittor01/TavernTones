@@ -1047,9 +1047,6 @@ client.once('clientReady', async () => {
             if (interaction.customId.startsWith('tda_buy_in_modal')) {
                 return client.commandHandler.tdaManager.handleBuyInModalSubmit(interaction);
             }
-            if (interaction.customId.startsWith('tda_ante_modal')) {
-                return client.commandHandler.tdaManager.handleAnteModalSubmit(interaction);
-            }
             if (interaction.customId.startsWith('npc-modal-')) {
                 const messageId = interaction.customId.replace('npc-modal-', '');
                 const selections = npcSelections.get(messageId) || {};
@@ -1337,18 +1334,6 @@ client.once('clientReady', async () => {
                     await client.commandHandler.tdaManager.resolveGreenDragonChoice(game, originalPlayer, nextPlayer, 'give', cardIndex);
                     return;
                 }
-                if (customId === 'tda_ante_select') {
-                    let game, player;
-                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
-                        const p = g.players.find(p => p.id === interaction.user.id);
-                        if (p) { game = g; player = p; break; }
-                    }
-                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-                    const cardIndex = parseInt(values[0], 10);
-                    await interaction.deferUpdate();
-                    await client.commandHandler.tdaManager.handleAnte(game, player, cardIndex);
-                    return;
-                }
             }
 
             // Other Handlers
@@ -1437,6 +1422,18 @@ client.once('clientReady', async () => {
         if (interaction.isButton()) {
             // TDA Handlers
             if (interaction.customId.startsWith('tda_')) {
+                if (interaction.customId.startsWith('tda_details_')) {
+                    let game, player;
+                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                        const p = g.players.find(p => p.id === interaction.user.id);
+                        if (p) { game = g; player = p; break; }
+                    }
+                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+                    const context = interaction.customId.split('_')[2]; // 'hand'
+                    await client.commandHandler.tdaManager.handleCardDetailsButton(interaction, game, player, context);
+                    return;
+                }
                 if (interaction.customId.includes('_page_')) {
                     let game, player;
                     for (const g of client.commandHandler.tdaManager.activeGames.values()) {

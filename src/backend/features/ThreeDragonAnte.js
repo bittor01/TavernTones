@@ -145,65 +145,59 @@ class ThreeDragonAnteManager {
         this.client = client;
         this.ui = null; // Will be set by CommandHandler
         this.activeGames = new Map();
-        this.updateQueues = new Map(); // gameId -> { queue: [{playerId, priority}], isProcessing: false }
+        this.updateQueues = new Map(); // gameId -> { queue: [], isProcessing: false }
+        this.SPECIAL_ABILITIES = SPECIAL_ABILITIES;
     }
 
-    // --- Queue System ---
-    // Priorities: 1 (high), 2 (medium), 3 (low)
-    queueRender(gameId, playerId, priority = 2) {
+    queueRender(gameId, type, priority, details = {}) {
         if (!this.activeGames.has(gameId)) return;
-
         if (!this.updateQueues.has(gameId)) {
-            this.updateQueues.set(gameId, { queue: [], isProcessing: false });
-        }
-        const gameQueue = this.updateQueues.get(gameId);
-
-        // Avoid adding duplicate playerIds with the same or lower priority
-        const existingIndex = gameQueue.queue.findIndex(item => item.playerId === playerId);
-        if (existingIndex > -1) {
-            if (gameQueue.queue[existingIndex].priority > priority) {
-                gameQueue.queue[existingIndex].priority = priority; // Upgrade priority
-            }
-        } else {
-            gameQueue.queue.push({ playerId, priority });
+            this.updateQueues.set(gameId, { isProcessing: false, queue: [] });
         }
 
+        const queueData = this.updateQueues.get(gameId);
+        queueData.queue.push({ type, priority, ...details });
         this._processUpdateQueue(gameId);
     }
 
-    queueRenderAll(game, priority = 2) {
-        game.players.forEach(p => this.queueRender(game.channelId, p.id, priority));
-    }
-
     async _processUpdateQueue(gameId) {
-        const gameQueue = this.updateQueues.get(gameId);
-        if (!gameQueue || gameQueue.isProcessing) return;
+        const queueData = this.updateQueues.get(gameId);
+        if (!queueData || queueData.isProcessing) return;
 
-        gameQueue.isProcessing = true;
+        queueData.isProcessing = true;
 
         // Sort by priority (lower number is higher priority)
-        gameQueue.queue.sort((a, b) => a.priority - b.priority);
+        queueData.queue.sort((a, b) => a.priority - b.priority);
 
-        while (gameQueue.queue.length > 0) {
-            const updateJob = gameQueue.queue.shift();
+        while (queueData.queue.length > 0) {
+            const task = queueData.queue.shift();
             const game = this.activeGames.get(gameId);
+            if (!game) continue;
 
-            if (game && game.state !== 'lobby' && game.state !== 'starting') {
-                const playerToRender = game.players.find(p => p.id === updateJob.playerId);
-                if (playerToRender) {
-                    try {
-                        await this.ui.renderPlayer(game, playerToRender);
-                        await sleep(1100); // Wait after each player render
-                    } catch (e) {
-                        console.error(`TDA: Error rendering board for player ${playerToRender.user.username}`, e);
-                    }
+            try {
+                switch (task.type) {
+                    case 'render_all':
+                        await this.ui.renderBoard(game);
+                        await this.ui.updateScoreboard(game);
+                        break;
+                    case 'render_player':
+                        const player = game.players.find(p => p.id === task.playerId);
+                        if (player) await this.ui.renderPlayer(game, player);
+                        break;
+                    case 'render_scoreboard':
+                        await this.ui.updateScoreboard(game);
+                        break;
                 }
+            } catch (e) {
+                console.error(`Error processing update task ${task.type} for ${gameId}`, e);
             }
+
+            // Wait after every task to respect rate limits
+            await sleep(1100);
         }
 
-        gameQueue.isProcessing = false;
+        queueData.isProcessing = false;
     }
-    // --- End Queue System ---
 
     setUiManager(uiManager) {
         this.ui = uiManager;
@@ -232,112 +226,111 @@ class ThreeDragonAnteManager {
         }
 
         const game = {
-            hostId: message.author.id,
+            hostId: null, // Will be set by the first player to join
             channelId: message.channel.id,
             players: [],
-            state: 'lobby',
+            state: 'pre-lobby',
             client: this.client,
             turnTimer: 300, // Default to 5 minutes (300 seconds)
         };
         this.activeGames.set(message.channel.id, game);
 
-        const embed = this._generateLobbyEmbed(game);
-        const components = this._buildLobbyComponents(game);
+        const preLobbyEmbed = new EmbedBuilder()
+            .setTitle('A Game of Three-Dragon Ante is Starting!')
+            .setColor(0x5539cc)
+            .setDescription('Be the first to join and set the stakes for the game!');
 
-        const lobbyMessage = await message.channel.send({ embeds: [embed], components });
+        const preLobbyRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('tda_join_set_stakes')
+                .setLabel('Join and Set Stakes')
+                .setStyle(ButtonStyle.Success)
+        );
+
+        const lobbyMessage = await message.channel.send({ embeds: [preLobbyEmbed], components: [preLobbyRow] });
         game.lobbyMessageId = lobbyMessage.id;
 
-        const collector = lobbyMessage.createMessageComponentCollector({ time: 3_600_000 });
+        // The main collector will be attached in handleBuyInModalSubmit after the lobby is officially formed.
+        game.preLobbyCollector = lobbyMessage.createMessageComponentCollector({ time: 900000 }); // 15 minute timeout for pre-lobby
+        game.preLobbyCollector.on('collect', i => this.handleLobbyInteraction(i, game));
+        game.preLobbyCollector.on('end', (collected, reason) => {
+            if (reason !== 'game_started' && reason !== 'ante_set' && game.state === 'pre-lobby') {
+                this._expireLobby(game.channelId);
+            }
+        });
+    }
 
-        collector.on('collect', async i => {
-            const game = this.activeGames.get(i.channelId);
-            if (!game) return i.reply({ content: 'This game lobby is no longer active.', ephemeral: true });
+    async handleLobbyInteraction(interaction, game) {
+        const user = interaction.user;
 
-            const isPlayerInGame = game.players.some(p => p.id === i.user.id);
+        if (game.state === 'pre-lobby' && interaction.customId === 'tda_join_set_stakes') {
+            game.state = 'setting_ante'; // Lock the state
+            game.hostId = user.id; // The first joiner is the host
 
-            if (i.customId === 'tda_join') {
-                if (isPlayerInGame) return i.reply({ content: 'You are already in the game.', ephemeral: true });
-                game.players.push({ id: i.user.id, user: i.user, specialAbility: null, flight: [], handPage: 0, draftPage: 0 });
-            } else if (i.customId === 'tda_leave') {
-                if (!isPlayerInGame) return i.reply({ content: 'You are not in this game.', ephemeral: true });
-                game.players = game.players.filter(p => p.id !== i.user.id);
-            } else if (i.customId === 'tda_ability_select') {
-                if (!isPlayerInGame) return i.reply({ content: 'You must join the game before selecting an ability.', ephemeral: true });
-                const player = game.players.find(p => p.id === i.user.id);
-                player.specialAbility = i.values[0];
-            } else if (i.customId === 'tda_timer_select') {
-                 if (i.user.id !== game.hostId) return i.reply({ content: 'Only the host can change the turn timer.', ephemeral: true });
-                 game.turnTimer = parseInt(i.values[0], 10);
-            } else if (i.customId === 'tda_start') {
-                if (!isPlayerInGame) return i.reply({ content: 'You must be in the game to start it.', ephemeral: true });
-                if (game.players.length < 2) return i.reply({ content: 'You need at least 2 players to start.', ephemeral: true });
+            await interaction.message.edit({
+                components: [new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('tda_join_set_stakes')
+                        .setLabel('Stakes being set...')
+                        .setStyle(ButtonStyle.Success)
+                        .setDisabled(true)
+                )]
+            });
 
-                const modal = new ModalBuilder()
-                    .setCustomId(`tda_buy_in_modal_${game.channelId}`)
-                    .setTitle('Set Game Buy-in');
-                const anteInput = new TextInputBuilder()
-                    .setCustomId('buy_in_amount')
-                    .setLabel("Game Buy-in (e.g. 5000)")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true)
-                    .setPlaceholder('Enter a positive number, will be rounded down to nearest 50');
-                const actionRow = new ActionRowBuilder().addComponents(anteInput);
-                modal.addComponents(actionRow);
-                await i.showModal(modal);
+            const modal = new ModalBuilder()
+                .setCustomId(`tda_buy_in_modal_${game.channelId}`)
+                .setTitle('Set Game Buy-in');
+            const anteInput = new TextInputBuilder()
+                .setCustomId('buy_in_amount')
+                .setLabel("Game Buy-in (e.g. 5000)")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setPlaceholder('Enter a positive number, will be rounded down to nearest 50');
+            const actionRow = new ActionRowBuilder().addComponents(anteInput);
+            modal.addComponents(actionRow);
+            await interaction.showModal(modal);
+
+        } else if (game.state === 'lobby') {
+            const isPlayerInGame = game.players.some(p => p.id === user.id);
+
+            if (interaction.customId === 'tda_join') {
+                if (isPlayerInGame) return interaction.reply({ content: 'You are already in the game.', ephemeral: true });
+                game.players.push({ id: user.id, user: user, specialAbility: null, flight: [], hand: [], anteCard: null, handPage: 0, draftPage: 0 });
+            } else if (interaction.customId === 'tda_leave') {
+                if (!isPlayerInGame) return interaction.reply({ content: 'You are not in this game.', ephemeral: true });
+                game.players = game.players.filter(p => p.id !== user.id);
+            } else if (interaction.customId === 'tda_ability_select') {
+                if (!isPlayerInGame) return interaction.reply({ content: 'You must join the game before selecting an ability.', ephemeral: true });
+                const player = game.players.find(p => p.id === user.id);
+                player.specialAbility = interaction.values[0];
+            } else if (interaction.customId === 'tda_timer_select') {
+                 game.turnTimer = parseInt(interaction.values[0], 10);
+            } else if (interaction.customId === 'tda_start') {
+                if (game.players.length < 2) return interaction.reply({ content: 'You need at least 2 players to start.', ephemeral: true });
+
+                if (game.lobbyTimeoutId) clearTimeout(game.lobbyTimeoutId);
+                if (game.lobbyIntervalId) clearInterval(game.lobbyIntervalId);
+
+                const lobbyMessage = await this.client.channels.cache.get(game.channelId).messages.fetch(game.lobbyMessageId).catch(() => null);
+                if(lobbyMessage) lobbyMessage.createMessageComponentCollector({ time: 1 }).stop('game_started');
+
+                const optionalCards = DECK_DEFINITION.filter(c => c.optional);
+                // The draft is to remove 10 cards. If there are 10 or fewer, there's nothing to draft.
+                if (optionalCards.length > 10) {
+                    await this._startDraft(game);
+                } else {
+                    // If no draft, just start the game with whatever optional cards are available.
+                    game.players.sort(() => Math.random() - 0.5); // Still randomize order even if no draft
+                    await this._startGameplay(game, optionalCards);
+                }
                 return;
             }
 
-            await i.update({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game) });
-        });
-
-        collector.on('end', (collected, reason) => {
-            if (reason !== 'game_started') {
-                this.activeGames.delete(message.channel.id);
-                this.updateQueues.delete(message.channel.id);
-                lobbyMessage.edit({ content: 'This game lobby has expired.', embeds: [], components: [] }).catch(() => {});
-            }
-        });
+            await this.ui.updateLobbyEmbed(game);
+            await interaction.deferUpdate();
+        }
     }
 
-    _generateLobbyEmbed(game) {
-        const embed = new EmbedBuilder()
-            .setTitle('Three-Dragon Ante Lobby')
-            .setColor(0x5539cc)
-            .setDescription('Players are gathering to play Three-Dragon Ante. Click "Join" to enter the game!')
-            .setFooter({ text: 'The game will begin once the "Start Game" button is pressed.' });
-
-        let playerList = game.players.map(p => {
-            const ability = SPECIAL_ABILITIES.find(a => a.value === p.specialAbility);
-            return `- ${p.user.username}` + (ability ? ` (${ability.label})` : '');
-        }).join('\n');
-
-        if (!playerList) playerList = 'No players have joined yet.';
-        embed.addFields({ name: `Players (${game.players.length})`, value: playerList });
-        return embed;
-    }
-
-    _buildLobbyComponents(game, disabled = false) {
-        const joinButton = new ButtonBuilder().setCustomId('tda_join').setLabel('Join Game').setStyle(ButtonStyle.Success).setDisabled(disabled);
-        const leaveButton = new ButtonBuilder().setCustomId('tda_leave').setLabel('Leave Game').setStyle(ButtonStyle.Danger).setDisabled(disabled);
-        const startButton = new ButtonBuilder().setCustomId('tda_start').setLabel('Start Game').setStyle(ButtonStyle.Primary).setDisabled(disabled || game.players.length < 2);
-
-        const abilityMenu = new StringSelectMenuBuilder().setCustomId('tda_ability_select').setPlaceholder('Choose a special ability (optional)').addOptions(SPECIAL_ABILITIES).setDisabled(disabled);
-
-        const timerMenu = new StringSelectMenuBuilder()
-            .setCustomId('tda_timer_select')
-            .setPlaceholder(`Turn Timer: ${game.turnTimer === 0 ? 'Disabled' : `${game.turnTimer / 60} min`}`)
-            .addOptions([
-                { label: '1 Minute', value: '60' },
-                { label: '5 Minutes', value: '300' },
-                { label: '10 Minutes', value: '600' },
-                { label: 'Disabled', value: '0' },
-            ]).setDisabled(disabled);
-
-        const row1 = new ActionRowBuilder().addComponents(joinButton, leaveButton, startButton);
-        const row2 = new ActionRowBuilder().addComponents(abilityMenu);
-        const row3 = new ActionRowBuilder().addComponents(timerMenu);
-        return [row1, row2, row3];
-    }
 
     _clearTurnTimer(game) {
         if (game.turnTimerId) clearTimeout(game.turnTimerId);
@@ -358,7 +351,8 @@ class ThreeDragonAnteManager {
         }, game.turnTimer * 1000);
 
         game.turnIntervalId = setInterval(() => {
-            this.queueRender(game.channelId, player.id, 3);
+            // Low priority for timer updates
+            this.queueRender(game.channelId, 'render_all', 3);
         }, 15000); // Update every 15 seconds
     }
 
@@ -366,21 +360,26 @@ class ThreeDragonAnteManager {
         this._clearTurnTimer(game);
         game.gambit.log.push(`**${player.user.username} ran out of time and has been removed from the game!**`);
 
+        // Reclaim cards
         const allPlayerCards = [...(player.hand || []), ...(player.flight || [])];
         game.discardPile.push(...allPlayerCards);
 
+        // Remove player
         const playerIndex = game.players.findIndex(p => p.id === player.id);
         if (playerIndex > -1) {
             game.players.splice(playerIndex, 1);
         }
 
+        // Close their DM board
         if (player.dmChannel) {
             await this.ui.closeGameBoard(player, 'You ran out of time and were removed from the game.');
         }
 
+        // Check for game over
         if (game.players.length < 2) {
             await this._endGame(game);
         } else {
+            // If it was their turn, advance the game flow
             await this._continueGameFlow(game);
         }
     }
@@ -390,7 +389,7 @@ class ThreeDragonAnteManager {
 
         const channelId = interaction.customId.split('_')[4];
         const game = this.activeGames.get(channelId);
-        if (!game) return interaction.editReply({ content: "Error: Could not find an active game for this action." });
+        if (!game || game.state !== 'setting_ante') return interaction.editReply({ content: "Error: Could not find an active game or it's not time to set the ante." });
 
         const rawBuyIn = parseInt(interaction.fields.getTextInputValue('buy_in_amount'));
         if (isNaN(rawBuyIn) || rawBuyIn <= 0) return interaction.editReply({ content: 'Error: Please enter a valid, positive number for the buy-in.' });
@@ -398,55 +397,88 @@ class ThreeDragonAnteManager {
         const buyIn = Math.floor(rawBuyIn / 50) * 50;
         if (buyIn === 0) return interaction.editReply({ content: 'Error: Buy-in must be at least 50.' });
 
-        const scalingFactor = buyIn / 50;
+        game.buyIn = buyIn;
+        game.scalingFactor = buyIn / 50;
+        game.state = 'lobby';
 
-        try {
-            const lobbyMessage = await interaction.channel.messages.fetch(game.lobbyMessageId);
-            if (lobbyMessage) {
-                const collector = lobbyMessage.createMessageComponentCollector({ time: 1 });
-                collector.stop('game_started');
-                await lobbyMessage.edit({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game, true) });
-            }
-        } catch(e) {
-            console.error("TDA: Could not find lobby message to disable components.", e);
+        const hostUser = await this.client.users.fetch(game.hostId);
+        game.players.push({ id: game.hostId, user: hostUser, specialAbility: null, flight: [], hand: [], anteCard: null, handPage: 0, draftPage: 0 });
+
+        await interaction.editReply({ content: 'Ante set! The lobby is now open.' });
+
+        // Stop the pre-lobby collector
+        if (game.preLobbyCollector) {
+            game.preLobbyCollector.stop('ante_set');
         }
 
-        await interaction.editReply({ content: 'Starting the game and dealing hands...' });
+        game.lobbyExpiresAt = Date.now() + 15 * 60 * 1000;
+        game.lobbyTimeoutId = setTimeout(() => this._expireLobby(game.channelId), 15 * 60 * 1000);
+        game.lobbyIntervalId = setInterval(() => this.ui.updateLobbyEmbed(game), 60 * 1000);
 
-        game.buyIn = buyIn;
-        game.scalingFactor = scalingFactor;
-        game.state = 'starting';
-        game.players.forEach(p => { p.hoard = buyIn; });
-        game.gambit = { log: [] };
+        const lobbyMessage = await this.client.channels.cache.get(game.channelId).messages.fetch(game.lobbyMessageId);
+        game.lobbyCollector = lobbyMessage.createMessageComponentCollector({ time: 15 * 60 * 1000 });
+        game.lobbyCollector.on('collect', i => this.handleLobbyInteraction(i, game));
+        game.lobbyCollector.on('end', (collected, reason) => {
+            if (reason !== 'game_started') {
+                 this._expireLobby(game.channelId);
+            }
+        });
 
-        await this.ui.createGameBoard(game);
-        await this._startDraft(game);
+        await this.ui.updateLobbyEmbed(game);
+    }
+
+    async _expireLobby(gameId) {
+        const game = this.activeGames.get(gameId);
+        if (!game || game.state === 'playing') return;
+
+        const lobbyMessage = await this.client.channels.cache.get(game.channelId).messages.fetch(game.lobbyMessageId).catch(() => null);
+        if(lobbyMessage) {
+            lobbyMessage.edit({ content: 'This game lobby has expired.', embeds: [], components: [] }).catch(() => {});
+        }
+
+        if (game.lobbyTimeoutId) clearTimeout(game.lobbyTimeoutId);
+        if (game.lobbyIntervalId) clearInterval(game.lobbyIntervalId);
+
+        this.activeGames.delete(gameId);
+        this.updateQueues.delete(gameId);
     }
 
     async _startDraft(game) {
         game.state = 'drafting';
+        // Shuffle players for random turn order at the start of the game
+        game.players.sort(() => Math.random() - 0.5);
+
         const optionalCards = DECK_DEFINITION.filter(c => c.optional);
+
+        game.players.forEach(p => {
+            p.draftPage = 0;
+        });
+
         game.draft = {
             options: optionalCards,
             removedCount: 0,
-            turnOrder: game.players.map(p => p.id),
+            turnOrder: game.players.map(p => p.id), // Will now use the shuffled order
             currentPlayerIndex: 0,
         };
 
-        game.gambit = { log: ['The game has started. Players will now take turns removing optional cards from the deck.'] };
+        game.gambit = { log: ['The game has started. Players will now take turns removing optional cards from the deck.'], stakes: 0 };
+
+        await this.ui.updateScoreboard(game); // Initial scoreboard render
 
         const currentPlayer = game.players.find(p => p.id === game.draft.turnOrder[game.draft.currentPlayerIndex]);
         this._startTurnTimer(game, currentPlayer);
 
-        this.queueRenderAll(game, 1);
+        this.queueRender(game.channelId, 'render_all', 1);
     }
 
     async handleDraftCardRemoval(game, player, cardImage) {
-        if (game.state !== 'drafting' || game.draft.turnOrder[game.draft.currentPlayerIndex] !== player.id) return;
-
+        if (game.state !== 'drafting' || game.draft.turnOrder[game.draft.currentPlayerIndex] !== player.id) {
+            return; // Not their turn
+        }
         this._clearTurnTimer(game);
+
         const cardIndex = game.draft.options.findIndex(c => c.image === cardImage);
-        if (cardIndex === -1) return;
+        if (cardIndex === -1) return; // Card not found
 
         const removedCard = game.draft.options.splice(cardIndex, 1)[0];
         game.draft.removedCount++;
@@ -461,16 +493,19 @@ class ThreeDragonAnteManager {
                 nextPlayer.draftPage = 0;
                 this._startTurnTimer(game, nextPlayer);
             }
-            this.queueRenderAll(game, 2);
+            this.queueRender(game.channelId, 'render_all', 1);
         }
     }
 
     async handlePagination(game, player, context, direction) {
-        const pageProp = (context === 'draft') ? 'draftPage' : 'handPage';
+        const pageProp = context === 'draft' ? 'draftPage' : 'handPage';
         const cardsPerPage = 5;
 
-        const list = (context === 'draft') ? game.draft.options : player.hand;
-        if (!list || list.length <= cardsPerPage) return;
+        const list = (context === 'draft')
+            ? game.draft.options
+            : player.hand;
+
+        if (!list || list.length <= cardsPerPage) return; // No need for pagination
 
         const totalPages = Math.ceil(list.length / cardsPerPage);
         if (player[pageProp] === undefined) player[pageProp] = 0;
@@ -481,11 +516,12 @@ class ThreeDragonAnteManager {
             player[pageProp] = (player[pageProp] - 1 + totalPages) % totalPages;
         }
 
-        this.queueRender(game.channelId, player.id, 1);
+        this.queueRender(game.channelId, 'render_player', 1, { playerId: player.id });
     }
 
     async _finalizeDraft(game) {
         const includedOptionalCards = game.draft.options;
+
         game.gambit.log.push('Drafting complete!');
         if (includedOptionalCards.length > 0) {
             game.gambit.log.push(`Included cards: ${includedOptionalCards.map(c => c.name).join(', ')}`);
@@ -499,6 +535,9 @@ class ThreeDragonAnteManager {
 
     async _startGameplay(game, includedOptionalCards = []) {
         game.state = 'playing';
+
+        await this.ui.updateScoreboard(game); // Initial scoreboard render
+
         const standardCards = DECK_DEFINITION.filter(c => !c.optional);
         game.deck = [...standardCards, ...includedOptionalCards];
 
@@ -542,13 +581,19 @@ class ThreeDragonAnteManager {
         const existingLog = game.gambit?.log || [];
         game.gambit = {
             number: (game.gambit?.number || 0) + 1,
-            antedByPlayer: [], antePile: [], stakes: 0, rounds: [],
-            log: existingLog, leader: game.gambit?.leader
+            antedByPlayer: [],
+            antePile: [],
+            stakes: 0,
+            rounds: [],
+            log: existingLog,
+            leader: game.gambit?.leader
         };
         game.players.forEach(p => {
-            p.triggeredStrengthFlights = []; p.triggeredColorFlights = []; p.anteCard = null;
+            p.triggeredStrengthFlights = [];
+            p.triggeredColorFlights = [];
+            p.anteCard = null;
         });
-        this.queueRenderAll(game, 2);
+        this.queueRender(game.channelId, 'render_all', 1);
     }
 
     async _startRound(game) {
@@ -564,8 +609,7 @@ class ThreeDragonAnteManager {
         const currentPlayer = game.gambit.turnOrder[game.gambit.currentPlayerIndex];
         this._startTurnTimer(game, currentPlayer);
 
-        this.queueRender(game.channelId, currentPlayer.id, 1);
-        game.players.filter(p => p.id !== currentPlayer.id).forEach(p => this.queueRender(game.channelId, p.id, 2));
+        this.queueRender(game.channelId, 'render_all', 1);
     }
 
     _findOpponentsByStrength(game, player, findHighest = true) {
@@ -587,6 +631,7 @@ class ThreeDragonAnteManager {
     async _checkSpecialFlights(game, player) {
         if (player.flight.length < 3) return;
 
+        // Check for Color Flights
         const colors = {};
         player.flight.forEach(card => {
             if (!colors[card.effect]) colors[card.effect] = 0;
@@ -603,6 +648,7 @@ class ThreeDragonAnteManager {
             }
         }
 
+        // Check for Strength Flights
         const strengths = {};
         player.flight.forEach(card => {
             if (!strengths[card.value]) strengths[card.value] = 0;
@@ -642,11 +688,15 @@ class ThreeDragonAnteManager {
             const hasGood = p.flight.some(c => CARD_EFFECTS.find(e => e.name === c.effect)?.alignment === 'good');
             const hasEvil = p.flight.some(c => CARD_EFFECTS.find(e => e.name === c.effect)?.alignment === 'evil');
 
-            if ((hasTiamat && hasGood) || (hasBahamut && hasEvil)) return false;
+            if ((hasTiamat && hasGood) || (hasBahamut && hasEvil)) {
+                return false;
+            }
             return true;
         });
 
-        if (qualifiedWinners.length === 1) winner = qualifiedWinners[0];
+        if (qualifiedWinners.length === 1) {
+            winner = qualifiedWinners[0];
+        }
 
         if (winner) {
             winner.hoard += game.gambit.stakes;
@@ -677,17 +727,22 @@ class ThreeDragonAnteManager {
         game.gambit.antePile = [];
         game.gambit.antedByPlayer = [];
 
+        // Remove players with no gold
         const playersToRemove = game.players.filter(p => p.hoard <= 0);
         if (playersToRemove.length > 0) {
             game.gambit.log.push(playersToRemove.map(p => `${p.user.username} is out of gold and has been removed from the game.`).join('\n'));
+
             for (const p of playersToRemove) {
                 await this.ui.closeGameBoard(p, 'You ran out of gold and have been removed from the game.');
+                // Track players who left/were removed
                 if (!game.gambit.playersWhoLeft) game.gambit.playersWhoLeft = [];
                 game.gambit.playersWhoLeft.push(p);
             }
+
             game.players = game.players.filter(p => p.hoard > 0);
         }
 
+        // Check for game over condition
         if (game.players.length < 2) {
             await this._endGame(game);
             return { gameOver: true, game, gambitWinner: winner };
@@ -698,7 +753,7 @@ class ThreeDragonAnteManager {
         }
 
         game.state = 'continue';
-        this.queueRenderAll(game, 2);
+        this.queueRender(game.channelId, 'render_all', 1);
         return { gameOver: false, game, gambitWinner: winner };
     }
 
@@ -709,8 +764,9 @@ class ThreeDragonAnteManager {
         if (forceTrigger || player.id === game.gambit.leader.id || (turnIndex > 0 && card.value <= round.turns[turnIndex - 1].card.value)) {
             trigger = true;
         }
-        if (!trigger) return;
-
+        if (!trigger) {
+            return;
+        }
         const effect = CARD_EFFECTS.find(e => e.name === card.effect);
         if (!effect) return;
 
@@ -720,16 +776,20 @@ class ThreeDragonAnteManager {
             case 'Brass': {
                 const currentRound = game.gambit.rounds[game.gambit.rounds.length - 1];
                 if (currentRound.turns.length < 1) break;
+
                 const lastTurnPlayerId = currentRound.turns[currentRound.turns.length - 1].player.id;
                 const lastPlayerInTurnOrder = game.gambit.turnOrder.find(p => p.id === lastTurnPlayerId);
                 const lastPlayerIndex = game.gambit.turnOrder.indexOf(lastPlayerInTurnOrder);
                 const previousPlayerIndex = (lastPlayerIndex - 1 + game.players.length) % game.players.length;
                 const lastPlayer = game.gambit.turnOrder[previousPlayerIndex];
+
                 if (lastPlayer.id === player.id) break;
+
                 const strongerGoodDragons = lastPlayer.hand.filter(c => {
                     const cEffect = CARD_EFFECTS.find(e => e.name === c.effect);
                     return cEffect && cEffect.alignment === 'good' && c.value > card.value;
                 });
+
                 await this.ui.promptBrassDragonChoice(game, player, lastPlayer, strongerGoodDragons);
                 return true;
             }
@@ -740,26 +800,44 @@ class ThreeDragonAnteManager {
             case 'Green': {
                 const currentPlayerIndex = game.gambit.turnOrder.findIndex(p => p.id === player.id);
                 const nextPlayer = game.gambit.turnOrder[(currentPlayerIndex + 1) % game.players.length];
+
                 const weakerEvilDragons = nextPlayer.hand.filter(c => {
                     const cEffect = CARD_EFFECTS.find(e => e.name === c.effect);
                     return cEffect && cEffect.alignment === 'evil' && c.value < card.value;
                 });
+
                 await this.ui.promptGreenDragonChoice(game, player, nextPlayer, weakerEvilDragons);
                 return true;
             }
             case 'Gold': {
-                const goodDragons = player.flight.filter(c => CARD_EFFECTS.find(e => e.name === c.effect)?.alignment === 'good');
-                if (goodDragons.length > 0) {
-                    game.gambit.log.push(`${player.user.username}'s Gold Dragon power lets them draw ${goodDragons.length} card(s).`);
-                    await this._drawCards(game, player, goodDragons.length);
+                const goodDragons = player.flight.filter(c => {
+                    const cEffect = CARD_EFFECTS.find(e => e.name === c.effect);
+                    return cEffect && cEffect.alignment === 'good';
+                });
+                const numToDraw = goodDragons.length;
+                if (numToDraw > 0) {
+                    game.gambit.log.push(`${player.user.username}'s Gold Dragon power lets them draw ${numToDraw} card(s).`);
+                    await this._drawCards(game, player, numToDraw);
                 }
                 break;
             }
             case 'Silver': {
-                const playersWhoDraw = game.players.filter(p => p.flight.some(c => CARD_EFFECTS.find(e => e.name === c.effect)?.alignment === 'good'));
+                let playersWhoDraw = [];
+                for (const p of game.players) {
+                    const hasGoodDragon = p.flight.some(c => {
+                        const cEffect = CARD_EFFECTS.find(e => e.name === c.effect);
+                        return cEffect && cEffect.alignment === 'good';
+                    });
+                    if (hasGoodDragon) {
+                        playersWhoDraw.push(p);
+                    }
+                }
+
                 if (playersWhoDraw.length > 0) {
                     game.gambit.log.push(`A Silver Dragon's power is triggered! ${playersWhoDraw.map(p => p.user.username).join(', ')} will draw a card.`);
-                    for (const p of playersWhoDraw) await this._drawCards(game, p, 1);
+                    for (const p of playersWhoDraw) {
+                        await this._drawCards(game, p, 1);
+                    }
                 }
                 break;
             }
@@ -768,6 +846,7 @@ class ThreeDragonAnteManager {
                     game.gambit.log.push('Not enough cards in the ante pile for the Bronze Dragon\'s power.');
                     break;
                 }
+                // Sort ante pile by strength ascending
                 game.gambit.antePile.sort((a, b) => a.value - b.value);
                 const weakestTwo = game.gambit.antePile.splice(0, 2);
                 player.hand.push(...weakestTwo);
@@ -777,6 +856,7 @@ class ThreeDragonAnteManager {
             case 'White': {
                 const weakestOpponents = this._findOpponentsByStrength(game, player, false);
                 if (weakestOpponents.length === 0) break;
+
                 if (weakestOpponents.length === 1) {
                     const target = weakestOpponents[0];
                     const payment = Math.min(target.hoard, 2 * game.scalingFactor);
@@ -784,7 +864,11 @@ class ThreeDragonAnteManager {
                     player.hoard += payment;
                     game.gambit.log.push(`${player.user.username}'s White Dragon forces ${target.user.username} to pay ${payment} gold.`);
                 } else {
-                    game.pendingPlayerChoice = { type: 'WhiteDragonTarget', player, options: weakestOpponents };
+                    game.pendingPlayerChoice = {
+                        type: 'WhiteDragonTarget',
+                        player,
+                        options: weakestOpponents
+                    };
                     await this.ui.promptTargetPlayer(game, player, weakestOpponents, "Choose weakest opponent to take 2 gold from:");
                     return true;
                 }
@@ -793,12 +877,14 @@ class ThreeDragonAnteManager {
             case 'Red': {
                 const strongestOpponents = this._findOpponentsByStrength(game, player, true);
                 if (strongestOpponents.length === 0) break;
+
                 if (strongestOpponents.length === 1) {
                     const target = strongestOpponents[0];
                     const payment = Math.min(target.hoard, 1 * game.scalingFactor);
                     target.hoard -= payment;
                     player.hoard += payment;
                     game.gambit.log.push(`${player.user.username}'s Red Dragon forces ${target.user.username} to pay ${payment} gold.`);
+
                     if (target.hand.length > 0) {
                         const randomIndex = Math.floor(Math.random() * target.hand.length);
                         const stolenCard = target.hand.splice(randomIndex, 1)[0];
@@ -806,7 +892,11 @@ class ThreeDragonAnteManager {
                         game.gambit.log.push(`${player.user.username} also steals a random card from ${target.user.username}'s hand.`);
                     }
                 } else {
-                    game.pendingPlayerChoice = { type: 'RedDragonTarget', player, options: strongestOpponents };
+                    game.pendingPlayerChoice = {
+                        type: 'RedDragonTarget',
+                        player,
+                        options: strongestOpponents
+                    };
                     await this.ui.promptTargetPlayer(game, player, strongestOpponents, "Choose strongest opponent to take 1 gold and a card from:");
                     return true;
                 }
@@ -815,17 +905,23 @@ class ThreeDragonAnteManager {
             case 'Copper': {
                 const copperCardIndex = player.flight.findIndex(c => c.effect === 'Copper');
                 if (copperCardIndex === -1) break;
+
                 if (game.deck.length === 0) {
                     game.gambit.log.push('The deck is empty, the Copper Dragon\'s power fails.');
                     break;
                 }
+
                 const copperCard = player.flight.splice(copperCardIndex, 1)[0];
                 game.discardPile.push(copperCard);
+
                 const newCard = game.deck.shift();
                 player.flight.splice(copperCardIndex, 0, newCard);
                 game.gambit.log.push(`${player.user.username}'s Copper Dragon is discarded and replaced with the ${newCard.name}.`);
+
                 const waitingForInput = await this._resolveCardPower(game, player, newCard, true);
+                // If the new card also requires input, we need to return true up the chain
                 if (waitingForInput) return true;
+
                 break;
             }
             case 'Kobold': {
@@ -834,7 +930,7 @@ class ThreeDragonAnteManager {
                     break;
                 }
                 await this.ui.promptKoboldChoice(game, player);
-                return true;
+                return true; // Pauses game flow
             }
             case 'Sorcerer': {
                 if (game.deck.length < 3) {
@@ -842,75 +938,102 @@ class ThreeDragonAnteManager {
                     break;
                 }
                 const revealedCards = game.deck.splice(0, 3);
+
                 const sorcererInFlight = player.flight.find(c => c.effect === 'Sorcerer' && !c.markedForReplacement);
                 if (sorcererInFlight) {
                     sorcererInFlight.markedForReplacement = true;
                 } else {
                     game.gambit.log.push('Error: Could not find the Sorcerer card to replace.');
-                    game.deck.unshift(...revealedCards);
+                    game.deck.unshift(...revealedCards); // Return cards to deck
                     break;
                 }
-                const revealedCardData = revealedCards.map(card => ({
-                    name: card.name, value: card.value, text: CARD_EFFECTS.find(e => e.name === card.effect)?.text || 'None', image: card.image
-                }));
-                game.pendingSorcererChoice = { playerId: player.id, revealedCards };
+
+                const revealedCardData = revealedCards.map(card => {
+                    const effect = CARD_EFFECTS.find(e => e.name === card.effect);
+                    return {
+                        name: card.name,
+                        value: card.value,
+                        text: effect ? effect.text : 'None',
+                        image: card.image
+                    };
+                });
+
+                game.pendingSorcererChoice = {
+                    playerId: player.id,
+                    revealedCards: revealedCards // Still store the full card object for later logic
+                };
+
                 await this.ui.promptSorcererChoice(game, player, revealedCardData);
-                return true;
+                return true; // Pauses game flow
             }
         }
     }
 
     async _continueGameFlow(game) {
         game.gambit.currentPlayerIndex++;
+
         if (game.gambit.currentPlayerIndex >= game.players.length) {
             const roundNumber = game.gambit.rounds.length;
-            let gambitOver = (roundNumber >= 3 && !game.gambit.playedBronzeWarlord) || roundNumber >= 4;
+            let gambitOver = false;
+            if (roundNumber >= 4) {
+                gambitOver = true;
+            } else if (roundNumber === 3 && !game.gambit.playedBronzeWarlord) {
+                gambitOver = true;
+            }
+
             if (gambitOver) {
                 const { winner } = await this._endGambit(game);
                 game.gambit.log.push(`Gambit ends. ${winner ? winner.user.username + ' wins the stakes!' : 'The stakes are added to the next gambit.'}`);
+                return;
             } else {
-                if (game.gambit.playedBronzeWarlord && roundNumber === 3) {
+                if (game.gambit.playedBronzeWarlord && game.gambit.rounds.length === 3) {
                      game.gambit.log.push(`${game.gambit.playedBronzeWarlord.user.username} played the Bronze Warlord! A fourth round begins.`);
                 }
-                game.gambit.log.push(`Round ${roundNumber} ends. Starting a new round.`);
+                game.gambit.log.push(`Round ${game.gambit.rounds.length} ends. Starting a new round.`);
                 await this._startRound(game);
+                return;
             }
-        } else {
-            const currentPlayer = game.gambit.turnOrder[game.gambit.currentPlayerIndex];
-            this._startTurnTimer(game, currentPlayer);
-            this.queueRender(game.channelId, currentPlayer.id, 1);
-            game.players.filter(p => p.id !== currentPlayer.id).forEach(p => this.queueRender(game.channelId, p.id, 2));
         }
+
+        this.queueRender(game.channelId, 'render_all', 2);
     }
 
     async handleAnte(game, player, cardIndex) {
-        if (player.anteCard) return;
+        if (player.anteCard) {
+            return;
+        }
         this._clearTurnTimer(game);
         if (!player.hand[cardIndex]) {
             console.error(`TDA Error: Player ${player.user.username} tried to ante with invalid card index ${cardIndex}`);
             return;
         }
+
         const card = player.hand.splice(cardIndex, 1)[0];
         player.anteCard = card;
         game.gambit.antePile.push(card);
         game.gambit.antedByPlayer.push({ player, card });
+
         const anteAmount = card.value * game.scalingFactor;
         player.hoard -= anteAmount;
         game.gambit.stakes += anteAmount;
+
         game.gambit.log.push(`${player.user.username} antes with their ${card.name} and pays ${anteAmount} to the stakes.`);
+
         const allAnted = game.players.every(p => p.anteCard);
+
         if (allAnted) {
             this._determineLeader(game);
             game.gambit.log.push(`The new leader is ${game.gambit.leader.user.username}.`);
             await this._startRound(game);
         } else {
-            this.queueRenderAll(game, 2);
+            this.queueRender(game.channelId, 'render_all', 2);
         }
     }
 
     _determineLeader(game) {
         let highestAnte = -1;
         let potentialLeaders = [];
+
         for (const p of game.players) {
             if (p.anteCard.value > highestAnte) {
                 highestAnte = p.anteCard.value;
@@ -919,6 +1042,7 @@ class ThreeDragonAnteManager {
                 potentialLeaders.push(p);
             }
         }
+
         if (potentialLeaders.length === 1) {
             game.gambit.leader = potentialLeaders[0];
         } else {
@@ -933,21 +1057,34 @@ class ThreeDragonAnteManager {
 
     async handlePlayCard(game, player, cardIndex) {
         this._clearTurnTimer(game);
-        if (!player.hand[cardIndex]) return;
+        if (!player.hand[cardIndex]) {
+            console.error(`TDA Error: Player ${player.user.username} tried to play with invalid card index ${cardIndex}`);
+            return;
+        }
+
         const card = player.hand.splice(cardIndex, 1)[0];
         player.flight.push(card);
+
         const currentRound = game.gambit.rounds[game.gambit.rounds.length - 1];
         currentRound.turns.push({ player, card });
+
         game.gambit.log.push(`${player.user.username} plays the ${card.name} (Strength ${card.value}).`);
+
         const waitingForInput = await this._resolveCardPower(game, player, card);
+
+        // This needs to be called after the card power, as powers can alter the flight
         await this._checkSpecialFlights(game, player);
-        if (!waitingForInput) await this._continueGameFlow(game);
-        else this.queueRenderAll(game, 2);
+
+        if (!waitingForInput) {
+            await this._continueGameFlow(game);
+        }
     }
 
     async resolveBlueDragonChoice(game, player, choice) {
         this._clearTurnTimer(game);
         const goldAmount = 1 * game.scalingFactor;
+        const flightCount = player.flight.length;
+
         if (choice === 'take') {
             game.gambit.log.push(`${player.user.username} chose to take gold from opponents.`);
             for (const opponent of game.players) {
@@ -957,8 +1094,8 @@ class ThreeDragonAnteManager {
                 player.hoard += payment;
                 game.gambit.log.push(`  - ${opponent.user.username} pays ${payment} gold.`);
             }
-        } else {
-            const stakeAmount = goldAmount * player.flight.length;
+        } else { // choice === 'stakes'
+            const stakeAmount = goldAmount * flightCount;
             game.gambit.log.push(`${player.user.username} chose to have opponents add to the stakes.`);
             for (const opponent of game.players) {
                 if (opponent.id === player.id) continue;
@@ -968,6 +1105,7 @@ class ThreeDragonAnteManager {
                 game.gambit.log.push(`  - ${opponent.user.username} pays ${payment} gold to the stakes.`);
             }
         }
+
         await this._continueGameFlow(game);
     }
 
@@ -979,8 +1117,9 @@ class ThreeDragonAnteManager {
             nextPlayer.hoard -= payment;
             originalPlayer.hoard += payment;
             game.gambit.log.push(`${nextPlayer.user.username} chooses to pay ${originalPlayer.user.username} ${payment} gold.`);
-        } else {
+        } else { // choice === 'give'
             if (cardIndex === null || !nextPlayer.hand[cardIndex]) {
+                console.error(`TDA Error: Invalid card index ${cardIndex} for Green Dragon choice.`);
                 game.gambit.log.push(`An error occurred with Green Dragon choice. No action taken.`);
             } else {
                 const card = nextPlayer.hand.splice(cardIndex, 1)[0];
@@ -988,6 +1127,7 @@ class ThreeDragonAnteManager {
                 game.gambit.log.push(`${nextPlayer.user.username} gives the ${card.name} to ${originalPlayer.user.username}.`);
             }
         }
+
         await this._continueGameFlow(game);
     }
 
@@ -999,8 +1139,9 @@ class ThreeDragonAnteManager {
             lastPlayer.hoard -= payment;
             originalPlayer.hoard += payment;
             game.gambit.log.push(`${lastPlayer.user.username} chooses to pay ${originalPlayer.user.username} ${payment} gold.`);
-        } else {
+        } else { // choice === 'give'
             if (cardIndex === null || !lastPlayer.hand[cardIndex]) {
+                console.error(`TDA Error: Invalid card index ${cardIndex} for Brass Dragon choice.`);
                 game.gambit.log.push(`An error occurred with Brass Dragon choice. No action taken.`);
             } else {
                 const card = lastPlayer.hand.splice(cardIndex, 1)[0];
@@ -1008,42 +1149,60 @@ class ThreeDragonAnteManager {
                 game.gambit.log.push(`${lastPlayer.user.username} gives the ${card.name} to ${originalPlayer.user.username}.`);
             }
         }
+
         await this._continueGameFlow(game);
     }
 
     async resolveKoboldChoice(game, player, cardIndicesToDiscard) {
         this._clearTurnTimer(game);
-        if (cardIndicesToDiscard.length === 0) {
+        const numToDiscard = cardIndicesToDiscard.length;
+        if (numToDiscard === 0) {
             game.gambit.log.push(`${player.user.username} uses the Kobold's power but chooses not to discard any cards.`);
-        } else {
-            cardIndicesToDiscard.sort((a, b) => parseInt(b) - parseInt(a));
-            const discardedCards = [];
-            for (const index of cardIndicesToDiscard) {
-                if (player.hand[index]) discardedCards.push(player.hand.splice(index, 1)[0]);
-            }
-            if (discardedCards.length > 0) {
-                game.discardPile.push(...discardedCards);
-                game.gambit.log.push(`${player.user.username} uses the Kobold's power to discard ${discardedCards.length} card(s).`);
-                await this._drawCards(game, player, discardedCards.length);
-                game.gambit.log.push(`${player.user.username} draws ${discardedCards.length} new card(s).`);
+            await this._continueGameFlow(game);
+            return;
+        }
+
+        cardIndicesToDiscard.sort((a, b) => parseInt(b) - parseInt(a));
+
+        const discardedCards = [];
+        for (const index of cardIndicesToDiscard) {
+            if (player.hand[index]) {
+                discardedCards.push(player.hand.splice(index, 1)[0]);
             }
         }
+
+        if (discardedCards.length > 0) {
+            game.discardPile.push(...discardedCards);
+            game.gambit.log.push(`${player.user.username} uses the Kobold's power to discard ${discardedCards.length} card(s).`);
+
+            await this._drawCards(game, player, discardedCards.length);
+            game.gambit.log.push(`${player.user.username} draws ${discardedCards.length} new card(s).`);
+        }
+
         await this._continueGameFlow(game);
     }
 
     async resolveSorcererChoice(game, player, chosenCardImage) {
         this._clearTurnTimer(game);
-        if (!game.pendingSorcererChoice || game.pendingSorcererChoice.playerId !== player.id) return;
+        if (!game.pendingSorcererChoice || game.pendingSorcererChoice.playerId !== player.id) {
+            console.error('TDA Error: Mismatched sorcerer choice resolution.');
+            // It's possible for a user to click an old button. Just ignore it.
+            return;
+        }
         const { revealedCards } = game.pendingSorcererChoice;
         delete game.pendingSorcererChoice;
+
         const chosenCard = revealedCards.find(c => c.image === chosenCardImage);
         const otherCards = revealedCards.filter(c => c.image !== chosenCardImage);
+
         if (!chosenCard) {
+            console.error(`TDA Error: Could not find chosen card with image ${chosenCardImage}`);
             game.gambit.log.push('An error occurred with the Sorcerer\'s power.');
             game.deck.unshift(...revealedCards);
             await this._continueGameFlow(game);
             return;
         }
+
         const sorcererIndex = player.flight.findIndex(c => c.markedForReplacement);
         if (sorcererIndex !== -1) {
             const sorcererCard = player.flight[sorcererIndex];
@@ -1051,21 +1210,32 @@ class ThreeDragonAnteManager {
             game.discardPile.push(sorcererCard);
             delete sorcererCard.markedForReplacement;
         } else {
+             console.error(`TDA Error: Could not find marked Sorcerer to replace.`);
              game.gambit.log.push('An error occurred replacing the Sorcerer card.');
         }
+
         game.gambit.antePile.push(...otherCards);
         game.gambit.log.push(`${player.user.username} uses the Sorcerer's power, chooses the ${chosenCard.name}, and adds ${otherCards.length} cards to the ante pile.`);
+
         const waitingForInput = await this._resolveCardPower(game, player, chosenCard, true);
-        if (!waitingForInput) await this._continueGameFlow(game);
+
+        if (!waitingForInput) {
+            await this._continueGameFlow(game);
+        }
     }
 
     async resolvePlayerTargetChoice(game, choosingPlayer, targetPlayerId) {
         this._clearTurnTimer(game);
-        if (!game.pendingPlayerChoice || game.pendingPlayerChoice.player.id !== choosingPlayer.id) return;
+        if (!game.pendingPlayerChoice || game.pendingPlayerChoice.player.id !== choosingPlayer.id) {
+            return; // Invalid state or not the right player
+        }
+
         const choiceType = game.pendingPlayerChoice.type;
         const target = game.players.find(p => p.id === targetPlayerId);
-        if (!target) return;
+        if (!target) return; // Target not found
+
         delete game.pendingPlayerChoice;
+
         if (choiceType === 'WhiteDragonTarget') {
             const payment = Math.min(target.hoard, 2 * game.scalingFactor);
             target.hoard -= payment;
@@ -1076,6 +1246,7 @@ class ThreeDragonAnteManager {
             target.hoard -= payment;
             choosingPlayer.hoard += payment;
             game.gambit.log.push(`${choosingPlayer.user.username}'s Red Dragon forces ${target.user.username} to pay ${payment} gold.`);
+
             if (target.hand.length > 0) {
                 const randomIndex = Math.floor(Math.random() * target.hand.length);
                 const stolenCard = target.hand.splice(randomIndex, 1)[0];
@@ -1083,29 +1254,41 @@ class ThreeDragonAnteManager {
                 game.gambit.log.push(`${choosingPlayer.user.username} also steals a random card from ${target.user.username}'s hand.`);
             }
         }
+
         await this._continueGameFlow(game);
     }
 
     async handleContinueChoice(game, player, choice) {
-        if (player.continueStatus !== 'pending') return;
+        if (player.continueStatus !== 'pending') {
+            return; // Player has already made a choice
+        }
         this._clearTurnTimer(game);
+
         if (choice === 'leave') {
             player.continueStatus = 'left';
             game.gambit.log.push(`${player.user.username} has left the game.`);
             const allPlayerCards = [...(player.hand || []), ...(player.flight || [])];
             game.discardPile.push(...allPlayerCards);
+
             const playerIndex = game.players.findIndex(p => p.id === player.id);
-            if (playerIndex > -1) game.players.splice(playerIndex, 1);
-            if (player.dmChannel) await this.ui.closeGameBoard(player, 'You have left the game.');
+            if (playerIndex > -1) {
+                game.players.splice(playerIndex, 1);
+            }
+            if (player.dmChannel) {
+                await this.ui.closeGameBoard(player, 'You have left the game.');
+            }
         } else {
-            player.continueStatus = choice;
+            player.continueStatus = choice; // 'same_deck' or 'new_deck'
             game.gambit.log.push(`${player.user.username} is ready to play again.`);
         }
+
         if (game.players.length < 2) {
             await this._endGame(game);
             return;
         }
+
         const allReady = game.players.every(p => p.continueStatus !== 'pending');
+
         if (allReady) {
             const wantsNewDeck = game.players.some(p => p.continueStatus === 'new_deck');
             if (wantsNewDeck) {
@@ -1117,22 +1300,69 @@ class ThreeDragonAnteManager {
                 await this._startGambit(game);
             }
         } else {
-            this.queueRenderAll(game, 2);
+            this.queueRender(game.channelId, 'render_all', 2);
         }
     }
 
-    async _endGame(game) {
-        const winner = game.players.length === 1 ? game.players[0] : null;
-        const gameOverMessage = winner ? `${winner.user.username} is the last player remaining and wins the game!` : 'Not enough players to continue. The game has ended.';
-        game.gambit.log.push(gameOverMessage);
-        const allOriginalPlayers = [...game.players, ...(game.gambit.playersWhoLeft || [])];
-        for(const p of allOriginalPlayers) {
-            if (p.dmChannel) await this.ui.closeGameBoard(p, `The game has ended. ${gameOverMessage}`);
+    async handleCardDetailsButton(interaction, game, player, context) {
+        let cardsToShow = [];
+        if (context === 'hand') {
+            const page = player.handPage || 0;
+            const cardsPerPage = 5;
+            const startIndex = page * cardsPerPage;
+            cardsToShow = (player.hand || []).slice(startIndex, startIndex + cardsPerPage);
         }
+        // Could add other contexts like 'flight' later if needed
+
+        if (cardsToShow.length === 0) {
+            return interaction.reply({ content: 'There are no cards to show details for.', ephemeral: true });
+        }
+
+        const embed = new EmbedBuilder()
+            .setColor(0xabcdef)
+            .setTitle('Card Details');
+
+        cardsToShow.forEach(card => {
+            const effect = CARD_EFFECTS.find(e => e.name === card.effect);
+            embed.addFields({
+                name: `${card.name} (Str ${card.value})`,
+                value: effect ? effect.text : 'No special power.'
+            });
+        });
+
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    async _endGame(game) {
+        // This is a simplified end game function.
+        // A more robust version would declare a winner if one exists.
+        const winner = game.players.length === 1 ? game.players[0] : null;
+        const gameOverMessage = winner
+            ? `${winner.user.username} is the last player remaining and wins the game!`
+            : 'Not enough players to continue. The game has ended.';
+
+        game.gambit.log.push(gameOverMessage);
+
+        // Notify all original players and close their boards
+        const allOriginalPlayers = [...game.players];
+        const playersWhoLeft = game.gambit.playersWhoLeft || []; // Assuming we track this
+        allOriginalPlayers.push(...playersWhoLeft);
+
+        for(const p of allOriginalPlayers) {
+            if (p.dmChannel) {
+                await this.ui.closeGameBoard(p, `The game has ended. ${gameOverMessage}`);
+            }
+        }
+
+        // Clean up the active game
         this.activeGames.delete(game.channelId);
         this.updateQueues.delete(game.channelId);
+
+        // Send a final message to the main channel
         const channel = await this.client.channels.fetch(game.channelId);
-        if (channel) await channel.send(`The game of Three-Dragon Ante has concluded. ${gameOverMessage}`);
+        if (channel) {
+            await channel.send(`The game of Three-Dragon Ante has concluded. ${gameOverMessage}`);
+        }
     }
 }
 

@@ -3,19 +3,22 @@ const path = require('path');
 const { createCanvas, loadImage } = require('canvas');
 
 class TdaUiManager {
-    async _createDraftPageImage(draftPage) {
-        if (!draftPage || draftPage.length === 0) return null;
+    async _createCardCollage(cards, maxCards = 10) {
+        if (!cards || cards.length === 0) return null;
 
         const cardWidth = 250;
         const cardHeight = 350;
-        const canvasWidth = cardWidth * draftPage.length;
+        const cardsToDraw = cards.slice(0, maxCards);
+        const canvasWidth = cardWidth * cardsToDraw.length;
         const canvasHeight = cardHeight;
+
+        if (canvasWidth === 0) return null;
 
         const canvas = createCanvas(canvasWidth, canvasHeight);
         const ctx = canvas.getContext('2d');
 
-        for (let i = 0; i < draftPage.length; i++) {
-            const card = draftPage[i];
+        for (let i = 0; i < cardsToDraw.length; i++) {
+            const card = cardsToDraw[i];
             try {
                 const imagePath = path.join(__dirname, '..', '..', '..', 'resources', 'threedragonanteimages', card.image);
                 const image = await loadImage(imagePath);
@@ -59,28 +62,33 @@ class TdaUiManager {
     _createLogEmbed(game) {
         const embed = new EmbedBuilder()
             .setTitle('Game Log')
-            .setColor(0xaaaaaa)
-            .setDescription(game.gambit.log.slice(-10).join('\n') || 'Log is empty.');
+            .setColor(0xaaaaaa);
+
+        const log = game.gambit?.log || [];
+        embed.setDescription(log.slice(-15).join('\n') || 'Log is empty.');
 
         if (game.turnExpiresAt) {
             const secondsRemaining = Math.round((game.turnExpiresAt - Date.now()) / 1000);
             let currentPlayer;
-            if (game.state === 'drafting') {
+
+            if (game.state === 'drafting' && game.draft?.turnOrder) {
                 currentPlayer = game.players.find(p => p.id === game.draft.turnOrder[game.draft.currentPlayerIndex]);
-            } else if (game.gambit?.turnOrder) {
+            } else if (game.state === 'playing_round' && game.gambit?.turnOrder) {
                 currentPlayer = game.gambit.turnOrder[game.gambit.currentPlayerIndex];
             }
 
             if (currentPlayer) {
-                embed.setFooter({ text: `Your turn, ${currentPlayer.user.username}! Time remaining: ${secondsRemaining}s` });
+                embed.setFooter({ text: `It's ${currentPlayer.user.username}'s turn! Time remaining: ${Math.max(0, secondsRemaining)}s` });
             }
         }
         return embed;
     }
 
     _createOpponentEmbed(game, opponent) {
-        const flight = opponent.flight || [];
-        const hand = opponent.hand || [];
+        const flight = opponent?.flight || [];
+        const hand = opponent?.hand || [];
+        const hoard = opponent?.hoard ?? 0; // Use nullish coalescing for 0 values
+
         const flightValue = flight.reduce((sum, card) => sum + card.value, 0);
         const handEmoji = '🃏'.repeat(hand.length) + '⬛'.repeat(10 - hand.length);
 
@@ -88,7 +96,7 @@ class TdaUiManager {
             .setTitle(opponent.user.username)
             .setColor(0x5865F2)
             .addFields(
-                { name: 'Hoard', value: `${opponent.hoard}gp`, inline: true },
+                { name: 'Hoard', value: `${hoard}gp`, inline: true },
                 { name: 'Hand', value: `${handEmoji} (${hand.length})`, inline: true },
                 { name: 'Flight Value', value: flightValue.toString(), inline: true }
             );
@@ -179,40 +187,44 @@ class TdaUiManager {
     async createGameBoard(game) {
         for (const player of game.players) {
             const dmChannel = await player.user.createDM();
+            if (!dmChannel) continue;
             player.dmChannel = dmChannel;
             player.board = {};
 
+            // Create embeds
             const logEmbed = this._createLogEmbed(game);
             const opponentEmbeds = game.players.filter(p => p.id !== player.id).map(opp => this._createOpponentEmbed(game, opp));
             const anteEmbed = this._createAnteEmbed(game);
             const playerFlightEmbed = this._createPlayerFlightEmbed(game, player);
             const playerActionEmbed = this._createPlayerActionEmbed(game, player);
             const components = this.getComponentsForState(game, player);
-            let files = [];
 
-            const isMyTurnInDraft = game.state === 'drafting' && game.draft.turnOrder[game.draft.currentPlayerIndex] === player.id;
-            if (isMyTurnInDraft) {
-                const page = player.draftPage || 0;
-                const cardsPerPage = 5;
-                const startIndex = page * cardsPerPage;
-                const draftPage = game.draft.options.slice(startIndex, startIndex + cardsPerPage);
-
-                if (draftPage.length > 0) {
-                    const imageBuffer = await this._createDraftPageImage(draftPage);
-                    if (imageBuffer) {
-                        files.push({ attachment: imageBuffer, name: 'draft_page.png' });
-                        playerActionEmbed.setImage('attachment://draft_page.png');
-                    }
-                }
+            // Generate images
+            const flightImageBuffer = await this._createCardCollage(player.flight, 10);
+            if (flightImageBuffer) {
+                playerFlightEmbed.setImage('attachment://flight.png');
             }
 
+            let actionImageBuffer = null;
+            if (game.state === 'drafting') {
+                const page = player.draftPage || 0;
+                const draftPage = game.draft.options.slice(page * 5, page * 5 + 5);
+                actionImageBuffer = await this._createCardCollage(draftPage, 5);
+            } else {
+                const page = player.handPage || 0;
+                const handPage = (player.hand || []).slice(page * 5, page * 5 + 5);
+                actionImageBuffer = await this._createCardCollage(handPage, 5);
+            }
+            if (actionImageBuffer) {
+                playerActionEmbed.setImage('attachment://action_image.png');
+            }
 
             try {
                 player.board.logMessage = await dmChannel.send({ embeds: [logEmbed] });
                 player.board.opponentMessages = await Promise.all(opponentEmbeds.map(e => dmChannel.send({ embeds: [e] })));
                 player.board.anteMessage = await dmChannel.send({ embeds: [anteEmbed] });
-                player.board.playerFlightMessage = await dmChannel.send({ embeds: [playerFlightEmbed] });
-                player.board.playerActionMessage = await dmChannel.send({ embeds: [playerActionEmbed], components, files });
+                player.board.playerFlightMessage = await dmChannel.send({ embeds: [playerFlightEmbed], files: flightImageBuffer ? [{ attachment: flightImageBuffer, name: 'flight.png' }] : [] });
+                player.board.playerActionMessage = await dmChannel.send({ embeds: [playerActionEmbed], components, files: actionImageBuffer ? [{ attachment: actionImageBuffer, name: 'action_image.png' }] : [] });
             } catch (error) {
                 console.error(`Could not send game board to ${player.user.username}`, error);
             }
@@ -228,6 +240,7 @@ class TdaUiManager {
     async renderPlayer(game, player) {
         if (!player.dmChannel || !player.board) return;
         try {
+            // Edit embeds
             const logEmbed = this._createLogEmbed(game);
             await player.board.logMessage.edit({ embeds: [logEmbed] });
 
@@ -242,30 +255,41 @@ class TdaUiManager {
             const anteEmbed = this._createAnteEmbed(game);
             await player.board.anteMessage.edit({ embeds: [anteEmbed] });
 
+            // Prepare embeds and images for flight and action messages
             const playerFlightEmbed = this._createPlayerFlightEmbed(game, player);
-            await player.board.playerFlightMessage.edit({ embeds: [playerFlightEmbed] });
-
             const playerActionEmbed = this._createPlayerActionEmbed(game, player);
             const components = this.getComponentsForState(game, player);
-            let files = [];
 
-            const isMyTurnInDraft = game.state === 'drafting' && game.draft.turnOrder[game.draft.currentPlayerIndex] === player.id;
-            if (isMyTurnInDraft) {
-                const page = player.draftPage || 0;
-                const cardsPerPage = 5;
-                const startIndex = page * cardsPerPage;
-                const draftPage = game.draft.options.slice(startIndex, startIndex + cardsPerPage);
+            // Generate flight image
+            const flightImageBuffer = await this._createCardCollage(player.flight, 10);
+            if (flightImageBuffer) {
+                playerFlightEmbed.setImage('attachment://flight.png');
+            }
+            await player.board.playerFlightMessage.edit({ embeds: [playerFlightEmbed], files: flightImageBuffer ? [{ attachment: flightImageBuffer, name: 'flight.png' }] : [] });
 
-                if (draftPage.length > 0) {
-                    const imageBuffer = await this._createDraftPageImage(draftPage);
-                    if (imageBuffer) {
-                        files.push({ attachment: imageBuffer, name: 'draft_page.png' });
-                        playerActionEmbed.setImage('attachment://draft_page.png');
-                    }
-                }
+            // Generate hand/draft image
+            let actionImageBuffer = null;
+            if (game.state === 'drafting') {
+                 const isMyTurnInDraft = game.draft.turnOrder[game.draft.currentPlayerIndex] === player.id;
+                 if (isMyTurnInDraft) {
+                    const page = player.draftPage || 0;
+                    const draftPage = game.draft.options.slice(page * 5, page * 5 + 5);
+                    actionImageBuffer = await this._createCardCollage(draftPage, 5);
+                 }
+            } else {
+                const page = player.handPage || 0;
+                const handPage = (player.hand || []).slice(page * 5, page * 5 + 5);
+                actionImageBuffer = await this._createCardCollage(handPage, 5);
             }
 
-            await player.board.playerActionMessage.edit({ embeds: [playerActionEmbed], components, files });
+            if (actionImageBuffer) {
+                playerActionEmbed.setImage('attachment://action_image.png');
+            } else {
+                // Clear the image if no buffer was generated (e.g. not your turn in draft)
+                playerActionEmbed.setImage(null);
+            }
+
+            await player.board.playerActionMessage.edit({ embeds: [playerActionEmbed], components, files: actionImageBuffer ? [{ attachment: actionImageBuffer, name: 'action_image.png' }] : [] });
         } catch (error) {
             console.error(`Failed to render board for ${player.user.username}`, error);
         }
@@ -328,6 +352,15 @@ class TdaUiManager {
                 );
             components.push(navRow);
         }
+
+        const detailsRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('tda_details_hand')
+                .setLabel('View Card Details')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🔎')
+        );
+        components.push(detailsRow);
 
         return components;
     }
@@ -393,6 +426,15 @@ class TdaUiManager {
                 );
             components.push(navRow);
         }
+
+        const detailsRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('tda_details_hand')
+                .setLabel('View Card Details')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🔎')
+        );
+        components.push(detailsRow);
 
         return components;
     }
@@ -684,6 +726,106 @@ class TdaUiManager {
             // The individual catches will log errors, this is an additional safeguard.
             console.error(`An error occurred while closing game board for ${player.user.username}`, error);
         }
+    }
+
+    // --- Lobby and Scoreboard Management ---
+
+    async updateLobbyEmbed(game) {
+        const lobbyMessage = await this.client.channels.cache.get(game.channelId).messages.fetch(game.lobbyMessageId).catch(() => null);
+        if (!lobbyMessage) return;
+
+        const embed = new EmbedBuilder()
+            .setTitle('Three-Dragon Ante Lobby')
+            .setColor(0x5539cc)
+            .setDescription('Players are gathering to play Three-Dragon Ante. Click "Join" to enter the game!')
+            .addFields({ name: 'Game Settings', value: `Buy-in: ${game.buyIn}gp | Ante scaling: x${game.scalingFactor}` });
+
+        let playerList = game.players.map(p => {
+            // SPECIAL_ABILITIES is on the manager, not the UI manager
+            const ability = this.manager.SPECIAL_ABILITIES.find(a => a.value === p.specialAbility);
+            return `- ${p.user.username}` + (ability ? ` (${ability.label})` : '');
+        }).join('\n');
+
+        if (!playerList) playerList = 'No players have joined yet.';
+        embed.addFields({ name: `Players (${game.players.length})`, value: playerList });
+
+        if (game.lobbyExpiresAt) {
+            const timeRemaining = Math.round((game.lobbyExpiresAt - Date.now()) / 1000);
+            if (timeRemaining > 0) {
+                embed.setFooter({ text: `Lobby expires in ${Math.floor(timeRemaining / 60)}m ${timeRemaining % 60}s` });
+            } else {
+                embed.setFooter({ text: 'Lobby has expired.' });
+            }
+        }
+
+        const components = this._buildLobbyComponents(game);
+        await lobbyMessage.edit({ embeds: [embed], components });
+    }
+
+    _buildLobbyComponents(game) {
+        const joinButton = new ButtonBuilder().setCustomId('tda_join').setLabel('Join Game').setStyle(ButtonStyle.Success);
+        const leaveButton = new ButtonBuilder().setCustomId('tda_leave').setLabel('Leave Game').setStyle(ButtonStyle.Danger);
+        const startButton = new ButtonBuilder().setCustomId('tda_start').setLabel('Start Game').setStyle(ButtonStyle.Primary);
+
+        const abilityMenu = new StringSelectMenuBuilder()
+            .setCustomId('tda_ability_select')
+            .setPlaceholder('Choose a special ability (optional)')
+            .addOptions(this.manager.SPECIAL_ABILITIES); // Assumes manager is set
+
+        const timerMenu = new StringSelectMenuBuilder()
+            .setCustomId('tda_timer_select')
+            .setPlaceholder(`Turn Timer: ${game.turnTimer === 0 ? 'Disabled' : `${game.turnTimer / 60} min`}`)
+            .addOptions([
+                { label: '1 Minute', value: '60' },
+                { label: '5 Minutes', value: '300' },
+                { label: '10 Minutes', value: '600' },
+                { label: 'Disabled', value: '0' }
+            ]);
+
+        const row1 = new ActionRowBuilder().addComponents(joinButton, leaveButton, startButton);
+        const row2 = new ActionRowBuilder().addComponents(abilityMenu);
+        const row3 = new ActionRowBuilder().addComponents(timerMenu);
+        return [row1, row2, row3];
+    }
+
+    async updateScoreboard(game) {
+        const scoreboardMessage = await this.client.channels.cache.get(game.channelId).messages.fetch(game.lobbyMessageId).catch(() => null);
+        if (!scoreboardMessage) return;
+
+        const embed = new EmbedBuilder()
+            .setTitle('Three-Dragon Ante Scoreboard')
+            .setColor(0x1ABC9C) // A green-ish color for "in-progress"
+            .setTimestamp();
+
+        const sortedPlayers = [...game.players].sort((a, b) => b.hoard - a.hoard);
+
+        let description = `**Stakes:** ${game.gambit.stakes}gp\n\n`;
+        sortedPlayers.forEach(p => {
+            const flightValue = p.flight ? p.flight.reduce((sum, card) => sum + card.value, 0) : 0;
+            const isLeader = game.gambit.leader && game.gambit.leader.id === p.id;
+            const isCurrentTurn = game.gambit.turnOrder && game.gambit.turnOrder[game.gambit.currentPlayerIndex]?.id === p.id;
+
+            let playerLine = '';
+            if (isCurrentTurn) playerLine += '▶️ ';
+            if (isLeader) playerLine += '👑 ';
+            playerLine += `**${p.user.username}**`;
+
+            description += `${playerLine}\n`;
+            description += `> **Hoard:** ${p.hoard}gp\n`;
+            description += `> **Flight Value:** ${flightValue}\n`;
+        });
+
+        embed.setDescription(description || 'Scoreboard is empty.');
+
+        // Remove components when turning it into a scoreboard for the first time
+        const components = scoreboardMessage.components.length > 0 ? [] : undefined;
+
+        const editOptions = { embeds: [embed] };
+        if (components) {
+            editOptions.components = components;
+        }
+
+        await scoreboardMessage.edit(editOptions);
     }
 }
 
