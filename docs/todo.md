@@ -76,3 +76,8 @@ This document consolidates all known bugs, planned features, and active developm
     - **Legendary Dragons:** `Black Raider`, `Blue Overlord`, `Brass Sultan`, `Bronze Warlord`, `Copper Trickster`, `Gold Monarch`, `Green Schemer`, `Red Destroyer`, `Silver Seer`, `White Hunter`.
     - **Other Mortals/Special Dragons:** `The Princess`, `The Kobold`, `The Wyrmpriest`, `Dracolich`, `Bahamut`, and the two Wyrmlings.
 - **D&D Special Abilities**: While selectable in the UI, the mechanical effects of the 8 special abilities (Bluff, Concentration, etc.) are not yet hooked into the game logic. This is the largest missing feature.
+
+### Three-Dragon Ante - UI/UX Improvements (Backlog)
+- **Current Action Embed**: Create a new, temporary embed in each player's DM that only appears when they need to take an action. This embed should flash with different colors to draw attention (e.g., green for a normal turn, yellow for an off-turn choice, red for low time) and contain text describing the exact choice required.
+- **Full Text Display**: Instead of just showing card names, the embeds for a player's Hand and Flight should show the full, unabbreviated rules text for each card. This is an important accessibility feature.
+- **5x4 Draft Grid**: Rework the draft UI to display the pool of 20 optional cards in a 5x4 grid of images. As cards are removed, the grid should collapse to fill the empty space. The background of the image should be transparent.

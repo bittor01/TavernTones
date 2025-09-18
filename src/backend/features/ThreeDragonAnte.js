@@ -203,6 +203,24 @@ class ThreeDragonAnteManager {
         this.ui = uiManager;
     }
 
+    isPlayerTurn(game, player) {
+        if (!game || !player) return false;
+
+        switch(game.state) {
+            case 'drafting':
+                return game.draft.turnOrder[game.draft.currentPlayerIndex] === player.id;
+            case 'ante':
+                return !player.anteCard;
+            case 'playing_round':
+                const currentPlayer = game.gambit.turnOrder[game.gambit.currentPlayerIndex];
+                return currentPlayer && currentPlayer.id === player.id;
+            case 'continue':
+                return player.continueStatus === 'pending';
+            default:
+                return false;
+        }
+    }
+
     _getCardAlignment(card) {
         const effect = CARD_EFFECTS.find(e => e.name === card.effect);
         return effect ? effect.alignment : 'mortal';
@@ -1083,6 +1101,14 @@ class ThreeDragonAnteManager {
 
         const card = player.hand.splice(cardIndex, 1)[0];
         player.flight.push(card);
+
+        // After playing a card, check if the current hand page is now empty and adjust.
+        const cardsPerPage = 5;
+        const handPage = player.handPage || 0;
+        const startIndex = handPage * cardsPerPage;
+        if (startIndex >= player.hand.length && player.hand.length > 0) {
+            player.handPage = Math.floor((player.hand.length - 1) / cardsPerPage);
+        }
 
         const currentRound = game.gambit.rounds[game.gambit.rounds.length - 1];
         currentRound.turns.push({ player, card });

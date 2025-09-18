@@ -144,7 +144,11 @@ class TdaUiManager {
             .setColor(0x57F287);
 
         if (flight.length > 0) {
-            embed.setDescription(flight.map(c => `**${c.name}** (Str ${c.value})`).join('\n'));
+            const description = flight.map(c => {
+                const effect = this.manager.CARD_EFFECTS.find(e => e.name === c.effect);
+                return `**${c.name}** (Str ${c.value})\n*${effect ? effect.text : 'No special power.'}*`;
+            }).join('\n\n');
+            embed.setDescription(description);
         } else {
             embed.setDescription('(Your flight is currently empty)');
         }
@@ -152,27 +156,32 @@ class TdaUiManager {
     }
 
     _createPlayerActionEmbed(game, player) {
-        const embed = new EmbedBuilder()
-            .setColor(0xED4245);
+        const embed = new EmbedBuilder();
 
         if (game.state === 'drafting') {
-            embed.setTitle('Card Draft');
-            const currentPlayer = game.players.find(p => p.id === game.draft.turnOrder[game.draft.currentPlayerIndex]);
-            let description = `Players are taking turns removing optional cards from the deck.\nCards removed so far: ${game.draft.removedCount} / 10.\n\n`;
-            if (currentPlayer) {
-                description += `It is currently **${currentPlayer.user.username}'s** turn to choose a card to remove.`;
+            embed.setTitle('Card Draft Pool');
+            embed.setColor(0x9B59B6); // Purple for draft
+            const page = player.draftPage || 0;
+            const draftPage = game.draft.options.slice(page * 5, page * 5 + 5);
+             if (draftPage.length > 0) {
+                const description = draftPage.map(c => {
+                    const effect = this.manager.CARD_EFFECTS.find(e => e.name === c.effect);
+                    return `**${c.name}** (Str ${c.value})\n*${effect ? effect.text : 'No special power.'}*`;
+                }).join('\n\n');
+                embed.setDescription(description);
+            } else {
+                embed.setDescription('No cards in the draft pool.');
             }
-            embed.setDescription(description);
         } else {
             embed.setTitle(`Your Hand | Hoard: ${player.hoard}gp`);
+            embed.setColor(0xED4245); // Red for hand
             const hand = player.hand || [];
             if (hand.length > 0) {
-                // The hand is already sorted by the game manager.
-                embed.setDescription(hand.map(c => {
-                    const alignment = this.manager._getCardAlignment(c);
-                    const emoji = alignment === 'good' ? '😇' : alignment === 'evil' ? '😈' : '🧙';
-                    return `• ${emoji} ${c.name} (Str ${c.value})`;
-                }).join('\n'));
+                const description = hand.map(c => {
+                    const effect = this.manager.CARD_EFFECTS.find(e => e.name === c.effect);
+                    return `**${c.name}** (Str ${c.value})\n*${effect ? effect.text : 'No special power.'}*`;
+                }).join('\n\n');
+                embed.setDescription(description);
             } else {
                 embed.setDescription('Your hand is empty.');
             }
@@ -184,6 +193,56 @@ class TdaUiManager {
 
     // --- UI Management ---
 
+    _createCurrentActionEmbed(game, player) {
+        const isMyTurn = this.manager.isPlayerTurn(game, player);
+        if (!isMyTurn) return null; // Return null if no action is required
+
+        let description = "It's your turn to act!";
+        let color = '#15633D'; // Green for normal turn
+
+        // Determine description
+        switch(game.state) {
+            case 'drafting':
+                description = "Choose a card from the draft pool to remove.";
+                break;
+            case 'ante':
+                description = "Choose a card from your hand to ante.";
+                break;
+            case 'playing_round':
+                description = "Choose a card from your hand to play into your flight.";
+                break;
+            case 'continue':
+                description = "The gambit has ended. Choose to continue or leave.";
+                break;
+        }
+        if (game.pendingPlayerChoice) {
+            description = game.pendingPlayerChoice.reason || "You need to make a choice for a card's power.";
+            color = '#E9D502'; // Yellow for off-turn choice
+        }
+
+        // Determine color based on time
+        if (game.turnExpiresAt && game.turnTimer > 0) {
+            const timeRemaining = game.turnExpiresAt - Date.now();
+            const timePercentage = timeRemaining / (game.turnTimer * 1000);
+            if (timePercentage < 0.2) {
+                color = '#ff0f0f'; // Red for low time
+            }
+        }
+
+        // Flashing logic
+        if (game.flashToggle) {
+            color = '#353839'; // Grey
+        }
+        game.flashToggle = !game.flashToggle;
+
+        const embed = new EmbedBuilder()
+            .setTitle('ACTION REQUIRED')
+            .setColor(color)
+            .setDescription(description);
+
+        return embed;
+    }
+
     async createGameBoard(game) {
         for (const player of game.players) {
             const dmChannel = await player.user.createDM();
@@ -191,40 +250,15 @@ class TdaUiManager {
             player.dmChannel = dmChannel;
             player.board = {};
 
-            // Create embeds
-            const logEmbed = this._createLogEmbed(game);
-            const opponentEmbeds = game.players.filter(p => p.id !== player.id).map(opp => this._createOpponentEmbed(game, opp));
-            const anteEmbed = this._createAnteEmbed(game);
-            const playerFlightEmbed = this._createPlayerFlightEmbed(game, player);
-            const playerActionEmbed = this._createPlayerActionEmbed(game, player);
-            const components = this.getComponentsForState(game, player);
-
-            // Generate images
-            const flightImageBuffer = await this._createCardCollage(player.flight, 10);
-            if (flightImageBuffer) {
-                playerFlightEmbed.setImage('attachment://flight.png');
-            }
-
-            let actionImageBuffer = null;
-            if (game.state === 'drafting') {
-                const page = player.draftPage || 0;
-                const draftPage = game.draft.options.slice(page * 5, page * 5 + 5);
-                actionImageBuffer = await this._createCardCollage(draftPage, 5);
-            } else {
-                const page = player.handPage || 0;
-                const handPage = (player.hand || []).slice(page * 5, page * 5 + 5);
-                actionImageBuffer = await this._createCardCollage(handPage, 5);
-            }
-            if (actionImageBuffer) {
-                playerActionEmbed.setImage('attachment://action_image.png');
-            }
-
             try {
-                player.board.logMessage = await dmChannel.send({ embeds: [logEmbed] });
-                player.board.opponentMessages = await Promise.all(opponentEmbeds.map(e => dmChannel.send({ embeds: [e] })));
-                player.board.anteMessage = await dmChannel.send({ embeds: [anteEmbed] });
-                player.board.playerFlightMessage = await dmChannel.send({ embeds: [playerFlightEmbed], files: flightImageBuffer ? [{ attachment: flightImageBuffer, name: 'flight.png' }] : [] });
-                player.board.playerActionMessage = await dmChannel.send({ embeds: [playerActionEmbed], components, files: actionImageBuffer ? [{ attachment: actionImageBuffer, name: 'action_image.png' }] : [] });
+                player.board.logMessage = await dmChannel.send({ embeds: [this._createLogEmbed(game)] });
+                player.board.opponentMessages = await Promise.all(
+                    game.players.filter(p => p.id !== player.id).map(opp => dmChannel.send({ embeds: [this._createOpponentEmbed(game, opp)] }))
+                );
+                player.board.anteMessage = await dmChannel.send({ embeds: [this._createAnteEmbed(game)] });
+                player.board.playerFlightMessage = await dmChannel.send({ embeds: [this._createPlayerFlightEmbed(game, player)] });
+                player.board.playerHandMessage = await dmChannel.send({ embeds: [this._createPlayerActionEmbed(game, player)] });
+                player.board.currentActionMessage = await dmChannel.send({ content: "​" }); // Invisible character to create message
             } catch (error) {
                 console.error(`Could not send game board to ${player.user.username}`, error);
             }
@@ -240,64 +274,55 @@ class TdaUiManager {
     async renderPlayer(game, player) {
         if (!player.dmChannel || !player.board) return;
         try {
-            // Edit embeds
-            const logEmbed = this._createLogEmbed(game);
-            await player.board.logMessage.edit({ embeds: [logEmbed] });
-
+            // --- Update Static Embeds ---
+            await player.board.logMessage.edit({ embeds: [this._createLogEmbed(game)] });
             const opponents = game.players.filter(p => p.id !== player.id);
             for (let i = 0; i < opponents.length; i++) {
-                const opponentEmbed = this._createOpponentEmbed(game, opponents[i]);
                 if (player.board.opponentMessages[i]) {
-                    await player.board.opponentMessages[i].edit({ embeds: [opponentEmbed] });
+                    await player.board.opponentMessages[i].edit({ embeds: [this._createOpponentEmbed(game, opponents[i])] });
                 }
             }
+            await player.board.anteMessage.edit({ embeds: [this._createAnteEmbed(game)] });
 
-            const anteEmbed = this._createAnteEmbed(game);
-            await player.board.anteMessage.edit({ embeds: [anteEmbed] });
-
-            // Prepare embeds and images for flight and action messages
+            // --- Update Player Flight ---
             const playerFlightEmbed = this._createPlayerFlightEmbed(game, player);
-            const playerActionEmbed = this._createPlayerActionEmbed(game, player);
-            const components = this.getComponentsForState(game, player);
-
-            // Generate flight image
             const flightImageBuffer = await this._createCardCollage(player.flight, 10);
-            if (flightImageBuffer) {
-                playerFlightEmbed.setImage('attachment://flight.png');
-            }
+            if (flightImageBuffer) playerFlightEmbed.setImage('attachment://flight.png');
             await player.board.playerFlightMessage.edit({ embeds: [playerFlightEmbed], files: flightImageBuffer ? [{ attachment: flightImageBuffer, name: 'flight.png' }] : [] });
 
-            // Generate hand/draft image
-            let actionImageBuffer = null;
+            // --- Update Player Hand ---
+            const playerHandEmbed = this._createPlayerActionEmbed(game, player); // This now acts as the hand embed
+            const handComponents = this.getHandComponents(game, player);
+            let handImageBuffer = null;
             if (game.state === 'drafting') {
-                 const isMyTurnInDraft = game.draft.turnOrder[game.draft.currentPlayerIndex] === player.id;
-                 if (isMyTurnInDraft) {
-                    const page = player.draftPage || 0;
-                    const draftPage = game.draft.options.slice(page * 5, page * 5 + 5);
-                    actionImageBuffer = await this._createCardCollage(draftPage, 5);
-                 }
+                const page = player.draftPage || 0;
+                const draftPage = game.draft.options.slice(page * 5, page * 5 + 5);
+                handImageBuffer = await this._createCardCollage(draftPage, 5);
             } else {
                 const page = player.handPage || 0;
                 const handPage = (player.hand || []).slice(page * 5, page * 5 + 5);
-                actionImageBuffer = await this._createCardCollage(handPage, 5);
+                handImageBuffer = await this._createCardCollage(handPage, 5);
             }
+            if (handImageBuffer) playerHandEmbed.setImage('attachment://action_image.png');
+            await player.board.playerHandMessage.edit({ embeds: [playerHandEmbed], components: handComponents, files: handImageBuffer ? [{ attachment: handImageBuffer, name: 'action_image.png' }] : [] });
 
-            if (actionImageBuffer) {
-                playerActionEmbed.setImage('attachment://action_image.png');
+            // --- Update Current Action Message ---
+            const isMyTurn = this.manager.isPlayerTurn(game, player);
+            if (isMyTurn) {
+                const actionEmbed = this._createCurrentActionEmbed(game, player);
+                const actionComponents = this.getActionComponents(game, player);
+                await player.board.currentActionMessage.edit({ content: '', embeds: [actionEmbed], components: actionComponents });
             } else {
-                // Clear the image if no buffer was generated (e.g. not your turn in draft)
-                playerActionEmbed.setImage(null);
+                await player.board.currentActionMessage.edit({ content: "​", embeds: [], components: [] });
             }
 
-            await player.board.playerActionMessage.edit({ embeds: [playerActionEmbed], components, files: actionImageBuffer ? [{ attachment: actionImageBuffer, name: 'action_image.png' }] : [] });
         } catch (error) {
             console.error(`Failed to render board for ${player.user.username}`, error);
         }
     }
 
-    getComponentsForState(game, player) {
-        const currentPlayer = game.gambit?.turnOrder ? game.gambit.turnOrder[game.gambit.currentPlayerIndex] : null;
-        const isMyTurn = currentPlayer && currentPlayer.id === player.id;
+    getActionComponents(game, player) {
+        if (!this.manager.isPlayerTurn(game, player)) return [];
 
         switch(game.state) {
             case 'drafting':
@@ -305,181 +330,12 @@ class TdaUiManager {
             case 'ante':
                 return this.getAnteComponents(game, player);
             case 'playing_round':
-                return this.getPlayCardComponents(game, player, isMyTurn);
+                return this.getPlayCardComponents(game, player);
             case 'continue':
                 return this.getContinueLeaveComponents(game, player);
             default:
                 return [];
         }
-    }
-
-    getDraftComponents(game, player) {
-        const isMyTurn = game.draft.turnOrder[game.draft.currentPlayerIndex] === player.id;
-        if (!isMyTurn) return [];
-
-        const page = player.draftPage || 0;
-        const cardsPerPage = 5;
-        const startIndex = page * cardsPerPage;
-        const endIndex = startIndex + cardsPerPage;
-        const draftPage = game.draft.options.slice(startIndex, endIndex);
-
-        const components = [];
-        const cardRow = new ActionRowBuilder();
-        draftPage.forEach((card, index) => {
-            const alignment = this.manager._getCardAlignment(card);
-            const emoji = alignment === 'good' ? '😇' : alignment === 'evil' ? '😈' : '🧙';
-            cardRow.addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`tda_draft_remove_${card.image}`)
-                    .setLabel(`${card.name} (Str ${card.value})`)
-                    .setEmoji(emoji)
-                    .setStyle(ButtonStyle.Danger)
-            );
-        });
-        if (cardRow.components.length > 0) components.push(cardRow);
-
-        if (game.draft.options.length > cardsPerPage) {
-            const navRow = new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('tda_draft_page_prev')
-                        .setLabel('Previous')
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId('tda_draft_page_next')
-                        .setLabel('Next')
-                        .setStyle(ButtonStyle.Secondary)
-                );
-            components.push(navRow);
-        }
-
-        const detailsRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('tda_details_hand')
-                .setLabel('View Card Details')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🔎')
-        );
-        components.push(detailsRow);
-
-        return components;
-    }
-
-    getContinueLeaveComponents(game, player) {
-        const status = player.continueStatus;
-        if (status === 'ready' || status === 'left') return [];
-
-        const row = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('tda_continue_same_deck')
-                    .setLabel('Play Again (Same Deck)')
-                    .setStyle(ButtonStyle.Success),
-                new ButtonBuilder()
-                    .setCustomId('tda_continue_new_deck')
-                    .setLabel('Play Again (New Deck)')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId('tda_continue_leave')
-                    .setLabel('Leave Game')
-                    .setStyle(ButtonStyle.Danger)
-            );
-        return [row];
-    }
-
-    getPlayCardComponents(game, player, isMyTurn) {
-        if (!isMyTurn || !player.hand || player.hand.length === 0) return [];
-
-        const page = player.handPage || 0;
-        const cardsPerPage = 5;
-        const startIndex = page * cardsPerPage;
-        const endIndex = startIndex + cardsPerPage;
-        const handPage = player.hand.slice(startIndex, endIndex);
-
-        const components = [];
-        const cardRow = new ActionRowBuilder();
-        handPage.forEach((card, index) => {
-            const cardIndex = startIndex + index;
-            const alignment = this.manager._getCardAlignment(card);
-            const emoji = alignment === 'good' ? '😇' : alignment === 'evil' ? '😈' : '🧙';
-            cardRow.addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`tda_play_${cardIndex}`)
-                    .setLabel(`${card.name} (Str ${card.value})`)
-                    .setEmoji(emoji)
-                    .setStyle(ButtonStyle.Primary)
-            );
-        });
-        components.push(cardRow);
-
-        if (player.hand.length > cardsPerPage) {
-            const navRow = new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('tda_play_page_prev')
-                        .setLabel('Previous')
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId('tda_play_page_next')
-                        .setLabel('Next')
-                        .setStyle(ButtonStyle.Secondary)
-                );
-            components.push(navRow);
-        }
-
-        const detailsRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('tda_details_hand')
-                .setLabel('View Card Details')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🔎')
-        );
-        components.push(detailsRow);
-
-        return components;
-    }
-
-    getAnteComponents(game, player) {
-        if (player.anteCard || !player.hand || player.hand.length === 0) return [];
-
-        const page = player.handPage || 0;
-        const cardsPerPage = 5;
-        const startIndex = page * cardsPerPage;
-        const endIndex = startIndex + cardsPerPage;
-        const handPage = player.hand.slice(startIndex, endIndex);
-
-        const components = [];
-        const cardRow = new ActionRowBuilder();
-        handPage.forEach((card, index) => {
-            const cardIndex = startIndex + index;
-            const alignment = this.manager._getCardAlignment(card);
-            const emoji = alignment === 'good' ? '😇' : alignment === 'evil' ? '😈' : '🧙';
-            cardRow.addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`tda_ante_${cardIndex}`)
-                    .setLabel(`${card.name} (Str ${card.value})`)
-                    .setEmoji(emoji)
-                    .setStyle(ButtonStyle.Primary)
-            );
-        });
-        components.push(cardRow);
-
-        if (player.hand.length > cardsPerPage) {
-            const navRow = new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('tda_ante_page_prev')
-                        .setLabel('Previous')
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId('tda_ante_page_next')
-                        .setLabel('Next')
-                        .setStyle(ButtonStyle.Secondary)
-                );
-            components.push(navRow);
-        }
-
-        return components;
     }
 
     async promptBlueDragonChoice(game, player) {
