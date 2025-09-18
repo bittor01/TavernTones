@@ -147,6 +147,7 @@ class ThreeDragonAnteManager {
         this.activeGames = new Map();
         this.updateQueues = new Map(); // gameId -> { queue: [], isProcessing: false }
         this.SPECIAL_ABILITIES = SPECIAL_ABILITIES;
+        this.CARD_EFFECTS = CARD_EFFECTS;
     }
 
     queueRender(gameId, type, priority, details = {}) {
