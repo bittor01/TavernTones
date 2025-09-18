@@ -1043,10 +1043,1059 @@ client.once('clientReady', async () => {
 
     client.on('interactionCreate', async interaction => {
 
+        if (interaction.isButton() && interaction.customId.startsWith('tda_draft_remove_')) {
+            const cardImage = interaction.customId.replace('tda_draft_remove_', '');
+            let game, player;
+            for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                const p = g.players.find(p => p.id === interaction.user.id);
+                if (p) { game = g; player = p; break; }
+            }
+            if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+            await interaction.deferUpdate();
+            await client.commandHandler.tdaManager.handleDraftCardRemoval(game, player, cardImage);
+            return;
+        }
+
+        // Add this inside the client.on('interactionCreate', ...)
+        // This handler is for the Next/Previous page buttons
+        if (interaction.isButton() && interaction.customId.startsWith('tda_draft_page_')) {
+            const page = parseInt(interaction.customId.split('_')[3], 10);
+            let game, player;
+            for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                const p = g.players.find(p => p.id === interaction.user.id);
+                if (p) { game = g; player = p; break; }
+            }
+            if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+            await interaction.deferUpdate();
+            await client.commandHandler.tdaManager.handleDraftPagination(game, player, page);
+            return;
+        }
+
+        // This handler is for the select menu
+        if (interaction.isStringSelectMenu() && interaction.customId.startsWith('tda_draft_vote_select_')) {
+            const [_, __, ___, ____, channelId, playerId] = interaction.customId.split('_');
+            const game = client.commandHandler.tdaManager.activeGames.get(channelId);
+            if (!game || game.players.find(p => p.id === interaction.user.id)?.id !== playerId) {
+                return interaction.reply({ content: 'This is not a valid choice for you.', ephemeral: true });
+            }
+            const player = game.players.find(p => p.id === playerId);
+
+            // Just record the selection, don't process it yet
+            await client.commandHandler.tdaManager.handleDraftSelection(game, player, interaction.values);
+
+            await interaction.reply({ content: `You have selected ${interaction.values.length} card(s). Click "Submit Votes" to confirm.`, ephemeral: true });
+            return;
+        }
+
+        // This handler is for the submit button
+        if (interaction.isButton() && interaction.customId === 'tda_draft_vote_submit') {
+            let game, player;
+            for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                const p = g.players.find(p => p.id === interaction.user.id);
+                if (p) { game = g; player = p; break; }
+            }
+            if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+            if (game.state !== 'drafting') {
+                return interaction.reply({ content: 'It is not time to vote.', ephemeral: true });
+            }
+
+            await interaction.update({ content: 'Your vote has been submitted!', components: [] });
+            await client.commandHandler.tdaManager.handleDraftVote(game, player);
+            return;
+        }
         if (interaction.isModalSubmit()) {
+            // ... existing modal handlers
+
             if (interaction.customId.startsWith('tda_buy_in_modal')) {
                 return client.commandHandler.tdaManager.handleBuyInModalSubmit(interaction);
             }
+        }
+
+        if (interaction.isStringSelectMenu()) {
+                // Add this inside the if (interaction.isStringSelectMenu()) { ... } block
+            if (interaction.customId.startsWith('tda_target_player_')) {
+                const [_, __, ___, channelId, playerId] = interaction.customId.split('_');
+                const game = client.commandHandler.tdaManager.activeGames.get(channelId);
+
+                if (!game || game.players.find(p => p.id === interaction.user.id)?.id !== playerId) {
+                    return interaction.reply({ content: 'This is not a valid choice for you.', ephemeral: true });
+                }
+
+                const choosingPlayer = game.players.find(p => p.id === playerId);
+                const targetPlayerId = interaction.values[0];
+
+                await interaction.update({ content: 'Target selected.', components: [] });
+                await client.commandHandler.tdaManager.resolvePlayerTargetChoice(game, choosingPlayer, targetPlayerId);
+                return;
+            }
+            // Add this inside the if (interaction.isStringSelectMenu()) { ... } block
+            if (interaction.customId.startsWith('tda_draft_vote_')) {
+                const [_, __, ___, channelId, playerId] = interaction.customId.split('_');
+                const game = client.commandHandler.tdaManager.activeGames.get(channelId);
+
+                if (!game || game.players.find(p => p.id === interaction.user.id)?.id !== playerId) {
+                    return interaction.reply({ content: 'This is not a valid choice for you.', ephemeral: true });
+                }
+
+                if (game.state !== 'drafting') {
+                    return interaction.reply({ content: 'It is not time to vote.', ephemeral: true });
+                }
+
+                const player = game.players.find(p => p.id === playerId);
+                const votedCardImages = interaction.values;
+
+                await interaction.update({ content: 'Your vote has been submitted!', components: [] });
+                await client.commandHandler.tdaManager.handleDraftVote(game, player, votedCardImages);
+                return;
+            }
+            // ... existing select menu handlers
+
+            if (interaction.customId.startsWith('tda_kobold_choice_')) {
+                const [_, __, ___, channelId, playerId] = interaction.customId.split('_');
+                const game = client.commandHandler.tdaManager.activeGames.get(channelId);
+                if (!game || game.players.find(p => p.id === interaction.user.id)?.id !== playerId) {
+                    return interaction.reply({ content: 'This is not a valid choice for you.', ephemeral: true });
+                }
+                const player = game.players.find(p => p.id === playerId);
+                const cardIndices = interaction.values; // These are already strings
+                await interaction.update({ content: 'Processing your discard...', embeds: [], components: [] });
+                await client.commandHandler.tdaManager.resolveKoboldChoice(game, player, cardIndices);
+                return;
+            }
+
+            if (interaction.customId.startsWith('tda_brass_choice_give_')) {
+                let game, lastPlayer;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        lastPlayer = p;
+                        break;
+                    }
+                }
+                if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+                const originalPlayerId = interaction.customId.split('_')[4];
+                const originalPlayer = game.players.find(p => p.id === originalPlayerId);
+                if (!originalPlayer) return interaction.reply({ content: 'Could not find the original player.', ephemeral: true });
+
+                const cardIndex = parseInt(interaction.values[0], 10);
+                await interaction.update({ content: 'Processing choice...', embeds: [], components: [] });
+                await client.commandHandler.tdaManager.resolveBrassDragonChoice(game, originalPlayer, lastPlayer, 'give', cardIndex);
+                return;
+            }
+        }
+
+        if (interaction.isButton()) {
+            // Add this inside the if (interaction.isButton()) { ... } block
+            if (interaction.customId === 'tda_continue_ready' || interaction.customId === 'tda_continue_leave') {
+                let game, player;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        player = p;
+                        break;
+                    }
+                }
+
+                if (!game) {
+                    return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+                }
+
+                if (game.state !== 'continue') {
+                    return interaction.reply({ content: 'It is not time to make this choice.', ephemeral: true });
+                }
+
+                const choice = interaction.customId === 'tda_continue_ready' ? 'ready' : 'leave';
+
+                // Defer update to prevent interaction failure
+                await interaction.deferUpdate();
+
+                await client.commandHandler.tdaManager.handleContinueChoice(game, player, choice);
+                return;
+            }
+            // ... existing button handlers
+
+            if (interaction.customId.startsWith('tda_sorcerer_choice_')) {
+                const parts = interaction.customId.split('_');
+                const channelId = parts[3];
+                const playerId = parts[4];
+                const cardImage = parts.slice(5).join('_'); // Handle image names with underscores
+
+                const game = client.commandHandler.tdaManager.activeGames.get(channelId);
+                if (!game || game.players.find(p => p.id === interaction.user.id)?.id !== playerId) {
+                    return interaction.reply({ content: 'This is not a valid choice for you.', ephemeral: true });
+                }
+                const player = game.players.find(p => p.id === playerId);
+                await interaction.update({ content: 'Processing your choice...', embeds: [], components: [] });
+                await client.commandHandler.tdaManager.resolveSorcererChoice(game, player, cardImage);
+                return;
+            }
+
+            if (interaction.customId.startsWith('tda_brass_choice_pay_')) {
+                let game, lastPlayer;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        lastPlayer = p;
+                        break;
+                    }
+                }
+                if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+                const originalPlayerId = interaction.customId.split('_')[4];
+                const originalPlayer = game.players.find(p => p.id === originalPlayerId);
+                if (!originalPlayer) return interaction.reply({ content: 'Could not find the original player.', ephemeral: true });
+
+                await interaction.update({ content: 'Processing choice...', embeds: [], components: [] });
+                await client.commandHandler.tdaManager.resolveBrassDragonChoice(game, originalPlayer, lastPlayer, 'pay');
+                return;
+            }
+        }
+
+
+
+        if (interaction.isStringSelectMenu()) {
+            const { customId, values, message } = interaction;
+            const [customIdBase] = customId.split('|');
+
+            if (customId.startsWith('tda_green_choice_give_')) {
+                let game, nextPlayer;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        nextPlayer = p;
+                        break;
+                    }
+                }
+                if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+                const originalPlayerId = customId.split('_')[4];
+                const originalPlayer = game.players.find(p => p.id === originalPlayerId);
+                if (!originalPlayer) return interaction.reply({ content: 'Could not find the original player.', ephemeral: true });
+
+                const cardIndex = parseInt(values[0], 10);
+                await interaction.deferUpdate();
+                await client.commandHandler.tdaManager.resolveGreenDragonChoice(game, originalPlayer, nextPlayer, 'give', cardIndex);
+                return;
+            }
+
+            if (customId === 'tda_ante_select') {
+                let game, player;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        player = p;
+                        break;
+                    }
+                }
+
+                if (!game) {
+                    return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+                }
+
+                const cardIndex = parseInt(values[0], 10);
+
+                await interaction.deferUpdate();
+                await client.commandHandler.tdaManager.handleAnte(game, player, cardIndex);
+                return;
+            }
+
+            if (customIdBase.startsWith('trap-')) {
+                const selections = trapSelections.get(interaction.message.id) || {};
+                const selectionType = customIdBase.replace('trap-', '').replace('-select', '');
+                const selectedValue = values[0];
+
+                // Validate the incoming selection before updating the state
+                const isValid = await _isTrapSelectionValid(selectionType, selectedValue, selections);
+
+                if (!isValid) {
+                    // If not valid, just re-render with the old selections to prevent the invalid state.
+                    await _updateTrapDropdowns(interaction, selections);
+                    return;
+                }
+
+                if (selectedValue === 'random') {
+                    delete selections[selectionType];
+                } else {
+                    selections[selectionType] = selectedValue;
+                }
+
+                trapSelections.set(interaction.message.id, selections);
+                await _updateTrapDropdowns(interaction, selections);
+                return;
+            }
+
+            if (customIdBase.startsWith('npc-')) {
+                // This now handles dropdowns AND the back buttons
+                await _handleNpcDropdowns(interaction);
+                return;
+            }
+
+            if (customId === 'vehicle-tag-select') {
+                const selections = vehicleSelections.get(message.id) || {};
+                selections.tag = values[0];
+                vehicleSelections.set(message.id, selections);
+                await interaction.deferUpdate();
+                return;
+            }
+
+            if (customId === 'vehicle-style-select') {
+                const selections = vehicleSelections.get(message.id) || {};
+                selections.style = values[0];
+                vehicleSelections.set(message.id, selections);
+                await interaction.deferUpdate();
+                return;
+            }
+
+            if (customId === 'encounter-creature-select') {
+                const selections = encounterSelections.get(message.id) || {};
+                selections.creature = values[0];
+                encounterSelections.set(message.id, selections);
+                await interaction.deferUpdate();
+                return;
+            }
+
+            if (customId === 'encounter-difficulty-select') {
+                const selections = encounterSelections.get(message.id) || {};
+                selections.difficulty = values[0];
+                encounterSelections.set(message.id, selections);
+                await interaction.deferUpdate();
+                return;
+            }
+
+            if (customId === '5e-result-select') {
+                await interaction.deferUpdate();
+                const [category, source, name] = values[0].split('__');
+
+                const item = await fiveEToolsParser.getExact(category, name, source);
+
+                if (item) {
+                    const embed = format5eResult(item);
+                    await interaction.editReply({ embeds: [embed], components: [] }); // Remove the dropdown
+                } else {
+                    await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details for that item.', components: [] });
+                }
+                return; // Stop further processing for this interaction
+            }
+
+            const [prefix, selectType] = customId.split('-');
+
+            if (prefix === 'ma') {
+                // Update state
+                const selections = maSelections.get(message.id) || { mode: 'loot', size: 'Average' };
+                selections[selectType] = values[0];
+                maSelections.set(message.id, selections);
+                logToRenderer(`[MA Command] Selections updated: ${JSON.stringify(selections)}`);
+
+                // Get current full state
+                const currentMode = selections.mode;
+                const currentSize = selections.size;
+
+                // Rebuild mode select menu
+                const modeSelect = new StringSelectMenuBuilder()
+                    .setCustomId('ma-mode-select')
+                    .setPlaceholder('Select Mode')
+                    .addOptions([
+                        { label: 'Loot', value: 'loot', default: currentMode === 'loot' },
+                        { label: 'Shop', value: 'shop', default: currentMode === 'shop' }
+                    ]);
+
+                // Rebuild size select menu
+                const sizeSelect = new StringSelectMenuBuilder()
+                    .setCustomId('ma-size-select')
+                    .setPlaceholder('Select Size')
+                    .addOptions([
+                        { label: 'Huge', value: 'Huge', default: currentSize === 'Huge' },
+                        { label: 'Large', value: 'Large', default: currentSize === 'Large' },
+                        { label: 'Average', value: 'Average', default: currentSize === 'Average' },
+                        { label: 'Small', value: 'Small', default: currentSize === 'Small' },
+                        { label: 'Tiny', value: 'Tiny', default: currentSize === 'Tiny' }
+                    ]);
+
+                // Rebuild button row
+                const configureButton = new ButtonBuilder()
+                    .setCustomId('ma-configure-button')
+                    .setLabel('Configure & Generate')
+                    .setStyle(ButtonStyle.Primary);
+
+                const cancelButton = new ButtonBuilder()
+                    .setCustomId('ma-cancel-button')
+                    .setLabel('Cancel')
+                    .setStyle(ButtonStyle.Secondary);
+
+                // Package into ActionRows
+                const row1 = new ActionRowBuilder().addComponents(modeSelect);
+                const row2 = new ActionRowBuilder().addComponents(sizeSelect);
+                const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
+
+                // Update the message
+                await interaction.update({ components: [row1, row2, row3] });
+            }
+            return;
+        }
+
+        if (interaction.isButton()) {
+            if (interaction.customId.startsWith('tda_green_choice_pay_')) {
+                let game, nextPlayer;
+                 for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        nextPlayer = p;
+                        break;
+                    }
+                }
+                if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+
+                const originalPlayerId = interaction.customId.split('_')[4];
+                const originalPlayer = game.players.find(p => p.id === originalPlayerId);
+                if (!originalPlayer) return interaction.reply({ content: 'Could not find the original player.', ephemeral: true });
+
+                await interaction.deferUpdate();
+                await client.commandHandler.tdaManager.resolveGreenDragonChoice(game, originalPlayer, nextPlayer, 'pay');
+                return;
+            }
+
+            if (interaction.customId.startsWith('tda_blue_choice_')) {
+                let game, player;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        player = p;
+                        break;
+                    }
+                }
+
+                if (!game) {
+                    return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+                }
+
+                const choice = interaction.customId.split('_')[3];
+
+                await interaction.deferUpdate();
+                await client.commandHandler.tdaManager.resolveBlueDragonChoice(game, player, choice);
+                return;
+            }
+
+            if (interaction.customId.startsWith('tda_play_')) {
+                let game, player;
+                for (const g of client.commandHandler.tdaManager.activeGames.values()) {
+                    const p = g.players.find(p => p.id === interaction.user.id);
+                    if (p) {
+                        game = g;
+                        player = p;
+                        break;
+                    }
+                }
+
+                if (!game) {
+                    return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
+                }
+
+                const currentPlayer = game.gambit.turnOrder[game.gambit.currentPlayerIndex];
+                if (!currentPlayer || currentPlayer.id !== player.id) {
+                    return interaction.reply({ content: "It's not your turn to play a card.", ephemeral: true });
+                }
+
+                const cardIndex = parseInt(interaction.customId.split('_')[2], 10);
+
+                await interaction.deferUpdate();
+                await client.commandHandler.tdaManager.handlePlayCard(game, player, cardIndex);
+                return;
+            }
+
+            if (interaction.customId === 'trap-proceed-button') {
+                await interaction.message.edit({ content: '⚙️ Finding a trap...', embeds: [], components: [] });
+                const selections = trapSelections.get(interaction.message.id) || {};
+                const trap = await fiveEToolsParser.generateTrap(selections);
+
+                if (!trap) {
+                    await interaction.message.edit({ content: '❌ Could not find a trap matching your criteria. Please try broadening your search.' });
+                    return;
+                }
+
+                const embed = new EmbedBuilder()
+                    .setColor(0xE74C3C) // Red for traps
+                    .setTitle(`Trap: ${trap.name}`)
+                    .setDescription(formatEntries(trap.entries));
+
+                await interaction.channel.send({ embeds: [embed] });
+                await interaction.message.edit({ content: '✅ Trap generated! View the details in the new public message.' });
+                trapSelections.delete(interaction.message.id);
+                await interaction.deferUpdate();
+                return;
+            }
+
+            if (interaction.customId === 'npc-generate-idea') {
+                await interaction.message.edit({ content: '⚙️ Generating character...', embeds: [], components: [] });
+                const selections = npcSelections.get(interaction.message.id) || {};
+                selections.mode = 'idea';
+                await _handleNpcGeneration(interaction, selections, true); // Pass true for a silent defer
+                npcSelections.delete(interaction.message.id);
+                return;
+            }
+
+            if (interaction.customId === 'npc-generate-npc') {
+                const modal = new ModalBuilder()
+                    .setCustomId(`npc-modal-${interaction.message.id}`)
+                    .setTitle('NPC Details');
+                const partyLevelInput = new TextInputBuilder()
+                    .setCustomId('partyLevel')
+                    .setLabel("Average Party Level (1-20)")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+                const partySizeInput = new TextInputBuilder()
+                    .setCustomId('partySize')
+                    .setLabel("Number of Players")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(partyLevelInput),
+                    new ActionRowBuilder().addComponents(partySizeInput)
+                );
+                await interaction.showModal(modal);
+                return;
+            }
+
+            if (interaction.customId === 'vehicle-proceed-button') {
+                const selections = vehicleSelections.get(interaction.message.id) || {};
+
+                const modal = new ModalBuilder()
+                    .setCustomId(`vehicle-modal|${selections.tag || 'random'}|${selections.style || 'random'}`)
+                    .setTitle('Vehicle Encounter Details');
+
+                const totalHpInput = new TextInputBuilder()
+                    .setCustomId('totalHp')
+                    .setLabel("Total Vehicle HP Budget")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                const numVehiclesInput = new TextInputBuilder()
+                    .setCustomId('numVehicles')
+                    .setLabel("Ideal Number of Vehicles")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                modal.addComponents(new ActionRowBuilder().addComponents(totalHpInput));
+                modal.addComponents(new ActionRowBuilder().addComponents(numVehiclesInput));
+
+                await interaction.showModal(modal);
+                return;
+            }
+
+            if (interaction.customId.startsWith('encounter-proceed-button')) {
+                const parts = interaction.customId.split('|');
+                const selections = encounterSelections.get(interaction.message.id) || {};
+
+                let modalCustomId;
+                if (parts.length > 1 && parts[1] === 'type') {
+                    // Type-based encounter
+                    const type = parts[2];
+                    if (!selections.difficulty) {
+                        await interaction.reply({ content: 'Please select a difficulty before proceeding.', flags: [MessageFlags.Ephemeral] });
+                        return;
+                    }
+                    modalCustomId = `encounter-modal|type|${type}|${selections.difficulty}`;
+                } else {
+                    // Creature-based encounter
+                    if (!selections.creature || !selections.difficulty) {
+                        await interaction.reply({ content: 'Please select a creature and a difficulty before proceeding.', flags: [MessageFlags.Ephemeral] });
+                        return;
+                    }
+                    modalCustomId = `encounter-modal|creature|${selections.creature}|${selections.difficulty}`;
+                }
+
+                const modal = new ModalBuilder()
+                    .setCustomId(modalCustomId)
+                    .setTitle('Encounter Details');
+
+                const partyLevelInput = new TextInputBuilder()
+                    .setCustomId('partyLevel')
+                    .setLabel("Average Party Level (1-20)")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                const partySizeInput = new TextInputBuilder()
+                    .setCustomId('partySize')
+                    .setLabel("Number of Party Members")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
+
+                const multiplierInput = new TextInputBuilder()
+                    .setCustomId('multiplier')
+                    .setLabel("Difficulty Multiplier (optional, default 1.0)")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(false);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(partyLevelInput),
+                    new ActionRowBuilder().addComponents(partySizeInput),
+                    new ActionRowBuilder().addComponents(multiplierInput)
+                );
+
+                await interaction.showModal(modal);
+                // Clean up the selections map after use
+                encounterSelections.delete(interaction.message.id);
+                return;
+            }
+
+            if (interaction.customId === 'ma-cancel-button') {
+                maSelections.delete(interaction.message.id);
+
+                const originalRows = interaction.message.components;
+                const row1 = new ActionRowBuilder().addComponents(originalRows[0].components);
+                const row2 = new ActionRowBuilder().addComponents(originalRows[1].components);
+
+                const configureButton = new ButtonBuilder()
+                    .setCustomId('ma-configure-button')
+                    .setLabel('Configure & Generate')
+                    .setStyle(ButtonStyle.Primary)
+                    .setDisabled(true);
+
+                const cancelButton = new ButtonBuilder()
+                    .setCustomId('ma-cancel-button')
+                    .setLabel('Cancelled')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(true);
+
+                const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
+
+                await interaction.update({ components: [row1, row2, row3] });
+                return;
+            }
+
+            if (interaction.customId === 'ma-configure-button') {
+                const modal = new ModalBuilder()
+                    .setCustomId(`ma-config-modal-${interaction.message.id}`)
+                    .setTitle('Configure Magic Item Generation');
+
+                const nicknameInput = new TextInputBuilder()
+                    .setCustomId('ma-nickname-input')
+                    .setLabel("Nickname (Optional)")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(false);
+
+                const numRollsInput = new TextInputBuilder()
+                    .setCustomId('ma-numrolls-input')
+                    .setLabel("Number of Items (e.g., 5 or 1d4+1)")
+                    .setStyle(TextInputStyle.Short)
+                    .setValue('10')
+                    .setRequired(true);
+
+                const partyLevelInput = new TextInputBuilder()
+                    .setCustomId('ma-partylevel-input')
+                    .setLabel("Average Party Level")
+                    .setStyle(TextInputStyle.Short)
+                    .setValue('20')
+                    .setRequired(true);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(nicknameInput),
+                    new ActionRowBuilder().addComponents(numRollsInput),
+                    new ActionRowBuilder().addComponents(partyLevelInput)
+                );
+
+                await interaction.showModal(modal);
+                return;
+            }
+        }
+
+async function _updateTrapDropdowns(interaction, selections) {
+    await interaction.deferUpdate();
+
+    const allTraps = await fiveEToolsParser._loadCategoryData('traps');
+    const environmentKeywords = {
+        'dungeon': /dungeon|tomb|crypt|lair|hallway/i,
+        'wilderness': /forest|jungle|swamp|mountain|wilderness|cave/i,
+        'urban': /city|sewer|building|room/i,
+        'planar': /planar|plane|feywild|shadowfell/i,
+        'aquatic': /water|aquatic|ship/i
+    };
+
+    // 1. Create a single, authoritative list of possible traps based on all active filters.
+    const tier = selections.tier && selections.tier !== 'random' ? parseInt(selections.tier, 10) : null;
+    const threat = selections.threat && selections.threat !== 'random' ? selections.threat.toLowerCase() : null;
+    const type = selections.type && selections.type !== 'random' ? selections.type : null;
+    const envRegex = selections.environment && selections.environment !== 'random' ? environmentKeywords[selections.environment] : null;
+
+    const possibleTraps = allTraps.filter(trap => {
+        const typeMatch = !type || trap.trapHazType === type;
+        const envMatch = !envRegex || (trap.entries && envRegex.test(JSON.stringify(trap.entries)));
+
+        if (!typeMatch || !envMatch) return false;
+
+        // If tier or threat is selected, the trap MUST have a matching rating
+        if (tier || threat) {
+            if (!trap.rating) return false;
+            return trap.rating.some(rating => {
+                const tierMatch = !tier || rating.tier === tier;
+                const threatMatch = !threat || (rating.threat && rating.threat.toLowerCase() === threat);
+                return tierMatch && threatMatch;
+            });
+        }
+
+        return true; // No tier/threat filters, so it's a match
+    });
+
+    // 2. From that filtered list, derive the complete set of all still-possible options.
+    const validTiers = new Set();
+    const validThreats = new Set();
+    const validTypes = new Set();
+    const validEnvironments = new Set();
+
+    for (const trap of possibleTraps) {
+        if (trap.trapHazType) validTypes.add(trap.trapHazType);
+
+        for (const [env, regex] of Object.entries(environmentKeywords)) {
+            if (trap.entries && regex.test(JSON.stringify(trap.entries))) {
+                validEnvironments.add(env);
+            }
+        }
+
+        if (trap.rating) {
+            for (const rating of trap.rating) {
+                validTiers.add(rating.tier.toString());
+                if (rating.threat) validThreats.add(rating.threat.toLowerCase());
+            }
+        }
+    }
+
+    // 3. Rebuild all dropdowns, disabling any option not in the valid sets.
+    const createDropdown = (id, placeholder, allOptions, selectedValue, validValues) => {
+        const availableOptions = allOptions.map(opt => {
+            const isRandom = opt.value === 'random';
+            const isSelected = opt.value === selectedValue;
+            const isDisabled = !isRandom && !validValues.has(opt.value);
+            return { ...opt, default: isSelected, disabled: isDisabled };
+        });
+        return new StringSelectMenuBuilder()
+            .setCustomId(id)
+            .setPlaceholder(placeholder)
+            .addOptions(availableOptions);
+    };
+
+    const tierOpts = [ { label: 'Any Tier', value: 'random' }, { label: 'Tier 1 (Levels 1-4)', value: '1' }, { label: 'Tier 2 (Levels 5-10)', value: '2' }, { label: 'Tier 3 (Levels 11-16)', value: '3' }, { label: 'Tier 4 (Levels 17-20)', value: '4' } ];
+    const threatOpts = [ { label: 'Any Threat', value: 'random' }, { label: 'Setback', value: 'setback' }, { label: 'Dangerous', value: 'dangerous' }, { label: 'Deadly', value: 'deadly' } ];
+    const typeOpts = [ { label: 'Any Type', value: 'random' }, { label: 'Mechanical', value: 'MECH' }, { label: 'Magical', value: 'MAG' }, { label: 'Simple', value: 'SMPL' } ];
+    const envOpts = [ { label: 'Any Environment', value: 'random' }, { label: 'Dungeon / Tomb', value: 'dungeon' }, { label: 'Wilderness / Cave', value: 'wilderness' }, { label: 'Urban / Building', value: 'urban' }, { label: 'Planar / Magical', value: 'planar' }, { label: 'Aquatic', value: 'aquatic' } ];
+
+    const tierSelect = createDropdown('trap-tier-select', selections.tier ? tierOpts.find(o => o.value === selections.tier).label : 'Select Party Tier (Optional)', tierOpts, selections.tier, validTiers);
+    const threatSelect = createDropdown('trap-threat-select', selections.threat ? threatOpts.find(o => o.value === selections.threat).label : 'Select Threat Level (Optional)', threatOpts, selections.threat, validThreats);
+    const typeSelect = createDropdown('trap-type-select', selections.type ? typeOpts.find(o => o.value === selections.type).label : 'Select Trap Type (Optional)', typeOpts, selections.type, validTypes);
+    const environmentSelect = createDropdown('trap-environment-select', selections.environment ? envOpts.find(o => o.value === selections.environment).label : 'Select Environment (Optional)', envOpts, selections.environment, validEnvironments);
+
+    const proceedButton = new ButtonBuilder().setCustomId('trap-proceed-button').setLabel('Generate').setStyle(ButtonStyle.Success);
+
+    await interaction.editReply({
+        components: [
+            new ActionRowBuilder().addComponents(tierSelect),
+            new ActionRowBuilder().addComponents(threatSelect),
+            new ActionRowBuilder().addComponents(typeSelect),
+            new ActionRowBuilder().addComponents(environmentSelect),
+            new ActionRowBuilder().addComponents(proceedButton),
+        ]
+    });
+}
+
+async function _isTrapSelectionValid(selectionType, selectedValue, currentSelections) {
+    if (selectedValue === 'random') return true; // "Any" is always a valid selection.
+
+    const allTraps = await fiveEToolsParser._loadCategoryData('traps');
+    const environmentKeywords = {
+        'dungeon': /dungeon|tomb|crypt|lair|hallway/i,
+        'wilderness': /forest|jungle|swamp|mountain|wilderness|cave/i,
+        'urban': /city|sewer|building|room/i,
+        'planar': /planar|plane|feywild|shadowfell/i,
+        'aquatic': /water|aquatic|ship/i
+    };
+
+    // Create a temporary selections object WITHOUT the key we are currently validating.
+    const tempSelections = { ...currentSelections };
+    delete tempSelections[selectionType];
+
+    const tier = tempSelections.tier && tempSelections.tier !== 'random' ? parseInt(tempSelections.tier, 10) : null;
+    const threat = tempSelections.threat && tempSelections.threat !== 'random' ? tempSelections.threat.toLowerCase() : null;
+    const type = tempSelections.type && tempSelections.type !== 'random' ? tempSelections.type : null;
+    const envRegex = tempSelections.environment && tempSelections.environment !== 'random' ? environmentKeywords[tempSelections.environment] : null;
+
+    const possibleTraps = allTraps.filter(trap => {
+        const typeMatch = !type || trap.trapHazType === type;
+        const envMatch = !envRegex || (trap.entries && envRegex.test(JSON.stringify(trap.entries)));
+        if (!typeMatch || !envMatch) return false;
+        if (tier || threat) {
+            if (!trap.rating) return false;
+            return trap.rating.some(rating => {
+                const tierMatch = !tier || rating.tier === tier;
+                const threatMatch = !threat || (rating.threat && rating.threat.toLowerCase() === threat);
+                return tierMatch && threatMatch;
+            });
+        }
+        return true;
+    });
+
+    const validValues = new Set();
+    for (const trap of possibleTraps) {
+        switch (selectionType) {
+            case 'tier':
+                if (trap.rating) trap.rating.forEach(r => validValues.add(r.tier.toString()));
+                break;
+            case 'threat':
+                if (trap.rating) trap.rating.forEach(r => { if (r.threat) validValues.add(r.threat.toLowerCase()) });
+                break;
+            case 'type':
+                if (trap.trapHazType) validValues.add(trap.trapHazType);
+                break;
+            case 'environment':
+                for (const [env, regex] of Object.entries(environmentKeywords)) {
+                    if (trap.entries && regex.test(JSON.stringify(trap.entries))) {
+                        validValues.add(env);
+                    }
+                }
+                break;
+        }
+    }
+
+    return validValues.has(selectedValue);
+}
+
+async function _handleNpcDropdowns(interaction) {
+    const { customId, values, message } = interaction;
+    await interaction.deferUpdate();
+
+    const selections = npcSelections.get(message.id) || {};
+    const handlers = client.npcDropdownHandlers.get(message.id);
+    if (!handlers) return;
+
+    const [customIdBase, pageStr] = customId.split('|');
+    const selectedValue = values ? values[0] : null;
+    const newComponents = [...message.components];
+
+    // Handle "Back" selections first
+    if (selectedValue === '!backToSpecies') {
+        delete selections.species;
+        delete selections.lineage;
+        const speciesRow = handlers.species.createActionRow(1);
+        const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith('npc-lineage-select'));
+        if (componentIndex !== -1) newComponents[componentIndex] = speciesRow;
+        npcSelections.set(message.id, selections);
+        await interaction.editReply({ components: newComponents });
+        return;
+    }
+    if (selectedValue === '!backToClass') {
+        delete selections.class;
+        delete selections.subclass;
+        const classRow = handlers.class.createActionRow(1);
+        const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith('npc-subclass-select'));
+        if (componentIndex !== -1) newComponents[componentIndex] = classRow;
+        npcSelections.set(message.id, selections);
+        await interaction.editReply({ components: newComponents });
+        return;
+    }
+
+    // Handle pagination
+    if (selectedValue.startsWith('!prevPage') || selectedValue.startsWith('!nextPage')) {
+        const handlerKey = customIdBase.split('-')[1];
+        const handler = handlers[handlerKey];
+        const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith(customIdBase));
+        const newPage = parseInt(selectedValue.split('|')[1], 10);
+        if (handler && componentIndex !== -1) {
+            newComponents[componentIndex] = handler.createActionRow(newPage);
+            await interaction.editReply({ components: newComponents });
+        }
+        return;
+    }
+
+    // Handle actual selections
+    const handlerKey = customIdBase.split('-')[1];
+    const handler = handlers[handlerKey];
+    const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith(customIdBase));
+
+    if (selectedValue === 'random') {
+        delete selections[handlerKey];
+    } else {
+        selections[handlerKey] = selectedValue;
+    }
+
+    if (handler) {
+        handler.setDefault(selectedValue);
+        if(componentIndex !== -1) {
+            newComponents[componentIndex] = handler.createActionRow(parseInt(pageStr, 10) || 1);
+        }
+    }
+
+    // Handle transforming dropdowns
+    if (handlerKey === 'species') {
+        logToRenderer(`[NPC Dropdown] Species selection triggered. Value: ${selectedValue}`);
+        delete selections.lineage;
+        if (selectedValue !== 'random') {
+            const [, speciesName, speciesSource] = selectedValue.split('|');
+            logToRenderer(`[NPC Dropdown] Processing species: ${speciesName}, Source: ${speciesSource}`);
+            const lineages = await fiveEToolsParser.getLineages(speciesName, speciesSource);
+            logToRenderer(`[NPC Dropdown] Found ${lineages.length} lineages.`);
+            if (lineages.length > 0) {
+                const lineageOptions = lineages.map(l => ({ label: `${l.name} (${l.source})`, value: `lineage|${l.name}|${l.source}` }));
+                const lineageHandler = new DropdownHandler({
+                    customId: 'npc-lineage-select',
+                    options: lineageOptions,
+                    placeholder: 'Select a Lineage (Optional)',
+                    topPinned: [
+                        { label: 'Back to Species Select', value: '!backToSpecies' },
+                        { label: 'Any Lineage (Random)', value: 'random' }
+                    ]
+                });
+                handlers.lineage = lineageHandler;
+                if (componentIndex !== -1) newComponents[componentIndex] = lineageHandler.createActionRow(1);
+            }
+        }
+    }
+
+    if (handlerKey === 'class') {
+        logToRenderer(`[NPC Dropdown] Class selection triggered. Value: ${selectedValue}`);
+        delete selections.subclass;
+        if (selectedValue !== 'random') {
+            const [, className, classSource] = selectedValue.split('|');
+            logToRenderer(`[NPC Dropdown] Processing class: ${className}, Source: ${classSource}`);
+
+            const subclasses = await fiveEToolsParser.getSubclasses(className, classSource);
+            logToRenderer(`[NPC Dropdown] Found ${subclasses.length} subclasses.`);
+
+            if (subclasses.length > 0) {
+                const subclassOptions = subclasses.map(sc => ({ label: `${sc.name} (${sc.source})`, value: `subclass|${sc.name}|${sc.source}` }));
+                const subclassHandler = new DropdownHandler({
+                    customId: 'npc-subclass-select',
+                    options: subclassOptions,
+                    placeholder: 'Select a Subclass (Optional)',
+                    topPinned: [
+                        { label: 'Back to Class Select', value: '!backToClass' },
+                        { label: 'Any Subclass (Random)', value: 'random' }
+                    ]
+                });
+                handlers.subclass = subclassHandler;
+                logToRenderer(`[NPC Dropdown] Created new subclass dropdown component.`);
+
+                if (componentIndex !== -1) {
+                    newComponents[componentIndex] = subclassHandler.createActionRow(1);
+                    logToRenderer(`[NPC Dropdown] Replaced class dropdown with subclass dropdown in component list.`);
+                } else {
+                    logToRenderer(`[NPC Dropdown] WARNING: Could not find the original class dropdown component to replace.`);
+                }
+            }
+        }
+    }
+
+    npcSelections.set(message.id, selections);
+    client.npcDropdownHandlers.set(message.id, handlers);
+    await interaction.editReply({ components: newComponents });
+}
+
+
+async function _handleNpcGeneration(interaction, selections, silentDefer = false) {
+    // Translate the selections from the interaction into the format NpcGenerator expects
+    const generatorOptions = {
+        mode: selections.mode,
+        species: selections.species,
+        lineage: selections.lineage,
+        class: selections.class,
+        subclass: selections.subclass,
+        background: selections.background,
+        partyLevel: selections.partyLevel,
+        partySize: selections.partySize,
+    };
+
+    const result = await client.commandHandler.npcGenerator.generateCharacter(generatorOptions);
+    if (result.error) {
+        await interaction.message.edit({ content: `❌ Error: ${result.error}` });
+        if (!silentDefer) await interaction.deferUpdate();
+        return;
+    }
+
+    const embed = formatNpcResult(result);
+    await interaction.channel.send({ embeds: [embed] });
+    await interaction.message.edit({ content: '✅ Character generated! View the details in the new public message.' });
+    if (!silentDefer) await interaction.deferUpdate();
+}
+
+function formatNpcResult(result) {
+    // Defensively create display names to prevent crashes
+    const speciesName = result.species?.name || 'Unknown Species';
+    const lineageName = result.lineage?.name;
+    const backgroundName = result.background?.name || 'Unknown Background';
+
+    // Combine class and subclass name intelligently
+    const baseClassName = result.class?.name || 'Unknown Class';
+    const subclassName = result.subclass?.name;
+    const className = subclassName ? `${subclassName} ${baseClassName}` : baseClassName;
+
+
+    // Combine lineage and species name intelligently
+    let raceDisplay = speciesName;
+    if (lineageName && lineageName !== speciesName) {
+        // If the lineage name already contains the species name (e.g., "High Elf" contains "Elf"), just use the lineage name.
+        if (lineageName.toLowerCase().includes(speciesName.toLowerCase())) {
+            raceDisplay = lineageName;
+        } else {
+            // Otherwise, combine them (e.g., "Deep" and "Gnome" -> "Deep Gnome")
+            raceDisplay = `${lineageName} ${speciesName}`;
+        }
+    }
+
+    const embed = new EmbedBuilder()
+        .setColor(0x9B59B6) // Purple for NPCs
+        .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name || ''}`)
+        .setDescription(`**${raceDisplay} ${className} ${backgroundName}**`);
+
+    const formatTraitList = (traitArray) => {
+        if (!traitArray || traitArray.length === 0) return '';
+        let list = `A. ${traitArray[0]}`;
+        if (traitArray.length > 1 && traitArray[1]) {
+            list += `\nB. ${traitArray[1]}`;
+        }
+        return list;
+    };
+
+    // Helper to check if a trait is valid and should be displayed
+    const isTraitValid = (traitArray) => {
+        return traitArray && traitArray.length > 0 && traitArray[0] && !traitArray[0].toLowerCase().includes('not found');
+    }
+
+    if (isTraitValid(result.trait)) {
+        embed.addFields({ name: 'Personality Traits', value: formatTraitList(result.trait) });
+    }
+    if (isTraitValid(result.ideal)) {
+        embed.addFields({ name: 'Ideal', value: formatTraitList(result.ideal) });
+    }
+    if (isTraitValid(result.bond)) {
+        embed.addFields({ name: 'Bond', value: formatTraitList(result.bond) });
+    }
+    if (isTraitValid(result.flaw)) {
+        embed.addFields({ name: 'Flaw', value: formatTraitList(result.flaw) });
+    }
+
+    if (result.mode === 'npc' && result.statblockSuggestions) {
+        const { easy, medium, hard } = result.statblockSuggestions;
+        const statblockValue = `**Easy:** ${easy.name} (CR ${easy.cr})\n` +
+                               `**Medium:** ${medium.name} (CR ${medium.cr})\n` +
+                               `**Hard:** ${hard.name} (CR ${hard.cr})`;
+        embed.addFields({ name: 'Suggested Stat Blocks', value: statblockValue });
+    }
+
+    return embed;
+}
+
+        if (interaction.isModalSubmit()) {
+            if (interaction.customId.startsWith('tda_ante_modal')) {
+                return client.commandHandler.tdaManager.handleAnteModalSubmit(interaction);
+            }
+
             if (interaction.customId.startsWith('npc-modal-')) {
                 const messageId = interaction.customId.replace('npc-modal-', '');
                 const selections = npcSelections.get(messageId) || {};
@@ -1064,6 +2113,7 @@ client.once('clientReady', async () => {
                 npcSelections.delete(messageId);
                 return;
             }
+
             if (interaction.customId.startsWith('vehicle-modal|')) {
                 const parts = interaction.customId.split('|');
                 let style = parts[2];
@@ -1118,6 +2168,7 @@ client.once('clientReady', async () => {
                 await interaction.deferUpdate();
                 return;
             }
+
             if (interaction.customId.startsWith('encounter-modal|')) {
                 const parts = interaction.customId.split('|');
                 const encounterType = parts[1];
@@ -1270,387 +2321,9 @@ client.once('clientReady', async () => {
                 });
 
                 maSelections.delete(messageId);
+                // We no longer need to reply to the interaction itself, as we've edited the original message.
+                // We just need to acknowledge the interaction so it doesn't time out.
                 await interaction.deferUpdate();
-            }
-        }
-
-        if (interaction.isStringSelectMenu()) {
-            const { customId, values, message } = interaction;
-            const [customIdBase] = customId.split('|');
-
-            // TDA Handlers
-            if (customId.startsWith('tda_')) {
-                if (customId.startsWith('tda_target_player_')) {
-                    const [_, __, ___, channelId, playerId] = customId.split('_');
-                    const game = client.commandHandler.tdaManager.activeGames.get(channelId);
-                    if (!game || game.players.find(p => p.id === interaction.user.id)?.id !== playerId) {
-                        return interaction.reply({ content: 'This is not a valid choice for you.', ephemeral: true });
-                    }
-                    const choosingPlayer = game.players.find(p => p.id === playerId);
-                    const targetPlayerId = interaction.values[0];
-                    await interaction.update({ content: 'Target selected.', components: [] });
-                    await client.commandHandler.tdaManager.resolvePlayerTargetChoice(game, choosingPlayer, targetPlayerId);
-                    return;
-                }
-                if (customId.startsWith('tda_kobold_choice_')) {
-                    const [_, __, ___, channelId, playerId] = customId.split('_');
-                    const game = client.commandHandler.tdaManager.activeGames.get(channelId);
-                    if (!game || game.players.find(p => p.id === interaction.user.id)?.id !== playerId) {
-                        return interaction.reply({ content: 'This is not a valid choice for you.', ephemeral: true });
-                    }
-                    const player = game.players.find(p => p.id === playerId);
-                    const cardIndices = interaction.values;
-                    await interaction.update({ content: 'Processing your discard...', embeds: [], components: [] });
-                    await client.commandHandler.tdaManager.resolveKoboldChoice(game, player, cardIndices);
-                    return;
-                }
-                if (customId.startsWith('tda_brass_choice_give_')) {
-                    let game, lastPlayer;
-                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
-                        const p = g.players.find(p => p.id === interaction.user.id);
-                        if (p) { game = g; lastPlayer = p; break; }
-                    }
-                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-                    const originalPlayerId = customId.split('_')[4];
-                    const originalPlayer = game.players.find(p => p.id === originalPlayerId);
-                    if (!originalPlayer) return interaction.reply({ content: 'Could not find the original player.', ephemeral: true });
-                    const cardIndex = parseInt(interaction.values[0], 10);
-                    await interaction.update({ content: 'Processing choice...', embeds: [], components: [] });
-                    await client.commandHandler.tdaManager.resolveBrassDragonChoice(game, originalPlayer, lastPlayer, 'give', cardIndex);
-                    return;
-                }
-                if (customId.startsWith('tda_green_choice_give_')) {
-                    let game, nextPlayer;
-                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
-                        const p = g.players.find(p => p.id === interaction.user.id);
-                        if (p) { game = g; nextPlayer = p; break; }
-                    }
-                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-                    const originalPlayerId = customId.split('_')[4];
-                    const originalPlayer = game.players.find(p => p.id === originalPlayerId);
-                    if (!originalPlayer) return interaction.reply({ content: 'Could not find the original player.', ephemeral: true });
-                    const cardIndex = parseInt(values[0], 10);
-                    await interaction.deferUpdate();
-                    await client.commandHandler.tdaManager.resolveGreenDragonChoice(game, originalPlayer, nextPlayer, 'give', cardIndex);
-                    return;
-                }
-            }
-
-            // Other Handlers
-            if (customIdBase.startsWith('trap-')) {
-                const selections = trapSelections.get(interaction.message.id) || {};
-                const selectionType = customIdBase.replace('trap-', '').replace('-select', '');
-                const selectedValue = values[0];
-                const isValid = await _isTrapSelectionValid(selectionType, selectedValue, selections);
-                if (!isValid) {
-                    await _updateTrapDropdowns(interaction, selections);
-                    return;
-                }
-                if (selectedValue === 'random') {
-                    delete selections[selectionType];
-                } else {
-                    selections[selectionType] = selectedValue;
-                }
-                trapSelections.set(interaction.message.id, selections);
-                await _updateTrapDropdowns(interaction, selections);
-                return;
-            }
-            if (customIdBase.startsWith('npc-')) {
-                await _handleNpcDropdowns(interaction);
-                return;
-            }
-            if (customId === 'vehicle-tag-select') {
-                const selections = vehicleSelections.get(message.id) || {};
-                selections.tag = values[0];
-                vehicleSelections.set(message.id, selections);
-                await interaction.deferUpdate();
-                return;
-            }
-            if (customId === 'vehicle-style-select') {
-                const selections = vehicleSelections.get(message.id) || {};
-                selections.style = values[0];
-                vehicleSelections.set(message.id, selections);
-                await interaction.deferUpdate();
-                return;
-            }
-            if (customId === 'encounter-creature-select') {
-                const selections = encounterSelections.get(message.id) || {};
-                selections.creature = values[0];
-                encounterSelections.set(message.id, selections);
-                await interaction.deferUpdate();
-                return;
-            }
-            if (customId === 'encounter-difficulty-select') {
-                const selections = encounterSelections.get(message.id) || {};
-                selections.difficulty = values[0];
-                encounterSelections.set(message.id, selections);
-                await interaction.deferUpdate();
-                return;
-            }
-            if (customId === '5e-result-select') {
-                await interaction.deferUpdate();
-                const [category, source, name] = values[0].split('__');
-                const item = await fiveEToolsParser.getExact(category, name, source);
-                if (item) {
-                    const embed = format5eResult(item);
-                    await interaction.editReply({ embeds: [embed], components: [] });
-                } else {
-                    await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details for that item.', components: [] });
-                }
-                return;
-            }
-            const [prefix, selectType] = customId.split('-');
-            if (prefix === 'ma') {
-                const selections = maSelections.get(message.id) || { mode: 'loot', size: 'Average' };
-                selections[selectType] = values[0];
-                maSelections.set(message.id, selections);
-                logToRenderer(`[MA Command] Selections updated: ${JSON.stringify(selections)}`);
-                const currentMode = selections.mode;
-                const currentSize = selections.size;
-                const modeSelect = new StringSelectMenuBuilder().setCustomId('ma-mode-select').setPlaceholder('Select Mode').addOptions([{ label: 'Loot', value: 'loot', default: currentMode === 'loot' }, { label: 'Shop', value: 'shop', default: currentMode === 'shop' }]);
-                const sizeSelect = new StringSelectMenuBuilder().setCustomId('ma-size-select').setPlaceholder('Select Size').addOptions([{ label: 'Huge', value: 'Huge', default: currentSize === 'Huge' }, { label: 'Large', value: 'Large', default: currentSize === 'Large' }, { label: 'Average', value: 'Average', default: currentSize === 'Average' }, { label: 'Small', value: 'Small', default: currentSize === 'Small' }, { label: 'Tiny', value: 'Tiny', default: currentSize === 'Tiny' }]);
-                const configureButton = new ButtonBuilder().setCustomId('ma-configure-button').setLabel('Configure & Generate').setStyle(ButtonStyle.Primary);
-                const cancelButton = new ButtonBuilder().setCustomId('ma-cancel-button').setLabel('Cancel').setStyle(ButtonStyle.Secondary);
-                const row1 = new ActionRowBuilder().addComponents(modeSelect);
-                const row2 = new ActionRowBuilder().addComponents(sizeSelect);
-                const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
-                await interaction.update({ components: [row1, row2, row3] });
-            }
-            return;
-        }
-
-        if (interaction.isButton()) {
-            // TDA Handlers
-            if (interaction.customId.startsWith('tda_')) {
-                if (interaction.customId.startsWith('tda_details_')) {
-                    let game, player;
-                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
-                        const p = g.players.find(p => p.id === interaction.user.id);
-                        if (p) { game = g; player = p; break; }
-                    }
-                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-
-                    const context = interaction.customId.split('_')[2]; // 'hand'
-                    await client.commandHandler.tdaManager.handleCardDetailsButton(interaction, game, player, context);
-                    return;
-                }
-                if (interaction.customId.includes('_page_')) {
-                    let game, player;
-                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
-                        const p = g.players.find(p => p.id === interaction.user.id);
-                        if (p) { game = g; player = p; break; }
-                    }
-                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-
-                    const context = interaction.customId.split('_')[1]; // e.g., 'draft', 'ante', 'play'
-                    const direction = interaction.customId.split('_')[3]; // 'prev' or 'next'
-
-                    await interaction.deferUpdate();
-                    // Delegate the logic to the game manager
-                    await client.commandHandler.tdaManager.handlePagination(game, player, context, direction);
-                    return;
-                }
-                if (interaction.customId.startsWith('tda_ante_')) {
-                    const cardIndex = parseInt(interaction.customId.split('_')[2], 10);
-                    let game, player;
-                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
-                        const p = g.players.find(p => p.id === interaction.user.id);
-                        if (p) { game = g; player = p; break; }
-                    }
-                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-
-                    await interaction.deferUpdate();
-                    await client.commandHandler.tdaManager.handleAnte(game, player, cardIndex);
-                    return;
-                }
-                if (interaction.customId.startsWith('tda_draft_remove_')) {
-                    const cardImage = interaction.customId.replace('tda_draft_remove_', '');
-                    let game, player;
-                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
-                        const p = g.players.find(p => p.id === interaction.user.id);
-                        if (p) { game = g; player = p; break; }
-                    }
-                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-
-                    await interaction.deferUpdate();
-                    await client.commandHandler.tdaManager.handleDraftCardRemoval(game, player, cardImage);
-                    return;
-                }
-                if (interaction.customId.startsWith('tda_continue_')) {
-                    let game, player;
-                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
-                        const p = g.players.find(p => p.id === interaction.user.id);
-                        if (p) { game = g; player = p; break; }
-                    }
-                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-                    if (game.state !== 'continue') {
-                        return interaction.reply({ content: 'It is not time to make this choice.', ephemeral: true });
-                    }
-                    const choice = interaction.customId.replace('tda_continue_', '');
-                    await interaction.deferUpdate();
-                    await client.commandHandler.tdaManager.handleContinueChoice(game, player, choice);
-                    return;
-                }
-                if (interaction.customId.startsWith('tda_sorcerer_choice_')) {
-                    const parts = interaction.customId.split('_');
-                    const channelId = parts[3];
-                    const playerId = parts[4];
-                    const cardImage = parts.slice(5).join('_');
-                    const game = client.commandHandler.tdaManager.activeGames.get(channelId);
-                    if (!game || game.players.find(p => p.id === interaction.user.id)?.id !== playerId) {
-                        return interaction.reply({ content: 'This is not a valid choice for you.', ephemeral: true });
-                    }
-                    const player = game.players.find(p => p.id === playerId);
-                    await interaction.update({ content: 'Processing your choice...', embeds: [], components: [] });
-                    await client.commandHandler.tdaManager.resolveSorcererChoice(game, player, cardImage);
-                    return;
-                }
-                if (interaction.customId.startsWith('tda_brass_choice_pay_')) {
-                    let game, lastPlayer;
-                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
-                        const p = g.players.find(p => p.id === interaction.user.id);
-                        if (p) { game = g; lastPlayer = p; break; }
-                    }
-                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-                    const originalPlayerId = interaction.customId.split('_')[4];
-                    const originalPlayer = game.players.find(p => p.id === originalPlayerId);
-                    if (!originalPlayer) return interaction.reply({ content: 'Could not find the original player.', ephemeral: true });
-                    await interaction.update({ content: 'Processing choice...', embeds: [], components: [] });
-                    await client.commandHandler.tdaManager.resolveBrassDragonChoice(game, originalPlayer, lastPlayer, 'pay');
-                    return;
-                }
-                if (interaction.customId.startsWith('tda_green_choice_pay_')) {
-                    let game, nextPlayer;
-                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
-                        const p = g.players.find(p => p.id === interaction.user.id);
-                        if (p) { game = g; nextPlayer = p; break; }
-                    }
-                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-                    const originalPlayerId = interaction.customId.split('_')[4];
-                    const originalPlayer = game.players.find(p => p.id === originalPlayerId);
-                    if (!originalPlayer) return interaction.reply({ content: 'Could not find the original player.', ephemeral: true });
-                    await interaction.deferUpdate();
-                    await client.commandHandler.tdaManager.resolveGreenDragonChoice(game, originalPlayer, nextPlayer, 'pay');
-                    return;
-                }
-                if (interaction.customId.startsWith('tda_blue_choice_')) {
-                    let game, player;
-                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
-                        const p = g.players.find(p => p.id === interaction.user.id);
-                        if (p) { game = g; player = p; break; }
-                    }
-                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-                    const choice = interaction.customId.split('_')[3];
-                    await interaction.deferUpdate();
-                    await client.commandHandler.tdaManager.resolveBlueDragonChoice(game, player, choice);
-                    return;
-                }
-                if (interaction.customId.startsWith('tda_play_')) {
-                    let game, player;
-                    for (const g of client.commandHandler.tdaManager.activeGames.values()) {
-                        const p = g.players.find(p => p.id === interaction.user.id);
-                        if (p) { game = g; player = p; break; }
-                    }
-                    if (!game) return interaction.reply({ content: 'Could not find an active game for you.', ephemeral: true });
-                    const currentPlayer = game.gambit.turnOrder[game.gambit.currentPlayerIndex];
-                    if (!currentPlayer || currentPlayer.id !== player.id) {
-                        return interaction.reply({ content: "It's not your turn to play a card.", ephemeral: true });
-                    }
-                    const cardIndex = parseInt(interaction.customId.split('_')[2], 10);
-                    await interaction.deferUpdate();
-                    await client.commandHandler.tdaManager.handlePlayCard(game, player, cardIndex);
-                    return;
-                }
-            }
-
-            // Other Handlers
-            if (interaction.customId === 'trap-proceed-button') {
-                await interaction.message.edit({ content: '⚙️ Finding a trap...', embeds: [], components: [] });
-                const selections = trapSelections.get(interaction.message.id) || {};
-                const trap = await fiveEToolsParser.generateTrap(selections);
-                if (!trap) {
-                    await interaction.message.edit({ content: '❌ Could not find a trap matching your criteria. Please try broadening your search.' });
-                    return;
-                }
-                const embed = new EmbedBuilder().setColor(0xE74C3C).setTitle(`Trap: ${trap.name}`).setDescription(formatEntries(trap.entries));
-                await interaction.channel.send({ embeds: [embed] });
-                await interaction.message.edit({ content: '✅ Trap generated! View the details in the new public message.' });
-                trapSelections.delete(interaction.message.id);
-                await interaction.deferUpdate();
-                return;
-            }
-            if (interaction.customId === 'npc-generate-idea') {
-                await interaction.message.edit({ content: '⚙️ Generating character...', embeds: [], components: [] });
-                const selections = npcSelections.get(interaction.message.id) || {};
-                selections.mode = 'idea';
-                await _handleNpcGeneration(interaction, selections, true);
-                npcSelections.delete(interaction.message.id);
-                return;
-            }
-            if (interaction.customId === 'npc-generate-npc') {
-                const modal = new ModalBuilder().setCustomId(`npc-modal-${interaction.message.id}`).setTitle('NPC Details');
-                const partyLevelInput = new TextInputBuilder().setCustomId('partyLevel').setLabel("Average Party Level (1-20)").setStyle(TextInputStyle.Short).setRequired(true);
-                const partySizeInput = new TextInputBuilder().setCustomId('partySize').setLabel("Number of Players").setStyle(TextInputStyle.Short).setRequired(true);
-                modal.addComponents(new ActionRowBuilder().addComponents(partyLevelInput), new ActionRowBuilder().addComponents(partySizeInput));
-                await interaction.showModal(modal);
-                return;
-            }
-            if (interaction.customId === 'vehicle-proceed-button') {
-                const selections = vehicleSelections.get(interaction.message.id) || {};
-                const modal = new ModalBuilder().setCustomId(`vehicle-modal|${selections.tag || 'random'}|${selections.style || 'random'}`).setTitle('Vehicle Encounter Details');
-                const totalHpInput = new TextInputBuilder().setCustomId('totalHp').setLabel("Total Vehicle HP Budget").setStyle(TextInputStyle.Short).setRequired(true);
-                const numVehiclesInput = new TextInputBuilder().setCustomId('numVehicles').setLabel("Ideal Number of Vehicles").setStyle(TextInputStyle.Short).setRequired(true);
-                modal.addComponents(new ActionRowBuilder().addComponents(totalHpInput));
-                modal.addComponents(new ActionRowBuilder().addComponents(numVehiclesInput));
-                await interaction.showModal(modal);
-                return;
-            }
-            if (interaction.customId.startsWith('encounter-proceed-button')) {
-                const parts = interaction.customId.split('|');
-                const selections = encounterSelections.get(interaction.message.id) || {};
-                let modalCustomId;
-                if (parts.length > 1 && parts[1] === 'type') {
-                    const type = parts[2];
-                    if (!selections.difficulty) {
-                        await interaction.reply({ content: 'Please select a difficulty before proceeding.', flags: [MessageFlags.Ephemeral] });
-                        return;
-                    }
-                    modalCustomId = `encounter-modal|type|${type}|${selections.difficulty}`;
-                } else {
-                    if (!selections.creature || !selections.difficulty) {
-                        await interaction.reply({ content: 'Please select a creature and a difficulty before proceeding.', flags: [MessageFlags.Ephemeral] });
-                        return;
-                    }
-                    modalCustomId = `encounter-modal|creature|${selections.creature}|${selections.difficulty}`;
-                }
-                const modal = new ModalBuilder().setCustomId(modalCustomId).setTitle('Encounter Details');
-                const partyLevelInput = new TextInputBuilder().setCustomId('partyLevel').setLabel("Average Party Level (1-20)").setStyle(TextInputStyle.Short).setRequired(true);
-                const partySizeInput = new TextInputBuilder().setCustomId('partySize').setLabel("Number of Party Members").setStyle(TextInputStyle.Short).setRequired(true);
-                const multiplierInput = new TextInputBuilder().setCustomId('multiplier').setLabel("Difficulty Multiplier (optional, default 1.0)").setStyle(TextInputStyle.Short).setRequired(false);
-                modal.addComponents(new ActionRowBuilder().addComponents(partyLevelInput), new ActionRowBuilder().addComponents(partySizeInput), new ActionRowBuilder().addComponents(multiplierInput));
-                await interaction.showModal(modal);
-                encounterSelections.delete(interaction.message.id);
-                return;
-            }
-            if (interaction.customId === 'ma-cancel-button') {
-                maSelections.delete(interaction.message.id);
-                const originalRows = interaction.message.components;
-                const row1 = new ActionRowBuilder().addComponents(originalRows[0].components);
-                const row2 = new ActionRowBuilder().addComponents(originalRows[1].components);
-                const configureButton = new ButtonBuilder().setCustomId('ma-configure-button').setLabel('Configure & Generate').setStyle(ButtonStyle.Primary).setDisabled(true);
-                const cancelButton = new ButtonBuilder().setCustomId('ma-cancel-button').setLabel('Cancelled').setStyle(ButtonStyle.Secondary).setDisabled(true);
-                const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
-                await interaction.update({ components: [row1, row2, row3] });
-                return;
-            }
-            if (interaction.customId === 'ma-configure-button') {
-                const modal = new ModalBuilder().setCustomId(`ma-config-modal-${interaction.message.id}`).setTitle('Configure Magic Item Generation');
-                const nicknameInput = new TextInputBuilder().setCustomId('ma-nickname-input').setLabel("Nickname (Optional)").setStyle(TextInputStyle.Short).setRequired(false);
-                const numRollsInput = new TextInputBuilder().setCustomId('ma-numrolls-input').setLabel("Number of Items (e.g., 5 or 1d4+1)").setStyle(TextInputStyle.Short).setValue('10').setRequired(true);
-                const partyLevelInput = new TextInputBuilder().setCustomId('ma-partylevel-input').setLabel("Average Party Level").setStyle(TextInputStyle.Short).setValue('20').setRequired(true);
-                modal.addComponents(new ActionRowBuilder().addComponents(nicknameInput), new ActionRowBuilder().addComponents(numRollsInput), new ActionRowBuilder().addComponents(partyLevelInput));
-                await interaction.showModal(modal);
-                return;
             }
         }
     });
