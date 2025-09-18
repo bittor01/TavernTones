@@ -772,20 +772,9 @@ class TdaUiManager {
             .setPlaceholder('Choose a special ability (optional)')
             .addOptions(this.manager.SPECIAL_ABILITIES); // Assumes manager is set
 
-        const timerMenu = new StringSelectMenuBuilder()
-            .setCustomId('tda_timer_select')
-            .setPlaceholder(`Turn Timer: ${game.turnTimer === 0 ? 'Disabled' : `${game.turnTimer / 60} min`}`)
-            .addOptions([
-                { label: '1 Minute', value: '60' },
-                { label: '5 Minutes', value: '300' },
-                { label: '10 Minutes', value: '600' },
-                { label: 'Disabled', value: '0' }
-            ]);
-
         const row1 = new ActionRowBuilder().addComponents(joinButton, leaveButton, startButton);
         const row2 = new ActionRowBuilder().addComponents(abilityMenu);
-        const row3 = new ActionRowBuilder().addComponents(timerMenu);
-        return [row1, row2, row3];
+        return [row1, row2];
     }
 
     async updateScoreboard(game) {

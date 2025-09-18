@@ -286,8 +286,16 @@ class ThreeDragonAnteManager {
                 .setStyle(TextInputStyle.Short)
                 .setRequired(true)
                 .setPlaceholder('Enter a positive number, will be rounded down to nearest 50');
-            const actionRow = new ActionRowBuilder().addComponents(anteInput);
-            modal.addComponents(actionRow);
+            const timerInput = new TextInputBuilder()
+                .setCustomId('turn_timer_seconds')
+                .setLabel("Turn Timer in Seconds (0 for none)")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setPlaceholder('e.g., 60, 300. Default: 300');
+
+            const buyInRow = new ActionRowBuilder().addComponents(anteInput);
+            const timerRow = new ActionRowBuilder().addComponents(timerInput);
+            modal.addComponents(buyInRow, timerRow);
             await interaction.showModal(modal);
 
         } else if (game.state === 'lobby') {
@@ -295,7 +303,7 @@ class ThreeDragonAnteManager {
 
             if (interaction.customId === 'tda_join') {
                 if (isPlayerInGame) return interaction.reply({ content: 'You are already in the game.', ephemeral: true });
-                game.players.push({ id: user.id, user: user, specialAbility: null, flight: [], hand: [], anteCard: null, handPage: 0, draftPage: 0 });
+                game.players.push({ id: user.id, user: user, hoard: game.buyIn, specialAbility: null, flight: [], hand: [], anteCard: null, handPage: 0, draftPage: 0 });
             } else if (interaction.customId === 'tda_leave') {
                 if (!isPlayerInGame) return interaction.reply({ content: 'You are not in this game.', ephemeral: true });
                 game.players = game.players.filter(p => p.id !== user.id);
@@ -392,6 +400,8 @@ class ThreeDragonAnteManager {
         if (!game || game.state !== 'setting_ante') return interaction.editReply({ content: "Error: Could not find an active game or it's not time to set the ante." });
 
         const rawBuyIn = parseInt(interaction.fields.getTextInputValue('buy_in_amount'));
+        const timerValue = interaction.fields.getTextInputValue('turn_timer_seconds');
+
         if (isNaN(rawBuyIn) || rawBuyIn <= 0) return interaction.editReply({ content: 'Error: Please enter a valid, positive number for the buy-in.' });
 
         const buyIn = Math.floor(rawBuyIn / 50) * 50;
@@ -399,10 +409,17 @@ class ThreeDragonAnteManager {
 
         game.buyIn = buyIn;
         game.scalingFactor = buyIn / 50;
+
+        if (timerValue) {
+            const timerSeconds = parseInt(timerValue, 10);
+            if (!isNaN(timerSeconds) && timerSeconds >= 0) {
+                game.turnTimer = timerSeconds;
+            }
+        }
         game.state = 'lobby';
 
         const hostUser = await this.client.users.fetch(game.hostId);
-        game.players.push({ id: game.hostId, user: hostUser, specialAbility: null, flight: [], hand: [], anteCard: null, handPage: 0, draftPage: 0 });
+        game.players.push({ id: game.hostId, user: hostUser, hoard: game.buyIn, specialAbility: null, flight: [], hand: [], anteCard: null, handPage: 0, draftPage: 0 });
 
         await interaction.editReply({ content: 'Ante set! The lobby is now open.' });
 
@@ -464,6 +481,7 @@ class ThreeDragonAnteManager {
         game.gambit = { log: ['The game has started. Players will now take turns removing optional cards from the deck.'], stakes: 0 };
 
         await this.ui.updateScoreboard(game); // Initial scoreboard render
+        await this.ui.createGameBoard(game); // Create the initial DM boards
 
         const currentPlayer = game.players.find(p => p.id === game.draft.turnOrder[game.draft.currentPlayerIndex]);
         this._startTurnTimer(game, currentPlayer);
@@ -537,6 +555,7 @@ class ThreeDragonAnteManager {
         game.state = 'playing';
 
         await this.ui.updateScoreboard(game); // Initial scoreboard render
+        await this.ui.createGameBoard(game); // Create the initial DM boards
 
         const standardCards = DECK_DEFINITION.filter(c => !c.optional);
         game.deck = [...standardCards, ...includedOptionalCards];
