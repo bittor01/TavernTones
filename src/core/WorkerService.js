@@ -1,58 +1,60 @@
 const { Worker } = require('worker_threads');
-const path = require('path');
 const crypto = require('crypto');
 
 class WorkerService {
-    constructor(logCallback) {
-        this.log = logCallback || console.log;
-        this.worker = new Worker(path.join(__dirname, '..', 'worker.js'));
-        this.pendingTasks = new Map();
+    constructor(workerPath) {
+        this.worker = new Worker(workerPath);
+        this.promises = new Map();
 
         this.worker.on('message', (message) => {
-            if (message.type === 'task-result') {
-                const promise = this.pendingTasks.get(message.correlationId);
-                if (promise) {
-                    if (message.error) {
-                        promise.reject(new Error(message.error));
+            const { correlationId, error, result } = message;
+            if (this.promises.has(correlationId)) {
+                const { resolve, reject } = this.promises.get(correlationId);
+                if (error) {
+                    reject(new Error(error));
+                } else {
+                    // If the result is a plain object representing a Buffer, convert it back
+                    if (result && result.type === 'Buffer' && Array.isArray(result.data)) {
+                        resolve(Buffer.from(result.data));
                     } else {
-                        promise.resolve(message.result);
+                        resolve(result);
                     }
-                    this.pendingTasks.delete(message.correlationId);
                 }
-            } else if (message.type === 'log') {
-                this.log(message.message);
+                this.promises.delete(correlationId);
             }
         });
 
         this.worker.on('error', (error) => {
-            this.log(`[Worker Error] ${error.message}`);
             console.error('Worker error:', error);
+            // Reject all pending promises
+            for (const [correlationId, { reject }] of this.promises.entries()) {
+                reject(error);
+                this.promises.delete(correlationId);
+            }
         });
 
         this.worker.on('exit', (code) => {
             if (code !== 0) {
-                const errorMsg = `Worker stopped with exit code ${code}`;
-                this.log(`[Worker Error] ${errorMsg}`);
-                console.error(errorMsg);
+                console.error(`Worker stopped with exit code ${code}`);
+                const error = new Error(`Worker stopped with exit code ${code}`);
+                for (const [correlationId, { reject }] of this.promises.entries()) {
+                    reject(error);
+                    this.promises.delete(correlationId);
+                }
             }
         });
     }
 
-    run(taskName, ...args) {
+    run(task, ...args) {
         return new Promise((resolve, reject) => {
             const correlationId = crypto.randomBytes(16).toString('hex');
-            this.pendingTasks.set(correlationId, { resolve, reject });
-            this.worker.postMessage({
-                type: 'run-task',
-                taskName,
-                args,
-                correlationId,
-            });
+            this.promises.set(correlationId, { resolve, reject });
+            this.worker.postMessage({ task, args, correlationId });
         });
     }
 
-    init() {
-        this.worker.postMessage({ type: 'init' });
+    terminate() {
+        return this.worker.terminate();
     }
 }
 

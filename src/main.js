@@ -32,7 +32,6 @@ let connection;
 let musicPlayer;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
-let workerService;
 let fiveEToolsParser;
 const maSelections = new Map();
 const encounterSelections = new Map();
@@ -151,9 +150,7 @@ function createGamifyWindow() {
 async function apploader() {
     await app.whenReady().then(() => {
         console.log('App is ready.');
-        workerService = new WorkerService(logToRenderer);
-        workerService.init();
-        fiveEToolsParser = new FiveEToolsParser(logToRenderer); // Keep this for now, will be removed later
+        fiveEToolsParser = new FiveEToolsParser(logToRenderer); // Initialize parser early
 
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
@@ -1041,7 +1038,8 @@ client.once('clientReady', async () => {
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
-    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER }, fiveEToolsParser);
+    const workerService = new WorkerService(path.join(__dirname, 'worker.js'));
+    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER }, fiveEToolsParser, workerService);
     client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 

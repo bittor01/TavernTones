@@ -1,6 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, AttachmentBuilder } = require('discord.js');
 const path = require('path');
-const { renderHand, renderDraftGrid } = require('./CanvasHelper.js');
+const crypto = require('crypto');
 
 const DECK_DEFINITION = [
   { name: "Black Dragon", optional: false, value: 1, image: "1 black.jpg", effect: "Black", alignment: "evil" },
@@ -139,8 +139,9 @@ const SPECIAL_ABILITIES = [
 ];
 
 class ThreeDragonAnteGame {
-    constructor(client) {
+    constructor(client, workerService) {
         this.client = client;
+        this.workerService = workerService;
         this.activeGames = new Map();
     }
 
@@ -385,7 +386,7 @@ class ThreeDragonAnteGame {
     async _createDraftEmbed(game, player) {
         const embed = new EmbedBuilder().setTitle('Draft Pool').setColor(0x1abc9c);
 
-        const draftImageBuffer = await renderDraftGrid(game.draftPool);
+        const draftImageBuffer = await this.workerService.run('renderDraftGrid', game.draftPool);
         const attachment = new AttachmentBuilder(draftImageBuffer, { name: 'draft_pool.png' });
         embed.setImage('attachment://draft_pool.png');
 
@@ -400,9 +401,21 @@ class ThreeDragonAnteGame {
             const totalPages = Math.ceil(game.draftPool.length / DRAFT_PAGE_SIZE);
 
             const cardsOnPage = game.draftPool.slice(start, end);
-            const cardTexts = cardsOnPage.map(c => `**${this._formatCardName(c)}**: ${CARD_EFFECTS.find(e => e.name === c.effect)?.text || 'No special effect.'}`).join('\n\n');
+            const cardLines = cardsOnPage.map(c => `**${this._formatCardName(c)}**: ${CARD_EFFECTS.find(e => e.name === c.effect)?.text || 'No special effect.'}`);
 
-            embed.addFields({ name: `Available Cards (Page ${page + 1}/${totalPages})`, value: cardTexts });
+            let currentFieldValue = '';
+            let fieldCount = 1;
+            for (const line of cardLines) {
+                if (currentFieldValue.length + line.length + 2 > 1024) {
+                    embed.addFields({ name: `Available Cards (Page ${page + 1}/${totalPages}, Part ${fieldCount})`, value: currentFieldValue });
+                    currentFieldValue = '';
+                    fieldCount++;
+                }
+                currentFieldValue += line + '\n\n';
+            }
+            if (currentFieldValue) {
+                embed.addFields({ name: `Available Cards (Page ${page + 1}/${totalPages}, Part ${fieldCount})`, value: currentFieldValue });
+            }
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId(`tda_action_${game.channelId}_draftpage_${page - 1}`).setLabel('Previous').setStyle(ButtonStyle.Primary).setDisabled(page === 0),
@@ -474,7 +487,7 @@ class ThreeDragonAnteGame {
                 { name: 'Your Hand', value: player.hand.length > 0 ? cardTexts : 'Empty' }
             );
 
-        const handImageBuffer = await renderHand(player.hand);
+        const handImageBuffer = await this.workerService.run('renderHand', player.hand);
         const attachment = new AttachmentBuilder(handImageBuffer, { name: 'hand.png' });
         embed.setImage('attachment://hand.png');
 

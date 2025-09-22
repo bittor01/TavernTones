@@ -19,7 +19,7 @@ let DEFAULT_LOCAL_FOLDER;
 
 
 class CommandHandler {
-    constructor(client, logToRendererInstance, musicPlayerInstance, config, fiveEToolsParserInstance) {
+    constructor(client, logToRendererInstance, musicPlayerInstance, config, fiveEToolsParserInstance, workerService) {
         this.client = client;
         logToRenderer = logToRendererInstance;
         musicPlayer = musicPlayerInstance;
@@ -27,7 +27,7 @@ class CommandHandler {
         this.encounterBuilder = new EncounterBuilder(this.fiveEToolsParser);
         this.vehicleEncounterBuilder = new VehicleEncounterBuilder(this.fiveEToolsParser);
         this.npcGenerator = new NpcGenerator(this.fiveEToolsParser, askGPT4All);
-        this.tdaManager = new ThreeDragonAnteGame(this.client);
+        this.tdaManager = new ThreeDragonAnteGame(this.client, workerService);
         this.lastResponse = null;
         BOT_ROLE_ID = config.BOT_ROLE_ID;
         DEFAULT_LOCAL_FOLDER = config.DEFAULT_LOCAL_FOLDER;

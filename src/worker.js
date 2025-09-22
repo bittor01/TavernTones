@@ -1,155 +1,141 @@
 const { parentPort } = require('worker_threads');
-const fs = require('fs');
-const path = require('path');
 const { createCanvas, loadImage } = require('canvas');
+const path = require('path');
+const fs = require('fs');
 
-function log(message) {
-    parentPort.postMessage({ type: 'log', message });
-}
-
-// --- Music Caching ---
-function cacheMusic(filePath) {
-    log(`[Worker] Caching music file: ${filePath}`);
-    try {
-        return fs.readFileSync(filePath);
-    } catch (error) {
-        log(`[Worker] Error caching file ${filePath}: ${error.message}`);
-        throw error;
-    }
-}
-
-// --- TDA Image Generation ---
 const IMAGE_DIR = path.join(__dirname, '..', 'resources', 'threedragonanteimages');
-const MAX_IMAGE_SIZE_BYTES = 7 * 1024 * 1024;
-
-let handScalingFactor = null;
-let draftScalingFactor = null;
+const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8 MB
 
 async function renderHand(cards) {
-    if (!cards || cards.length === 0) return createCanvas(1, 1).toBuffer('image/png');
-    if (!handScalingFactor) handScalingFactor = await getHandScalingFactor();
+    if (!cards || cards.length === 0) {
+        const canvas = createCanvas(1, 1);
+        return canvas.toBuffer('image/png');
+    }
 
+    // Dynamically calculate the scaling factor
     const firstCardImage = await loadImage(path.join(IMAGE_DIR, cards[0].image));
-    const cardWidth = firstCardImage.width * handScalingFactor;
-    const cardHeight = firstCardImage.height * handScalingFactor;
-    const canvas = createCanvas(cardWidth * cards.length, cardHeight);
+    const cardWidth = firstCardImage.width;
+    const cardHeight = firstCardImage.height;
+    const initialSize = cardWidth * cardHeight * 4 * cards.length;
+    const scale = Math.min(1.0, Math.sqrt(MAX_FILE_SIZE / initialSize));
+
+    const scaledWidth = Math.floor(cardWidth * scale);
+    const scaledHeight = Math.floor(cardHeight * scale);
+
+    const canvasWidth = scaledWidth * cards.length;
+    const canvasHeight = scaledHeight;
+
+    const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
 
     for (let i = 0; i < cards.length; i++) {
         const card = cards[i];
         const imagePath = path.join(IMAGE_DIR, card.image);
         try {
-            const image = await loadImage(imagePath);
-            ctx.drawImage(image, i * cardWidth, 0, cardWidth, cardHeight);
+            if (fs.existsSync(imagePath)) {
+                const image = await loadImage(imagePath);
+                ctx.drawImage(image, i * scaledWidth, 0, scaledWidth, scaledHeight);
+            } else { throw new Error(`Image not found`); }
         } catch (error) {
-             log(`[renderHand] Failed to draw ${card.name}: ${error.message}`);
+             console.error(`[renderHand] Failed to load or draw card ${card.name}: ${error.message}`);
              ctx.fillStyle = '#4f545c';
-             ctx.fillRect(i * cardWidth, 0, cardWidth, cardHeight);
+             ctx.fillRect(i * scaledWidth, 0, scaledWidth, scaledHeight);
              ctx.fillStyle = 'white';
              ctx.textAlign = 'center';
-             ctx.fillText(card.name, i * cardWidth + cardWidth / 2, cardHeight / 2);
+             ctx.fillText(card.name, i * scaledWidth + scaledWidth / 2, scaledHeight / 2);
         }
     }
+
     return canvas.toBuffer('image/png');
 }
 
 async function renderDraftGrid(cards) {
-    if (!cards || cards.length === 0) return createCanvas(1, 1).toBuffer('image/png');
-    if (!draftScalingFactor) draftScalingFactor = await getDraftScalingFactor();
+    if (!cards || cards.length === 0) {
+        const canvas = createCanvas(1, 1);
+        return canvas.toBuffer('image/png');
+    }
 
+    // Dynamically calculate the scaling factor
     const firstCardImage = await loadImage(path.join(IMAGE_DIR, cards[0].image));
-    const cardWidth = firstCardImage.width * draftScalingFactor;
-    const cardHeight = firstCardImage.height * draftScalingFactor;
+    const cardWidth = firstCardImage.width;
+    const cardHeight = firstCardImage.height;
+    const initialSize = cardWidth * cardHeight * 4 * cards.length;
+    const scale = Math.min(1.0, Math.sqrt(MAX_FILE_SIZE / initialSize));
+
+    const scaledWidth = Math.floor(cardWidth * scale);
+    const scaledHeight = Math.floor(cardHeight * scale);
+
     const cols = 5;
-    const rows = 4;
-    const canvas = createCanvas(cardWidth * cols, cardHeight * rows);
+    const rows = Math.ceil(cards.length / cols);
+    const canvasWidth = scaledWidth * cols;
+    const canvasHeight = scaledHeight * rows;
+
+    const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
 
     for (let i = 0; i < cards.length; i++) {
         const card = cards[i];
         const col = i % cols;
         const row = Math.floor(i / cols);
+        const x = col * scaledWidth;
+        const y = row * scaledHeight;
+
+        const imagePath = path.join(IMAGE_DIR, card.image);
         try {
-            const image = await loadImage(path.join(IMAGE_DIR, card.image));
-            ctx.drawImage(image, col * cardWidth, row * cardHeight, cardWidth, cardHeight);
+            if (fs.existsSync(imagePath)) {
+                const image = await loadImage(imagePath);
+                ctx.drawImage(image, x, y, scaledWidth, scaledHeight);
+            } else { throw new Error(`Image not found`); }
         } catch (error) {
-            log(`[renderDraftGrid] Failed to draw ${card.name}: ${error.message}`);
+            console.error(`[renderDraftGrid] Failed to load or draw card ${card.name}: ${error.message}`);
             ctx.fillStyle = '#4f545c';
-            ctx.fillRect(col * cardWidth, row * cardHeight, cardWidth, cardHeight);
+            ctx.fillRect(x, y, scaledWidth, scaledHeight);
             ctx.fillStyle = 'white';
             ctx.textAlign = 'center';
-            ctx.fillText(card.name, col * cardWidth + cardWidth / 2, row * cardHeight + cardHeight / 2);
+            ctx.fillText(card.name, x + scaledWidth / 2, y + scaledHeight / 2);
         }
     }
     return canvas.toBuffer('image/png');
 }
 
-async function getHandScalingFactor() {
-    log('Calculating hand scaling factor...');
-    const allImages = fs.readdirSync(IMAGE_DIR);
-    const largestImages = allImages
-        .map(img => ({ name: img, size: fs.statSync(path.join(IMAGE_DIR, img)).size }))
-        .sort((a, b) => b.size - a.size)
-        .slice(0, 10)
-        .map(img => ({ image: img.name }));
-
-    if (largestImages.length === 0) return 1.0;
-
-    let scalingFactor = 1.0;
-    for (let i = 0; i < 5; i++) {
-        const buffer = await renderHand(largestImages);
-        if (buffer.length < MAX_IMAGE_SIZE_BYTES) {
-            log(`Hand scaling factor set to ${scalingFactor}`);
-            return scalingFactor;
-        }
-        scalingFactor *= 0.9;
+async function cacheMusic(filePath, shell) {
+    try {
+        let resolvedPath = filePath;
+        // The shell object cannot be passed to the worker, so this logic is commented out.
+        // The main thread should resolve shortcuts before calling the worker.
+        // if (shell && path.extname(resolvedPath).toLowerCase() === '.lnk') {
+        //     ...
+        // }
+        const buffer = fs.readFileSync(resolvedPath);
+        return { buffer, resolvedPath };
+    } catch (error) {
+        // Errors in the worker need to be serializable to be sent back
+        throw new Error(error.message);
     }
-    return scalingFactor;
 }
 
-async function getDraftScalingFactor() {
-    log('Calculating draft scaling factor...');
-    const allImages = fs.readdirSync(IMAGE_DIR);
-    const draftImages = allImages.slice(0, 20).map(img => ({ image: img }));
-    if (draftImages.length === 0) return 1.0;
 
-    let scalingFactor = 1.0;
-    for (let i = 0; i < 5; i++) {
-        const buffer = await renderDraftGrid(draftImages);
-        if (buffer.length < MAX_IMAGE_SIZE_BYTES) {
-            log(`Draft scaling factor set to ${scalingFactor}`);
-            return scalingFactor;
-        }
-        scalingFactor *= 0.9;
-    }
-    return scalingFactor;
-}
+const tasks = {
+    renderHand,
+    renderDraftGrid,
+    cacheMusic,
+};
 
-// --- Message Handler ---
-parentPort.on('message', async (task) => {
-    const { type, taskName, args, correlationId } = task;
-
-    if (type === 'init') {
-        log('Worker initialized.');
-        parentPort.postMessage({ type: 'init-complete' });
-        return;
-    }
-
-    if (type === 'run-task') {
-        try {
-            let result;
-            if (taskName === 'cacheMusic') {
-                result = cacheMusic(...args);
-            } else if (taskName === 'renderHand') {
-                result = await renderHand(...args);
-            } else if (taskName === 'renderDraftGrid') {
-                result = await renderDraftGrid(...args);
+parentPort.on('message', async ({ task, args, correlationId }) => {
+    try {
+        if (tasks[task]) {
+            const result = await tasks[task](...args);
+            // When sending a buffer, it's safer to convert it to a plain object
+            // as some worker implementations might have issues with direct Buffer transfers.
+            if (result instanceof Buffer) {
+                 parentPort.postMessage({ correlationId, result: { type: 'Buffer', data: Array.from(result) } });
             } else {
-                throw new Error(`Unknown task: ${taskName}`);
+                 parentPort.postMessage({ correlationId, result });
             }
-            parentPort.postMessage({ type: 'task-result', result, correlationId });
-        } catch (error) {
-            parentPort.postMessage({ type: 'task-result', error: error.message, correlationId });
+        } else {
+            throw new Error(`Unknown task: ${task}`);
         }
+    } catch (error) {
+        parentPort.postMessage({ correlationId, error: error.message || 'An unknown error occurred' });
     }
 });
