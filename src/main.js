@@ -21,6 +21,7 @@ const FiveEToolsParser = require('./core/5eParser.js');
 const { format5eResult, formatEntries } = require('./core/5eEmbedFormatter.js');
 const DropdownHandler = require('./ui/DropdownHandler.js');
 const fs = require('fs').promises;
+const WorkerService = require('./core/WorkerService.js');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
 const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
@@ -31,6 +32,7 @@ let connection;
 let musicPlayer;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
+let workerService;
 let fiveEToolsParser;
 const maSelections = new Map();
 const encounterSelections = new Map();
@@ -149,7 +151,9 @@ function createGamifyWindow() {
 async function apploader() {
     await app.whenReady().then(() => {
         console.log('App is ready.');
-        fiveEToolsParser = new FiveEToolsParser(logToRenderer); // Initialize parser early
+        workerService = new WorkerService(logToRenderer);
+        workerService.init();
+        fiveEToolsParser = new FiveEToolsParser(logToRenderer); // Keep this for now, will be removed later
 
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
@@ -930,7 +934,7 @@ async function logToRenderer(message) {
         logToRenderer(message);
     }
 }
-musicPlayer = new BackendAudioPlayer(logToRenderer, shell);
+musicPlayer = new BackendAudioPlayer(logToRenderer, shell, workerService);
 musicPlayer.on('status-change', (status) => {
     if (mainWindow && mainWindow.webContents) {
         mainWindow.webContents.send('music-player-status', status);

@@ -5,13 +5,12 @@ const { Readable } = require('stream');
 const { EventEmitter } = require('events');
 
 class BackendAudioPlayer extends EventEmitter {
-    constructor(logCallback, shell) {
+    constructor(logCallback, shell, workerService) {
         super();
-        // Dependencies
         this.log = logCallback || console.log;
         this.shell = shell;
+        this.workerService = workerService;
 
-        // State
         this.playerStatus = AudioPlayerStatus.Idle;
         this.isPlaying = false;
         this.isCaching = false;
@@ -19,17 +18,15 @@ class BackendAudioPlayer extends EventEmitter {
         this.loopToggle = true;
         this.playbackVolume = 1.0;
 
-        // Internal file management
         this.activeFile = null;
         this.pendingFile = null;
         this.pendingFilePath = null;
 
-        // Discord.js Voice components
         this.player = createAudioPlayer();
         this.connection = null;
 
         this.setupPlayerEvents();
-        this._emitStatusUpdate(); // Emit initial state
+        this._emitStatusUpdate();
     }
 
     _emitStatusUpdate() {
@@ -137,8 +134,8 @@ class BackendAudioPlayer extends EventEmitter {
                 }
             }
 
-            const buffer = fs.readFileSync(resolvedPath);
-            this.pendingFile = buffer;
+            const buffer = await this.workerService.run('cacheMusic', resolvedPath);
+            this.pendingFile = Buffer.from(buffer);
             this.pendingFilePath = resolvedPath;
             this.log(`Successfully cached file: ${filePath}`);
             this.isCaching = false;
