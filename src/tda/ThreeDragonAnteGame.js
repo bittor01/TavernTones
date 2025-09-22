@@ -144,79 +144,142 @@ class ThreeDragonAnteGame {
         this.activeGames = new Map();
     }
 
-    // ... (rest of the class methods) ...
-
-    // HELPER FUNCTIONS
-    _getCardAlignmentEmoji(card) {
-        switch (card.alignment) {
-            case 'good': return '😇';
-            case 'evil': return '😈';
-            case 'mortal': return '🧑‍🎤';
-            default: return '❓';
+    async handleCommand(message) {
+        if (this.activeGames.has(message.channel.id)) {
+            return message.channel.send({ content: 'A game is already in progress in this channel.' });
         }
-    }
 
-    _formatCardName(card) {
-        return `${this._getCardAlignmentEmoji(card)} (Str ${card.value}) ${card.name}`;
-    }
+        const game = {
+            hostId: message.author.id,
+            channelId: message.channel.id,
+            players: [],
+            state: 'lobby',
+            client: this.client,
+            log: [],
+            pot: 0,
+            deck: [],
+            antePile: [],
+            leader: null,
+            draftPool: [],
+            draftOrder: [],
+            turnOrder: [],
+            draftPicks: 0,
+        };
+        game.players.push({ id: message.author.id, user: message.author, specialAbility: null, hand: [], flight: [], hoard: 0, dmMessages: { draftPage: 0 }, draftedCards: [], isReady: false });
+        this.activeGames.set(message.channel.id, game);
 
-    _sortHand(hand) {
-        const alignmentOrder = { 'good': 1, 'evil': 2, 'mortal': 3 };
-        hand.sort((a, b) => {
-            const alignA = alignmentOrder[a.alignment] || 4;
-            const alignB = alignmentOrder[b.alignment] || 4;
-            if (alignA !== alignB) {
-                return alignA - alignB;
+        const embed = this._generateLobbyEmbed(game);
+        const components = this._buildLobbyComponents(game);
+
+        const lobbyMessage = await message.channel.send({ embeds: [embed], components });
+        game.lobbyMessageId = lobbyMessage.id;
+
+        const collector = lobbyMessage.createMessageComponentCollector({ time: 3_600_000 });
+
+        collector.on('collect', async i => {
+            const game = this.activeGames.get(i.channelId);
+            if (!game) {
+                await i.reply({ content: 'This game lobby is no longer active.', ephemeral: true });
+                return;
             }
-            return b.value - a.value; // Sort by strength descending within the same alignment
+            await this.handleLobbyInteraction(i, game, collector);
+        });
+
+        collector.on('end', (collected, reason) => {
+            if (reason !== 'game_started') {
+                this.activeGames.delete(message.channel.id);
+                lobbyMessage.edit({ content: 'This game lobby has expired.', embeds: [], components: [] }).catch(() => {});
+            }
         });
     }
 
-    // ... (rest of the class methods, updated to use helpers) ...
+    async handleLobbyInteraction(i, game, collector) {
+        const isPlayerInGame = game.players.some(p => p.id === i.user.id);
 
-    async _createPlayerEmbed(player) {
-        this._sortHand(player.hand); // Sort the hand before displaying
-        const cardTexts = player.hand.map(card => {
-            const effect = CARD_EFFECTS.find(e => e.name === card.effect);
-            return `**${this._formatCardName(card)}**: ${effect ? effect.text : 'No special effect.'}`;
-        }).join('\n');
-
-        const embed = new EmbedBuilder()
-            .setTitle('Your Hand & Hoard')
-            .setColor(0x5865f2)
-            .addFields(
-                { name: 'Your Hoard', value: `${player.hoard}gp` },
-                { name: 'Your Hand', value: player.hand.length > 0 ? cardTexts : 'Empty' }
-            );
-
-        const handImageBuffer = await renderHand(player.hand);
-        const attachment = new AttachmentBuilder(handImageBuffer, { name: 'hand.png' });
-        embed.setImage('attachment://hand.png');
-
-        return { embeds: [embed], files: [attachment] };
-    }
-
-    async _requestAnte(game, player) {
-        const embed = new EmbedBuilder().setTitle('Choose Your Ante Card').setDescription('Select one card from your hand to play as your ante.').setColor(0x3498db);
-        const rows = [];
-        let currentRow = new ActionRowBuilder();
-
-        this._sortHand(player.hand); // Sort hand before creating buttons
-        for (const card of player.hand) {
-            if (currentRow.components.length === 5) {
-                rows.push(currentRow);
-                currentRow = new ActionRowBuilder();
+        if (i.customId === 'tda_join') {
+            if (isPlayerInGame) {
+                await i.reply({ content: 'You are already in the game.', ephemeral: true });
+                return;
             }
-            const stake = card.value * game.scaleFactor;
-            currentRow.addComponents(new ButtonBuilder().setCustomId(`tda_action_${game.channelId}_ante_${card.name.replace(/ /g, '_')}`).setLabel(`${this._formatCardName(card)} - Stakes: ${stake}gp`).setStyle(ButtonStyle.Secondary));
+            game.players.push({ id: i.user.id, user: i.user, specialAbility: null, hand: [], flight: [], hoard: 0, dmMessages: { draftPage: 0 }, draftedCards: [], isReady: false });
+        } else if (i.customId === 'tda_leave') {
+            if (!isPlayerInGame) {
+                await i.reply({ content: 'You are not in this game.', ephemeral: true });
+                return;
+            }
+            game.players = game.players.filter(p => p.id !== i.user.id);
+             if (i.user.id === game.hostId && game.players.length > 0) {
+                game.hostId = game.players[0].id;
+            } else if (game.players.length === 0) {
+                collector.stop('all_left');
+                return;
+            }
+        } else if (i.customId === 'tda_ability_select') {
+            if (!isPlayerInGame) {
+                await i.reply({ content: 'You must join the game before selecting an ability.', ephemeral: true });
+                return;
+            }
+            const player = game.players.find(p => p.id === i.user.id);
+            player.specialAbility = i.values[0];
+        } else if (i.customId === 'tda_start') {
+            if (i.user.id !== game.hostId) {
+                await i.reply({ content: 'Only the host can start the game.', ephemeral: true });
+                return;
+            }
+            if (game.players.length < 2) {
+                await i.reply({ content: 'You need at least 2 players to start.', ephemeral: true });
+                return;
+            }
+
+            const modal = new ModalBuilder()
+                .setCustomId(`tda_buy_in_modal_${game.channelId}`)
+                .setTitle('Set Game Stakes');
+            const buyInInput = new TextInputBuilder()
+                .setCustomId('buy_in_amount')
+                .setLabel("Game Buy-in (in Gold Pieces)")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setPlaceholder('e.g., 50 for a standard game, 5000 for high-stakes');
+            const actionRow = new ActionRowBuilder().addComponents(buyInInput);
+            modal.addComponents(actionRow);
+            await i.showModal(modal);
+            return;
         }
-        rows.push(currentRow);
-        try {
-            await player.dmChannel.send({ embeds: [embed], components: rows });
-        } catch (e) { console.error(`Failed to send ante request to ${player.user.tag}`, e); }
+
+        await i.update({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game) });
     }
 
-    // ... (and so on for all other methods that display card names)
+    async handleGameInteraction(interaction) {
+        const customId = interaction.customId;
+        const [prefix, action, channelId, ...params] = customId.split('_');
+
+        if (prefix !== 'tda' || action !== 'action') return;
+
+        const game = this.activeGames.get(channelId);
+        if (!game) {
+            await interaction.reply({ content: 'This game is no longer active.', ephemeral: true });
+            return;
+        }
+
+        const actionType = params[0];
+        const restOfParams = params.slice(1).join('_');
+
+        if (actionType === 'ante') {
+            await this.handleAnte(interaction, game, restOfParams.replace(/_/g, ' '));
+        } else if (actionType === 'draft') {
+            await this.handleDraftRemoval(interaction, game, restOfParams.replace(/_/g, ' '));
+        } else if (actionType === 'play') {
+            await this.handleCardPlay(interaction, game, restOfParams.replace(/_/g, ' '));
+        } else if (actionType === 'ready') {
+            await this.handleReadyCheck(interaction, game);
+        } else if (actionType === 'draftpage') {
+            const newPage = parseInt(restOfParams, 10);
+            await this.handleDraftPage(interaction, game, newPage);
+        }
+    }
+
+    // ... (All other methods will go here, fully implemented)
+
 }
 
 module.exports = ThreeDragonAnteGame;
