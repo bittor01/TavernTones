@@ -2,38 +2,98 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelect
 const path = require('path');
 const { renderHand } = require('./CanvasHelper.js');
 
-// Corrected Deck Definition from design documents
 const DECK_DEFINITION = [
   { name: "Black Dragon", optional: false, value: 1, image: "1 black.jpg", effect: "Black" },
+  { name: "Blue Dragon", optional: false, value: 1, image: "1 blue.jpg", effect: "Blue" },
+  { name: "Brass Dragon", optional: false, value: 1, image: "1 brass.jpg", effect: "Brass" },
+  { name: "Bronze Dragon", optional: false, value: 1, image: "1 bronze.jpg", effect: "Bronze" },
+  { name: "Copper Dragon", optional: false, value: 1, image: "1 copper.jpg", effect: "Copper" },
+  { name: "Green Dragon", optional: false, value: 1, image: "1 green.jpg", effect: "Green" },
+  { name: "White Dragon", optional: false, value: 1, image: "1 white.jpg", effect: "White" },
+  { name: "Black Dragon", optional: false, value: 2, image: "2 black.jpg", effect: "Black" },
   { name: "Blue Dragon", optional: false, value: 2, image: "2 blue.jpg", effect: "Blue" },
+  { name: "Brass Dragon", optional: false, value: 2, image: "2 brass.jpg", effect: "Brass" },
+  { name: "Gold Dragon", optional: false, value: 2, image: "2 gold.jpg", effect: "Gold" },
+  { name: "Green Dragon", optional: false, value: 2, image: "2 green.jpg", effect: "Green" },
+  { name: "Red Dragon", optional: false, value: 2, image: "2 red.jpg", effect: "Red" },
+  { name: "Silver Dragon", optional: false, value: 2, image: "2 silver.jpg", effect: "Silver" },
+  { name: "White Dragon", optional: false, value: 2, image: "2 white.jpg", effect: "White" },
+  { name: "Black Dragon", optional: false, value: 3, image: "3 black.jpg", effect: "Black" },
   { name: "Brass Dragon", optional: false, value: 3, image: "3 brass.jpg", effect: "Brass" },
-  { name: "Bronze Dragon", optional: false, value: 4, image: "4 bronze.jpg", effect: "Bronze" },
+  { name: "Bronze Dragon", optional: false, value: 3, image: "3 bronze.jpg", effect: "Bronze" },
+  { name: "Copper Dragon", optional: false, value: 3, image: "3 copper.jpg", effect: "Copper" },
+  { name: "Red Dragon", optional: false, value: 3, image: "3 red.jpg", effect: "Red" },
+  { name: "Silver Dragon", optional: false, value: 3, image: "3 silver.jpg", effect: "Silver" },
+  { name: "White Dragon", optional: false, value: 3, image: "3 white.jpg", effect: "White" },
+  { name: "Blue Dragon", optional: false, value: 4, image: "4 blue.jpg", effect: "Blue" },
+  { name: "Brass Dragon", optional: false, value: 4, image: "4 brass.jpg", effect: "Brass" },
+  { name: "Gold Dragon", optional: false, value: 4, image: "4 gold.jpg", effect: "Gold " },
+  { name: "Green Dragon", optional: false, value: 4, image: "4 green.jpg", effect: "Green" },
+  { name: "White Dragon", optional: false, value: 4, image: "4 white.jpg", effect: "White" },
+  { name: "Black Dragon", optional: false, value: 5, image: "5 black.jpg", effect: "Black" },
+  { name: "Brass Dragon", optional: false, value: 5, image: "5 brass.jpg", effect: "Brass" },
   { name: "Copper Dragon", optional: false, value: 5, image: "5 copper.jpg", effect: "Copper" },
+  { name: "Green Dragon", optional: false, value: 5, image: "5 green.jpg", effect: "Green" },
+  { name: "Red Dragon", optional: false, value: 5, image: "5 red.jpg", effect: "Red" },
+  { name: "White Dragon", optional: false, value: 5, image: "5 white.jpg", effect: "White" },
+  { name: "Black Dragon", optional: false, value: 6, image: "6 black.jpg", effect: "Black" },
+  { name: "Blue Dragon", optional: false, value: 6, image: "6 blue.jpg", effect: "Blue" },
+  { name: "Bronze Dragon", optional: false, value: 6, image: "6 bronze.jpg", effect: "Bronze" },
+  { name: "Copper Dragon", optional: false, value: 6, image: "6 copper.jpg", effect: "Copper" },
   { name: "Gold Dragon", optional: false, value: 6, image: "6 gold.jpg", effect: "Gold" },
-  { name: "Green Dragon", optional: false, value: 7, image: "7 green.jpg", effect: "Green" },
+  { name: "Green Dragon", optional: false, value: 6, image: "6 green.jpg", effect: "Green" },
+  { name: "Silver Dragon", optional: false, value: 6, image: "6 silver.jpg", effect: "Silver" },
+  { name: "White Dragon", optional: false, value: 6, image: "6 white.jpg", effect: "White" },
+  { name: "Black Dragon", optional: false, value: 7, image: "7 black.jpg", effect: "Black" },
+  { name: "Blue Dragon", optional: false, value: 7, image: "7 blue.jpg", effect: "Blue" },
+  { name: "Brass Dragon", optional: false, value: 7, image: "7 brass.jpg", effect: "Brass" },
+  { name: "Bronze Dragon", optional: false, value: 7, image: "7 bronze.jpg", effect: "Bronze" },
+  { name: "Copper Dragon", optional: false, value: 7, image: "7 copper.jpg", effect: "Copper" },
+  { name: "Red Dragon", optional: false, value: 7, image: "7 red.jpg", effect: "Red" },
+  { name: "Silver Dragon", optional: false, value: 7, image: "7 silver.jpg", effect: "Silver" },
+  { name: "Bronze Dragon", optional: false, value: 8, image: "8 bronze.jpg", effect: "Bronze" },
+  { name: "Copper Dragon", optional: false, value: 8, image: "8 copper.jpg", effect: "Copper" },
+  { name: "Gold Dragon", optional: false, value: 8, image: "8 gold.jpg", effect: "Gold" },
+  { name: "Green Dragon", optional: false, value: 8, image: "8 green.jpg", effect: "Green" },
   { name: "Red Dragon", optional: false, value: 8, image: "8 red.jpg", effect: "Red" },
-  { name: "Silver Dragon", optional: false, value: 9, image: "9 silver.jpg", effect: "Silver" },
-  { name: "White Dragon", optional: false, value: 10, image: "10 white.jpg", effect: "White" },
-  { name: "The Tarrasque", optional: true, value: 13, image: "13 tarrasque.jpg", effect: "The Tarrasque" },
-  { name: "Dracolich", optional: true, value: 12, image: "12 dracolich.jpg", effect: "Dracolich" },
-  { name: "Bahamut", optional: true, value: 11, image: "11 bahamut.jpg", effect: "Bahamut" },
-  { name: "Tiamat", optional: true, value: 11, image: "11 tiamat.jpg", effect: "Tiamat" },
-  { name: "Aspect of Tiamat", optional: true, value: 10, image: "10 aspect of tiamat.jpg", effect: "Aspect of Tiamat" },
-  { name: "Aspect of Bahamut", optional: true, value: 9, image: "9 aspect of bahamut.jpg", effect: "Aspect of Bahamut" },
-  { name: "Good Dragon", optional: true, value: 8, image: "8 good dragon.jpg", effect: "Good Dragon" },
-  { name: "Evil Dragon", optional: true, value: 7, image: "7 evil dragon.jpg", effect: "Evil Dragon" },
-  { name: "The Fool", optional: true, value: 0, image: "0 the fool.jpg", effect: "The Fool" },
-  { name: "The Druid", optional: true, value: 1, image: "1 the druid.jpg", effect: "The Druid" },
-  { name: "The Priest", optional: true, value: 2, image: "2 the priest.jpg", effect: "The Priest" },
-  { name: "The Thief", optional: true, value: 3, image: "3 the thief.jpg", effect: "The Thief" },
-  { name: "The Wizard", optional: true, value: 4, image: "4 the wizard.jpg", effect: "The Wizard" },
-  { name: "The Ranger", optional: true, value: 5, image: "5 the ranger.jpg", effect: "The Ranger" },
-  { name: "The Paladin", optional: true, value: 6, image: "6 the paladin.jpg", effect: "The Paladin" },
-  { name: "The Knight", optional: true, value: 7, image: "7 the knight.jpg", effect: "The Knight" },
-  { name: "The Barbarian", optional: true, value: 8, image: "8 the barbarian.jpg", effect: "The Barbarian" },
-  { name: "The Archmage", optional: true, value: 9, image: "9 the archmage.jpg", effect: "The Archmage" }
+  { name: "Silver Dragon", optional: false, value: 8, image: "8 silver.jpg", effect: "Silver" },
+  { name: "White Dragon", optional: false, value: 8, image: "8 white.jpg", effect: "White" },
+  { name: "Black Dragon", optional: false, value: 9, image: "9 black.jpg", effect: "Black" },
+  { name: "Blue Dragon", optional: false, value: 9, image: "9 blue.jpg", effect: "Blue" },
+  { name: "Brass Dragon", optional: false, value: 9, image: "9 brass.jpg", effect: "Brass" },
+  { name: "Bronze Dragon", optional: false, value: 9, image: "9 bronze.jpg", effect: "Bronze" },
+  { name: "Gold Dragon", optional: false, value: 9, image: "9 gold.jpg", effect: "Gold" },
+  { name: "Copper Dragon", optional: false, value: 10, image: "10 copper.jpg", effect: "Copper" },
+  { name: "Green Dragon", optional: false, value: 10, image: "10 green.jpg", effect: "Green" },
+  { name: "Red Dragon", optional: false, value: 10, image: "10 red.jpg", effect: "Red" },
+  { name: "Silver Dragon", optional: false, value: 10, image: "10 silver.jpg", effect: "Silver" },
+  { name: "Blue Dragon", optional: false, value: 11, image: "11 blue.jpg", effect: "Blue" },
+  { name: "Bronze Dragon", optional: false, value: 11, image: "11 bronze.jpg", effect: "Bronze" },
+  { name: "Gold Dragon", optional: false, value: 11, image: "11 gold.jpg", effect: "Gold" },
+  { name: "Red Dragon", optional: false, value: 12, image: "12 red.jpg", effect: "Red" },
+  { name: "Silver Dragon", optional: false, value: 12, image: "12 silver.jpg", effect: "Silver" },
+  { name: "Gold Dragon", optional: false, value: 13, image: "13 gold.jpg", effect: "Gold" },
+  { name: "Black Raider", optional: true, value: 8, image: "Black Raider.jpg", effect: "BlackRaider" },
+  { name: "Blue Overlord", optional: true, value: 10, image: "Blue Overlord.jpg", effect: "BlueOverlord" },
+  { name: "Brass Sultan", optional: true, value: 8, image: "Brass Sultan.jpg", effect: "BrassSultan" },
+  { name: "Bronze Warlord", optional: true, value: 10, image: "Bronze Warlord.jpg", effect: "BronzeWarlord" },
+  { name: "Copper Trickster", optional: true, value: 6, image: "Copper Trickster.jpg", effect: "CopperTrickster" },
+  { name: "Gold Monarch", optional: true, value: 12, image: "Gold Monarch.jpg", effect: "GoldMonarch" },
+  { name: "Green Schemer", optional: true, value: 5, image: "Green Schemer.jpg", effect: "GreenSchemer" },
+  { name: "Red Destroyer", optional: true, value: 11, image: "Red Destroyer.jpg", effect: "RedDestroyer" },
+  { name: "Silver Seer", optional: true, value: 11, image: "Silver Seer.jpg", effect: "SilverSeer" },
+  { name: "White Hunter", optional: true, value: 7, image: "White Hunter.jpg", effect: "WhiteHunter" },
+  { name: "Chromatic Wyrmling", optional: true, value: 1, image: "Chromatic Wyrmling.jpg", effect: "ChromWyrm" },
+  { name: "Metallic Wyrmling", optional: true, value: 1, image: "Metallic Wyrmling.jpg", effect: "MetalWyrm" },
+  { name: "Dracolich", optional: true, value: 10, image: "Dracolich.jpg", effect: "Dracolich" },
+  { name: "Bahamut", optional: true, value: 13, image: "Bahamut.jpg", effect: "Bahamut" },
+  { name: "Tiamat", optional: true, value: 13, image: "Tiamat.jpg", effect: "Tiamat" },
+  { name: "The Wyrmpriest", optional: true, value: 5, image: "Wyrmpriest.jpg", effect: "Wyrmpriest" },
+  { name: "The Druid", optional: true, value: 6, image: "Druid.jpg", effect: "Druid" },
+  { name: "The Kobold", optional: true, value: 2, image: "kobold.jpg", effect: "Kobold" },
+  { name: "The Princess", optional: true, value: 4, image: "Princess.jpg", effect: "Princess" },
+  { name: "The Sorcerer", optional: true, value: 8, image: "Sorcerer.jpg", effect: "Sorcerer" },
 ];
-
 const CARD_EFFECTS = [
   { name: "Black", alignment: "evil", text: "Steal 3 gold from the stakes" },
   { name: "Blue", alignment: "evil", text: "Choose one: Each opponent gives you 1 gold; OR each opponent adds 1 gold to the stakes for each card in your flight" },
@@ -45,6 +105,26 @@ const CARD_EFFECTS = [
   { name: "Copper", alignment: "good", text: "Discard this card and replace it with the top card of the deck. That card's power triggers regardless of its strength" },
   { name: "Gold", alignment: "good", text: "Draw a card for each good dragon in your flight" },
   { name: "Silver", alignment: "good", text: "Each player with at least one good dragon in their flight draws a card" },
+  { name: "BlackRaider", alignment: "evil", text: "Steal 1 gold from the stakes, then take 2 gold from the next player, then 3 gold from the player after that and so on until you have taken gold from everyone" },
+  { name: "BlueOverlord", alignment: "evil", text: "Choose one: Each opponent gives you 2 gold; OR each opponent adds 2 gold to the stakes for each card in your flight" },
+  { name: "BrassSultan", alignment: "good", text: "The player who played last and the next opponent each choose to give you a stronger good dragon from their hand or pay you 5 gold" },
+  { name: "BronzeWarlord", alignment: "good", text: "Put the two weakest ante cards into your hand. Then if you do not win the gambit after the third round, play a fourth round" },
+  { name: "CopperTrickster", alignment: "good", text: "Discard a different card in your flight and replace it with the top card of the deck. You can trigger the new card's power if you wish" },
+  { name: "GoldMonarch", alignment: "good", text: "Draw a card for each good dragon in your flight. Then if you win this gambit, gift each opponent 3 gold" },
+  { name: "GreenSchemer", alignment: "evil", text: "The opponent who played last and the next opponent each choose to give you a weaker evil dragon from their hand or pay you 5 gold" },
+  { name: "RedDestroyer", alignment: "evil", text: "The opponent with the strongest flight pays you 10 gold. Take a random card from that player's hand" },
+  { name: "SilverSeer", alignment: "good", text: "Each player with at least one good dragon in their flight draws a card. Then you look at the top 3 cards in the deck, choose one to draw, and discard the others" },
+  { name: "WhiteHunter", alignment: "evil", text: "Each weaker opponent pays you 3 gold" },
+  { name: "ChromWyrm", alignment: "evil", text: "You may discard this card and replace it with an evil dragon from your hand. The new card's power triggers regardless of its strength" },
+  { name: "MetalWyrm", alignment: "good", text: "You may discard this card and replace it with a good dragon from your hand. The new card's power triggers regardless of its strength" },
+  { name: "Dracolich", alignment: "evil", text: "When the gambit is scored, you get +2 Strength for each evil dragon in your flight" },
+  { name: "Bahamut", alignment: "good", text: "Dragon God: As long as you have Bahamut and an evil dragon in your flight, you can't win the gambit. Power: Each other player with both good and evil dragons in the same flight pays you 10 gold" },
+  { name: "Tiamat", alignment: "evil", text: "Dragon God: Tiamat counts as a Black, Blue, Green, Red, and White Dragon. As long as you have Tiamat and a good dragon in your flight, you can't win the gambit" },
+  { name: "Wyrmpriest", alignment: "mortal", text: "for the rest of the gambit, this card also counts as a dragon of any color for completing a color flight" },
+  { name: "Druid", alignment: "mortal", text: "The player with the weakest flight wins the gambit instead of the player with the strongest flight" },
+  { name: "Kobold", alignment: "mortal", text: "Discard as many cards as you wish from your hand. Then draw that many cards" },
+  { name: "Princess", alignment: "mortal", text: "The power of each good dragon in your flight triggers" },
+  { name: "Sorcerer", alignment: "mortal", text: "Reveal the top three cards of the deck. Discard this card and replace it with one of the revealed cards. that card's power triggers. Put the other two revealed cards into the ante" },
 ];
 
 const SPECIAL_ABILITIES = [
@@ -78,11 +158,13 @@ class ThreeDragonAnteGame {
             log: [],
             pot: 0,
             deck: [],
-            draftCards: [],
             antePile: [],
             leader: null,
+            draftPool: [],
+            draftOrder: [],
+            turnOrder: [],
         };
-        game.players.push({ id: message.author.id, user: message.author, specialAbility: null, hand: [], flight: [], hoard: 0, dmMessages: {} });
+        game.players.push({ id: message.author.id, user: message.author, specialAbility: null, hand: [], flight: [], hoard: 0, dmMessages: {}, draftedCards: [], isReady: false });
         this.activeGames.set(message.channel.id, game);
 
         const embed = this._generateLobbyEmbed(game);
@@ -118,7 +200,7 @@ class ThreeDragonAnteGame {
                 await i.reply({ content: 'You are already in the game.', ephemeral: true });
                 return;
             }
-            game.players.push({ id: i.user.id, user: i.user, specialAbility: null, hand: [], flight: [], hoard: 0, dmMessages: {} });
+            game.players.push({ id: i.user.id, user: i.user, specialAbility: null, hand: [], flight: [], hoard: 0, dmMessages: {}, draftedCards: [], isReady: false });
         } else if (i.customId === 'tda_leave') {
             if (!isPlayerInGame) {
                 await i.reply({ content: 'You are not in this game.', ephemeral: true });
@@ -179,10 +261,16 @@ class ThreeDragonAnteGame {
         }
 
         const actionType = params[0];
-        const cardIdentifier = params.slice(1).join('_');
+        const cardIdentifier = params.slice(1).join('_').replace(/_/g, ' ');
 
         if (actionType === 'ante') {
-            await this.handleAnte(interaction, game, cardIdentifier.replace(/_/g, ' '));
+            await this.handleAnte(interaction, game, cardIdentifier);
+        } else if (actionType === 'draft') {
+            await this.handleDraftPick(interaction, game, cardIdentifier);
+        } else if (actionType === 'play') {
+            await this.handleCardPlay(interaction, game, cardIdentifier);
+        } else if (actionType === 'ready') {
+            await this.handleReadyCheck(interaction, game);
         }
     }
 
@@ -203,7 +291,7 @@ class ThreeDragonAnteGame {
         if (!playerList) playerList = 'No players have joined yet.';
         embed.addFields({ name: `Players (${game.players.length})`, value: playerList });
 
-        if (game.state === 'starting') {
+        if (game.state === 'starting' || game.state === 'drafting') {
             embed.setDescription("Game starting... Check your DMs!");
             embed.setFields([]);
         }
@@ -253,36 +341,9 @@ class ThreeDragonAnteGame {
     }
 
     async startGame(game) {
-        game.state = 'drafting';
-        game.log.push('The draft begins!');
-        this._selectDraftCards(game);
-        this._buildDeck(game);
-        this._dealInitialHands(game);
-        await this.dealGameBoard(game);
-
-        game.log.push('Drafting complete. The first gambit begins.');
-        await this.startAntePhase(game);
-    }
-
-    _selectDraftCards(game) {
-        const optionalCards = DECK_DEFINITION.filter(card => card.optional);
-        this._shuffle(optionalCards);
-        game.draftCards = optionalCards.slice(0, 10);
-        game.log.push(`Draft cards selected: ${game.draftCards.map(c => c.name).join(', ')}.`);
-    }
-
-    _buildDeck(game) {
-        const standardCards = DECK_DEFINITION.filter(card => !card.optional);
-        game.deck = [...standardCards, ...game.draftCards];
-        this._shuffle(game.deck);
-    }
-
-    _dealInitialHands(game) {
-        for (let i = 0; i < 6; i++) {
-            for (const player of game.players) {
-                if (game.deck.length > 0) player.hand.push(game.deck.pop());
-            }
-        }
+        game.state = 'starting';
+        await this.dealInitialEmptyGameBoard(game);
+        await this.startDraftPhase(game);
     }
 
     _shuffle(array) {
@@ -292,12 +353,14 @@ class ThreeDragonAnteGame {
         }
     }
 
-    async dealGameBoard(game) {
+    async dealInitialEmptyGameBoard(game) {
         for (const player of game.players) {
             try {
                 player.dmChannel = await player.user.createDM();
                 const logMessage = await player.dmChannel.send({ embeds: [this._createLogEmbed(game)] });
                 player.dmMessages.log = logMessage.id;
+                const draftMessage = await player.dmChannel.send({ embeds: [this._createDraftEmbed(game)] });
+                player.dmMessages.draft = draftMessage.id;
                 const anteMessage = await player.dmChannel.send({ embeds: [this._createAnteEmbed(game)] });
                 player.dmMessages.ante = anteMessage.id;
                 player.dmMessages.opponents = {};
@@ -318,12 +381,18 @@ class ThreeDragonAnteGame {
         }
     }
 
-    async _updateAllBoards(game, revealAntes = false) {
+    async _updateAllBoards(game, options = {}) {
+        const { revealAntes = false, updateDraft = false } = options;
         for (const player of game.players) {
             if (!player.dmChannel || !player.dmMessages) continue;
             try {
                 const logMessage = await player.dmChannel.messages.fetch(player.dmMessages.log).catch(() => null);
                 if (logMessage) await logMessage.edit({ embeds: [this._createLogEmbed(game)] });
+
+                if (updateDraft) {
+                    const draftMessage = await player.dmChannel.messages.fetch(player.dmMessages.draft).catch(() => null);
+                    if (draftMessage) await draftMessage.edit({ embeds: [this._createDraftEmbed(game)] });
+                }
 
                 const anteMessage = await player.dmChannel.messages.fetch(player.dmMessages.ante).catch(() => null);
                 if (anteMessage) await anteMessage.edit({ embeds: [this._createAnteEmbed(game, revealAntes)] });
@@ -346,6 +415,96 @@ class ThreeDragonAnteGame {
         }
     }
 
+    // DRAFT PHASE
+    async startDraftPhase(game) {
+        game.state = 'drafting';
+        const optionalCards = DECK_DEFINITION.filter(card => card.optional);
+        this._shuffle(optionalCards);
+        game.draftPool = optionalCards.slice(0, 10);
+
+        const reversedPlayers = [...game.players].reverse();
+        game.draftOrder = [...game.players, ...reversedPlayers];
+
+        game.log.push('**DRAFT PHASE:** The draft for special cards has begun! Check your DMs to pick a card.');
+        await this._updateAllBoards(game, { updateDraft: true });
+
+        await this._requestDraftPick(game);
+    }
+
+    async _requestDraftPick(game) {
+        if (game.draftOrder.length === 0) {
+            await this.postDraftSetup(game);
+            return;
+        }
+
+        const currentPlayer = game.draftOrder[0];
+        const embed = new EmbedBuilder()
+            .setTitle('Choose a Card to Draft')
+            .setDescription(`It's your turn to pick a card from the draft pool. This card will be added to the deck for this game.`)
+            .setColor(0x1abc9c);
+
+        const rows = [];
+        let currentRow = new ActionRowBuilder();
+        for (const card of game.draftPool) {
+            if (currentRow.components.length === 5) {
+                rows.push(currentRow);
+                currentRow = new ActionRowBuilder();
+            }
+            currentRow.addComponents(new ButtonBuilder().setCustomId(`tda_action_${game.channelId}_draft_${card.name.replace(/ /g, '_')}`).setLabel(`${card.name} (Str ${card.value})`).setStyle(ButtonStyle.Secondary));
+        }
+        rows.push(currentRow);
+
+        try {
+            await currentPlayer.dmChannel.send({ embeds: [embed], components: rows });
+        } catch (e) {
+            console.error(`Failed to send draft request to ${currentPlayer.user.tag}`, e);
+            game.draftOrder.shift();
+            await this._requestDraftPick(game);
+        }
+    }
+
+    async handleDraftPick(interaction, game, cardName) {
+        const player = game.players.find(p => p.id === interaction.user.id);
+        if (!player) return interaction.reply({ content: "You're not in this game.", ephemeral: true });
+
+        const currentPlayer = game.draftOrder[0];
+        if (player.id !== currentPlayer.id) return interaction.reply({ content: "It's not your turn to draft.", ephemeral: true });
+
+        const cardIndex = game.draftPool.findIndex(c => c.name === cardName);
+        if (cardIndex === -1) return interaction.reply({ content: "That card is no longer available.", ephemeral: true });
+
+        await interaction.message.delete().catch(e => console.error("Failed to delete draft message:", e));
+
+        const card = game.draftPool.splice(cardIndex, 1)[0];
+        player.draftedCards.push(card);
+        game.log.push(`${player.user.username} drafted **${card.name}**.`);
+
+        game.draftOrder.shift();
+
+        await this._updateAllBoards(game, { updateDraft: true });
+        await this._requestDraftPick(game);
+    }
+
+    async postDraftSetup(game) {
+        game.log.push('**DRAFT COMPLETE:** All special cards have been drafted.');
+        const standardCards = DECK_DEFINITION.filter(card => !card.optional);
+        const allDraftedCards = game.players.flatMap(p => p.draftedCards);
+        game.deck = [...standardCards, ...allDraftedCards];
+        this._shuffle(game.deck);
+
+        for (let i = 0; i < 6; i++) {
+            for (const player of game.players) {
+                if (game.deck.length > 0) player.hand.push(game.deck.pop());
+            }
+        }
+        game.log.push('Initial hands have been dealt. The first gambit begins.');
+
+        game.draftPool = [];
+        await this._updateAllBoards(game, { updateDraft: true });
+        await this.startAntePhase(game);
+    }
+
+    // ANTE PHASE
     async startAntePhase(game) {
         game.state = 'ante';
         game.antePile = [];
@@ -409,12 +568,236 @@ class ThreeDragonAnteGame {
         game.leader = sortedAntes[0].player;
         game.log.push(`**${game.leader.user.username}** anted the strongest card and is the leader for this gambit.`);
 
-        game.state = 'gambit';
-        await this._updateAllBoards(game, true);
+        await this._updateAllBoards(game, { revealAntes: true });
+        await this.startGambitPhase(game);
     }
 
+    // GAMBIT PHASE
+    async startGambitPhase(game) {
+        game.state = 'gambit';
+        game.log.push('**GAMBIT PHASE:** The gambit begins!');
+
+        for(const ante of game.antePile) {
+            ante.player.flight.push(ante.card);
+        }
+        game.antePile = [];
+
+        const leaderIndex = game.players.findIndex(p => p.id === game.leader.id);
+        game.turnOrder = [...game.players.slice(leaderIndex), ...game.players.slice(0, leaderIndex)];
+
+        await this._updateAllBoards(game);
+        await this._requestCardPlay(game);
+    }
+
+    async _requestCardPlay(game) {
+        if (game.turnOrder.length === 0) {
+            await this.scoreGambit(game);
+            return;
+        }
+
+        const currentPlayer = game.turnOrder[0];
+        const embed = new EmbedBuilder()
+            .setTitle('Your Turn to Play')
+            .setDescription('Select a card from your hand to play.')
+            .setColor(0x9b59b6)
+            .setFooter({text: `It's ${currentPlayer.user.username}'s turn.`});
+
+        const rows = [];
+        let currentRow = new ActionRowBuilder();
+        for (const card of currentPlayer.hand) {
+            if (currentRow.components.length === 5) {
+                rows.push(currentRow);
+                currentRow = new ActionRowBuilder();
+            }
+            currentRow.addComponents(new ButtonBuilder().setCustomId(`tda_action_${game.channelId}_play_${card.name.replace(/ /g, '_')}`).setLabel(`${card.name} (Str ${card.value})`).setStyle(ButtonStyle.Primary));
+        }
+        rows.push(currentRow);
+
+        try {
+            await currentPlayer.dmChannel.send({ embeds: [embed], components: rows });
+        } catch (e) {
+            console.error(`Failed to send play request to ${currentPlayer.user.tag}`, e);
+            game.turnOrder.shift();
+            await this._requestCardPlay(game);
+        }
+    }
+
+    async handleCardPlay(interaction, game, cardName) {
+        const player = game.players.find(p => p.id === interaction.user.id);
+        if (!player) return interaction.reply({ content: "You're not in this game.", ephemeral: true });
+
+        const currentPlayer = game.turnOrder[0];
+        if (player.id !== currentPlayer.id) return interaction.reply({ content: "It's not your turn to play.", ephemeral: true });
+
+        const cardIndex = player.hand.findIndex(c => c.name === cardName);
+        if (cardIndex === -1) return interaction.reply({ content: "You don't have that card.", ephemeral: true });
+
+        await interaction.message.delete().catch(e => console.error("Failed to delete play message:", e));
+
+        const card = player.hand.splice(cardIndex, 1)[0];
+        player.flight.push(card);
+        game.log.push(`${player.user.username} played **${card.name}**.`);
+
+        const lastPlayedCard = player.flight.length > 1 ? player.flight[player.flight.length - 2] : null;
+        if (!lastPlayedCard || card.value >= lastPlayedCard.value) {
+            await this._triggerCardPower(game, player, card);
+        } else {
+            game.log.push(`The power of **${card.name}** did not trigger because it was weaker than the previous card.`);
+        }
+
+        game.turnOrder.shift();
+        await this._updateAllBoards(game);
+        await this._requestCardPlay(game);
+    }
+
+    async _triggerCardPower(game, player, card) {
+        game.log.push(`The power of **${card.name}** triggers!`);
+        switch(card.effect) {
+            case 'Black': {
+                const amount = Math.min(3 * game.scaleFactor, game.pot);
+                player.hoard += amount;
+                game.pot -= amount;
+                game.log.push(`${player.user.username} steals ${amount}gp from the pot.`);
+                break;
+            }
+            case 'Gold': {
+                const goodDragonsInFlight = player.flight.filter(c => CARD_EFFECTS.find(e => e.name === c.effect)?.alignment === 'good').length;
+                game.log.push(`${player.user.username} has ${goodDragonsInFlight} good dragons in their flight.`);
+                for (let i = 0; i < goodDragonsInFlight; i++) {
+                    if (game.deck.length > 0) {
+                        const drawnCard = game.deck.pop();
+                        player.hand.push(drawnCard);
+                        game.log.push(`${player.user.username} draws a card (${drawnCard.name}).`);
+                    } else {
+                        game.log.push('The deck is empty!');
+                        break;
+                    }
+                }
+                break;
+            }
+             case 'Silver': {
+                for (const p of game.players) {
+                    const hasGoodDragon = p.flight.some(c => CARD_EFFECTS.find(e => e.name === c.effect)?.alignment === 'good');
+                    if (hasGoodDragon) {
+                         if (game.deck.length > 0) {
+                            const drawnCard = game.deck.pop();
+                            p.hand.push(drawnCard);
+                            game.log.push(`${p.user.username} has a good dragon and draws a card (${drawnCard.name}).`);
+                        } else {
+                            game.log.push('The deck is empty!');
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+                game.log.push(`...but the effect for **${card.effect}** is not implemented yet.`);
+        }
+    }
+
+    // END OF GAMBIT
+    _calculateFlightStrength(flight) {
+        return flight.reduce((sum, card) => sum + card.value, 0);
+    }
+
+    async scoreGambit(game) {
+        game.state = 'scoring';
+        game.log.push('**SCORING PHASE:** The gambit has ended. Calculating results...');
+
+        let winner = null;
+        let highestStrength = -1;
+
+        for (const player of game.players) {
+            const strength = this._calculateFlightStrength(player.flight);
+            game.log.push(`${player.user.username}'s flight strength: ${strength}`);
+            if (strength > highestStrength) {
+                highestStrength = strength;
+                winner = player;
+            }
+        }
+
+        if (winner) {
+            winner.hoard += game.pot;
+            game.log.push(`**${winner.user.username}** wins the gambit with a strength of ${highestStrength} and takes the pot of ${game.pot}gp!`);
+            game.pot = 0;
+        } else {
+            game.log.push('There was no winner. The pot rolls over to the next gambit.');
+        }
+
+        await this._updateAllBoards(game);
+        await this._sendReadyCheck(game);
+    }
+
+    async _sendReadyCheck(game) {
+        game.players.forEach(p => p.isReady = false);
+        const embed = new EmbedBuilder()
+            .setTitle('Gambit Over')
+            .setDescription('The gambit has concluded. Are you ready for the next one?')
+            .setColor(0xf1c40f);
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`tda_action_${game.channelId}_ready`).setLabel('Ready for Next Gambit').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`tda_leave`).setLabel('Leave Table').setStyle(ButtonStyle.Danger) // Using the lobby leave ID
+        );
+
+        for (const player of game.players) {
+            try {
+                const msg = await player.dmChannel.send({ embeds: [embed], components: [row] });
+                player.dmMessages.readyCheck = msg.id;
+            } catch(e) { console.error(`Failed to send ready check to ${player.user.tag}`, e); }
+        }
+    }
+
+    async handleReadyCheck(interaction, game) {
+        const player = game.players.find(p => p.id === interaction.user.id);
+        if (!player) return interaction.reply({ content: "You're not in this game.", ephemeral: true });
+
+        player.isReady = true;
+        game.log.push(`${player.user.username} is ready for the next gambit.`);
+        await interaction.update({ components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('tda_ready_confirmed').setLabel('Ready').setStyle(ButtonStyle.Success).setDisabled(true))] });
+
+        const allReady = game.players.every(p => p.isReady);
+        if (allReady) {
+            await this.startNextGambit(game);
+        }
+    }
+
+    async startNextGambit(game) {
+        game.log.push('All players are ready. Starting the next gambit...');
+
+        for (const player of game.players) {
+            try {
+                const readyMessage = await player.dmChannel.messages.fetch(player.dmMessages.readyCheck).catch(() => null);
+                if (readyMessage) await readyMessage.delete();
+            } catch(e) { console.error(`Failed to delete ready message for ${player.user.tag}`, e); }
+
+            player.flight = [];
+            for(let i=0; i<2; i++) {
+                if (game.deck.length > 0) player.hand.push(game.deck.pop());
+            }
+        }
+
+        await this.startAntePhase(game);
+    }
+
+
+    // EMBED CREATION
     _createLogEmbed(game) {
         return new EmbedBuilder().setTitle('Gameplay Log').setDescription(game.log.slice(-15).join('\n')).setColor(0x992d22);
+    }
+
+    _createDraftEmbed(game) {
+        const embed = new EmbedBuilder().setTitle('Draft Pool').setColor(0x1abc9c);
+        if (game.state === 'drafting' && game.draftPool.length > 0) {
+            const remainingCards = game.draftPool.map(c => `**${c.name}** (Str ${c.value})`).join('\n');
+            const nextPlayer = game.draftOrder[0];
+            embed.setDescription(`Cards remaining in the pool. It is **${nextPlayer.user.username}**'s turn to pick.`);
+            embed.addFields({ name: 'Available Cards', value: remainingCards });
+        } else {
+            embed.setDescription('The draft has concluded.');
+        }
+        return embed;
     }
 
     _createAnteEmbed(game, reveal = false) {
@@ -443,12 +826,20 @@ class ThreeDragonAnteGame {
 
     _createOpponentEmbed(opponent) {
         const handRepresentation = '🃏'.repeat(opponent.hand.length) + '⬛'.repeat(10 - opponent.hand.length);
+        const flightValue = opponent.flight.length > 0 ? opponent.flight.map(c => {
+            const lastPlayedCard = opponent.flight.length > 1 ? opponent.flight[opponent.flight.length - 2] : null;
+            // The first card in the flight (the ante) always triggers.
+            const isAnte = opponent.flight.indexOf(c) === 0;
+            const triggered = isAnte || !lastPlayedCard || c.value >= lastPlayedCard.value;
+            return triggered ? c.name : `~~${c.name}~~`;
+        }).join('\n') : 'None';
+
         return new EmbedBuilder()
             .setTitle(`${opponent.user.username}'s Board`)
             .addFields(
                 { name: 'Hand', value: `${handRepresentation} (${opponent.hand.length}/10)` },
                 { name: 'Hoard', value: `${opponent.hoard}gp`, inline: true },
-                { name: 'Flight', value: opponent.flight.length > 0 ? opponent.flight.map(c => c.name).join('\n') : 'None', inline: true }
+                { name: 'Flight', value: flightValue, inline: true }
             )
             .setColor(0x4f545c);
     }

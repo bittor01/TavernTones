@@ -26,8 +26,8 @@ async function renderHand(cards) {
     const cardWidth = firstCardImage.width;
     const cardHeight = firstCardImage.height;
 
-    // Define the overlap. 0.25 means 25% of the card is visible.
-    const visiblePart = 0.25;
+    // Define the overlap. 0.5 means 50% of the card is visible.
+    const visiblePart = 0.5;
     const x_offset = cardWidth * visiblePart;
 
     // Calculate the total width of the canvas
