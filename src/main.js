@@ -1181,6 +1181,10 @@ client.once('clientReady', async () => {
         }
 
         if (interaction.isButton()) {
+            if (interaction.customId.startsWith('tda_action_')) {
+                return client.commandHandler.tdaManager.handleGameInteraction(interaction);
+            }
+
             if (interaction.customId === 'trap-proceed-button') {
                 await interaction.deferReply({ ephemeral: true });
                 const selections = trapSelections.get(interaction.message.id) || {};
@@ -1757,8 +1761,8 @@ function formatNpcResult(result) {
 }
 
         if (interaction.isModalSubmit()) {
-            if (interaction.customId.startsWith('tda_ante_modal')) {
-                return client.commandHandler.tdaManager.handleAnteModalSubmit(interaction);
+            if (interaction.customId.startsWith('tda_buy_in_modal')) {
+                return client.commandHandler.tdaManager.handleBuyInModalSubmit(interaction);
             }
 
             if (interaction.customId.startsWith('npc-modal-')) {
