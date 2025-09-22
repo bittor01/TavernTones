@@ -132,7 +132,7 @@ const SPECIAL_ABILITIES = [
     { label: 'Concentration', value: 'concentration', description: 'Pay 1 fewer gold to the stakes when you ante.' },
     { label: 'Diplomacy (Persuasion)', value: 'diplomacy', description: 'You may choose another player to be the leader instead of you.' },
     { label: 'Intimidate (Intimidation)', value: 'intimidate', description: 'You can\'t be chosen as strongest flight if tied.' },
-    { label: 'Gambler', value: 'gambler', description: 'When buying cards, you may discard a second card from the deck.' },
+    { label: 'Gambler', value: 'gambler', description: 'When buying cards, you may discard a second card from the deck and pay the lower value.' },
     { label: 'Sense Motive (Insight)', value: 'sense_motive', description: 'Look at an opponent\'s hand if they play two same-colored dragons.' },
     { label: 'Sleight of Hand', value: 'sleight_of_hand', description: 'After stealing from the stakes, you may steal 1 more gold.' },
     { label: 'Wild Card', value: 'wild_card', description: 'Once per game, count a mortal as a dragon for a color flight.' },
