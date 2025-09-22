@@ -18,7 +18,7 @@ The application is built on two main pillars: an **Electron App** for the DM-fac
 - **Electron App**: This provides the main window that the DM interacts with. It's responsible for the initiative tracker, soundboard, and logging UI. It runs a Node.js backend (`main.js`) and a Chromium-based frontend (`renderer.js`).
 - **Discord.js Bot**: This runs within the Electron main process and connects to the Discord API. It listens for chat commands and interactions (buttons, modals, etc.) to trigger its various features.
 
-These two pillars communicate via Electron's Inter-Process Communication (IPC) mechanism.
+These two pillars communicate via Electron's IPC mechanism.
 
 ### Key Files
 
