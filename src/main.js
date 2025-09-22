@@ -13,13 +13,13 @@ client.npcDropdownHandlers = new Map();
 console.log('Discord client instantiated.');
 const axios = require('axios');
 console.log('Axios loaded.');
-const BackendAudioPlayer = require('./BackendAudioPlayer.js');
-const CommandHandler = require('./CommandHandler.js');
-const MagicItemGenerator = require('./MagicItemGenerator.js');
-const VehicleEncounterBuilder = require('./VehicleEncounterBuilder.js');
-const FiveEToolsParser = require('./5eParser.js');
-const { format5eResult, formatEntries } = require('./5eEmbedFormatter.js');
-const DropdownHandler = require('./DropdownHandler.js');
+const BackendAudioPlayer = require('./discord/BackendAudioPlayer.js');
+const CommandHandler = require('./discord/CommandHandler.js');
+const MagicItemGenerator = require('./core/MagicItemGenerator.js');
+const VehicleEncounterBuilder = require('./core/VehicleEncounterBuilder.js');
+const FiveEToolsParser = require('./core/5eParser.js');
+const { format5eResult, formatEntries } = require('./core/5eEmbedFormatter.js');
+const DropdownHandler = require('./ui/DropdownHandler.js');
 const fs = require('fs').promises;
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
@@ -94,7 +94,7 @@ async function createWindow(showWindow = true) {
     mainWindow = new BrowserWindow({
         show: false, // Do not show the window until it's ready
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
+            preload: path.join(__dirname, 'ui/preload.js'),
             contextIsolation: true,
             enableRemoteModule: false,
             nodeIntegration: true
@@ -127,7 +127,7 @@ function createGamifyWindow() {
         width: 1200,
         height: 900,
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
+            preload: path.join(__dirname, 'ui/preload.js'),
             contextIsolation: true,
             enableRemoteModule: false,
             nodeIntegration: true // Keep consistent with mainWindow
@@ -326,7 +326,7 @@ async function checkAndShowReminders(creature, turnEvent) {
     }
 }
 
-const InitiativeTracker = require('./InitiativeTracker.js');
+const InitiativeTracker = require('./core/InitiativeTracker.js');
 
 async function ipcloader() {
     if (windowloaded) {
@@ -356,13 +356,13 @@ async function ipcloader() {
 
         ipcMain.handle('get-high-score', async () => {
             try {
-                const settingsPath = path.join(__dirname, 'gamify-settings.json');
+                const settingsPath = path.join(__dirname, '..', 'gamify-settings.json');
                 const data = await fs.readFile(settingsPath, 'utf8');
                 const settings = JSON.parse(data);
                 return settings.highScore || 0;
             } catch (error) {
                 if (error.code === 'ENOENT') {
-                    const settingsPath = path.join(__dirname, 'gamify-settings.json');
+                    const settingsPath = path.join(__dirname, '..', 'gamify-settings.json');
                     await fs.writeFile(settingsPath, JSON.stringify({ highScore: 0 }, null, 2));
                     return 0;
                 }
@@ -373,7 +373,7 @@ async function ipcloader() {
 
         ipcMain.on('save-high-score', async (event, score) => {
             try {
-                const settingsPath = path.join(__dirname, 'gamify-settings.json');
+                const settingsPath = path.join(__dirname, '..', 'gamify-settings.json');
                 let settings = {};
                 try {
                     const data = await fs.readFile(settingsPath, 'utf8');
@@ -399,7 +399,7 @@ async function ipcloader() {
                     return { success: true, taskComplete: true, taskData };
                 }
 
-                let itemFilePath = path.join(__dirname, taskData.files[fileIndex]);
+                let itemFilePath = path.join(__dirname, '..', taskData.files[fileIndex]);
                 let itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
 
                 // Loop to find the next valid item, skipping empty files
@@ -413,7 +413,7 @@ async function ipcloader() {
                         return { success: true, taskComplete: true, taskData };
                     }
 
-                    itemFilePath = path.join(__dirname, taskData.files[fileIndex]);
+                    itemFilePath = path.join(__dirname, '..', taskData.files[fileIndex]);
                     itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
                 }
 
@@ -458,19 +458,19 @@ async function ipcloader() {
         ipcMain.handle('load-task-by-path', async (event, filePath) => {
             // If the path is absolute (e.g., from a file dialog), use it directly.
             // Otherwise, join it with the base directory (for internal calls).
-            const taskPath = path.isAbsolute(filePath) ? filePath : path.join(__dirname, filePath);
+            const taskPath = path.isAbsolute(filePath) ? filePath : path.join(__dirname, '..', filePath);
             return await loadTaskData(taskPath);
         });
 
         ipcMain.handle('get-task-data', async () => {
-            const defaultTaskPath = path.join(__dirname, 'deck-editing-task.json');
+            const defaultTaskPath = path.join(__dirname, '..', 'deck-editing-task.json');
             return await loadTaskData(defaultTaskPath);
         });
 
         ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell, taskFilePath }) => {
             try {
                 // 1. Save the current spell changes
-                const currentItemFilePath = path.join(__dirname, taskData.files[taskData.progress.fileIndex]);
+                const currentItemFilePath = path.join(__dirname, '..', taskData.files[taskData.progress.fileIndex]);
                 const currentItemFileData = await fs.readFile(currentItemFilePath, 'utf8');
                 let currentItemList = JSON.parse(currentItemFileData);
                 currentItemList[taskData.progress.itemIndex] = currentSpell;
@@ -493,7 +493,7 @@ async function ipcloader() {
                 await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
 
                 // 4. Get the next spell and its details
-                const nextFilePath = path.join(__dirname, taskData.files[taskData.progress.fileIndex]);
+                const nextFilePath = path.join(__dirname, '..', taskData.files[taskData.progress.fileIndex]);
                 const nextFileData = await fs.readFile(nextFilePath, 'utf8');
                 const nextItemList = JSON.parse(nextFileData);
                 const nextItem = nextItemList[taskData.progress.itemIndex];
@@ -522,7 +522,7 @@ async function ipcloader() {
 
         ipcMain.handle('scrap-and-get-next-item', async (event, { taskData, currentItem, taskFilePath }) => {
             try {
-                const currentItemFilePath = path.join(__dirname, taskData.files[taskData.progress.fileIndex]);
+                const currentItemFilePath = path.join(__dirname, '..', taskData.files[taskData.progress.fileIndex]);
                 let currentItemList = JSON.parse(await fs.readFile(currentItemFilePath, 'utf8'));
 
                 // Use the title field for a more robust lookup
@@ -564,14 +564,14 @@ async function ipcloader() {
                     if (prevFileIndex < 0) {
                         return { success: false, error: "Already at the beginning." };
                     }
-                    const prevFilePath = path.join(__dirname, taskData.files[prevFileIndex]);
+                    const prevFilePath = path.join(__dirname, '..', taskData.files[prevFileIndex]);
                     const prevFileData = await fs.readFile(prevFilePath, 'utf8');
                     const prevSpellList = JSON.parse(prevFileData);
                     prevItemIndex = prevSpellList.length - 1;
                 }
 
                 // 2. Save the *previous* state back to the file
-                const targetFilePath = path.join(__dirname, taskData.files[prevFileIndex]);
+                const targetFilePath = path.join(__dirname, '..', taskData.files[prevFileIndex]);
                 const targetFileData = await fs.readFile(targetFilePath, 'utf8');
                 let targetSpellList = JSON.parse(targetFileData);
                 targetSpellList[prevItemIndex] = previousSpellState;
@@ -1976,7 +1976,7 @@ function formatNpcResult(result) {
                 });
 
                 // Hit/Miss Grid
-                const { itemTypes } = require('./MagicItemData.js');
+                const { itemTypes } = require('./core/MagicItemData.js');
                 const gridLabelMap = {
                     "Reusable Item (Gizmo)": "Giz",
                     "Single-use Scroll/Tablet": "Scr",
