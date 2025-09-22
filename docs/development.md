@@ -225,7 +225,7 @@ The bot can connect to a locally running Large Language Model (LLM) service to a
 
 The application's data-driven features rely on two key directories:
 
--   **`reference/5etoolsdata`**: This directory contains a vast collection of JSON files sourced from the `5etools` project. It includes data for nearly every aspect of D&D 5e, such as spells, items, monsters, feats, and backgrounds. This data is primarily accessed and searched by the `5eParser.js` module.
+-   **`resources/5etoolsdata`**: This directory contains a vast collection of JSON files sourced from the `5etools` project. It includes data for nearly every aspect of D&D 5e, such as spells, items, monsters, feats, and backgrounds. This data is primarily accessed and searched by the `5eParser.js` module.
 
 -   **`randomtables`**: This directory contains custom JSON files that are used as weighted tables for random generation.
     -   Files in the root of this directory (e.g., `surge.json`, `shield.json`) are used for simple, one-off rolls.
@@ -274,7 +274,7 @@ This section outlines the plan for the features currently under active developme
 2.  Update `FILE_REFERENCE.md` to remove the "HP Tracker (Legacy)" section.
 
 ### Part 2: Vehicle Encounter Generator (`!vehicle-encounter`)
-1.  **Data Analysis**: Analyze `reference/5etoolsdata/vehicles.json` to map vehicle tags to the requested environment categories (`Land`, `Air`, `Naval`, `Space`, `Underground`).
+1.  **Data Analysis**: Analyze `resources/5etoolsdata/vehicles.json` to map vehicle tags to the requested environment categories (`Land`, `Air`, `Naval`, `Space`, `Underground`).
 2.  **Command & UI**: Implement a new `!vehicle-encounter` command in `CommandHandler.js` that triggers a message with dropdowns for `Environment` and `Encounter Style` (`Flagship`/`Balanced`).
 3.  **Modal Input**: Upon proceeding, display a modal to collect `Total HP` and (for "Balanced" style) `Number of Vehicles` from the user.
 4.  **Backend Logic (`Flagship`)**: Implement the logic to find the largest single vehicle that fits the HP budget, then use the remaining HP to add smaller escort vehicles.

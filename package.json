@@ -1,7 +1,7 @@
 {
   "name": "taverntones",
   "version": "1.0.0",
-  "main": "main.js",
+  "main": "src/main.js",
   "scripts": {
     "start": "electron .",
     "json": "electron . --tool=gamify"
@@ -28,10 +28,10 @@
     "appId": "com.CrispyChestnuts.TavernTones",
     "files": [
       "environmentvars.env",
-      "main.js",
-      "preload.js",
+      "src/main.js",
+      "src/ui/preload.js",
       "index.html",
-      "renderer.js",
+      "src/ui/renderer.js",
       "styles.css"
     ],
     "directories": {
