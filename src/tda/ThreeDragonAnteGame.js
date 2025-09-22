@@ -648,21 +648,23 @@ class ThreeDragonAnteGame {
     }
 
     async handleDraftPage(interaction, game, newPage) {
+        await interaction.deferUpdate();
         const player = game.players.find(p => p.id === interaction.user.id);
-        if (!player) return interaction.reply({ content: "You're not in this game.", ephemeral: true });
+        if (!player) return interaction.editReply({ content: "You're not in this game.", ephemeral: true });
 
         player.dmMessages.draftPage = newPage;
         const payload = await this._createDraftEmbed(game, player);
-        await interaction.update(payload);
+        await interaction.editReply(payload);
     }
 
     async handleHandPage(interaction, game, newPage) {
+        await interaction.deferUpdate();
         const player = game.players.find(p => p.id === interaction.user.id);
-        if (!player) return interaction.reply({ content: "You're not in this game.", ephemeral: true });
+        if (!player) return interaction.editReply({ content: "You're not in this game.", ephemeral: true });
 
         player.dmMessages.handPage = newPage;
         const payload = await this._createPlayerEmbed(player, game);
-        await interaction.update(payload);
+        await interaction.editReply(payload);
     }
 
     async postDraftSetup(game) {
