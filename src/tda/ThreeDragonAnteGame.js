@@ -166,7 +166,7 @@ class ThreeDragonAnteGame {
             turnOrder: [],
             draftPicks: 0,
         };
-        game.players.push({ id: message.author.id, user: message.author, specialAbility: null, hand: [], flight: [], hoard: 0, dmMessages: { draftPage: 0 }, draftedCards: [], isReady: false });
+        game.players.push({ id: message.author.id, user: message.author, specialAbility: null, hand: [], flight: [], hoard: 0, dmMessages: { draftPage: 0, handPage: 0 }, draftedCards: [], isReady: false });
         this.activeGames.set(message.channel.id, game);
 
         const embed = this._generateLobbyEmbed(game);
@@ -202,7 +202,7 @@ class ThreeDragonAnteGame {
                 await i.reply({ content: 'You are already in the game.', ephemeral: true });
                 return;
             }
-            game.players.push({ id: i.user.id, user: i.user, specialAbility: null, hand: [], flight: [], hoard: 0, dmMessages: { draftPage: 0 }, draftedCards: [], isReady: false });
+            game.players.push({ id: i.user.id, user: i.user, specialAbility: null, hand: [], flight: [], hoard: 0, dmMessages: { draftPage: 0, handPage: 0 }, draftedCards: [], isReady: false });
         } else if (i.customId === 'tda_leave') {
             if (!isPlayerInGame) {
                 await i.reply({ content: 'You are not in this game.', ephemeral: true });
@@ -276,6 +276,9 @@ class ThreeDragonAnteGame {
         } else if (actionType === 'draftpage') {
             const newPage = parseInt(restOfParams, 10);
             await this.handleDraftPage(interaction, game, newPage);
+        } else if (actionType === 'handpage') {
+            const newPage = parseInt(restOfParams, 10);
+            await this.handleHandPage(interaction, game, newPage);
         }
     }
 
@@ -394,28 +397,16 @@ class ThreeDragonAnteGame {
             const nextPicker = game.draftOrder[0];
             embed.setDescription(`Cards remaining in the pool. ${game.draftPicks}/10 cards removed.\nIt is **${nextPicker.user.username}**'s turn to remove a card.`);
 
-            const DRAFT_PAGE_SIZE = 10;
+            const DRAFT_PAGE_SIZE = 5;
             const page = player.dmMessages.draftPage || 0;
             const start = page * DRAFT_PAGE_SIZE;
             const end = start + DRAFT_PAGE_SIZE;
             const totalPages = Math.ceil(game.draftPool.length / DRAFT_PAGE_SIZE);
 
             const cardsOnPage = game.draftPool.slice(start, end);
-            const cardLines = cardsOnPage.map(c => `**${this._formatCardName(c)}**: ${CARD_EFFECTS.find(e => e.name === c.effect)?.text || 'No special effect.'}`);
+            const cardTexts = cardsOnPage.map(c => `**${this._formatCardName(c)}**: ${CARD_EFFECTS.find(e => e.name === c.effect)?.text || 'No special effect.'}`).join('\n\n');
 
-            let currentFieldValue = '';
-            let fieldCount = 1;
-            for (const line of cardLines) {
-                if (currentFieldValue.length + line.length + 2 > 1024) {
-                    embed.addFields({ name: `Available Cards (Page ${page + 1}/${totalPages}, Part ${fieldCount})`, value: currentFieldValue });
-                    currentFieldValue = '';
-                    fieldCount++;
-                }
-                currentFieldValue += line + '\n\n';
-            }
-            if (currentFieldValue) {
-                embed.addFields({ name: `Available Cards (Page ${page + 1}/${totalPages}, Part ${fieldCount})`, value: currentFieldValue });
-            }
+            embed.addFields({ name: `Available Cards (Page ${page + 1}/${totalPages})`, value: cardTexts });
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId(`tda_action_${game.channelId}_draftpage_${page - 1}`).setLabel('Previous').setStyle(ButtonStyle.Primary).setDisabled(page === 0),
@@ -472,26 +463,39 @@ class ThreeDragonAnteGame {
             .setColor(0x4f545c);
     }
 
-    async _createPlayerEmbed(player) {
+    async _createPlayerEmbed(player, game) {
         this._sortHand(player.hand);
-        const cardTexts = player.hand.map(card => {
+
+        const HAND_PAGE_SIZE = 5;
+        const page = player.dmMessages.handPage || 0;
+        const totalPages = Math.max(1, Math.ceil(player.hand.length / HAND_PAGE_SIZE));
+        const start = page * HAND_PAGE_SIZE;
+        const end = start + HAND_PAGE_SIZE;
+        const cardsOnPage = player.hand.slice(start, end);
+
+        const cardTexts = cardsOnPage.map(card => {
             const effect = CARD_EFFECTS.find(e => e.name === card.effect);
             return `**${this._formatCardName(card)}**: ${effect ? effect.text : 'No special effect.'}`;
-        }).join('\n');
+        }).join('\n\n');
 
         const embed = new EmbedBuilder()
             .setTitle('Your Hand & Hoard')
             .setColor(0x5865f2)
             .addFields(
                 { name: 'Your Hoard', value: `${player.hoard}gp` },
-                { name: 'Your Hand', value: player.hand.length > 0 ? cardTexts : 'Empty' }
+                { name: `Your Hand (Page ${page + 1}/${totalPages})`, value: player.hand.length > 0 ? cardTexts : 'Empty' }
             );
 
         const handImageBuffer = await this.workerService.run('renderHand', player.hand);
         const attachment = new AttachmentBuilder(handImageBuffer, { name: 'hand.png' });
         embed.setImage('attachment://hand.png');
 
-        return { embeds: [embed], files: [attachment] };
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`tda_action_${game.channelId}_handpage_${page - 1}`).setLabel('Previous').setStyle(ButtonStyle.Primary).setDisabled(page === 0),
+            new ButtonBuilder().setCustomId(`tda_action_${game.channelId}_handpage_${page + 1}`).setLabel('Next').setStyle(ButtonStyle.Primary).setDisabled(page >= totalPages - 1)
+        );
+
+        return { embeds: [embed], files: [attachment], components: [row] };
     }
 
     // GAME FLOW
@@ -510,7 +514,7 @@ class ThreeDragonAnteGame {
                 const logMessage = await player.dmChannel.send({ embeds: [this._createLogEmbed(game)] });
                 player.dmMessages.log = logMessage.id;
 
-                const playerMessagePayload = await this._createPlayerEmbed(player);
+                const playerMessagePayload = await this._createPlayerEmbed(player, game);
                 const playerMessage = await player.dmChannel.send(playerMessagePayload);
                 player.dmMessages.player = playerMessage.id;
 
@@ -567,7 +571,7 @@ class ThreeDragonAnteGame {
 
                 const playerMessage = await player.dmChannel.messages.fetch(player.dmMessages.player).catch(() => null);
                 if (playerMessage) {
-                    const playerMessagePayload = await this._createPlayerEmbed(player);
+                    const playerMessagePayload = await this._createPlayerEmbed(player, game);
                     await playerMessage.edit(playerMessagePayload);
                 }
             } catch (error) {
@@ -649,6 +653,15 @@ class ThreeDragonAnteGame {
 
         player.dmMessages.draftPage = newPage;
         const payload = await this._createDraftEmbed(game, player);
+        await interaction.update(payload);
+    }
+
+    async handleHandPage(interaction, game, newPage) {
+        const player = game.players.find(p => p.id === interaction.user.id);
+        if (!player) return interaction.reply({ content: "You're not in this game.", ephemeral: true });
+
+        player.dmMessages.handPage = newPage;
+        const payload = await this._createPlayerEmbed(player, game);
         await interaction.update(payload);
     }
 

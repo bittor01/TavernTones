@@ -30,6 +30,7 @@ const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
 const TEXT_CHANNEL_ID = process.env.TEXT_CHANNEL_ID;
 let connection;
 let musicPlayer;
+let workerService;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
@@ -931,6 +932,7 @@ async function logToRenderer(message) {
         logToRenderer(message);
     }
 }
+workerService = new WorkerService(path.join(__dirname, 'worker.js'));
 musicPlayer = new BackendAudioPlayer(logToRenderer, shell, workerService);
 musicPlayer.on('status-change', (status) => {
     if (mainWindow && mainWindow.webContents) {
@@ -1038,7 +1040,6 @@ client.once('clientReady', async () => {
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
-    const workerService = new WorkerService(path.join(__dirname, 'worker.js'));
     const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER }, fiveEToolsParser, workerService);
     client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));
