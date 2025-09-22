@@ -15,9 +15,17 @@ async function renderHand(cards) {
         return canvas.toBuffer('image/png');
     }
 
-    const firstCardImage = await loadImage(path.join(IMAGE_DIR, cards[0].image));
-    const cardWidth = firstCardImage.width;
-    const cardHeight = firstCardImage.height;
+    let cardWidth = 250; // Default width
+    let cardHeight = 350; // Default height
+
+    try {
+        const firstCardImage = await loadImage(path.join(IMAGE_DIR, cards[0].image));
+        cardWidth = firstCardImage.width;
+        cardHeight = firstCardImage.height;
+    } catch (error) {
+        console.error(`[renderHand] Could not load first card image. Using default dimensions.`, error);
+    }
+
 
     const canvasWidth = cardWidth * cards.length;
     const canvasHeight = cardHeight;
@@ -57,9 +65,16 @@ async function renderDraftGrid(cards) {
         return canvas.toBuffer('image/png');
     }
 
-    const firstCardImage = await loadImage(path.join(IMAGE_DIR, cards[0].image));
-    const cardWidth = firstCardImage.width;
-    const cardHeight = firstCardImage.height;
+    let cardWidth = 250; // Default width
+    let cardHeight = 350; // Default height
+
+    try {
+        const firstCardImage = await loadImage(path.join(IMAGE_DIR, cards[0].image));
+        cardWidth = firstCardImage.width;
+        cardHeight = firstCardImage.height;
+    } catch (error) {
+        console.error(`[renderDraftGrid] Could not load first card image. Using default dimensions.`, error);
+    }
 
     const cols = 5;
     const rows = 4;

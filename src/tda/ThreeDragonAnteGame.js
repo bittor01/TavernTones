@@ -272,9 +272,6 @@ class ThreeDragonAnteGame {
             await this.handleCardPlay(interaction, game, restOfParams.replace(/_/g, ' '));
         } else if (actionType === 'ready') {
             await this.handleReadyCheck(interaction, game);
-        } else if (actionType === 'draftpage') {
-            const newPage = parseInt(restOfParams, 10);
-            await this.handleDraftPage(interaction, game, newPage);
         }
     }
 
@@ -393,22 +390,18 @@ class ThreeDragonAnteGame {
             const nextPicker = game.draftOrder[0];
             embed.setDescription(`Cards remaining in the pool. ${game.draftPicks}/10 cards removed.\nIt is **${nextPicker.user.username}**'s turn to remove a card.`);
 
-            const DRAFT_PAGE_SIZE = 10;
-            const page = player.dmMessages.draftPage || 0;
-            const start = page * DRAFT_PAGE_SIZE;
-            const end = start + DRAFT_PAGE_SIZE;
-            const totalPages = Math.ceil(game.draftPool.length / DRAFT_PAGE_SIZE);
+            const firstHalf = game.draftPool.slice(0, 10);
+            const secondHalf = game.draftPool.slice(10);
 
-            const cardsOnPage = game.draftPool.slice(start, end);
-            const cardTexts = cardsOnPage.map(c => `**${this._formatCardName(c)}**: ${CARD_EFFECTS.find(e => e.name === c.effect)?.text || 'No special effect.'}`).join('\n\n');
+            const firstHalfText = firstHalf.map(c => `**${this._formatCardName(c)}**: ${CARD_EFFECTS.find(e => e.name === c.effect)?.text || 'No special effect.'}`).join('\n\n');
+            const secondHalfText = secondHalf.map(c => `**${this._formatCardName(c)}**: ${CARD_EFFECTS.find(e => e.name === c.effect)?.text || 'No special effect.'}`).join('\n\n');
 
-            embed.addFields({ name: `Available Cards (Page ${page + 1}/${totalPages})`, value: cardTexts });
-
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`tda_action_${game.channelId}_draftpage_${page - 1}`).setLabel('Previous').setStyle(ButtonStyle.Primary).setDisabled(page === 0),
-                new ButtonBuilder().setCustomId(`tda_action_${game.channelId}_draftpage_${page + 1}`).setLabel('Next').setStyle(ButtonStyle.Primary).setDisabled(page >= totalPages - 1)
+            embed.addFields(
+                { name: 'Available Cards (1-10)', value: firstHalfText || ' ' },
+                { name: 'Available Cards (11-20)', value: secondHalfText || ' ' }
             );
-            return { embeds: [embed], files: [attachment], components: [row] };
+
+            return { embeds: [embed], files: [attachment], components: [] };
 
         } else {
             embed.setDescription('The draft has concluded.');
@@ -567,10 +560,11 @@ class ThreeDragonAnteGame {
     async startDraftPhase(game) {
         game.state = 'drafting';
         const optionalCards = DECK_DEFINITION.filter(card => card.optional);
-        this._shuffle(optionalCards);
         game.draftPool = optionalCards.slice(0, 20);
 
         game.draftOrder = [...game.players];
+        this._shuffle(game.draftOrder);
+
 
         game.log.push('**DRAFT PHASE:** The draft for special cards has begun! Each player will vote to REMOVE one card from the pool of 20. The 10 cards that remain will be used in this game.');
         await this._updateAllBoards(game, { updateDraft: true });
@@ -628,15 +622,6 @@ class ThreeDragonAnteGame {
 
         await this._updateAllBoards(game, { updateDraft: true });
         await this._requestDraftRemoval(game);
-    }
-
-    async handleDraftPage(interaction, game, newPage) {
-        const player = game.players.find(p => p.id === interaction.user.id);
-        if (!player) return interaction.reply({ content: "You're not in this game.", ephemeral: true });
-
-        player.dmMessages.draftPage = newPage;
-        const payload = await this._createDraftEmbed(game, player);
-        await interaction.update(payload);
     }
 
     async postDraftSetup(game) {
