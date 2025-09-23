@@ -50,22 +50,20 @@ async function renderHand(cards) {
     return canvas.toBuffer('image/png');
 }
 
-async function renderDraftGrid(cards, removedCardNames = []) {
+async function renderDraftGrid({ cards, buffer = null, cardToCover = null }) {
     if (!cards || cards.length === 0) {
         const canvas = createCanvas(1, 1);
         return canvas.toBuffer('image/png');
     }
 
-    // Dynamically calculate the scaling factor
+    // Always calculate geometry from the full card list
     const firstCardImage = await loadImage(path.join(IMAGE_DIR, cards[0].image));
     const cardWidth = firstCardImage.width;
     const cardHeight = firstCardImage.height;
     const initialSize = cardWidth * cardHeight * 4 * cards.length;
     const scale = Math.min(1.0, Math.sqrt(MAX_FILE_SIZE / initialSize));
-
     const scaledWidth = Math.floor(cardWidth * scale);
     const scaledHeight = Math.floor(cardHeight * scale);
-
     const cols = 5;
     const rows = Math.ceil(cards.length / cols);
     const canvasWidth = scaledWidth * cols;

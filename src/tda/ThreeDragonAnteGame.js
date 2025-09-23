@@ -169,6 +169,7 @@ class ThreeDragonAnteGame {
             draftPool: [],
             fullDraftPool: [],
             removedDraftCards: [],
+            draftGridImageBuffer: null,
             draftOrder: [],
             turnOrder: [],
             draftPicks: 0,
@@ -411,9 +412,8 @@ class ThreeDragonAnteGame {
     async _createDraftEmbed(game, player) {
         const embed = new EmbedBuilder().setTitle('Draft Pool').setColor(0x1abc9c);
 
-        // Pass the full, original pool for layout, and the list of removed cards to be covered
-        const draftImageBuffer = await this.workerService.run('renderDraftGrid', game.fullDraftPool, game.removedDraftCards);
-        const attachment = new AttachmentBuilder(draftImageBuffer, { name: 'draft_pool.png' });
+        // The image buffer is now pre-generated and cached. We just attach it.
+        const attachment = new AttachmentBuilder(game.draftGridImageBuffer, { name: 'draft_pool.png' });
         embed.setImage('attachment://draft_pool.png');
 
         if (game.state === 'drafting' && game.draftPool.length > 10) {
@@ -662,6 +662,9 @@ class ThreeDragonAnteGame {
 
         game.log.push('**DRAFT PHASE:** The draft for special cards has begun! Each player will vote to REMOVE one card from the pool of 20. The 10 cards that remain will be used in this game.');
 
+        // Generate and cache the initial grid image
+        game.draftGridImageBuffer = await this.workerService.run('renderDraftGrid', { cards: game.fullDraftPool });
+
         const updatePromises = game.players.map(p => {
             this._queueLogUpdate(game, p, 3);
             return this._queueDraftUpdate(game, p, 3);
@@ -719,6 +722,13 @@ class ThreeDragonAnteGame {
         game.removedDraftCards.push(card.name);
         game.draftPicks++;
         game.log.push(`${player.user.username} voted to remove **${this._formatCardName(card)}**.`);
+
+        // Update the cached image buffer by drawing the new card back over the previous image
+        game.draftGridImageBuffer = await this.workerService.run('renderDraftGrid', {
+            cards: game.fullDraftPool,
+            buffer: game.draftGridImageBuffer,
+            cardToCover: card
+        });
 
         // Queue updates for all players, then request next action
         const updatePromises = game.players.map(p => {
