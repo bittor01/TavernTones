@@ -5,37 +5,46 @@
 class TDAUpdateQueue {
     /**
      * @param {object} options
-     * @param {number} [options.delay=250] - The delay in ms between processing tasks.
+     * @param {number} [options.delay=25] - The delay in ms between processing tasks.
      */
     constructor(options = {}) {
         this.queue = [];
         this.isProcessing = false;
-        this.delay = options.delay || 250; // Delay between tasks to avoid secondary rate limits
+        this.delay = options.delay || 25; // Delay between tasks. 25ms = 40 calls/sec.
     }
 
     /**
      * Adds a job to the queue and handles deduplication.
      * If a job with the same ID already exists, it's replaced.
+     * Returns a promise that resolves when the job is completed.
      * @param {object} job - The job object to add to the queue.
      * @param {string} job.id - A unique identifier for the job (e.g., `player-embed-${playerId}`).
      * @param {number} job.priority - The job's priority (lower number is higher priority).
      * @param {function(): Promise<void>} job.task - The async function to execute.
+     * @returns {Promise<void>} A promise that resolves when this specific job is done.
      */
     add(job) {
-        // Add a timestamp for FIFO ordering within the same priority
-        const jobWithTimestamp = { ...job, timestamp: Date.now() };
+        return new Promise((resolve, reject) => {
+            const jobWithMeta = {
+                ...job,
+                timestamp: Date.now(),
+                resolve: resolve,
+                reject: reject
+            };
 
-        const existingJobIndex = this.queue.findIndex(j => j.id === jobWithTimestamp.id);
+            const existingJobIndex = this.queue.findIndex(j => j.id === jobWithMeta.id);
 
-        if (existingJobIndex !== -1) {
-            // Replace existing job to ensure only the latest update is performed
-            this.queue[existingJobIndex] = jobWithTimestamp;
-        } else {
-            this.queue.push(jobWithTimestamp);
-        }
+            if (existingJobIndex !== -1) {
+                // If replacing a job, resolve the old promise immediately
+                // so that any code awaiting it doesn't hang forever.
+                this.queue[existingJobIndex].resolve();
+                this.queue[existingJobIndex] = jobWithMeta;
+            } else {
+                this.queue.push(jobWithMeta);
+            }
 
-        // Start the processing loop if it's not already running
-        this.start();
+            this.start();
+        });
     }
 
     /**
@@ -46,7 +55,6 @@ class TDAUpdateQueue {
             return;
         }
         this.isProcessing = true;
-        // Do not await this call; let it run in the background.
         this._processQueue();
     }
 
@@ -56,32 +64,28 @@ class TDAUpdateQueue {
      */
     async _processQueue() {
         while (this.queue.length > 0) {
-            // Sort the queue by priority, then by timestamp (for FIFO)
             this.queue.sort((a, b) => {
                 if (a.priority !== b.priority) {
-                    return a.priority - b.priority; // Lower number = higher priority
+                    return a.priority - b.priority;
                 }
-                return a.timestamp - b.timestamp; // Older timestamp first
+                return a.timestamp - b.timestamp;
             });
 
-            // Get the highest-priority job from the front of the queue
             const job = this.queue.shift();
 
             try {
-                // Execute the job's task
                 await job.task();
+                job.resolve();
             } catch (error) {
-                // Log errors but continue processing the rest of the queue.
-                // discord.js handles standard 429 rate limit errors internally.
-                // We only need to catch other errors, like trying to edit a deleted message.
                 if (error.code === 10008) { // "Unknown Message"
-                    console.warn(`[TDAUpdateQueue] Job ${job.id} failed because the message was likely deleted. Skipping.`);
+                    console.warn(`[TDAUpdateQueue] Job ${job.id} failed because message was likely deleted. Skipping.`);
+                    job.resolve(); // Resolve even on this error so we don't hang.
                 } else {
                     console.error(`[TDAUpdateQueue] Error processing job ${job.id}:`, error);
+                    job.reject(error);
                 }
             }
 
-            // Wait for a short period before processing the next item
             if (this.queue.length > 0) {
                 await new Promise(resolve => setTimeout(resolve, this.delay));
             }

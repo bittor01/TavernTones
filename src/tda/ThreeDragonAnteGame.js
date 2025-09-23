@@ -471,8 +471,11 @@ class ThreeDragonAnteGame {
         this._sortHand(player.hand);
 
         const HAND_PAGE_SIZE = 5;
-        const page = player.dmMessages.handPage || 0;
         const totalPages = Math.max(1, Math.ceil(player.hand.length / HAND_PAGE_SIZE));
+        if (player.dmMessages.handPage >= totalPages) {
+            player.dmMessages.handPage = Math.max(0, totalPages - 1);
+        }
+        const page = player.dmMessages.handPage || 0;
         const start = page * HAND_PAGE_SIZE;
         const end = start + HAND_PAGE_SIZE;
         const cardsOnPage = player.hand.slice(start, end);
@@ -570,7 +573,7 @@ class ThreeDragonAnteGame {
     }
 
     _queueLogUpdate(game, player, priority) {
-        this.updateQueue.add({
+        return this.updateQueue.add({
             id: `log-${player.id}`,
             priority: priority,
             task: async () => {
@@ -581,7 +584,7 @@ class ThreeDragonAnteGame {
     }
 
     _queueDraftUpdate(game, player, priority) {
-        this.updateQueue.add({
+        return this.updateQueue.add({
             id: `draft-${player.id}`,
             priority: priority,
             task: async () => {
@@ -595,7 +598,7 @@ class ThreeDragonAnteGame {
     }
 
     _queueAnteUpdate(game, player, priority, reveal = false) {
-        this.updateQueue.add({
+        return this.updateQueue.add({
             id: `ante-${player.id}`,
             priority: priority,
             task: async () => {
@@ -606,7 +609,7 @@ class ThreeDragonAnteGame {
     }
 
     _queueOpponentUpdate(game, player, opponent, priority) {
-         this.updateQueue.add({
+         return this.updateQueue.add({
             id: `opponent-${player.id}-${opponent.id}`,
             priority: priority,
             task: async () => {
@@ -617,7 +620,7 @@ class ThreeDragonAnteGame {
     }
 
     _queuePlayerUpdate(game, player, priority) {
-        this.updateQueue.add({
+        return this.updateQueue.add({
             id: `player-${player.id}`,
             priority: priority,
             task: async () => {
@@ -630,25 +633,6 @@ class ThreeDragonAnteGame {
         });
     }
 
-    _queueFullBoardUpdate(game, options = {}) {
-        const { actingPlayerId = null, revealAntes = false } = options;
-
-        for (const p of game.players) {
-            const isActing = p.id === actingPlayerId;
-            const priority = isActing ? 2 : 3;
-
-            this._queueLogUpdate(game, p, priority);
-            this._queueAnteUpdate(game, p, priority, revealAntes);
-            this._queuePlayerUpdate(game, p, priority);
-
-            for (const o of game.players) {
-                if (p.id !== o.id) {
-                    this._queueOpponentUpdate(game, p, o, priority);
-                }
-            }
-        }
-    }
-
     // DRAFT PHASE
     async startDraftPhase(game) {
         game.state = 'drafting';
@@ -659,10 +643,12 @@ class ThreeDragonAnteGame {
         game.draftOrder = [...game.players];
 
         game.log.push('**DRAFT PHASE:** The draft for special cards has begun! Each player will vote to REMOVE one card from the pool of 20. The 10 cards that remain will be used in this game.');
-        for (const p of game.players) {
+
+        const updatePromises = game.players.map(p => {
             this._queueLogUpdate(game, p, 3);
-            this._queueDraftUpdate(game, p, 3);
-        }
+            return this._queueDraftUpdate(game, p, 3);
+        });
+        await Promise.all(updatePromises);
 
         await this._requestDraftRemoval(game);
     }
@@ -715,11 +701,13 @@ class ThreeDragonAnteGame {
         game.draftPicks++;
         game.log.push(`${player.user.username} voted to remove **${this._formatCardName(card)}**.`);
 
-        for (const p of game.players) {
+        // Queue updates for all players, then request next action
+        const updatePromises = game.players.map(p => {
             const priority = p.id === player.id ? 2 : 3;
             this._queueLogUpdate(game, p, priority);
-            this._queueDraftUpdate(game, p, priority);
-        }
+            return this._queueDraftUpdate(game, p, priority);
+        });
+        await Promise.all(updatePromises);
 
         await this._requestDraftRemoval(game);
     }
@@ -788,12 +776,13 @@ class ThreeDragonAnteGame {
         game.antePile = [];
         game.log.push('**ANTE PHASE:** All players, check your DMs to choose a card to ante.');
 
-        for (const p of game.players) {
-            this._queueLogUpdate(game, p, 3);
-            this._queueAnteUpdate(game, p, 3);
-        }
-
+        // Update all boards and then request ante from each player
         for (const player of game.players) {
+            const updatePromises = [
+                this._queueLogUpdate(game, player, 2),
+                this._queueAnteUpdate(game, player, 2),
+            ];
+            await Promise.all(updatePromises);
             await this._requestAnte(game, player);
         }
     }
@@ -836,19 +825,18 @@ class ThreeDragonAnteGame {
         game.antePile.push({ player, card });
         game.log.push(`${player.user.username} has anted with ${this._formatCardName(card)}.`);
 
-        // Queue updates for all players
-        for (const p of game.players) {
-            const isActing = p.id === player.id;
-            // Update the view of the acting player for everyone
-            if (p.id !== player.id) {
-                this._queueOpponentUpdate(game, p, player, 3);
-            }
-            // Update the acting player's own board
-            this._queuePlayerUpdate(game, p, isActing ? 1 : 3);
-            this._queueLogUpdate(game, p, isActing ? 1 : 3);
-            this._queueAnteUpdate(game, p, isActing ? 1 : 3);
-        }
+        // Queue high-priority updates for the acting player
+        this._queuePlayerUpdate(game, player, 1);
+        this._queueLogUpdate(game, player, 1);
+        this._queueAnteUpdate(game, player, 1);
 
+        // Queue lower-priority updates for all other players
+        for (const p of game.players) {
+            if (p.id === player.id) continue;
+            this._queueOpponentUpdate(game, p, player, 3);
+            this._queueLogUpdate(game, p, 3);
+            this._queueAnteUpdate(game, p, 3);
+        }
 
         if (game.antePile.length === game.players.length) {
             await this._revealAntes(game);
@@ -863,12 +851,6 @@ class ThreeDragonAnteGame {
         const sortedAntes = [...game.antePile].sort((a, b) => b.card.value - a.card.value);
         game.leader = sortedAntes[0].player;
         game.log.push(`**${game.leader.user.username}** anted the strongest card and is the leader for this gambit.`);
-
-        for (const p of game.players) {
-            const priority = p.id === game.leader.id ? 2 : 3;
-            this._queueLogUpdate(game, p, priority);
-            this._queueAnteUpdate(game, p, priority, true);
-        }
 
         await this.startGambitPhase(game);
     }
@@ -886,7 +868,22 @@ class ThreeDragonAnteGame {
         const leaderIndex = game.players.findIndex(p => p.id === game.leader.id);
         game.turnOrder = [...game.players.slice(leaderIndex), ...game.players.slice(0, leaderIndex)];
 
-        this._queueFullBoardUpdate(game, { actingPlayerId: game.leader.id });
+        // Queue updates for all non-leader players
+        for (const p of game.players) {
+            if (p.id !== game.leader.id) {
+                this._queuePlayerUpdate(game, p, 3);
+                this._queueOpponentUpdate(game, p, game.leader, 3);
+            }
+        }
+
+        // Ensure the leader's board is fully updated before we ask them to play.
+        const leaderUpdatePromises = [
+            this._queuePlayerUpdate(game, game.leader, 2),
+            this._queueLogUpdate(game, game.leader, 2),
+            this._queueAnteUpdate(game, game.leader, 2, true)
+        ];
+        await Promise.all(leaderUpdatePromises);
+
         await this._requestCardPlay(game);
     }
 
@@ -948,24 +945,35 @@ class ThreeDragonAnteGame {
         }
 
         game.turnOrder.shift();
-        // Priorities: 1 for acting player, 2 for next player, 3 for others
         const nextPlayer = game.turnOrder.length > 0 ? game.turnOrder[0] : null;
 
+        // Queue updates for the player who just acted (prio 1) and all observers (prio 3)
         for (const p of game.players) {
-            let priority = 3;
-            if (p.id === player.id) {
-                priority = 1; // The player who just acted
-            } else if (nextPlayer && p.id === nextPlayer.id) {
-                priority = 2; // The player who is now active
-            }
-            this._queueLogUpdate(game, p, priority);
+            if (nextPlayer && p.id === nextPlayer.id) continue;
+
+            const isActing = p.id === player.id;
+            const priority = isActing ? 1 : 3;
+
             this._queuePlayerUpdate(game, p, priority);
-            // Update opponent views for all players
+            this._queueLogUpdate(game, p, priority);
             for (const o of game.players) {
-                if (p.id !== o.id) {
-                    this._queueOpponentUpdate(game, p, o, priority);
+                if (p.id !== o.id) this._queueOpponentUpdate(game, p, o, priority);
+            }
+        }
+
+        // Before requesting the next action, sequentially update the next player's board
+        if (nextPlayer) {
+            const updatePromises = [
+                this._queuePlayerUpdate(game, nextPlayer, 2),
+                this._queueLogUpdate(game, nextPlayer, 2)
+            ];
+            // Also queue updates for their opponent views
+            for (const o of game.players) {
+                if (nextPlayer.id !== o.id) {
+                    updatePromises.push(this._queueOpponentUpdate(game, nextPlayer, o, 2));
                 }
             }
+            await Promise.all(updatePromises);
         }
 
         await this._requestCardPlay(game);
@@ -1046,7 +1054,13 @@ class ThreeDragonAnteGame {
             game.log.push('There was no winner. The pot rolls over to the next gambit.');
         }
 
-        this._queueFullBoardUpdate(game, { actingPlayerId: winner ? winner.id : null });
+        const updatePromises = game.players.map(p => {
+            const priority = winner && p.id === winner.id ? 1 : 3;
+            this._queuePlayerUpdate(game, p, priority);
+            return this._queueLogUpdate(game, p, priority);
+        });
+        await Promise.all(updatePromises);
+
         await this._sendReadyCheck(game);
     }
 
