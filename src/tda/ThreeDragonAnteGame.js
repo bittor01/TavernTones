@@ -1,6 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, AttachmentBuilder } = require('discord.js');
 const path = require('path');
 const crypto = require('crypto');
+const TDAUpdateQueue = require('./TDAUpdateQueue.js');
 
 const DECK_DEFINITION = [
   { name: "Black Dragon", optional: false, value: 1, image: "1 black.jpg", effect: "Black", alignment: "evil" },
@@ -143,6 +144,7 @@ class ThreeDragonAnteGame {
         this.client = client;
         this.workerService = workerService;
         this.activeGames = new Map();
+        this.updateQueue = new TDAUpdateQueue();
     }
 
     async handleCommand(message) {
@@ -415,7 +417,9 @@ class ThreeDragonAnteGame {
             return { embeds: [embed], files: [attachment], components: [row] };
 
         } else {
-            embed.setDescription('The draft has concluded.');
+            embed.setDescription('**The draft has concluded!**\nThe following 10 special cards have been added to the deck for this game.');
+            const cardTexts = game.draftPool.map(c => `**${this._formatCardName(c)}**`).join('\n');
+            embed.addFields({ name: `Final Drafted Cards`, value: cardTexts || 'None' });
             return { embeds: [embed], files: [attachment], components: [] };
         }
     }
@@ -486,6 +490,25 @@ class ThreeDragonAnteGame {
                 { name: `Your Hand (Page ${page + 1}/${totalPages})`, value: player.hand.length > 0 ? cardTexts : 'Empty' }
             );
 
+        let footerText = 'Waiting for game to start...';
+        if (game.state === 'ante') {
+            const antedPlayers = game.antePile.map(p => p.player.user.username);
+            if (antedPlayers.length === game.players.length) {
+                footerText = 'All players have anted. Revealing cards...';
+            } else {
+                footerText = `Ante phase. Waiting for ${game.players.length - antedPlayers.length} more players.`;
+            }
+        } else if (game.state === 'drafting' && game.draftOrder.length > 0) {
+            const nextPicker = game.draftOrder[game.draftPicks % game.players.length];
+            footerText = `Drafting... It is ${nextPicker.user.username}'s turn to remove a card.`;
+        } else if (game.state === 'gambit' && game.turnOrder.length > 0) {
+            const currentPlayer = game.turnOrder[0];
+            footerText = `It's ${currentPlayer.user.username}'s turn to play.`;
+        } else if (game.state === 'scoring') {
+            footerText = 'Scoring the gambit...';
+        }
+        embed.setFooter({ text: footerText });
+
         const handImageBuffer = await this.workerService.run('renderHand', player.hand);
         const attachment = new AttachmentBuilder(handImageBuffer, { name: 'hand.png' });
         embed.setImage('attachment://hand.png');
@@ -511,20 +534,11 @@ class ThreeDragonAnteGame {
         for (const player of game.players) {
             try {
                 player.dmChannel = await player.user.createDM();
+                // 1. Log
                 const logMessage = await player.dmChannel.send({ embeds: [this._createLogEmbed(game)] });
                 player.dmMessages.log = logMessage.id;
 
-                const playerMessagePayload = await this._createPlayerEmbed(player, game);
-                const playerMessage = await player.dmChannel.send(playerMessagePayload);
-                player.dmMessages.player = playerMessage.id;
-
-                const draftMessagePayload = await this._createDraftEmbed(game, player);
-                const draftMessage = await player.dmChannel.send(draftMessagePayload);
-                player.dmMessages.draft = draftMessage.id;
-
-                const anteMessage = await player.dmChannel.send(this._createAnteEmbed(game));
-                player.dmMessages.ante = anteMessage.id;
-
+                // 2. Opponent Embeds
                 player.dmMessages.opponents = {};
                 for (const opponent of game.players) {
                     if (player.id !== opponent.id) {
@@ -532,6 +546,21 @@ class ThreeDragonAnteGame {
                         player.dmMessages.opponents[opponent.id] = opponentMessage.id;
                     }
                 }
+
+                // 3. Ante Embed
+                const anteMessage = await player.dmChannel.send(this._createAnteEmbed(game));
+                player.dmMessages.ante = anteMessage.id;
+
+                // 4. Player Embed
+                const playerMessagePayload = await this._createPlayerEmbed(player, game);
+                const playerMessage = await player.dmChannel.send(playerMessagePayload);
+                player.dmMessages.player = playerMessage.id;
+
+                // 5. Draft Embed
+                const draftMessagePayload = await this._createDraftEmbed(game, player);
+                const draftMessage = await player.dmChannel.send(draftMessagePayload);
+                player.dmMessages.draft = draftMessage.id;
+
             } catch (error) {
                 console.error(`Could not send DM to ${player.user.tag}.`, error);
                 const channel = await this.client.channels.fetch(game.channelId);
@@ -540,42 +569,82 @@ class ThreeDragonAnteGame {
         }
     }
 
-    async _updateAllBoards(game, options = {}) {
-        const { revealAntes = false, updateDraft = false, page = -1, forPlayerId = null } = options;
-        for (const player of game.players) {
-            if (!player.dmChannel || !player.dmMessages) continue;
-            try {
+    _queueLogUpdate(game, player, priority) {
+        this.updateQueue.add({
+            id: `log-${player.id}`,
+            priority: priority,
+            task: async () => {
                 const logMessage = await player.dmChannel.messages.fetch(player.dmMessages.log).catch(() => null);
                 if (logMessage) await logMessage.edit({ embeds: [this._createLogEmbed(game)] });
+            }
+        });
+    }
 
-                if (updateDraft) {
-                    const draftMessage = await player.dmChannel.messages.fetch(player.dmMessages.draft).catch(() => null);
-                    if (draftMessage) {
-                        if(forPlayerId && player.id === forPlayerId) {
-                            player.dmMessages.draftPage = page;
-                        }
-                        const payload = await this._createDraftEmbed(game, player);
-                        await draftMessage.edit(payload);
-                    }
+    _queueDraftUpdate(game, player, priority) {
+        this.updateQueue.add({
+            id: `draft-${player.id}`,
+            priority: priority,
+            task: async () => {
+                const draftMessage = await player.dmChannel.messages.fetch(player.dmMessages.draft).catch(() => null);
+                if (draftMessage) {
+                    const payload = await this._createDraftEmbed(game, player);
+                    await draftMessage.edit(payload);
                 }
+            }
+        });
+    }
 
+    _queueAnteUpdate(game, player, priority, reveal = false) {
+        this.updateQueue.add({
+            id: `ante-${player.id}`,
+            priority: priority,
+            task: async () => {
                 const anteMessage = await player.dmChannel.messages.fetch(player.dmMessages.ante).catch(() => null);
-                if (anteMessage) await anteMessage.edit(this._createAnteEmbed(game, revealAntes));
+                if (anteMessage) await anteMessage.edit(this._createAnteEmbed(game, reveal));
+            }
+        });
+    }
 
-                for (const opponent of game.players) {
-                    if (player.id !== opponent.id) {
-                        const opponentMessage = await player.dmChannel.messages.fetch(player.dmMessages.opponents[opponent.id]).catch(() => null);
-                        if (opponentMessage) await opponentMessage.edit({ embeds: [this._createOpponentEmbed(opponent)] });
-                    }
-                }
+    _queueOpponentUpdate(game, player, opponent, priority) {
+         this.updateQueue.add({
+            id: `opponent-${player.id}-${opponent.id}`,
+            priority: priority,
+            task: async () => {
+                const opponentMessage = await player.dmChannel.messages.fetch(player.dmMessages.opponents[opponent.id]).catch(() => null);
+                if (opponentMessage) await opponentMessage.edit({ embeds: [this._createOpponentEmbed(opponent)] });
+            }
+        });
+    }
 
+    _queuePlayerUpdate(game, player, priority) {
+        this.updateQueue.add({
+            id: `player-${player.id}`,
+            priority: priority,
+            task: async () => {
                 const playerMessage = await player.dmChannel.messages.fetch(player.dmMessages.player).catch(() => null);
                 if (playerMessage) {
-                    const playerMessagePayload = await this._createPlayerEmbed(player, game);
-                    await playerMessage.edit(playerMessagePayload);
+                    const payload = await this._createPlayerEmbed(player, game);
+                    await playerMessage.edit(payload);
                 }
-            } catch (error) {
-                console.error(`Failed to update board for ${player.user.tag}:`, error);
+            }
+        });
+    }
+
+    _queueFullBoardUpdate(game, options = {}) {
+        const { actingPlayerId = null, revealAntes = false } = options;
+
+        for (const p of game.players) {
+            const isActing = p.id === actingPlayerId;
+            const priority = isActing ? 2 : 3;
+
+            this._queueLogUpdate(game, p, priority);
+            this._queueAnteUpdate(game, p, priority, revealAntes);
+            this._queuePlayerUpdate(game, p, priority);
+
+            for (const o of game.players) {
+                if (p.id !== o.id) {
+                    this._queueOpponentUpdate(game, p, o, priority);
+                }
             }
         }
     }
@@ -590,7 +659,10 @@ class ThreeDragonAnteGame {
         game.draftOrder = [...game.players];
 
         game.log.push('**DRAFT PHASE:** The draft for special cards has begun! Each player will vote to REMOVE one card from the pool of 20. The 10 cards that remain will be used in this game.');
-        await this._updateAllBoards(game, { updateDraft: true });
+        for (const p of game.players) {
+            this._queueLogUpdate(game, p, 3);
+            this._queueDraftUpdate(game, p, 3);
+        }
 
         await this._requestDraftRemoval(game);
     }
@@ -643,7 +715,12 @@ class ThreeDragonAnteGame {
         game.draftPicks++;
         game.log.push(`${player.user.username} voted to remove **${this._formatCardName(card)}**.`);
 
-        await this._updateAllBoards(game, { updateDraft: true });
+        for (const p of game.players) {
+            const priority = p.id === player.id ? 2 : 3;
+            this._queueLogUpdate(game, p, priority);
+            this._queueDraftUpdate(game, p, priority);
+        }
+
         await this._requestDraftRemoval(game);
     }
 
@@ -680,7 +757,28 @@ class ThreeDragonAnteGame {
         }
         game.log.push('Initial hands have been dealt. The first gambit begins.');
 
-        await this._updateAllBoards(game, { updateDraft: true });
+        for (const p of game.players) {
+            this._queueLogUpdate(game, p, 3);
+            this._queueDraftUpdate(game, p, 3); // Queue the final update
+            this._queuePlayerUpdate(game, p, 3);
+
+            // After 15 seconds, queue a job to delete the draft message
+            setTimeout(() => {
+                this.updateQueue.add({
+                    id: `delete-draft-${p.id}`,
+                    priority: 5, // Low priority
+                    task: async () => {
+                        const messageId = p.dmMessages.draft;
+                        if (messageId) {
+                            const message = await p.dmChannel.messages.fetch(messageId).catch(() => null);
+                            if (message) await message.delete();
+                            p.dmMessages.draft = null;
+                        }
+                    }
+                });
+            }, 15000);
+        }
+
         await this.startAntePhase(game);
     }
 
@@ -689,7 +787,12 @@ class ThreeDragonAnteGame {
         game.state = 'ante';
         game.antePile = [];
         game.log.push('**ANTE PHASE:** All players, check your DMs to choose a card to ante.');
-        await this._updateAllBoards(game);
+
+        for (const p of game.players) {
+            this._queueLogUpdate(game, p, 3);
+            this._queueAnteUpdate(game, p, 3);
+        }
+
         for (const player of game.players) {
             await this._requestAnte(game, player);
         }
@@ -733,7 +836,19 @@ class ThreeDragonAnteGame {
         game.antePile.push({ player, card });
         game.log.push(`${player.user.username} has anted with ${this._formatCardName(card)}.`);
 
-        await this._updateAllBoards(game);
+        // Queue updates for all players
+        for (const p of game.players) {
+            const isActing = p.id === player.id;
+            // Update the view of the acting player for everyone
+            if (p.id !== player.id) {
+                this._queueOpponentUpdate(game, p, player, 3);
+            }
+            // Update the acting player's own board
+            this._queuePlayerUpdate(game, p, isActing ? 1 : 3);
+            this._queueLogUpdate(game, p, isActing ? 1 : 3);
+            this._queueAnteUpdate(game, p, isActing ? 1 : 3);
+        }
+
 
         if (game.antePile.length === game.players.length) {
             await this._revealAntes(game);
@@ -749,7 +864,12 @@ class ThreeDragonAnteGame {
         game.leader = sortedAntes[0].player;
         game.log.push(`**${game.leader.user.username}** anted the strongest card and is the leader for this gambit.`);
 
-        await this._updateAllBoards(game, { revealAntes: true });
+        for (const p of game.players) {
+            const priority = p.id === game.leader.id ? 2 : 3;
+            this._queueLogUpdate(game, p, priority);
+            this._queueAnteUpdate(game, p, priority, true);
+        }
+
         await this.startGambitPhase(game);
     }
 
@@ -766,7 +886,7 @@ class ThreeDragonAnteGame {
         const leaderIndex = game.players.findIndex(p => p.id === game.leader.id);
         game.turnOrder = [...game.players.slice(leaderIndex), ...game.players.slice(0, leaderIndex)];
 
-        await this._updateAllBoards(game);
+        this._queueFullBoardUpdate(game, { actingPlayerId: game.leader.id });
         await this._requestCardPlay(game);
     }
 
@@ -828,7 +948,26 @@ class ThreeDragonAnteGame {
         }
 
         game.turnOrder.shift();
-        await this._updateAllBoards(game);
+        // Priorities: 1 for acting player, 2 for next player, 3 for others
+        const nextPlayer = game.turnOrder.length > 0 ? game.turnOrder[0] : null;
+
+        for (const p of game.players) {
+            let priority = 3;
+            if (p.id === player.id) {
+                priority = 1; // The player who just acted
+            } else if (nextPlayer && p.id === nextPlayer.id) {
+                priority = 2; // The player who is now active
+            }
+            this._queueLogUpdate(game, p, priority);
+            this._queuePlayerUpdate(game, p, priority);
+            // Update opponent views for all players
+            for (const o of game.players) {
+                if (p.id !== o.id) {
+                    this._queueOpponentUpdate(game, p, o, priority);
+                }
+            }
+        }
+
         await this._requestCardPlay(game);
     }
 
@@ -907,7 +1046,7 @@ class ThreeDragonAnteGame {
             game.log.push('There was no winner. The pot rolls over to the next gambit.');
         }
 
-        await this._updateAllBoards(game);
+        this._queueFullBoardUpdate(game, { actingPlayerId: winner ? winner.id : null });
         await this._sendReadyCheck(game);
     }
 
