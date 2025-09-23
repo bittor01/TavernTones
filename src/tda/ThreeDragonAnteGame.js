@@ -487,20 +487,12 @@ class ThreeDragonAnteGame {
         for (const player of game.players) {
             try {
                 player.dmChannel = await player.user.createDM();
+
+                // 1. Log
                 const logMessage = await player.dmChannel.send({ embeds: [this._createLogEmbed(game)] });
                 player.dmMessages.log = logMessage.id;
 
-                const playerMessagePayload = await this._createPlayerEmbed(player);
-                const playerMessage = await player.dmChannel.send(playerMessagePayload);
-                player.dmMessages.player = playerMessage.id;
-
-                const draftMessagePayload = await this._createDraftEmbed(game, player);
-                const draftMessage = await player.dmChannel.send(draftMessagePayload);
-                player.dmMessages.draft = draftMessage.id;
-
-                const anteMessage = await player.dmChannel.send(this._createAnteEmbed(game));
-                player.dmMessages.ante = anteMessage.id;
-
+                // 2. Opponents
                 player.dmMessages.opponents = {};
                 for (const opponent of game.players) {
                     if (player.id !== opponent.id) {
@@ -508,6 +500,21 @@ class ThreeDragonAnteGame {
                         player.dmMessages.opponents[opponent.id] = opponentMessage.id;
                     }
                 }
+
+                // 3. Ante
+                const anteMessage = await player.dmChannel.send(this._createAnteEmbed(game));
+                player.dmMessages.ante = anteMessage.id;
+
+                // 4. Player
+                const playerMessagePayload = await this._createPlayerEmbed(player);
+                const playerMessage = await player.dmChannel.send(playerMessagePayload);
+                player.dmMessages.player = playerMessage.id;
+
+                // 5. Draft
+                const draftMessagePayload = await this._createDraftEmbed(game, player);
+                const draftMessage = await player.dmChannel.send(draftMessagePayload);
+                player.dmMessages.draft = draftMessage.id;
+
             } catch (error) {
                 console.error(`Could not send DM to ${player.user.tag}.`, error);
                 const channel = await this.client.channels.fetch(game.channelId);
@@ -524,12 +531,9 @@ class ThreeDragonAnteGame {
                 const logMessage = await player.dmChannel.messages.fetch(player.dmMessages.log).catch(() => null);
                 if (logMessage) await logMessage.edit({ embeds: [this._createLogEmbed(game)] });
 
-                if (updateDraft) {
+                if (updateDraft && player.dmMessages.draft) {
                     const draftMessage = await player.dmChannel.messages.fetch(player.dmMessages.draft).catch(() => null);
                     if (draftMessage) {
-                        if(forPlayerId && player.id === forPlayerId) {
-                            player.dmMessages.draftPage = page;
-                        }
                         const payload = await this._createDraftEmbed(game, player);
                         await draftMessage.edit(payload);
                     }
@@ -630,14 +634,25 @@ class ThreeDragonAnteGame {
         game.deck = [...standardCards, ...game.draftPool]; // The draft pool now contains the 10 remaining cards
         this._shuffle(game.deck);
 
-        for (let i = 0; i < 6; i++) {
-            for (const player of game.players) {
+        for (const player of game.players) {
+            // Delete draft message
+            try {
+                const draftMessage = await player.dmChannel.messages.fetch(player.dmMessages.draft).catch(() => null);
+                if (draftMessage) await draftMessage.delete();
+                player.dmMessages.draft = null;
+            } catch (e) {
+                console.error(`Could not delete draft message for ${player.user.tag}`, e);
+            }
+
+            // Deal hand
+            for (let i = 0; i < 6; i++) {
                 if (game.deck.length > 0) player.hand.push(game.deck.pop());
             }
         }
+
         game.log.push('Initial hands have been dealt. The first gambit begins.');
 
-        await this._updateAllBoards(game, { updateDraft: true });
+        await this._updateAllBoards(game, { updateDraft: false }); // No more draft updates
         await this.startAntePhase(game);
     }
 
