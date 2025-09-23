@@ -161,12 +161,18 @@ class ThreeDragonAnteGame {
             log: [],
             pot: 0,
             deck: [],
+            discardPile: [],
             antePile: [],
             leader: null,
+            roundLeader: null,
+            lastRoundPlayed: [],
             draftPool: [],
+            fullDraftPool: [],
+            removedDraftCards: [],
             draftOrder: [],
             turnOrder: [],
             draftPicks: 0,
+            gambitRounds: 0,
         };
         game.players.push({ id: message.author.id, user: message.author, specialAbility: null, hand: [], flight: [], hoard: 0, dmMessages: { draftPage: 0, handPage: 0 }, draftedCards: [], isReady: false });
         this.activeGames.set(message.channel.id, game);
@@ -347,6 +353,20 @@ class ThreeDragonAnteGame {
         }
     }
 
+    _dealCard(game) {
+        if (game.deck.length === 0) {
+            if (game.discardPile.length === 0) {
+                game.log.push('**Warning:** The deck and discard pile are both empty. No cards to draw.');
+                return null;
+            }
+            game.log.push('The deck is empty. Shuffling the discard pile to create a new deck.');
+            game.deck = [...game.discardPile];
+            game.discardPile = [];
+            this._shuffle(game.deck);
+        }
+        return game.deck.pop();
+    }
+
     // EMBED CREATION
     _generateLobbyEmbed(game) {
         const hostUser = game.players.find(p => p.id === game.hostId)?.user;
@@ -391,7 +411,8 @@ class ThreeDragonAnteGame {
     async _createDraftEmbed(game, player) {
         const embed = new EmbedBuilder().setTitle('Draft Pool').setColor(0x1abc9c);
 
-        const draftImageBuffer = await this.workerService.run('renderDraftGrid', game.draftPool);
+        // Pass the full, original pool for layout, and the list of removed cards to be covered
+        const draftImageBuffer = await this.workerService.run('renderDraftGrid', game.fullDraftPool, game.removedDraftCards);
         const attachment = new AttachmentBuilder(draftImageBuffer, { name: 'draft_pool.png' });
         embed.setImage('attachment://draft_pool.png');
 
@@ -450,12 +471,9 @@ class ThreeDragonAnteGame {
 
     _createOpponentEmbed(opponent) {
         const handRepresentation = '🃏'.repeat(opponent.hand.length) + '⬛'.repeat(10 - opponent.hand.length);
-        const flightValue = opponent.flight.length > 0 ? opponent.flight.map(c => {
-            const lastPlayedCard = opponent.flight.length > 1 ? opponent.flight[opponent.flight.length - 2] : null;
-            const isAnte = opponent.flight.indexOf(c) === 0;
-            const triggered = isAnte || !lastPlayedCard || c.value >= lastPlayedCard.value;
-            return triggered ? this._formatCardName(c) : `~~${this._formatCardName(c)}~~`;
-        }).join('\n') : 'None';
+        const flightValue = opponent.flight.length > 0
+            ? opponent.flight.map(c => c.triggered ? this._formatCardName(c) : `~~${this._formatCardName(c)}~~`).join('\n')
+            : 'None';
 
         return new EmbedBuilder()
             .setTitle(`${opponent.user.username}'s Board`)
@@ -637,8 +655,8 @@ class ThreeDragonAnteGame {
     async startDraftPhase(game) {
         game.state = 'drafting';
         const optionalCards = DECK_DEFINITION.filter(card => card.optional);
-        this._shuffle(optionalCards);
         game.draftPool = optionalCards.slice(0, 20);
+        game.fullDraftPool = [...game.draftPool]; // Keep a copy of the full pool for rendering
 
         game.draftOrder = [...game.players];
 
@@ -698,6 +716,7 @@ class ThreeDragonAnteGame {
         await interaction.message.delete().catch(e => console.error("Failed to delete draft message:", e));
 
         const card = game.draftPool.splice(cardIndex, 1)[0];
+        game.removedDraftCards.push(card.name);
         game.draftPicks++;
         game.log.push(`${player.user.username} voted to remove **${this._formatCardName(card)}**.`);
 
@@ -740,7 +759,8 @@ class ThreeDragonAnteGame {
 
         for (let i = 0; i < 6; i++) {
             for (const player of game.players) {
-                if (game.deck.length > 0) player.hand.push(game.deck.pop());
+                const newCard = this._dealCard(game);
+                if (newCard) player.hand.push(newCard);
             }
         }
         game.log.push('Initial hands have been dealt. The first gambit begins.');
@@ -859,38 +879,84 @@ class ThreeDragonAnteGame {
     async startGambitPhase(game) {
         game.state = 'gambit';
         game.log.push('**GAMBIT PHASE:** The gambit begins!');
+        game.gambitRounds = 1;
 
-        for(const ante of game.antePile) {
-            ante.player.flight.push(ante.card);
+        for (const ante of game.antePile) {
+            // Ante cards are part of the flight but their powers don't trigger.
+            const cardInFlight = { ...ante.card, triggered: false };
+            ante.player.flight.push(cardInFlight);
         }
         game.antePile = [];
+        game.roundLeader = game.leader;
 
         const leaderIndex = game.players.findIndex(p => p.id === game.leader.id);
         game.turnOrder = [...game.players.slice(leaderIndex), ...game.players.slice(0, leaderIndex)];
+        game.lastRoundPlayed = [];
 
-        // Queue updates for all non-leader players
-        for (const p of game.players) {
-            if (p.id !== game.leader.id) {
-                this._queuePlayerUpdate(game, p, 3);
-                this._queueOpponentUpdate(game, p, game.leader, 3);
+        // Queue updates for all players
+        const updatePromises = game.players.map(p => {
+            const priority = p.id === game.leader.id ? 2 : 3;
+            this._queuePlayerUpdate(game, p, priority);
+            this._queueLogUpdate(game, p, priority);
+            this._queueAnteUpdate(game, p, priority, true); // Show revealed antes
+            for (const o of game.players) {
+                if (p.id !== o.id) this._queueOpponentUpdate(game, p, o, priority);
             }
-        }
-
-        // Ensure the leader's board is fully updated before we ask them to play.
-        const leaderUpdatePromises = [
-            this._queuePlayerUpdate(game, game.leader, 2),
-            this._queueLogUpdate(game, game.leader, 2),
-            this._queueAnteUpdate(game, game.leader, 2, true)
-        ];
-        await Promise.all(leaderUpdatePromises);
+        });
+        await Promise.all(updatePromises);
 
         await this._requestCardPlay(game);
     }
 
     async _requestCardPlay(game) {
+        // If turn order is empty, the round is over.
         if (game.turnOrder.length === 0) {
-            await this.scoreGambit(game);
-            return;
+            game.log.push(`End of Round ${game.gambitRounds}.`);
+
+            // Determine the leader for the next round.
+            const validPlays = game.lastRoundPlayed.filter(p1 =>
+                !game.lastRoundPlayed.some(p2 => p1 !== p2 && p1.card.value === p2.card.value)
+            );
+
+            let nextRoundLeader = game.roundLeader; // Default to current leader if all are tied.
+            if (validPlays.length > 0) {
+                const sortedPlays = validPlays.sort((a, b) => b.card.value - a.card.value);
+                nextRoundLeader = sortedPlays[0].player;
+                game.log.push(`**${nextRoundLeader.user.username}** played the strongest unique card and is the leader for the next round.`);
+            } else {
+                game.log.push(`All cards played were tied. The leader remains **${nextRoundLeader.user.username}**.`);
+            }
+            game.roundLeader = nextRoundLeader;
+
+            // Check if the gambit should end.
+            if (game.gambitRounds >= 3) {
+                const strengths = game.players.map(p => ({ player: p, strength: this._calculateFlightStrength(p.flight) }));
+                const druidInPlay = game.players.some(p => p.flight.some(c => c.effect === 'Druid'));
+
+                if (druidInPlay) {
+                    game.log.push('The Druid is in play! The weakest flight wins.');
+                    strengths.sort((a, b) => a.strength - b.strength);
+                } else {
+                    strengths.sort((a, b) => b.strength - a.strength);
+                }
+
+                if (strengths.length < 2 || strengths[0].strength !== strengths[1].strength) {
+                    await this.scoreGambit(game); // We have a unique winner.
+                    return;
+                }
+                game.log.push('The gambit continues because there is a tie for the strongest (or weakest) flight.');
+            }
+
+            // Start the next round.
+            game.gambitRounds++;
+            game.log.push(`**Starting Round ${game.gambitRounds}**`);
+            const leaderIndex = game.players.findIndex(p => p.id === game.roundLeader.id);
+            game.turnOrder = [...game.players.slice(leaderIndex), ...game.players.slice(0, leaderIndex)];
+            game.lastRoundPlayed = [];
+
+            // Queue updates for all players before requesting next play.
+            const updatePromises = game.players.map(p => this._queueLogUpdate(game, p, 3));
+            await Promise.all(updatePromises);
         }
 
         const currentPlayer = game.turnOrder[0];
@@ -933,17 +999,24 @@ class ThreeDragonAnteGame {
 
         await interaction.message.delete().catch(e => console.error("Failed to delete play message:", e));
 
-        const card = player.hand.splice(cardIndex, 1)[0];
-        player.flight.push(card);
+        const cardFromHand = player.hand.splice(cardIndex, 1)[0];
+        const card = { ...cardFromHand }; // Clone to add 'triggered' property without modifying deck definition.
         game.log.push(`${player.user.username} played **${this._formatCardName(card)}**.`);
 
-        const lastPlayedCard = player.flight.length > 1 ? player.flight[player.flight.length - 2] : null;
-        if (!lastPlayedCard || card.value >= lastPlayedCard.value) {
+        const isRoundLeader = player.id === game.roundLeader.id;
+        const previousPlayerCard = game.lastRoundPlayed.length > 0 ? game.lastRoundPlayed[game.lastRoundPlayed.length - 1].card : null;
+
+        // The leader's power always triggers. Others trigger if their card is <= the previous card in the round.
+        if (isRoundLeader || (previousPlayerCard && card.value <= previousPlayerCard.value)) {
+            card.triggered = true;
             await this._triggerCardPower(game, player, card);
         } else {
-            game.log.push(`The power of **${this._formatCardName(card)}** did not trigger because it was weaker than the previous card.`);
+            card.triggered = false;
+            game.log.push(`The power of **${this._formatCardName(card)}** did not trigger because it was stronger than the previous card played this round.`);
         }
 
+        player.flight.push(card);
+        game.lastRoundPlayed.push({ player, card });
         game.turnOrder.shift();
         const nextPlayer = game.turnOrder.length > 0 ? game.turnOrder[0] : null;
 
@@ -993,13 +1066,12 @@ class ThreeDragonAnteGame {
                 const goodDragonsInFlight = player.flight.filter(c => c.alignment === 'good').length;
                 game.log.push(`${player.user.username} has ${goodDragonsInFlight} good dragons in their flight.`);
                 for (let i = 0; i < goodDragonsInFlight; i++) {
-                    if (game.deck.length > 0) {
-                        const drawnCard = game.deck.pop();
+                    const drawnCard = this._dealCard(game);
+                    if (drawnCard) {
                         player.hand.push(drawnCard);
                         game.log.push(`${player.user.username} draws a card (${this._formatCardName(drawnCard)}).`);
                     } else {
-                        game.log.push('The deck is empty!');
-                        break;
+                        break; // No more cards to draw
                     }
                 }
                 break;
@@ -1008,13 +1080,12 @@ class ThreeDragonAnteGame {
                 for (const p of game.players) {
                     const hasGoodDragon = p.flight.some(c => c.alignment === 'good');
                     if (hasGoodDragon) {
-                         if (game.deck.length > 0) {
-                            const drawnCard = game.deck.pop();
+                        const drawnCard = this._dealCard(game);
+                        if (drawnCard) {
                             p.hand.push(drawnCard);
                             game.log.push(`${p.user.username} has a good dragon and draws a card (${this._formatCardName(drawnCard)}).`);
                         } else {
-                            game.log.push('The deck is empty!');
-                            break;
+                            break; // No more cards to draw
                         }
                     }
                 }
@@ -1034,23 +1105,24 @@ class ThreeDragonAnteGame {
         game.state = 'scoring';
         game.log.push('**SCORING PHASE:** The gambit has ended. Calculating results...');
 
-        let winner = null;
-        let highestStrength = -1;
+        const strengths = game.players.map(p => ({ player: p, strength: this._calculateFlightStrength(p.flight) }));
+        const druidInPlay = game.players.some(p => p.flight.some(c => c.effect === 'Druid'));
 
-        for (const player of game.players) {
-            const strength = this._calculateFlightStrength(player.flight);
-            game.log.push(`${player.user.username}'s flight strength: ${strength}`);
-            if (strength > highestStrength) {
-                highestStrength = strength;
-                winner = player;
-            }
+        if (druidInPlay) {
+            strengths.sort((a, b) => a.strength - b.strength); // Weakest wins
+        } else {
+            strengths.sort((a, b) => b.strength - a.strength); // Strongest wins
         }
+
+        const winner = strengths[0].player;
+        const winnerStrength = strengths[0].strength;
 
         if (winner) {
             winner.hoard += game.pot;
-            game.log.push(`**${winner.user.username}** wins the gambit with a strength of ${highestStrength} and takes the pot of ${game.pot}gp!`);
+            game.log.push(`**${winner.user.username}** wins the gambit with a strength of ${winnerStrength} and takes the pot of ${game.pot}gp!`);
             game.pot = 0;
         } else {
+            // This case should not be reached if the pre-scoring check is correct.
             game.log.push('There was no winner. The pot rolls over to the next gambit.');
         }
 
@@ -1107,10 +1179,13 @@ class ThreeDragonAnteGame {
                 if (readyMessage) await readyMessage.delete();
             } catch(e) { console.error(`Failed to delete ready message for ${player.user.tag}`, e); }
 
+            game.discardPile.push(...player.flight); // Discard flight
             player.flight = [];
             for(let i=0; i<2; i++) {
-                if (game.deck.length > 0) player.hand.push(game.deck.pop());
+                const newCard = this._dealCard(game);
+                if (newCard) player.hand.push(newCard);
             }
+            this._queuePlayerUpdate(game, player, 2); // Update player hand embed immediately
         }
 
         await this.startAntePhase(game);

@@ -27,6 +27,7 @@ async function renderHand(cards) {
 
     const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
+    const cardBackImage = await loadImage(path.join(IMAGE_DIR, 'Card Back.jpg'));
 
     for (let i = 0; i < cards.length; i++) {
         const card = cards[i];
@@ -49,7 +50,7 @@ async function renderHand(cards) {
     return canvas.toBuffer('image/png');
 }
 
-async function renderDraftGrid(cards) {
+async function renderDraftGrid(cards, removedCardNames = []) {
     if (!cards || cards.length === 0) {
         const canvas = createCanvas(1, 1);
         return canvas.toBuffer('image/png');
@@ -93,6 +94,10 @@ async function renderDraftGrid(cards) {
             ctx.fillStyle = 'white';
             ctx.textAlign = 'center';
             ctx.fillText(card.name, x + scaledWidth / 2, y + scaledHeight / 2);
+        }
+
+        if (removedCardNames.includes(card.name)) {
+            ctx.drawImage(cardBackImage, x, y, scaledWidth, scaledHeight);
         }
     }
     return canvas.toBuffer('image/png');
