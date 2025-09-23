@@ -21,6 +21,7 @@ const FiveEToolsParser = require('./core/5eParser.js');
 const { format5eResult, formatEntries } = require('./core/5eEmbedFormatter.js');
 const DropdownHandler = require('./ui/DropdownHandler.js');
 const fs = require('fs').promises;
+const WorkerService = require('./core/WorkerService.js');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
 const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
@@ -29,6 +30,7 @@ const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
 const TEXT_CHANNEL_ID = process.env.TEXT_CHANNEL_ID;
 let connection;
 let musicPlayer;
+let workerService;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
@@ -930,7 +932,8 @@ async function logToRenderer(message) {
         logToRenderer(message);
     }
 }
-musicPlayer = new BackendAudioPlayer(logToRenderer, shell);
+workerService = new WorkerService(path.join(__dirname, 'worker.js'));
+musicPlayer = new BackendAudioPlayer(logToRenderer, shell, workerService);
 musicPlayer.on('status-change', (status) => {
     if (mainWindow && mainWindow.webContents) {
         mainWindow.webContents.send('music-player-status', status);
@@ -1037,7 +1040,7 @@ client.once('clientReady', async () => {
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
-    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER }, fiveEToolsParser);
+    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER }, fiveEToolsParser, workerService);
     client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 

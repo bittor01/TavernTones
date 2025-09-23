@@ -5,11 +5,12 @@ const { Readable } = require('stream');
 const { EventEmitter } = require('events');
 
 class BackendAudioPlayer extends EventEmitter {
-    constructor(logCallback, shell) {
+    constructor(logCallback, shell, workerService) {
         super();
         // Dependencies
         this.log = logCallback || console.log;
         this.shell = shell;
+        this.workerService = workerService;
 
         // State
         this.playerStatus = AudioPlayerStatus.Idle;
@@ -113,45 +114,6 @@ class BackendAudioPlayer extends EventEmitter {
         this.log(`Moved pending file to active: ${this.activeFilePath}`);
     }
 
-    async cacheFile(filePath) {
-        this.isCaching = true;
-        this._emitStatusUpdate();
-        this.log(`Caching started for: ${filePath}`);
-
-        try {
-            let resolvedPath = filePath;
-            if (this.shell && path.extname(resolvedPath).toLowerCase() === '.lnk') {
-                try {
-                    const shortcutDetails = this.shell.readShortcutLink(resolvedPath);
-                    if (shortcutDetails.target && fs.existsSync(shortcutDetails.target)) {
-                        this.log(`Resolved .lnk shortcut from ${resolvedPath} to ${shortcutDetails.target}`);
-                        resolvedPath = shortcutDetails.target;
-                    } else {
-                        throw new Error('Shortcut target does not exist or is invalid.');
-                    }
-                } catch (error) {
-                    this.log(`Failed to resolve .lnk shortcut at ${resolvedPath}: ${error.message}`);
-                    this.isCaching = false;
-                    this._emitStatusUpdate();
-                    return false;
-                }
-            }
-
-            const buffer = fs.readFileSync(resolvedPath);
-            this.pendingFile = buffer;
-            this.pendingFilePath = resolvedPath;
-            this.log(`Successfully cached file: ${filePath}`);
-            this.isCaching = false;
-            this._emitStatusUpdate();
-            return true;
-        } catch (error) {
-            this.log(`Error caching file ${filePath}: ${error.message}`);
-            this.isCaching = false;
-            this._emitStatusUpdate();
-            return false;
-        }
-    }
-
     async _play() {
         if (!this.activeFile) {
             this.log("Play called but no active file to play.");
@@ -180,12 +142,38 @@ class BackendAudioPlayer extends EventEmitter {
 
     async playFile(filePath = null) {
         if (filePath) {
-            const cacheSuccess = await this.cacheFile(filePath);
-            if (cacheSuccess) {
+            this.isCaching = true;
+            this._emitStatusUpdate();
+            this.log(`Caching started for: ${filePath}`);
+
+            try {
+                // Resolve .lnk shortcuts in the main thread
+                let resolvedPath = filePath;
+                if (this.shell && path.extname(resolvedPath).toLowerCase() === '.lnk') {
+                    const shortcutDetails = this.shell.readShortcutLink(resolvedPath);
+                    if (shortcutDetails.target && fs.existsSync(shortcutDetails.target)) {
+                        resolvedPath = shortcutDetails.target;
+                    } else {
+                        throw new Error('Shortcut target does not exist or is invalid.');
+                    }
+                }
+
+                const { buffer, resolvedPath: finalPath } = await this.workerService.run('cacheMusic', resolvedPath);
+                this.pendingFile = buffer;
+                this.pendingFilePath = finalPath;
+                this.log(`Successfully cached file: ${filePath}`);
+                this.isCaching = false;
+                this._emitStatusUpdate();
+
                 this._movePendingToActive();
                 this._play();
-            } else {
-                this.log(`Failed to cache ${filePath}, playing existing track if available.`);
+
+            } catch (error) {
+                this.log(`Failed to cache ${filePath} via worker: ${error.message}`);
+                this.isCaching = false;
+                this._emitStatusUpdate();
+
+                // Fallback to playing existing track if caching fails
                 if (this.playerStatus === AudioPlayerStatus.Idle && this.activeFile) {
                     this._play();
                 } else if (this.playerStatus === AudioPlayerStatus.Paused) {
