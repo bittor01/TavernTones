@@ -159,7 +159,8 @@ class BackendAudioPlayer extends EventEmitter {
                 }
 
                 const { buffer, resolvedPath: finalPath } = await this.workerService.run('cacheMusic', { filePath: resolvedPath });
-                this.pendingFile = buffer;
+                // The buffer comes back from the worker as a plain object, so we need to reconstruct it.
+                this.pendingFile = Buffer.from(buffer.data);
                 this.pendingFilePath = finalPath;
                 this.log(`Successfully cached file: ${filePath}`);
                 this.isCaching = false;

@@ -39,11 +39,8 @@ async function renderHand({ cards }) {
             } else { throw new Error(`Image not found`); }
         } catch (error) {
              console.error(`[renderHand] Failed to load or draw card ${card.name}: ${error.message}`);
-             ctx.fillStyle = '#4f545c';
-             ctx.fillRect(i * scaledWidth, 0, scaledWidth, scaledHeight);
-             ctx.fillStyle = 'white';
-             ctx.textAlign = 'center';
-             ctx.fillText(card.name, i * scaledWidth + scaledWidth / 2, scaledHeight / 2);
+             // Draw the card back as a fallback image
+             ctx.drawImage(cardBackImage, i * scaledWidth, 0, scaledWidth, scaledHeight);
         }
     }
 
