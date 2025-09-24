@@ -6,7 +6,7 @@ const fs = require('fs');
 const IMAGE_DIR = path.join(__dirname, '..', 'resources', 'threedragonanteimages');
 const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8 MB
 
-async function renderHand(cards) {
+async function renderHand({ cards }) {
     if (!cards || cards.length === 0) {
         const canvas = createCanvas(1, 1);
         return canvas.toBuffer('image/png');
@@ -101,7 +101,7 @@ async function renderDraftGrid({ cards, buffer = null, cardToCover = null }) {
     return canvas.toBuffer('image/png');
 }
 
-async function cacheMusic(filePath, shell) {
+async function cacheMusic({ filePath, shell }) {
     try {
         let resolvedPath = filePath;
         // The shell object cannot be passed to the worker, so this logic is commented out.

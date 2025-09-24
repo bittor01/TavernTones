@@ -530,7 +530,7 @@ class ThreeDragonAnteGame {
         }
         embed.setFooter({ text: footerText });
 
-        const handImageBuffer = await this.workerService.run('renderHand', player.hand);
+        const handImageBuffer = await this.workerService.run('renderHand', { cards: player.hand });
         const attachment = new AttachmentBuilder(handImageBuffer, { name: 'hand.png' });
         embed.setImage('attachment://hand.png');
 
