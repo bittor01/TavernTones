@@ -69,32 +69,48 @@ async function renderDraftGrid({ cards, buffer = null, cardToCover = null }) {
     const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
 
-    for (let i = 0; i < cards.length; i++) {
-        const card = cards[i];
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        const x = col * scaledWidth;
-        const y = row * scaledHeight;
-
-        const imagePath = path.join(IMAGE_DIR, card.image);
-        try {
-            if (fs.existsSync(imagePath)) {
-                const image = await loadImage(imagePath);
-                ctx.drawImage(image, x, y, scaledWidth, scaledHeight);
-            } else { throw new Error(`Image not found`); }
-        } catch (error) {
-            console.error(`[renderDraftGrid] Failed to load or draw card ${card.name}: ${error.message}`);
-            ctx.fillStyle = '#4f545c';
-            ctx.fillRect(x, y, scaledWidth, scaledHeight);
-            ctx.fillStyle = 'white';
-            ctx.textAlign = 'center';
-            ctx.fillText(card.name, x + scaledWidth / 2, y + scaledHeight / 2);
+    if (buffer) {
+        // If a buffer is provided, load it as the base image
+        const existingImage = await loadImage(buffer);
+        ctx.drawImage(existingImage, 0, 0);
+    } else {
+        // Otherwise, render the initial grid from scratch
+        for (let i = 0; i < cards.length; i++) {
+            const card = cards[i];
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const x = col * scaledWidth;
+            const y = row * scaledHeight;
+            const imagePath = path.join(IMAGE_DIR, card.image);
+            try {
+                if (fs.existsSync(imagePath)) {
+                    const image = await loadImage(imagePath);
+                    ctx.drawImage(image, x, y, scaledWidth, scaledHeight);
+                } else { throw new Error(`Image not found`); }
+            } catch (error) {
+                console.error(`[renderDraftGrid] Failed to load or draw card ${card.name}: ${error.message}`);
+                ctx.fillStyle = '#4f545c';
+                ctx.fillRect(x, y, scaledWidth, scaledHeight);
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.fillText(card.name, x + scaledWidth / 2, y + scaledHeight / 2);
+            }
         }
+    }
 
-        if (removedCardNames.includes(card.name)) {
+    if (cardToCover) {
+        // If a card needs to be covered, draw the card back over it
+        const cardBackImage = await loadImage(path.join(IMAGE_DIR, 'Card Back.jpg'));
+        const cardIndex = cards.findIndex(c => c.name === cardToCover.name);
+        if (cardIndex !== -1) {
+            const col = cardIndex % cols;
+            const row = Math.floor(cardIndex / cols);
+            const x = col * scaledWidth;
+            const y = row * scaledHeight;
             ctx.drawImage(cardBackImage, x, y, scaledWidth, scaledHeight);
         }
     }
+
     return canvas.toBuffer('image/png');
 }
 
@@ -124,7 +140,9 @@ const tasks = {
 parentPort.on('message', async ({ task, args, correlationId }) => {
     try {
         if (tasks[task]) {
-            const result = await tasks[task](...args);
+            // All refactored functions expect a single object argument.
+            // args is an array of arguments, so we pass the first element.
+            const result = await tasks[task](args[0]);
             // When sending a buffer, it's safer to convert it to a plain object
             // as some worker implementations might have issues with direct Buffer transfers.
             if (result instanceof Buffer) {
