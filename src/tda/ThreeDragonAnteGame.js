@@ -606,6 +606,8 @@ class ThreeDragonAnteGame {
             id: `draft-${player.id}`,
             priority: priority,
             task: async () => {
+                // Safeguard: Do not try to edit a message that has been marked for deletion.
+                if (!player.dmMessages.draft) return;
                 const draftMessage = await player.dmChannel.messages.fetch(player.dmMessages.draft).catch(() => null);
                 if (draftMessage) {
                     const payload = await this._createDraftEmbed(game, player);
@@ -780,21 +782,8 @@ class ThreeDragonAnteGame {
             this._queueDraftUpdate(game, p, 3); // Queue the final update
             this._queuePlayerUpdate(game, p, 3);
 
-            // After 15 seconds, queue a job to delete the draft message
-            setTimeout(() => {
-                this.updateQueue.add({
-                    id: `delete-draft-${p.id}`,
-                    priority: 5, // Low priority
-                    task: async () => {
-                        const messageId = p.dmMessages.draft;
-                        if (messageId) {
-                            const message = await p.dmChannel.messages.fetch(messageId).catch(() => null);
-                            if (message) await message.delete();
-                            p.dmMessages.draft = null;
-                        }
-                    }
-                });
-            }, 15000);
+            // The draft message will be deleted at the start of the next phase (ante)
+            // to prevent race conditions with the update queue.
         }
 
         await this.startAntePhase(game);
@@ -805,6 +794,19 @@ class ThreeDragonAnteGame {
         game.state = 'ante';
         game.antePile = [];
         game.log.push('**ANTE PHASE:** All players, check your DMs to choose a card to ante.');
+
+        // Clean up the draft message from the previous phase
+        for (const player of game.players) {
+            if (player.dmMessages.draft) {
+                try {
+                    const message = await player.dmChannel.messages.fetch(player.dmMessages.draft).catch(() => null);
+                    if (message) await message.delete();
+                } catch (e) {
+                    console.error(`TDA: Could not delete old draft message for ${player.user.tag}. It might have been deleted already.`, e.message);
+                }
+                player.dmMessages.draft = null;
+            }
+        }
 
         // Update all boards and then request ante from each player
         for (const player of game.players) {
