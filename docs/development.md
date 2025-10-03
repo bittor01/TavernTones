@@ -117,7 +117,7 @@ This is a complex implementation of the Three-Dragon Ante card game. It is **par
     - **Game State**: The game state is displayed to players in their DMs, and public actions are announced in the channel. The game correctly identifies the winner of a gambit and the end of the game.
 
 - **Key Files**:
-    - **`ThreeDragonAnte.js`**: A large, self-contained manager class that handles all game state, logic, and player interaction.
+    - **`ThreeDragonAnteGame.js`**: A large, self-contained manager class that handles all game state, logic, and player interaction.
     - **`CommandHandler.js`**: The entry point that receives the `!3da` command and delegates control to the `ThreeDragonAnteManager`.
     - **`main.js`**: Handles the `interactionCreate` events for buttons and modals submitted by players during the game.
 

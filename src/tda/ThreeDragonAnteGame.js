@@ -219,6 +219,7 @@ class ThreeDragonAnteGame {
             turnOrder: [],
             draftPicks: 0,
             gambitRounds: 0,
+            currentGambitAntes: [],
         };
         game.players.push({ id: message.author.id, user: message.author, specialAbility: null, hand: [], flight: [], hoard: 0, dmMessages: { draftPage: 0, handPage: 0 }, draftedCards: [], isReady: false });
         this.activeGames.set(message.channel.id, game);
@@ -349,6 +350,50 @@ class ThreeDragonAnteGame {
     }
 
     /**
+     * Prompts a player to choose a card from their hand to give to another player.
+     * @param {object} game - The game state object.
+     * @param {object} givingPlayer - The player who is giving the card.
+     * @param {EmbedBuilder} embed - The embed to send with the prompt.
+     * @param {function} cardFilter - A function that returns true if a card is a valid choice.
+     * @returns {Promise<object|null>} A promise that resolves with the chosen card object, or null if no choice was made.
+     * @private
+     */
+    async _promptPlayerToGiveCard(game, givingPlayer, embed, cardFilter) {
+        const validCards = givingPlayer.hand.filter(cardFilter);
+        if (validCards.length === 0) return null;
+
+        const rows = [];
+        let currentRow = new ActionRowBuilder();
+        for (const card of validCards) {
+            if (currentRow.components.length === 5) {
+                rows.push(currentRow);
+                currentRow = new ActionRowBuilder();
+            }
+            currentRow.addComponents(new ButtonBuilder().setCustomId(`tda_givecard_${game.channelId}_${card.name.replace(/ /g, '_')}`).setLabel(this._formatCardName(card)).setStyle(ButtonStyle.Secondary));
+        }
+        rows.push(currentRow);
+
+        const choiceMessage = await givingPlayer.dmChannel.send({ embeds: [embed], components: rows });
+
+        try {
+            const filter = i => i.user.id === givingPlayer.id && i.customId.startsWith(`tda_givecard_${game.channelId}`);
+            const interaction = await choiceMessage.awaitMessageComponent({ filter, time: 60000 });
+            await choiceMessage.delete().catch(() => {});
+
+            const cardName = interaction.customId.split('_').slice(3).join(' ');
+            const cardIndex = givingPlayer.hand.findIndex(c => c.name === cardName);
+            if (cardIndex !== -1) {
+                return givingPlayer.hand.splice(cardIndex, 1)[0];
+            }
+            return null;
+        } catch (error) {
+            await choiceMessage.delete().catch(() => {});
+            game.log.push(`**${givingPlayer.user.username}** did not choose a card in time.`);
+            return null;
+        }
+    }
+
+    /**
      * Handles the submission of the buy-in modal, setting the initial gold for all players.
      * @param {Interaction} interaction - The modal submit interaction.
      * @returns {Promise<void>}
@@ -457,6 +502,54 @@ class ThreeDragonAnteGame {
             this._shuffle(game.deck);
         }
         return game.deck.pop();
+    }
+
+    /**
+     * Gets a list of opponents, sorted by their current flight strength.
+     * @param {object} game - The game state object.
+     * @param {object} actingPlayer - The player whose opponents are to be sorted.
+     * @param {string} [order='asc'] - The sort order: 'asc' for weakest to strongest, 'desc' for strongest to weakest.
+     * @returns {Array<object>} A sorted array of opponent player objects.
+     * @private
+     */
+    _getOpponentsByStrength(game, actingPlayer, order = 'asc') {
+        const opponents = game.players.filter(p => p.id !== actingPlayer.id);
+        opponents.sort((a, b) => {
+            const strengthA = this._calculateFlightStrength(a.flight);
+            const strengthB = this._calculateFlightStrength(b.flight);
+            return order === 'asc' ? strengthA - strengthB : strengthB - strengthA;
+        });
+        return opponents;
+    }
+
+    /**
+     * Prompts a player to make a choice using buttons.
+     * @param {object} game - The game state object.
+     * @param {object} player - The player to prompt.
+     * @param {string} promptText - The text to display in the prompt embed.
+     * @param {Array<object>} choices - An array of choice objects, each with `label` and `value`.
+     * @returns {Promise<string|null>} The value of the chosen option, or null if no choice is made.
+     * @private
+     */
+    async _promptPlayerForChoice(game, player, promptText, choices) {
+        const embed = new EmbedBuilder().setDescription(promptText).setColor(0x3498db);
+        const row = new ActionRowBuilder();
+        choices.forEach(choice => {
+            row.addComponents(new ButtonBuilder().setCustomId(`tda_choice_${game.channelId}_${choice.value}`).setLabel(choice.label).setStyle(ButtonStyle.Primary));
+        });
+
+        const choiceMessage = await player.dmChannel.send({ embeds: [embed], components: [row] });
+
+        try {
+            const filter = i => i.user.id === player.id && i.customId.startsWith(`tda_choice_${game.channelId}`);
+            const interaction = await choiceMessage.awaitMessageComponent({ filter, time: 60000 });
+            await choiceMessage.delete().catch(() => {});
+            return interaction.customId.split('_')[3];
+        } catch (error) {
+            await choiceMessage.delete().catch(() => {});
+            game.log.push(`**${player.user.username}** did not make a choice in time.`);
+            return null;
+        }
     }
 
     // EMBED CREATION
@@ -1123,6 +1216,7 @@ class ThreeDragonAnteGame {
         const revealLog = game.antePile.map(p => `${p.player.user.username} anted **${this._formatCardName(p.card)}**`).join('\n');
         game.log.push(revealLog);
 
+        game.currentGambitAntes = [...game.antePile];
         const sortedAntes = [...game.antePile].sort((a, b) => b.card.value - a.card.value);
         game.leader = sortedAntes[0].player;
         game.log.push(`**${game.leader.user.username}** anted the strongest card and is the leader for this gambit.`);
@@ -1203,11 +1297,17 @@ class ThreeDragonAnteGame {
                     strengths.sort((a, b) => b.strength - a.strength);
                 }
 
-                if (strengths.length < 2 || strengths[0].strength !== strengths[1].strength) {
+                const potentialWinner = strengths[0].player;
+                const bronzeWarlordPlayer = game.players.find(p => p.flight.some(c => c.effect === 'BronzeWarlord'));
+
+                if (game.gambitRounds === 3 && bronzeWarlordPlayer && bronzeWarlordPlayer.id !== potentialWinner.id) {
+                    game.log.push(`**${bronzeWarlordPlayer.user.username}**'s Bronze Warlord extends the gambit to a fourth round!`);
+                } else if (strengths.length < 2 || strengths[0].strength !== strengths[1].strength) {
                     await this.scoreGambit(game);
                     return;
+                } else {
+                    game.log.push('The gambit continues because there is a tie for the strongest (or weakest) flight.');
                 }
-                game.log.push('The gambit continues because there is a tie for the strongest (or weakest) flight.');
             }
 
             game.gambitRounds++;
@@ -1324,7 +1424,13 @@ class ThreeDragonAnteGame {
      * @returns {Promise<void>}
      * @private
      */
-    async _triggerCardPower(game, player, card) {
+    async _triggerCardPower(game, player, card, isSecondaryTrigger = false) {
+        // Avoid infinite loops from cards like the Princess or chained Coppers.
+        if (isSecondaryTrigger && (card.effect === 'Princess' || card.effect === 'Copper')) {
+            game.log.push(`The power of **${this._formatCardName(card)}** does not trigger again as part of a chain reaction.`);
+            return;
+        }
+
         game.log.push(`The power of **${this._formatCardName(card)}** triggers!`);
         switch(card.effect) {
             case 'Black': {
@@ -1363,6 +1469,403 @@ class ThreeDragonAnteGame {
                 }
                 break;
             }
+            case 'White': {
+                const opponents = this._getOpponentsByStrength(game, player, 'asc');
+                if (opponents.length > 0) {
+                    const weakestOpponent = opponents[0];
+                    const amount = 2 * game.scaleFactor;
+                    const actualAmount = Math.min(amount, weakestOpponent.hoard);
+                    weakestOpponent.hoard -= actualAmount;
+                    player.hoard += actualAmount;
+                    game.log.push(`${player.user.username} takes ${actualAmount}gp from the weakest opponent, ${weakestOpponent.user.username}.`);
+                }
+                break;
+            }
+            case 'Red': {
+                const opponents = this._getOpponentsByStrength(game, player, 'desc');
+                if (opponents.length > 0) {
+                    const strongestOpponent = opponents[0];
+                    const amount = 1 * game.scaleFactor;
+                    const actualAmount = Math.min(amount, strongestOpponent.hoard);
+                    strongestOpponent.hoard -= actualAmount;
+                    player.hoard += actualAmount;
+                    game.log.push(`${player.user.username} takes ${actualAmount}gp from the strongest opponent, ${strongestOpponent.user.username}.`);
+
+                    if (strongestOpponent.hand.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * strongestOpponent.hand.length);
+                        const stolenCard = strongestOpponent.hand.splice(randomIndex, 1)[0];
+                        player.hand.push(stolenCard);
+                        game.log.push(`${player.user.username} steals a random card from ${strongestOpponent.user.username}'s hand.`);
+                    }
+                }
+                break;
+            }
+            case 'Bronze': {
+                if (game.currentGambitAntes.length > 0) {
+                    game.currentGambitAntes.sort((a, b) => a.card.value - b.card.value);
+                    const cardsToTake = game.currentGambitAntes.splice(0, 2);
+                    for (const ante of cardsToTake) {
+                        player.hand.push(ante.card);
+                        game.log.push(`${player.user.username} takes an ante card, **${this._formatCardName(ante.card)}**, into their hand.`);
+                    }
+                } else {
+                    game.log.push('There were no ante cards left to take.');
+                }
+                break;
+            }
+            case 'Copper': {
+                const copperIndex = player.flight.findIndex(c => c.name === card.name && c.value === card.value);
+                if (copperIndex !== -1) {
+                    const discardedCopper = player.flight.splice(copperIndex, 1)[0];
+                    game.discardPile.push(discardedCopper);
+                    game.log.push(`${player.user.username} discards the **${this._formatCardName(card)}**.`);
+
+                    const newCard = this._dealCard(game);
+                    if (newCard) {
+                        game.log.push(`${player.user.username} draws **${this._formatCardName(newCard)}** as a replacement.`);
+                        newCard.triggered = true;
+                        player.flight.push(newCard);
+                        await this._triggerCardPower(game, player, newCard, true);
+                    }
+                }
+                break;
+            }
+            case 'Princess': {
+                const goodDragonsInFlight = player.flight.filter(c => c.alignment === 'good' && c.effect !== 'Princess');
+                game.log.push(`${player.user.username}'s Princess triggers the powers of ${goodDragonsInFlight.length} good dragons in their flight.`);
+                for (const goodDragon of goodDragonsInFlight) {
+                    await this._triggerCardPower(game, player, goodDragon, true);
+                }
+                break;
+            }
+            case 'RedDestroyer': {
+                const opponents = this._getOpponentsByStrength(game, player, 'desc');
+                if (opponents.length > 0) {
+                    const strongestOpponent = opponents[0];
+                    const amount = 10 * game.scaleFactor;
+                    const actualAmount = Math.min(amount, strongestOpponent.hoard);
+                    strongestOpponent.hoard -= actualAmount;
+                    player.hoard += actualAmount;
+                    game.log.push(`${player.user.username} takes ${actualAmount}gp from the strongest opponent, ${strongestOpponent.user.username}.`);
+
+                    if (strongestOpponent.hand.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * strongestOpponent.hand.length);
+                        const stolenCard = strongestOpponent.hand.splice(randomIndex, 1)[0];
+                        player.hand.push(stolenCard);
+                        game.log.push(`${player.user.username} steals a random card from ${strongestOpponent.user.username}'s hand.`);
+                    }
+                }
+                break;
+            }
+            case 'WhiteHunter': {
+                const opponents = this._getOpponentsByStrength(game, player, 'asc');
+                const playerStrength = this._calculateFlightStrength(player.flight);
+                const weakerOpponents = opponents.filter(o => this._calculateFlightStrength(o.flight) < playerStrength);
+
+                if (weakerOpponents.length > 0) {
+                    game.log.push(`${player.user.username} targets ${weakerOpponents.length} weaker opponents.`);
+                    for (const opponent of weakerOpponents) {
+                        const amount = 3 * game.scaleFactor;
+                        const actualAmount = Math.min(amount, opponent.hoard);
+                        opponent.hoard -= actualAmount;
+                        player.hoard += actualAmount;
+                        game.log.push(`${player.user.username} takes ${actualAmount}gp from ${opponent.user.username}.`);
+                    }
+                } else {
+                    game.log.push('There are no weaker opponents to take gold from.');
+                }
+                break;
+            }
+            case 'GoldMonarch': {
+                const goodDragonsInFlight = player.flight.filter(c => c.alignment === 'good').length;
+                game.log.push(`${player.user.username} has ${goodDragonsInFlight} good dragons in their flight.`);
+                for (let i = 0; i < goodDragonsInFlight; i++) {
+                    const drawnCard = this._dealCard(game);
+                    if (drawnCard) {
+                        player.hand.push(drawnCard);
+                        game.log.push(`${player.user.username} draws a card (${this._formatCardName(drawnCard)}).`);
+                    } else {
+                        break;
+                    }
+                }
+                break;
+            }
+            case 'BronzeWarlord': {
+                 if (game.currentGambitAntes.length > 0) {
+                    game.currentGambitAntes.sort((a, b) => a.card.value - b.card.value);
+                    const cardsToTake = game.currentGambitAntes.splice(0, 2);
+                    for (const ante of cardsToTake) {
+                        player.hand.push(ante.card);
+                        game.log.push(`${player.user.username} takes an ante card, **${this._formatCardName(ante.card)}**, into their hand.`);
+                    }
+                } else {
+                    game.log.push('There were no ante cards left to take.');
+                }
+                break;
+            }
+            case 'Bahamut': {
+                const opponents = game.players.filter(p => p.id !== player.id);
+                for (const opponent of opponents) {
+                    const hasGood = opponent.flight.some(c => c.alignment === 'good');
+                    const hasEvil = opponent.flight.some(c => c.alignment === 'evil');
+                    if (hasGood && hasEvil) {
+                        const amount = 10 * game.scaleFactor;
+                        const actualAmount = Math.min(amount, opponent.hoard);
+                        opponent.hoard -= actualAmount;
+                        player.hoard += actualAmount;
+                        game.log.push(`${opponent.user.username} has good and evil dragons, and pays ${actualAmount}gp to ${player.user.username}.`);
+                    }
+                }
+                break;
+            }
+            case 'BlackRaider': {
+                const potSteal = Math.min(1 * game.scaleFactor, game.pot);
+                if (potSteal > 0) {
+                    player.hoard += potSteal;
+                    game.pot -= potSteal;
+                    game.log.push(`${player.user.username} steals ${potSteal}gp from the pot.`);
+                }
+
+                const playerIndex = game.players.findIndex(p => p.id === player.id);
+                for (let i = 0; i < game.players.length - 1; i++) {
+                    const opponentIndex = (playerIndex + 1 + i) % game.players.length;
+                    const opponent = game.players[opponentIndex];
+                    const amountToTake = (i + 2) * game.scaleFactor;
+                    const actualAmount = Math.min(amountToTake, opponent.hoard);
+
+                    if (actualAmount > 0) {
+                        opponent.hoard -= actualAmount;
+                        player.hoard += actualAmount;
+                        game.log.push(`${player.user.username} takes ${actualAmount}gp from ${opponent.user.username}.`);
+                    }
+                }
+                break;
+            }
+            case 'Blue':
+            case 'BlueOverlord': {
+                const isOverlord = card.effect === 'BlueOverlord';
+                const goldAmount = isOverlord ? 2 : 1;
+                const choice = await this._promptPlayerForChoice(game, player,
+                    `Choose an effect for your **${card.name}**:`,
+                    [
+                        { label: `Each opponent pays you ${goldAmount}gp`, value: 'pay' },
+                        { label: `Each opponent adds ${goldAmount}gp to stakes per card in your flight`, value: 'stakes' }
+                    ]
+                );
+
+                if (choice === 'pay') {
+                    game.log.push(`${player.user.username} chose to take gold from each opponent.`);
+                    for (const opponent of game.players.filter(p => p.id !== player.id)) {
+                        const actualAmount = Math.min(goldAmount * game.scaleFactor, opponent.hoard);
+                        opponent.hoard -= actualAmount;
+                        player.hoard += actualAmount;
+                        game.log.push(`${player.user.username} takes ${actualAmount}gp from ${opponent.user.username}.`);
+                    }
+                } else if (choice === 'stakes') {
+                    game.log.push(`${player.user.username} chose to make each opponent add to the stakes.`);
+                    const flightSize = player.flight.length;
+                    for (const opponent of game.players.filter(p => p.id !== player.id)) {
+                        const amountToAdd = flightSize * goldAmount * game.scaleFactor;
+                        const actualAmount = Math.min(amountToAdd, opponent.hoard);
+                        opponent.hoard -= actualAmount;
+                        game.pot += actualAmount;
+                        game.log.push(`${opponent.user.username} adds ${actualAmount}gp to the pot.`);
+                    }
+                }
+                break;
+            }
+            case 'Green':
+            case 'Brass':
+            case 'GreenSchemer':
+            case 'BrassSultan': {
+                const isGood = card.alignment === 'good';
+                const isLegendary = ['GreenSchemer', 'BrassSultan'].includes(card.effect);
+                const playerIndex = game.players.findIndex(p => p.id === player.id);
+
+                let targets = [];
+                if (isGood) { // Brass, BrassSultan
+                    const lastPlayerIndex = (playerIndex - 1 + game.players.length) % game.players.length;
+                    targets.push(game.players[lastPlayerIndex]);
+                    if (isLegendary) {
+                        const nextPlayerIndex = (playerIndex + 1) % game.players.length;
+                        if (nextPlayerIndex !== lastPlayerIndex) targets.push(game.players[nextPlayerIndex]);
+                    }
+                } else { // Green, GreenSchemer
+                    const nextPlayerIndex = (playerIndex + 1) % game.players.length;
+                    targets.push(game.players[nextPlayerIndex]);
+                    if (isLegendary) {
+                        const lastPlayerIndex = (playerIndex - 1 + game.players.length) % game.players.length;
+                         if (nextPlayerIndex !== lastPlayerIndex) targets.push(game.players[lastPlayerIndex]);
+                    }
+                }
+
+                for (const target of targets) {
+                    const payAmount = 5 * game.scaleFactor;
+                    const choice = await this._promptPlayerForChoice(game, target,
+                        `**${player.user.username}** played **${card.name}**. You must choose to either pay them ${payAmount}gp or give them a suitable dragon from your hand.`,
+                        [
+                            { label: `Pay ${payAmount}gp`, value: 'pay' },
+                            { label: 'Give Card', value: 'give' }
+                        ]
+                    );
+
+                    if (choice === 'give') {
+                        const cardFilter = c => c.alignment === (isGood ? 'good' : 'evil') && c.value > card.value;
+                        const promptEmbed = new EmbedBuilder().setDescription(`Choose a ${isGood ? 'stronger good' : 'weaker evil'} dragon to give to ${player.user.username}.`);
+                        const givenCard = await this._promptPlayerToGiveCard(game, target, promptEmbed, cardFilter);
+                        if (givenCard) {
+                            player.hand.push(givenCard);
+                            game.log.push(`${target.user.username} gives ${this._formatCardName(givenCard)} to ${player.user.username}.`);
+                        } else {
+                            game.log.push(`${target.user.username} had no valid card to give.`);
+                             const actualAmount = Math.min(payAmount, target.hoard);
+                             target.hoard -= actualAmount;
+                             player.hoard += actualAmount;
+                             game.log.push(`${target.user.username} pays ${actualAmount}gp instead.`);
+                        }
+                    } else { // 'pay' or timeout
+                        const actualAmount = Math.min(payAmount, target.hoard);
+                        target.hoard -= actualAmount;
+                        player.hoard += actualAmount;
+                        game.log.push(`${target.user.username} chooses to pay ${actualAmount}gp.`);
+                    }
+                }
+                break;
+            }
+            case 'Kobold': {
+                const embed = new EmbedBuilder().setTitle('Discard and Draw').setDescription('Select any cards from your hand to discard. You will draw that many new cards. Click "Done" when you are finished.');
+                const selectMenu = new StringSelectMenuBuilder()
+                    .setCustomId(`tda_kobold_discard_${game.channelId}`)
+                    .setPlaceholder('Select cards to discard...')
+                    .setMinValues(0)
+                    .setMaxValues(player.hand.length)
+                    .addOptions(player.hand.map(c => ({ label: this._formatCardName(c), value: c.name })));
+
+                const row1 = new ActionRowBuilder().addComponents(selectMenu);
+                const row2 = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`tda_kobold_done_${game.channelId}`).setLabel('Done').setStyle(ButtonStyle.Success));
+
+                const choiceMessage = await player.dmChannel.send({ embeds: [embed], components: [row1, row2] });
+
+                try {
+                    let cardsToDiscard = [];
+                    const collector = choiceMessage.createMessageComponentCollector({ time: 120000 });
+
+                    collector.on('collect', async i => {
+                        if (i.isStringSelectMenu()) {
+                            cardsToDiscard = i.values;
+                            await i.reply({ content: `Selected ${cardsToDiscard.length} cards to discard. Click "Done" to confirm.`, ephemeral: true });
+                        } else if (i.isButton()) {
+                            collector.stop('done');
+                        }
+                    });
+
+                    collector.on('end', async (collected, reason) => {
+                        await choiceMessage.delete().catch(() => {});
+                        if (reason === 'done' && cardsToDiscard.length > 0) {
+                            let discardedCount = 0;
+                            for (const cardName of cardsToDiscard) {
+                                const cardIndex = player.hand.findIndex(c => c.name === cardName);
+                                if (cardIndex !== -1) {
+                                    const discardedCard = player.hand.splice(cardIndex, 1)[0];
+                                    game.discardPile.push(discardedCard);
+                                    discardedCount++;
+                                }
+                            }
+                            game.log.push(`${player.user.username} discards ${discardedCount} cards.`);
+                            for (let i = 0; i < discardedCount; i++) {
+                                const newCard = this._dealCard(game);
+                                if (newCard) player.hand.push(newCard);
+                            }
+                             game.log.push(`${player.user.username} draws ${discardedCount} new cards.`);
+                        } else {
+                            game.log.push(`${player.user.username} chose not to discard any cards.`);
+                        }
+                    });
+                } catch (e) {
+                     await choiceMessage.delete().catch(() => {});
+                     game.log.push(`${player.user.username} did not make a choice in time.`);
+                }
+                break;
+            }
+            case 'Tiamat':
+                game.log.push("Tiamat's presence is felt, she counts as a dragon of five colors!");
+                break;
+            case 'Wyrmpriest':
+                game.log.push("The Wyrmpriest can count as any color for completing a color flight.");
+                break;
+            case 'ChromWyrm':
+            case 'MetalWyrm': {
+                const isGood = card.effect === 'MetalWyrm';
+                const cardFilter = c => c.alignment === (isGood ? 'good' : 'evil');
+                const promptEmbed = new EmbedBuilder().setDescription(`Choose a ${isGood ? 'good' : 'evil'} dragon from your hand to replace your Wyrmling.`);
+                const chosenCard = await this._promptPlayerToGiveCard(game, player, promptEmbed, cardFilter);
+
+                if (chosenCard) {
+                    const wyrmlingIndex = player.flight.findIndex(c => c.name === card.name);
+                    if (wyrmlingIndex !== -1) {
+                        const discardedWyrmling = player.flight.splice(wyrmlingIndex, 1)[0];
+                        game.discardPile.push(discardedWyrmling);
+                        game.log.push(`${player.user.username} discards the **${this._formatCardName(discardedWyrmling)}**.`);
+
+                        chosenCard.triggered = true;
+                        player.flight.push(chosenCard);
+                        game.log.push(`${player.user.username} replaces it with **${this._formatCardName(chosenCard)}**.`);
+                        await this._triggerCardPower(game, player, chosenCard, true);
+                    }
+                } else {
+                    game.log.push(`${player.user.username} chose not to replace their Wyrmling.`);
+                }
+                break;
+            }
+            case 'Sorcerer': {
+                 const topThree = [];
+                for(let i=0; i<3; i++) {
+                    const drawn = this._dealCard(game);
+                    if(drawn) topThree.push(drawn);
+                }
+
+                if (topThree.length > 0) {
+                    const choice = await this._promptPlayerForChoice(game, player,
+                        'The Sorcerer reveals the top cards of the deck. Choose one to replace the Sorcerer.',
+                        topThree.map(c => ({ label: this._formatCardName(c), value: c.name.replace(/ /g, '_') }))
+                    );
+
+                    const sorcererIndex = player.flight.findIndex(c => c.effect === 'Sorcerer');
+                    if (sorcererIndex !== -1) {
+                         const discardedSorcerer = player.flight.splice(sorcererIndex, 1)[0];
+                         game.discardPile.push(discardedSorcerer);
+                    }
+
+                    const chosenCardName = choice ? choice.replace(/_/g, ' ') : null;
+                    const chosenCardIndex = topThree.findIndex(c => c.name === chosenCardName);
+
+                    if (chosenCardIndex !== -1) {
+                        const newCard = topThree.splice(chosenCardIndex, 1)[0];
+                        newCard.triggered = true;
+                        player.flight.push(newCard);
+                        game.log.push(`${player.user.username} replaces the Sorcerer with **${this._formatCardName(newCard)}**.`);
+                        await this._triggerCardPower(game, player, newCard, true);
+                    } else {
+                        // If no choice or invalid choice, just add the first card
+                        const newCard = topThree.shift();
+                        newCard.triggered = true;
+                        player.flight.push(newCard);
+                        game.log.push(`${player.user.username}'s Sorcerer becomes **${this._formatCardName(newCard)}**.`);
+                        await this._triggerCardPower(game, player, newCard, true);
+                    }
+
+                    // Put remaining cards into ante
+                    if (topThree.length > 0) {
+                        game.log.push(`The remaining ${topThree.length} revealed cards are added to the ante pile.`);
+                        for (const anteCard of topThree) {
+                            game.antePile.push({ player: null, card: anteCard }); // No owner for these
+                        }
+                    }
+                } else {
+                    game.log.push('The Sorcerer finds the deck is empty!');
+                }
+                break;
+            }
             default:
                 game.log.push(`...but the effect for **${card.effect}** is not implemented yet.`);
         }
@@ -1377,7 +1880,100 @@ class ThreeDragonAnteGame {
      * @private
      */
     _calculateFlightStrength(flight) {
-        return flight.reduce((sum, card) => sum + card.value, 0);
+        let strength = flight.reduce((sum, card) => sum + card.value, 0);
+
+        // Dracolich adds +2 strength for each evil dragon
+        if (flight.some(c => c.effect === 'Dracolich')) {
+            const evilDragons = flight.filter(c => c.alignment === 'evil');
+            strength += evilDragons.length * 2;
+        }
+
+        return strength;
+    }
+
+    /**
+     * Scores color and strength flights at the end of a gambit and distributes rewards.
+     * @param {object} game - The game state object.
+     * @returns {Promise<boolean>} A promise that resolves to true if the gambit was won by a color flight.
+     * @private
+     */
+    async _scoreFlights(game) {
+        game.log.push('**Flight Scoring:** Checking for color and strength flights.');
+        if (game.pot === 0) {
+            game.log.push('The pot is empty, no flight rewards to distribute.');
+            return false;
+        }
+
+        const colorFlightWinners = [];
+        const strengthFlightWinners = [];
+
+        for (const player of game.players) {
+            const flight = player.flight;
+            if (flight.length < 3) continue;
+
+            // Color Flight Check
+            const colors = {};
+            let wyrmpriests = flight.filter(c => c.effect === 'Wyrmpriest').length;
+            flight.forEach(card => {
+                if (card.effect === 'Tiamat') {
+                    ['Black', 'Blue', 'Green', 'Red', 'White'].forEach(c => colors[c] = (colors[c] || 0) + 1);
+                    return;
+                }
+                if (['Black', 'Blue', 'Green', 'Red', 'White', 'Brass', 'Bronze', 'Copper', 'Gold', 'Silver'].includes(card.effect)) {
+                    colors[card.effect] = (colors[card.effect] || 0) + 1;
+                }
+            });
+
+            let hasColorFlight = false;
+            for (const color in colors) {
+                if (colors[color] + wyrmpriests >= 3) {
+                    hasColorFlight = true;
+                    game.log.push(`**${player.user.username}** has a Color Flight of ${color} dragons!`);
+                    break;
+                }
+            }
+
+            if (hasColorFlight) {
+                colorFlightWinners.push(player);
+            }
+
+            // Strength Flight Check
+            const strengths = {};
+            flight.forEach(card => strengths[card.value] = (strengths[card.value] || 0) + 1);
+            const hasStrengthFlight = Object.values(strengths).some(count => count >= 3);
+            if (hasStrengthFlight) {
+                strengthFlightWinners.push(player);
+                const strengthValue = Object.keys(strengths).find(k => strengths[k] >= 3);
+                game.log.push(`**${player.user.username}** has a Strength Flight of strength ${strengthValue}!`);
+            }
+        }
+
+        // Color flights take precedence and win the whole pot
+        if (colorFlightWinners.length > 0) {
+            const share = Math.floor(game.pot / colorFlightWinners.length);
+            game.log.push(`**Color Flight Victory!** The pot of ${game.pot}gp is split ${colorFlightWinners.length} ways.`);
+            for (const winner of colorFlightWinners) {
+                winner.hoard += share;
+                game.log.push(`**${winner.user.username}** wins ${share}gp for their color flight!`);
+            }
+            game.pot = 0;
+            return true; // End the gambit scoring
+        }
+
+        // Strength flights win half the pot
+        if (strengthFlightWinners.length > 0) {
+            const strengthPot = Math.floor(game.pot / 2);
+            const share = Math.floor(strengthPot / strengthFlightWinners.length);
+            game.log.push(`**Strength Flight!** Half the pot (${strengthPot}gp) is split ${strengthFlightWinners.length} ways.`);
+             for (const winner of strengthFlightWinners) {
+                winner.hoard += share;
+                game.pot -= share;
+                game.log.push(`**${winner.user.username}** wins ${share}gp for their strength flight!`);
+            }
+        }
+
+        if (game.pot < 0) game.pot = 0;
+        return false;
     }
 
     /**
@@ -1389,6 +1985,17 @@ class ThreeDragonAnteGame {
         game.state = 'scoring';
         game.log.push('**SCORING PHASE:** The gambit has ended. Calculating results...');
 
+        const wonByColorFlight = await this._scoreFlights(game);
+        if (wonByColorFlight) {
+            const updatePromises = game.players.map(p => {
+                this._queuePlayerUpdate(game, p, 3);
+                return this._queueLogUpdate(game, p, 3);
+            });
+            await Promise.all(updatePromises);
+            await this._sendReadyCheck(game);
+            return;
+        }
+
         const strengths = game.players.map(p => ({ player: p, strength: this._calculateFlightStrength(p.flight) }));
         const druidInPlay = game.players.some(p => p.flight.some(c => c.effect === 'Druid'));
 
@@ -1398,15 +2005,44 @@ class ThreeDragonAnteGame {
             strengths.sort((a, b) => b.strength - a.strength);
         }
 
-        const winner = strengths[0].player;
-        const winnerStrength = strengths[0].strength;
+        const eligibleWinners = strengths.filter(s => {
+            const hasBahamut = s.player.flight.some(c => c.effect === 'Bahamut');
+            const hasTiamat = s.player.flight.some(c => c.effect === 'Tiamat');
+            const hasGood = s.player.flight.some(c => c.alignment === 'good');
+            const hasEvil = s.player.flight.some(c => c.alignment === 'evil');
 
-        if (winner) {
+            if (hasBahamut && hasEvil) {
+                game.log.push(`**${s.player.user.username}** cannot win the gambit due to Bahamut's rule.`);
+                return false;
+            }
+            if (hasTiamat && hasGood) {
+                game.log.push(`**${s.player.user.username}** cannot win the gambit due to Tiamat's rule.`);
+                return false;
+            }
+            return true;
+        });
+
+        if (eligibleWinners.length > 0) {
+            const winner = eligibleWinners[0].player;
+            const winnerStrength = eligibleWinners[0].strength;
             winner.hoard += game.pot;
             game.log.push(`**${winner.user.username}** wins the gambit with a strength of ${winnerStrength} and takes the pot of ${game.pot}gp!`);
             game.pot = 0;
+
+            // Handle Gold Monarch's gift
+            if (winner.flight.some(c => c.effect === 'GoldMonarch')) {
+                const giftAmount = 3 * game.scaleFactor;
+                game.log.push(`As a Gold Monarch, **${winner.user.username}** gifts ${giftAmount}gp to all other players.`);
+                for (const p of game.players) {
+                    if (p.id !== winner.id) {
+                        const actualGift = Math.min(giftAmount, winner.hoard);
+                        winner.hoard -= actualGift;
+                        p.hoard += actualGift;
+                    }
+                }
+            }
         } else {
-            game.log.push('There was no winner. The pot rolls over to the next gambit.');
+            game.log.push('There was no eligible winner. The pot rolls over to the next gambit.');
         }
 
         const updatePromises = game.players.map(p => {
@@ -1472,6 +2108,7 @@ class ThreeDragonAnteGame {
      */
     async startNextGambit(game) {
         game.log.push('All players are ready. Starting the next gambit...');
+        game.currentGambitAntes = [];
 
         for (const player of game.players) {
             try {

@@ -45,7 +45,7 @@ This directory contains modules that are specifically related to the Discord bot
 ### `src/tda/`
 This directory contains all the code for the Three-Dragon Ante card game.
 
--   **`ThreeDragonAnte.js`**: A large, self-contained class that manages the state, logic, and player interaction for the game.
+-   **`ThreeDragonAnteGame.js`**: A large, self-contained class that manages the state, logic, and player interaction for the game.
 
 ### `src/ui/`
 This directory contains files related to the Electron user interface.
