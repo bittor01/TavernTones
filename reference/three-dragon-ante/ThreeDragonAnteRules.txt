@@ -1,0 +1,734 @@
+INTRODUCTION
+Regdar considered his cards: two Gold Dragons, a weak Red Dragon, a Black Dragon,
+and the Thief. Winning the stakes outright looked unlikely. Better to play the two
+Gold Dragons and hope they could provide him with the third Gold to make a color
+flight. If that didn’t work, he could then finish with the Thief and at least come away
+with his ante. Decent odds.
+ He took another swig of ale and pretended to think about his ante card while he
+considered the other four players at the table. There was: a sweating merchant nearly
+out of gold, a young sailor nursing a headache from the night before, his comrade
+Lidda half-hidden behind her stacks of gold coins despite standing on a chair, and
+a bitter old guard captain who seemed to be a regular at the tavern. Two hopeless
+weaklings, one good friend who’d won most of the money, and one frustrated loser of a
+guard captain. Also good odds.
+ Regdar anted the Black Dragon and let loose a roaring laugh. He couldn’t
+tell which he was happiest about: the chance that he’d draw another Gold Dragon or
+the chance that the captain would try to take some of his losses back from Lidda.
+THREE-DRAGON ANTE™ is the card game played in taverns and gambling
+parlors throughout the DUNGEONS & DRAGONS®
+ world. The first part of this
+book explains the rules of the game. On page 18, you’ll find rules for adding
+THREE-DRAGON ANTE to your D&D®
+ campaign.
+OBJECT OF THE GAME
+Have the most gold in your hoard when one player runs out of gold and the
+game ends.
+CONTENTS
+ • 70 playing cards
+ • 2 reference cards
+ • 24-page rulebook
+, '
+'
+4
+THE CARDS
+Each THREE-DRAGON ANTE card represents a dragon or a mortal in the
+DUNGEONS & DRAGONS world. Each card has four key elements.
+GAME SETUP
+Each player starts the game with 50 gold coins in his or her hoard. Players’
+hoards remain visible throughout the game, and each player must reveal
+how much gold he or she has if asked.
+ One player shuffl es the deck, and each player draws a hand of six cards.
+Cards in hand should be kept hidden from the other players.
+Strength is a card’s value. The weakest
+cards have strength 1, and the strongest
+have strength 13.
+Name describes the dragon or mortal the
+card represents. For most dragons, the
+name also tells you what color the dragon is.
+Power is a card’s ability. A card’s power
+may take effect when it’s played.
+Type tells you what kind of card it is, whether
+good, evil, or mortal. All cards except mortal cards are dragons.
+GOLD
+In the D&D world, THREE-DRAGON ANTE is played with stacks of gold
+coins. If you don’t have any gold lying around, use poker chips or
+coins instead. To keep the stakes and players’ hoards manageable,
+use different colored chips or denominations of coins. The following
+combination of chips or coins works well:
+ 10 chips worth 1 gold each (or 10 pennies)
+ 4 chips worth 5 gold each (or 4 nickels)
+ 2 chips worth 10 gold each (or 2 dimes)
+Your
+Hoard
+Ante
+Cards
+Your Hand
+Your
+Flight
+The
+Stakes
+Discard Deck
+Pile
+5
+PLAYING THE GAME
+The game is played in a series of gambits. A gambit comprises three or more
+rounds, in which players take turns. During a gambit, each player puts gold
+into the stakes and then plays cards to see who will win the stakes. As each
+card is played, its power can affect the outcome of the gambit.
+ANTE
+At the start of a gambit, players must determine who will start play in the first
+round and what the stakes are. To do this, each player chooses one card in his
+or her hand and puts it face down in the center of the table. These are the
+ante cards. Once all players have chosen ante cards, reveal them. When an
+ante card is revealed, ignore its power text.
+ The ante cards determine which player will start play in the fi rst round.
+The player who revealed the ante card with the highest strength (ignoring
+any ante cards with the same strength as at least one other ante card) is the
+leader. The leader will take the fi rst turn in the fi rst round of the gambit.
+ The ante card with the highest strength (including any ante cards with the
+same strength as any other ante cards) determines how much gold players
+pay to the stakes. Each player takes that amount of gold from his or her hoard
+and puts it in the middle of the table. If, at any time, no gold remains in the
+6
+stakes, the gambit ends immediately (see Ending the Gambit, page 8).
+(For example, if Regdar and Tordek each reveal a strength-9 ante card and Lidda
+reveals a strength-7 ante card in a three-player game, Lidda becomes the leader in the
+fi rst round of the gambit. Then each pays 9 gold to the stakes.)
+ Ante cards remain face up in the center of the table for the rest of the
+gambit. They’re not part of the stakes.
+ALL TIED UP?
+When players reveal their ante cards at the start of the gambit, if each
+ante card ties with at least one other ante card, discard those ante cards.
+Then each player draws a card and chooses a new ante card from his
+or her hand.
+FLIGHTS
+The group of cards a player plays face up on the table is called a flight. Each
+round, when a player plays a card, it’s added to his or her flight and placed
+to the right of the last card he or she played. Flights stay face up on the table
+until the end of the gambit.
+ The player who has a flight of cards with the highest total strength has the
+strongest flight. A player with the lowest total has the weakest flight. More
+than one player can have the strongest or weakest flight.
+SEQUENCE OF PLAY
+To start each round, the leader takes the fi rst turn and plays a card to his or
+her flight. When the card is played, its power triggers and that player follows
+the instructions on the card. (For how powers work, see Expanded Power
+Explanations, page 12.)
+ Then, the player to the leader’s left takes the next turn. That player plays
+a card to his or her flight and checks to see if the card’s power triggers,
+following the directions on the card. Play continues to the left until every
+player has taken a turn, then the round ends.
+ The player who has the card with the highest strength (ignoring tied
+cards) becomes the leader for the next round. If all cards played in a round
+tie with at least one other card played in that round, the current round’s
+leader is also the leader for the next round.
+7
+ The gambit usually ends after three rounds, with victory going to the
+player with the strongest flight. If any players tie for the strongest flight,
+keep playing rounds until someone wins the gambit (see Ending the
+Gambit, page 8).
+TRIGGERING POWERS
+When the leader plays a card, its power always triggers. On other players’
+turns, a card’s power triggers only if the card’s strength is less than or equal
+to the strength of the card the previous player played this round.
+(For example, if Lidda played a strength-5 card, the power of Tordek’s card will
+only trigger if it’s strength 5 or less.)
+ If a power affects more than one player, the player whose turn it is follows
+the directions on the card. Then the player to his or her left does the same,
+and so on, until all affected players have done so.
+ACQUIRING NEW CARDS
+There are three ways to get more cards in the game.
+• Players draw two cards at the end of each gambit
+ (see Ending the Gambit, page 8).
+• Players gain cards when certain card powers trigger.
+• Players buy cards.
+ At the start of a player’s turn, if that player has only one card in hand,
+he or she must buy new cards. During any turn, if any player has no cards in
+hand, that player must immediately buy new cards.
+ To buy new cards, a player first discards the top card of the deck and pays
+that card’s strength in gold to the stakes. Then that player draws cards from
+the deck until his or her hand contains four cards.
+MAXIMUM HAND SIZE
+A player can’t have more than ten cards in his or her hand at any time. As
+soon as a player has ten cards in his or her hand, that player can no longer
+draw cards from the deck or take them from the ante or from other players.
+If a triggered power would allow this, that player ignores that part of the
+power once he or she reaches ten cards.
+(For example, if Regdar has nine cards in his hand and a triggered power makes
+him draw three cards, he only draws one card.)
+, '
+'
+8
+ At the end of the gambit, a player with nine cards draws only one card;
+a player with ten draws none (see Ending the Gambit, below).
+THE DECK
+When the deck runs out of cards, shuffl e the discard pile to form a new deck.
+Do this as often as needed until the end of the game.
+ENDING THE GAMBIT
+The gambit ends when, after three rounds of play, only one player has the
+strongest flight at the end of a round (or the weakest flight if the Druid was
+played in this gambit). Although it happens rarely, any time no gold remains
+in the stakes the gambit ends immediately.
+ A round that ends with two or more players tied for the strongest flight
+requires the gambit to continue for another round.
+ When a gambit ends, the player with the strongest flight wins the
+stakes—that player takes all the gold in the stakes and adds it to his or her
+hoard. Each player discards his or her flight and ante cards (but not cards in
+hand). Then each player draws two cards (without exceeding the ten-card
+limit). Keep playing gambits until someone wins the game.
+WINNING THE GAME
+The game ends when at least one player’s hoard is empty at the end of any
+gambit. The winner is the player with the most gold.
+OPTIONAL RULES
+If all players agree, you can try one or more of these optional rules,
+or create your own.
+• The game ends when only a set number of players—such as
+ two—remain in the game.
+• Play until one player has at least a set amount of gold at the end
+ of a gambit.
+• Play a set number of gambits—such as fi ve or ten—for a shorter game.
+• Set a time limit for the game, then play one fi nal gambit after
+ reaching that time limit.
+• Start with a different amount of gold.
+9
+ADDITIONAL RULES
+DRAGON GOD ABILITIES
+Each of the dragon god cards, Bahamut and Tiamat, has a unique ability
+(in red) that’s in effect as long as it’s in a flight. Dragon god abilities are not
+powers, so they’re in effect whether or not the card has a higher strength
+than the card the previous player played. (Bahamut also has a power that
+triggers normally.) Cards that copy other cards’ powers ignore dragon
+god abilities.
+GOOD OR EVIL?
+If you play only evil dragons, you’ll eventually run out of cards and
+need to buy new ones. If you play only good dragons, you’ll avoid
+needing to buy new cards—but you won’t pick up as much gold
+from plundering the stakes.
+SPECIAL FLIGHTS
+Players can earn extra gold by having three or more similar dragons in a
+flight. A color flight has three dragons of the same color. A strength flight
+has three dragons of the same strength. A player completes a special flight
+on the turn the third matching dragon is played. The player follows the
+directions of all powers that trigger on that turn, then checks to see if he or
+she has completed a special flight.
+ When a player completes a color flight, each opponent pays that player
+gold equal to the strength of the second-strongest dragon in the flight.
+(For example, if Tordek has a color flight of three Gold Dragons—of strengths 2, 6,
+and 11—Lidda and Regdar each pay him 6 gold.)
+ When a player completes a strength flight, that player steals gold equal to
+the strength of one of those dragons from the stakes. That player also takes
+as many ante cards from the center of the table as he or she can and adds
+them to his or her hand (up to the hand-size limit of ten).
+(For example, if Lidda has eight cards in her hand and completes a strength flight
+of three strength-5 dragons, she steals 5 gold from the stakes and adds any two of the
+remaining ante cards from the center of the table to her hand.)
+10
+ Most often, special flights will happen when a player plays the third
+dragon of the same color or strength. Triggered powers, however, can cause
+the cards in a player’s flight to change. When this change completes a special
+flight, that player collects gold for that special flight just as if he or she had
+played those dragons.
+(For example, if Regdar has two Silver Dragons and he plays a Copper Dragon
+whose power triggers, he’ll earn a color flight if the top card of the deck is a
+Silver Dragon.)
+ Very rarely, gambits go on for more than three rounds (see Ending the
+Gambit, page 8). In a gambit that lasts fi ve or more rounds, it’s possible
+for one player to complete a color flight and strength flight—even at the
+same time!
+(For example, Regdar’s flight includes a strength-3 Silver Dragon, a strength-8
+Silver Dragon, a strength-6 Bronze Dragon, and a strength-6 White Dragon. If
+Regdar plays a strength-6 Silver Dragon as his fi fth card, he’ll complete both a color
+flight—three Silver Dragons—and a strength flight—three strength-6 dragons—in
+the same turn.)
+ If a player completes both a color flight and a strength flight during the
+same turn, he or she collects gold for completing the color flight fi rst. Each
+player can’t complete more than one of each color flight and one of each
+strength flight in a gambit.
+HOW TO GET RICH
+There are three ways to increase your hoard.
+• Win Gambits: Play high-strength cards, make the strongest flight,
+ and win the stakes. If you don’t have high-strength cards, play good
+ dragons to get more cards into your hand. The more cards you have,
+ the better your chances are of getting stronger cards.
+• Steal Gold: Play evil dragons to steal gold from the stakes and from
+ other players.
+• Play Special Flights: Play three dragons of the same color or the
+ same strength to earn gold from your opponents or the stakes.
+11
+RUNNING OUT OF GOLD
+If a player runs out of gold in the middle of a gambit, he or she continues to
+play. If his or her hoard is empty at the end of a gambit, that player is out of
+the game and the game ends.
+ If a player must pay an opponent or the stakes more gold than he or she
+has, that player goes into debt. Whenever a player owes more gold than
+remains in his or her hoard, that player pays as much gold as he or she can
+and goes into debt for the remaining amount. Keep track of the amount of
+each player’s debts, the order in which a player’s debts were incurred, and to
+whom each debt is owed.
+ As soon as a player in debt earns any gold, that player must use it to repay
+as much of his or her oldest debt as possible. After a player’s oldest debt is
+fully repaid, any gold that player has earned goes toward his or her secondoldest debt, and so on.
+ The winner of the gambit ignores any debts he or she owes to the stakes.
+If that player has no gold in his or her hoard after repaying all other debts
+owed (or can’t repay them), he or she is out of the game and the game ends.
+BOOKKEEPING
+If you’re keeping track of each player’s gold at the end of a game or
+using optional rules that allow the game to continue after a player is
+knocked out, you might run into trouble when a player owes a debt he
+or she can’t repay. A debt owed to you by a knocked-out player doesn’t
+count toward the amount of gold in your hoard.
+ Characters in the D&D world, however, would likely ask for an IOU.
+12
+EXPANDED POWER EXPLANATIONS
+If you’re not sure what happens when a specifi c card’s power triggers, you
+can look it up here. Keep in mind that the leader’s power always triggers, and
+that each other card’s power triggers only if the card’s strength is less than or
+equal to the strength of the last card played.
+THE ARCHMAGE
+Pay 1 gold to the stakes. Copy the power of an ante card.
+ Follow the directions of the chosen ante card’s power (regardless of that
+DECK LIST
+Card Name Strength
+The Archmage .........9
+Bahamut ................. 13
+Black Dragon ...........1
+ .................2
+ .................3
+ .................5
+ .................7
+ .................9
+Blue Dragon .............1
+ .................2
+ .................4
+ .................7
+ .................9
+ .............. 11
+Brass Dragon ............1
+ .................2
+ .................4
+ .................5
+ .................7
+ .................9
+Bronze Dragon ........1
+ .................3
+ .................6
+ .................7
+ .................9
+ .............. 11
+Copper Dragon .......1
+ .................3
+ .................5
+ .................7
+ .................8
+ .............. 10
+Dracolich ............... 10
+The Dragonslayer ...8
+The Druid .................6
+The Fool ....................3
+Gold Dragon ............2
+ .................4
+ .................6
+ .................9
+ .............. 11
+ .............. 13
+Green Dragon ..........1
+ .................2
+ .................4
+ .................6
+ .................8
+ .............. 10
+The Priest ..................5
+The Princess .............4
+Red Dragon ..............2
+ .................3
+ .................5
+ .................8
+ .............. 10
+ .............. 12
+Silver Dragon ...........2
+ .................3
+ .................6
+ .................8
+ .............. 10
+ .............. 12
+The Thief ...................7
+Tiamat ..................... 13
+White Dragon .........1
+ .................2
+ .................3
+ .................4
+ .................6
+ .................8
+Card Name Strength Card Name Strength
+13
+card’s strength) as if it were the Archmage’s power. The Archmage’s strength,
+name, and type remain the same. This power ignores the dragon god abilities
+of Bahamut and Tiamat (but it does copy Bahamut’s power).
+ When this power copies Brass Dragon, the Dragonslayer, or Green
+Dragon’s power, use the Archmage’s strength of 9 to determine whether a
+dragon is weaker or stronger than the Archmage.
+ If no ante cards remain, you still pay 1 gold to the stakes but the second
+part of the Archmage’s power has no effect.
+BAHAMUT
+Each other player with both good and evil dragons in the same flight pays you 10 gold.
+Dragon God—As long as you have Bahamut and an evil dragon in your flight, you
+can’t win the gambit.
+ Bahamut’s power triggers normally. Bahamut’s dragon god ability is always
+in effect.
+BLACK DRAGON
+Steal 2 gold from the stakes.
+ If only 1 gold remains in the stakes, steal it. Emptying the stakes ends the
+gambit (see Ending the Gambit, page 8).
+BLUE DRAGON
+Choose one: Steal 1 gold from the stakes for each evil dragon in your flight; or each
+opponent pays that much gold to the stakes.
+ Include this dragon when counting how many evil dragons you have in
+your flight. You choose which of this power’s effects to apply.
+ If the stakes have fewer gold than you have evil dragons, steal all
+remaining gold in the stakes. Emptying the stakes ends the gambit
+(see Ending the Gambit, page 8).
+BRASS DRAGON
+The opponent with the strongest flight chooses either to give you a stronger good
+dragon from his or her hand or to pay you 5 gold.
+ This power ignores the strength of your flight. If two or more opponents
+tie for the strongest flight, you choose which of those players this power
+affects. That player chooses whether he or she gives you a dragon or 5 gold.
+, '
+'
+14
+ If the opponent gives you a dragon, reveal it so all players can see that it’s a
+stronger good dragon.
+ If the player chooses to give you 5 gold but doesn’t have that much, he or
+she may go into debt as necessary to pay you.
+BRONZE DRAGON
+Put the two weakest ante cards into your hand.
+ If only one ante card remains, put it into your hand if you can.
+ When this power triggers, if you have nine cards in your hand, choose the
+two weakest ante cards, add one to your hand, then return the other to the
+ante. If you have ten cards, this power has no effect.
+ If any cards tie for the two weakest ante cards, choose any one of the
+weakest cards, then choose any one of the remaining weakest cards.
+COPPER DRAGON
+Discard this card and replace it with the top card of the deck. That card’s power
+triggers regardless of its strength.
+ When this power triggers, ignore Copper Dragon’s strength; it’s not part
+of your flight and doesn’t affect whether or not the next player’s power
+triggers. Instead, the card from the deck is considered the card you played
+this turn—use it to determine the total strength of your flight and whether
+or not the next player’s card’s power triggers.
+ If the card from the deck is a Copper Dragon, its power triggers and it’s
+replaced by the new top card of the deck.
+ Copper Dragon doesn’t complete a color flight or strength flight before
+it’s discarded. At the end of your turn, if any new cards complete a color
+flight or strength flight you haven’t already collected gold for in this gambit,
+collect gold for that special flight.
+DRACOLICH
+Copy the power of an evil dragon in any flight.
+ Follow the directions of the chosen evil dragon’s power (regardless of that
+card’s strength) as if it were Dracolich’s power. Dracolich’s strength, name,
+and type remain the same.
+ When this power copies Green Dragon’s power, the opponent to your left
+must give you an evil dragon with strength 9 or less or pay you 5 gold.
+<
+'
+. ,
+'
+' .
+15
+ This power ignores Tiamat’s dragon god ability. Tiamat has no power
+to copy.
+ If there are no other evil dragons in any flight, Dracolich’s power has
+no effect.
+THE DRAGONSLAYER
+Pay 1 gold to the stakes. Discard a weaker dragon from any flight.
+ Discard a weaker dragon—strength 7 or less—if one is in any flight,
+even your own.
+ A player whose dragon was discarded by this power will have one less
+dragon in his or her flight during this gambit. If that player played the
+discarded dragon this round, ignore that player when comparing card
+strengths to determine the next round’s leader.
+ If there are no weaker dragons in any flight, you still pay 1 gold to the
+stakes but the second part of the Dragonslayer’s power has no effect.
+THE DRUID
+Pay 1 gold to the stakes. The player with the weakest flight wins the gambit instead
+of the player with the strongest flight.
+ If two flights tie for the weakest flight after three rounds, play additional
+rounds until only one player’s flight is the weakest at the end of a round.
+THE FOOL
+Pay 1 gold to the stakes. Draw a card for each player with a flight stronger than yours.
+ Include this mortal when determining the strength of your flight.
+ If no opponent has a flight stronger than yours, pay 1 gold to the stakes but
+don’t draw any cards. (The second part of the power has no effect in that case.)
+ You can draw cards only until you have ten cards in your hand
+(see Maximum Hand Size, page 7).
+GREEN DRAGON
+The opponent to your left chooses either to give you a weaker evil dragon from his or
+her hand or to pay you 5 gold.
+ If the opponent gives you a dragon, reveal it so all players can see that it’s a
+weaker evil dragon.
+ If the player chooses to give you 5 gold but doesn’t have that much, he or
+, '
+'
+16
+she may go into debt as necessary to pay you.
+ Since there is no dragon weaker than the strength-1 Green Dragon, when
+its power triggers your opponent has no choice but to pay you 5 gold.
+GOLD DRAGON
+Draw a card for each good dragon in your flight.
+ Include this dragon when counting how many good dragons you have
+in your flight.
+ You can draw cards only until you have ten cards in your hand
+(see Maximum Hand Size, page 7).
+THE PRIEST
+Pay 1 gold to the stakes. You are the leader for the next round of this gambit instead
+of any other player.
+ This power affects only the next round of the gambit it’s played in. If this
+power triggers during the last round of a gambit, you still pay 1 gold to the
+stakes but the second part of the Priest’s power has no effect.
+ If this power triggers more than once in the same round, the last player to
+trigger it is the leader in the next round of the gambit.
+THE PRINCESS
+Pay 1 gold to the stakes. The power of each good dragon in your flight triggers.
+ You choose the order in which the powers of your good dragons trigger.
+Do so carefully, because it can make a difference. This power makes the
+powers of all your good dragons trigger, regardless of their strength and
+whether or not they’ve already triggered in this gambit. Follow the
+instructions for each power one at a time until you’ve gone through
+all of them.
+ When this power triggers Brass Dragon’s power, if you have ten cards in
+your hand, the opponent may choose to give you a stronger good dragon. If
+he or she does, that player reveals the card and keeps it—you get nothing!
+ When this power triggers Copper Dragon’s power, replace Copper
+Dragon with the top card of the deck and trigger that card’s power as well—
+regardless of its strength. The Princess’s power doesn’t also trigger the power
+of a good dragon that replaces Copper Dragon.
+ The Princess is the card you played this turn: The next player to take a
+<
+'
+. ,
+'
+' .
+17
+turn this round uses the Princess’s strength to determine whether or not
+his or her card’s power triggers. At the end of the round, if playing another
+round in the gambit, use the Princess’s strength when determining the
+strongest card played in the round.
+ If you have no good dragons in your flight, you still pay 1 gold to the
+stakes but the second part of the Princess’s power has no effect.
+RED DRAGON
+The opponent with the strongest flight pays you 1 gold. Take a random card from that
+player’s hand.
+ This power ignores the strength of your flight.
+ You don’t get to see your opponent’s hand before choosing a card. After
+you’ve chosen a card at random, the opponent may see it before you add it to
+your hand. Other players don’t see the card.
+SILVER DRAGON
+Each player with at least one good dragon in his or her flight draws a card.
+ Include this dragon when determining whether or not you have at least
+one good dragon in your flight.
+ The player who triggered this power draws first, then the player to his or
+her left (if that player has a good dragon), and so on, until all players with
+good dragons in their flights have drawn a card.
+ A player with ten cards in his or her hand ignores this power since that
+player can’t draw any more cards (see Maximum Hand Size, page 7).
+THE THIEF
+Steal 7 gold from the stakes. Discard a card from your hand.
+ When this power triggers, steal gold from the stakes first, then discard
+a card.
+ If less than 7 gold remain in the stakes, take all remaining gold in the
+stakes and discard a card from your hand. Emptying the stakes ends the
+gambit (see Ending the Gambit, page 8).
+ If this power causes you to discard the last card in your hand and the
+gambit ends in the same turn, don’t buy cards. You’ll draw two cards at the
+end of the gambit.
+, '
+'
+18
+TIAMAT
+Dragon God—Tiamat counts as a Black, Blue, Green, Red, and White Dragon. As
+long as you have Tiamat and a good dragon in your flight, you can’t win the gambit.
+ Tiamat has no power. Its dragon god ability is always in effect.
+ Tiamat can be used to complete any color flights that match one of its
+five colors.
+WHITE DRAGON
+If any flight includes a mortal, steal 3 gold from the stakes.
+ If no flights include a mortal, White Dragon’s power has no effect.
+THREE-DRAGON ANTE IN YOUR
+D&D CAMPAIGN
+The origins of THREE-DRAGON ANTE aren’t clear. Some scholars believe
+the earliest decks were influenced by dwarven drinking games. Dwarves,
+normally proud of their inventions, deny such claims. They say it’s a human
+game, even if it seems dwarven in origin.
+ No race is eager to claim the game’s creation because dragons, as a whole,
+dislike it. Dragons’ attitudes toward the game vary from contempt to mild
+amusement. Rumor has it that good-natured dragons—in human form—
+sometimes seek out games for a variety of reasons. But in most cases, dragons
+pretend the game doesn’t exist. Most everyone who deals with dragons goes
+along with that conceit. Many say that the one thing you’ll never find in a
+dragon’s hoard is a THREE-DRAGON ANTE deck.
+ Whether or not they take credit for inventing the game, humans make
+most of the decks in circulation, and theirs is the race most likely to play
+it. Elves find the game a bit crude but will play in the company of human
+friends. Half-elves, on the other hand—even those raised among elves—
+usually love the game. Dwarves like to play but hate to lose—anyone playing
+with a dwarf would be wise to buy a round or two of drinks. Halflings love
+the game and often have appropriately sized decks; for them, playing with
+humans means playing with cards that are too big. Half-orcs find the game’s
+frequent reversals of fortune capricious; they tend to prefer games of pure
+luck or brute strength.
+<
+'
+. ,
+'
+' .
+19
+THE VERNACULAR
+Colloquially, many refer to the game by the type of coin players use.
+Peasants play with copper and sometimes refer to the game as copper
+dragon, three-copper dragon, or copper ante. Merchants and crafters play
+with silver coins, while most adventurers play with gold coins and might
+speak of playing gold dragon, three-gold dragon, or gold ante. Nobles, truly
+wealthy merchants, and reckless adventurers might refer to the game as
+three-platinum dragon or platinum ante.
+ Below are some other slang terms:
+fat leader: A player punished several times in a row with Red Dragons or
+Brass Dragons after taking the lead.
+inviting the bronze: Triggering the first Bronze Dragon’s power in a
+gambit, leaving stronger ante cards accessible for the next Bronze Dragon’s
+power that triggers.
+playing like a dwarf: Handing over dragon cards when opponents use
+Green Dragons or Brass Dragons on you, because you’re unwilling to part
+with your gold.
+playing the white team: Playing White Dragons after you played a
+mortal earlier in the hand.
+ selfish silver or selfish and silver: A player who plays a Silver Dragon
+when he or she is the only player who’ll benefit. “You had your chance,” is
+the traditional response to an irate opponent who has already played a card.
+THE STAKES & VICTORY
+When played in taverns and dungeon antechambers throughout the
+DUNGEONS & DRAGONS world, THREE-DRAGON ANTE often includes an
+additional prize awarded to the winner of the game. Adventurers who can’t
+agree on how to divide treasure might play a few gambits; the winner keeps
+his or her winnings and decides who gets an item when the party can’t agree
+who should get it.
+SPECIAL ABILITIES
+Try these three options if you’d like your DUNGEONS & DRAGONS characters
+to play a THREE-DRAGON ANTE game.
+• Use only the normal rules. Each player roleplays his or her character’s
+reactions. This option is best for focusing on your characters’ personalities
+, '
+'
+20
+without worrying about how their skills affect the game.
+• Use the normal rules, plus each character uses one special ability from
+the list of D&D skills that follows (if eligible). Before the start of a game,
+choose one skill for each character in which he or she has at least 5 ranks.
+During the game, that character can use the skill’s associated special ability.
+This option allows the characters’ skills to influence the game without
+overshadowing the players’ own abilities.
+• Use the normal rules, plus each character uses all special abilities from
+the list of skills below in which he or she has 5 or more ranks. Of these three
+options, this reflects characters’ abilities the most. Dungeon Masters who
+want to simulate pitting skilled characters against each other should use
+this option.
+BLUFF
+“One, two . . . hey, barkeep, more drinks over here . . . four, five.”
+ Whenever you pay 2 or more gold to another player, pay 1 fewer gold.
+CONCENTRATION
+“When things get tense, I’m at my best.”
+ Whenever you ante, unless another player’s hoard has less gold than
+yours, pay 1 fewer gold to the stakes.
+DIPLOMACY
+“This could work out for everyone.”
+ Before your turn this round, if you are the leader, you may choose another
+player to be the leader this round instead. (If you weren’t the leader when
+the round started, you can’t use this special ability.)
+INTIMIDATE
+“Don’t even think about it.”
+ As long as you and any other player tie for the strongest flight, you can’t
+be chosen as the opponent with the strongest flight.
+PROFESSION (GAMBLER)
+“I’m just lucky sometimes.”
+ After you discard the top card of the deck while buying cards, you may
+<
+'
+. ,
+'
+' .
+21
+discard a second card from the top of the deck. If you do, pay the second
+card’s strength in gold to the stakes instead of the first card’s strength.
+(You can’t choose to pay the first card’s strength in gold if you use this
+special ability.)
+SENSE MOTIVE
+“You can hide your cards but not your face.”
+ When an opponent plays his or her second card, if both cards are the same
+color dragon, you may look at his or her hand before any powers trigger.
+(If an opponent plays Tiamat and a Black, Blue, Green, Red, or White
+Dragon, you may use this special ability to look at that opponent’s hand.)
+SLEIGHT OF HAND
+“If no one sees it, it’s not cheating.”
+ After you steal gold from the stakes with a card’s power or a strength
+flight, if the stakes have 2 or more gold, you may steal 1 gold from the stakes.
+WILD CARD
+“Trust me, I know exactly what I’m talking about.”
+ This special ability doesn’t correlate with a skill. Instead, any dragon
+(or half-dragon, at the DM’s discretion) can select it.
+ Once each game, if you played a mortal this turn, you may count the
+mortal as the third dragon of any color only to complete a color flight.
+GLOSSARY
+ante: The cards players reveal at the start of each gambit used to set the
+stakes and determine the leader for the first round. Can also mean “pay gold
+to the stakes at the start of the gambit.”
+color: A dragon’s name includes the dragon’s color. The dragon colors are
+Black, Blue, Brass, Bronze, Copper, Gold, Green, Red, Silver, and White.
+color flight: A flight with three or more dragons of the same color.
+debt: A player goes into debt when that player owes gold he or she can’t pay.
+Players repay as much of their oldest debt as possible until it’s fully repaid, in
+the order debts were incurred.
+, '
+'
+22
+discard: Put a card from your flight or hand into the discard pile.
+dragon: A dragon card. Dragons are either good or evil. Mortal cards are
+not dragons.
+flight: The face-up cards in front of each player. At the end of each gambit,
+the player with the strongest flight wins the stakes.
+gambit: A series of at least three rounds to determine who wins the stakes.
+A gambit can’t end as long as there’s gold in the stakes and any flights tie for
+the strongest flight.
+hand: The cards held by a player. Other players don’t see the cards in a
+player’s hand. A player’s hand can never have more than ten cards.
+hoard: A player’s gold. When a player’s hoard is empty, that player must go
+into debt to pay any gold owed. If a player’s hoard is empty at the end of a
+gambit, that player is out of the game and the game ends.
+leader: The player who takes the first turn in a round. The strongest card
+played each round (ignoring tied cards) determines the leader for the next
+round of the gambit.
+mortal: A card that’s not a dragon card.
+pay: Put gold into the stakes or give it to another player.
+play: Put a card from your hand into your flight on your turn.
+power: A card’s ability. When the leader plays a card, its power always
+triggers. Other players’ cards’ powers trigger unless such a card is stronger
+than the previous card played that round.
+round: Each player takes one turn in a round.
+special ability: When playing with DUNGEONS & DRAGONS characters, an
+ability granted to a player because of his or her character’s skills.
+stakes: The gold in the center of the table. At the end of each gambit, the
+player with the strongest flight wins the stakes. Emptying the stakes ends
+the gambit immediately.
+steal: Take gold from the stakes.
+strength: A card’s value.
+<
+'
+. ,
+'
+' .
+23
+strength flight: A flight with three or more dragons of the same strength.
+strongest: A card or flight with the highest strength value.
+trigger: Follow the directions of a card’s power.
+turn: A player plays a card from his or her hand into that player’s flight.
+The card’s power might trigger.
+type: The basic card types are good, evil, and mortal.
+weakest: A card or flight with the lowest strength value
