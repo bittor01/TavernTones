@@ -13,7 +13,7 @@ The Log Embed: Title: Game Log Content: [Turn 0] Game Started. Initial buy-in: 5
 
 The Opponent Embeds:
 
-(A separate embed is created for each opponent. This example is for Player B's view of Player C). Title: Player C Fields: Hoard: 5100gp Hand: ������ (6) Flight: (empty) The Ante Area Embed:
+(A separate embed is created for each opponent. This example is for Player B's view of Player C). Title: Player C Fields: Hoard: 5100gp Hand: 🃏🃏🃏🃏🃏🃏⬛⬛⬛⬛ (6) Flight: (empty) The Ante Area Embed:
 
 Title: Ante Area Content: The drafting phase is active. Anteing will begin shortly. The Player's Flight Embed:
 
