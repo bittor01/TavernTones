@@ -3,6 +3,10 @@ const path = require('path');
 const crypto = require('crypto');
 const TDAUpdateQueue = require('./TDAUpdateQueue.js');
 
+/**
+ * Defines all possible cards in a Three-Dragon Ante game, including standard and optional cards.
+ * @type {Array<object>}
+ */
 const DECK_DEFINITION = [
   { name: "Black Dragon", optional: false, value: 1, image: "1 black.jpg", effect: "Black", alignment: "evil" },
   { name: "Blue Dragon", optional: false, value: 1, image: "1 blue.jpg", effect: "Blue", alignment: "evil" },
@@ -95,6 +99,11 @@ const DECK_DEFINITION = [
   { name: "The Princess", optional: true, value: 4, image: "Princess.jpg", effect: "Princess", alignment: "mortal" },
   { name: "The Sorcerer", optional: true, value: 8, image: "Sorcerer.jpg", effect: "Sorcerer", alignment: "mortal" },
 ];
+
+/**
+ * Provides the text descriptions for each card's special effect.
+ * @type {Array<object>}
+ */
 const CARD_EFFECTS = [
   { name: "Black", alignment: "evil", text: "Steal 3 gold from the stakes" },
   { name: "Blue", alignment: "evil", text: "Choose one: Each opponent gives you 1 gold; OR each opponent adds 1 gold to the stakes for each card in your flight" },
@@ -128,6 +137,10 @@ const CARD_EFFECTS = [
   { name: "Sorcerer", alignment: "mortal", text: "Reveal the top three cards of the deck. Discard this card and replace it with one of the revealed cards. that card's power triggers. Put the other two revealed cards into the ante" },
 ];
 
+/**
+ * Defines the special abilities players can choose at the start of a game.
+ * @type {Array<object>}
+ */
 const SPECIAL_ABILITIES = [
     { label: 'Bluff (Deception)', value: 'bluff', description: 'Pay 1 fewer gold when paying 2+ to a player.' },
     { label: 'Concentration', value: 'concentration', description: 'Pay 1 fewer gold to the stakes when you ante.' },
@@ -139,14 +152,46 @@ const SPECIAL_ABILITIES = [
     { label: 'Wild Card', value: 'wild_card', description: 'Once per game, count a mortal as a dragon for a color flight.' },
 ];
 
+/**
+ * Manages the state and logic for a game of Three-Dragon Ante.
+ * An instance of this class is created for each game, handling everything from the lobby
+ * to game phases, player actions, and communication via Discord.
+ */
 class ThreeDragonAnteGame {
+    /**
+     * Creates an instance of the ThreeDragonAnteGame manager.
+     * @param {Client} client - The Discord.js client instance.
+     * @param {WorkerService} workerService - A service to offload tasks like image rendering to a worker thread.
+     */
     constructor(client, workerService) {
+        /**
+         * The Discord.js client.
+         * @type {Client}
+         */
         this.client = client;
+        /**
+         * The service for running tasks in a worker thread.
+         * @type {WorkerService}
+         */
         this.workerService = workerService;
+        /**
+         * A map of active games, with the channel ID as the key and the game object as the value.
+         * @type {Map<string, object>}
+         */
         this.activeGames = new Map();
+        /**
+         * The update queue for managing Discord message edits.
+         * @type {TDAUpdateQueue}
+         */
         this.updateQueue = new TDAUpdateQueue();
     }
 
+    /**
+     * Handles the initial command to start a new game.
+     * It creates a new game object, sets up the lobby, and listens for player interactions.
+     * @param {Message} message - The Discord message that triggered the command.
+     * @returns {Promise<Message|void>}
+     */
     async handleCommand(message) {
         if (this.activeGames.has(message.channel.id)) {
             return message.channel.send({ content: 'A game is already in progress in this channel.' });
@@ -203,6 +248,13 @@ class ThreeDragonAnteGame {
         });
     }
 
+    /**
+     * Handles interactions within the game lobby (join, leave, select ability, start game).
+     * @param {Interaction} i - The interaction object from the message component collector.
+     * @param {object} game - The game state object.
+     * @param {MessageComponentCollector} collector - The collector for lobby interactions.
+     * @returns {Promise<void>}
+     */
     async handleLobbyInteraction(i, game, collector) {
         const isPlayerInGame = game.players.some(p => p.id === i.user.id);
 
@@ -259,6 +311,11 @@ class ThreeDragonAnteGame {
         await i.update({ embeds: [this._generateLobbyEmbed(game)], components: this._buildLobbyComponents(game) });
     }
 
+    /**
+     * Routes button interactions from DMs to the appropriate handler function.
+     * @param {Interaction} interaction - The button interaction from a player's DM.
+     * @returns {Promise<void>}
+     */
     async handleGameInteraction(interaction) {
         const customId = interaction.customId;
         const [prefix, action, channelId, ...params] = customId.split('_');
@@ -291,6 +348,11 @@ class ThreeDragonAnteGame {
         }
     }
 
+    /**
+     * Handles the submission of the buy-in modal, setting the initial gold for all players.
+     * @param {Interaction} interaction - The modal submit interaction.
+     * @returns {Promise<void>}
+     */
     async handleBuyInModalSubmit(interaction) {
         const channelId = interaction.customId.split('_')[4];
         const game = this.activeGames.get(channelId);
@@ -322,6 +384,13 @@ class ThreeDragonAnteGame {
     }
 
     // HELPER FUNCTIONS
+
+    /**
+     * Gets the appropriate emoji for a card's alignment.
+     * @param {object} card - The card object.
+     * @returns {string} The emoji string.
+     * @private
+     */
     _getCardAlignmentEmoji(card) {
         switch (card.alignment) {
             case 'good': return '😇';
@@ -331,10 +400,21 @@ class ThreeDragonAnteGame {
         }
     }
 
+    /**
+     * Formats a card's name with its alignment emoji and strength.
+     * @param {object} card - The card object.
+     * @returns {string} The formatted card name.
+     * @private
+     */
     _formatCardName(card) {
         return `${this._getCardAlignmentEmoji(card)} (Str ${card.value}) ${card.name}`;
     }
 
+    /**
+     * Sorts a player's hand by alignment (good, evil, mortal) and then by strength descending.
+     * @param {Array<object>} hand - The player's hand to sort.
+     * @private
+     */
     _sortHand(hand) {
         const alignmentOrder = { 'good': 1, 'evil': 2, 'mortal': 3 };
         hand.sort((a, b) => {
@@ -347,6 +427,11 @@ class ThreeDragonAnteGame {
         });
     }
 
+    /**
+     * Shuffles an array in place using the Fisher-Yates algorithm.
+     * @param {Array<any>} array - The array to shuffle.
+     * @private
+     */
     _shuffle(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -354,6 +439,12 @@ class ThreeDragonAnteGame {
         }
     }
 
+    /**
+     * Deals a single card from the deck. If the deck is empty, shuffles the discard pile to create a new deck.
+     * @param {object} game - The game state object.
+     * @returns {object|null} The card object that was dealt, or null if no cards are available.
+     * @private
+     */
     _dealCard(game) {
         if (game.deck.length === 0) {
             if (game.discardPile.length === 0) {
@@ -369,6 +460,13 @@ class ThreeDragonAnteGame {
     }
 
     // EMBED CREATION
+
+    /**
+     * Generates the embed for the game lobby.
+     * @param {object} game - The game state object.
+     * @returns {EmbedBuilder} The generated embed.
+     * @private
+     */
     _generateLobbyEmbed(game) {
         const hostUser = game.players.find(p => p.id === game.hostId)?.user;
         const embed = new EmbedBuilder()
@@ -394,6 +492,13 @@ class ThreeDragonAnteGame {
         return embed;
     }
 
+    /**
+     * Builds the action rows with buttons and select menus for the lobby.
+     * @param {object} game - The game state object.
+     * @param {boolean} [disabled=false] - Whether the components should be disabled.
+     * @returns {Array<ActionRowBuilder>} An array of action rows.
+     * @private
+     */
     _buildLobbyComponents(game, disabled = false) {
         const joinButton = new ButtonBuilder().setCustomId('tda_join').setLabel('Join').setStyle(ButtonStyle.Success).setDisabled(disabled);
         const leaveButton = new ButtonBuilder().setCustomId('tda_leave').setLabel('Leave').setStyle(ButtonStyle.Danger).setDisabled(disabled);
@@ -405,14 +510,26 @@ class ThreeDragonAnteGame {
         return [row1, row2];
     }
 
+    /**
+     * Creates the embed for the gameplay log.
+     * @param {object} game - The game state object.
+     * @returns {EmbedBuilder} The log embed.
+     * @private
+     */
     _createLogEmbed(game) {
         return new EmbedBuilder().setTitle('Gameplay Log').setDescription(game.log.slice(-15).join('\n')).setColor(0x992d22);
     }
 
+    /**
+     * Creates the embed and attachment for the draft phase.
+     * @param {object} game - The game state object.
+     * @param {object} player - The player for whom to create the embed.
+     * @returns {Promise<object>} A payload object with embeds, files, and components for a Discord message.
+     * @private
+     */
     async _createDraftEmbed(game, player) {
         const embed = new EmbedBuilder().setTitle('Draft Pool').setColor(0x1abc9c);
 
-        // The image buffer is now pre-generated and cached. We just attach it.
         const attachment = new AttachmentBuilder(game.draftGridImageBuffer, { name: 'draft_pool.png' });
         embed.setImage('attachment://draft_pool.png');
 
@@ -445,6 +562,13 @@ class ThreeDragonAnteGame {
         }
     }
 
+    /**
+     * Creates the embed for the ante phase.
+     * @param {object} game - The game state object.
+     * @param {boolean} [reveal=false] - Whether to reveal the anted cards.
+     * @returns {object} A payload object with embeds.
+     * @private
+     */
     _createAnteEmbed(game, reveal = false) {
         const embed = new EmbedBuilder().setTitle('Current Ante').addFields({ name: 'Current Pot', value: `${game.pot}gp`, inline: false }).setColor(0xDAA520);
 
@@ -469,6 +593,12 @@ class ThreeDragonAnteGame {
         return { embeds: [embed] }; // Return payload
     }
 
+    /**
+     * Creates an embed showing an opponent's public game state (hand size, hoard, flight).
+     * @param {object} opponent - The opponent player object.
+     * @returns {EmbedBuilder} The opponent's board embed.
+     * @private
+     */
     _createOpponentEmbed(opponent) {
         const handRepresentation = '🃏'.repeat(opponent.hand.length) + '⬛'.repeat(10 - opponent.hand.length);
         const flightValue = opponent.flight.length > 0
@@ -485,6 +615,13 @@ class ThreeDragonAnteGame {
             .setColor(0x4f545c);
     }
 
+    /**
+     * Creates the main player embed, showing their hand, hoard, and game status.
+     * @param {object} player - The player object.
+     * @param {object} game - The game state object.
+     * @returns {Promise<object>} A payload for the player's main DM message.
+     * @private
+     */
     async _createPlayerEmbed(player, game) {
         this._sortHand(player.hand);
 
@@ -543,6 +680,12 @@ class ThreeDragonAnteGame {
     }
 
     // GAME FLOW
+
+    /**
+     * Starts the game after the lobby phase, shuffling players and beginning the draft.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     */
     async startGame(game) {
         game.state = 'starting';
         this._shuffle(game.players);
@@ -551,6 +694,11 @@ class ThreeDragonAnteGame {
         await this.startDraftPhase(game);
     }
 
+    /**
+     * Sends the initial set of DM messages to each player to create their game board.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     */
     async dealInitialEmptyGameBoard(game) {
         for (const player of game.players) {
             try {
@@ -590,6 +738,14 @@ class ThreeDragonAnteGame {
         }
     }
 
+    /**
+     * Queues an update for a player's log embed.
+     * @param {object} game - The game state object.
+     * @param {object} player - The player whose log should be updated.
+     * @param {number} priority - The priority of the update.
+     * @returns {Promise<void>}
+     * @private
+     */
     _queueLogUpdate(game, player, priority) {
         return this.updateQueue.add({
             id: `log-${player.id}`,
@@ -601,12 +757,19 @@ class ThreeDragonAnteGame {
         });
     }
 
+    /**
+     * Queues an update for a player's draft embed.
+     * @param {object} game - The game state object.
+     * @param {object} player - The player whose draft view should be updated.
+     * @param {number} priority - The priority of the update.
+     * @returns {Promise<void>}
+     * @private
+     */
     _queueDraftUpdate(game, player, priority) {
         return this.updateQueue.add({
             id: `draft-${player.id}`,
             priority: priority,
             task: async () => {
-                // Safeguard: Do not try to edit a message that has been marked for deletion.
                 if (!player.dmMessages.draft) return;
                 const draftMessage = await player.dmChannel.messages.fetch(player.dmMessages.draft).catch(() => null);
                 if (draftMessage) {
@@ -617,6 +780,15 @@ class ThreeDragonAnteGame {
         });
     }
 
+    /**
+     * Queues an update for a player's ante embed.
+     * @param {object} game - The game state object.
+     * @param {object} player - The player whose ante view should be updated.
+     * @param {number} priority - The priority of the update.
+     * @param {boolean} [reveal=false] - Whether to reveal the anted cards.
+     * @returns {Promise<void>}
+     * @private
+     */
     _queueAnteUpdate(game, player, priority, reveal = false) {
         return this.updateQueue.add({
             id: `ante-${player.id}`,
@@ -628,6 +800,15 @@ class ThreeDragonAnteGame {
         });
     }
 
+    /**
+     * Queues an update for a player's view of an opponent's board.
+     * @param {object} game - The game state object.
+     * @param {object} player - The player whose view is being updated.
+     * @param {object} opponent - The opponent whose board is being updated.
+     * @param {number} priority - The priority of the update.
+     * @returns {Promise<void>}
+     * @private
+     */
     _queueOpponentUpdate(game, player, opponent, priority) {
          return this.updateQueue.add({
             id: `opponent-${player.id}-${opponent.id}`,
@@ -639,6 +820,14 @@ class ThreeDragonAnteGame {
         });
     }
 
+    /**
+     * Queues an update for a player's own main board embed (hand, hoard).
+     * @param {object} game - The game state object.
+     * @param {object} player - The player whose board should be updated.
+     * @param {number} priority - The priority of the update.
+     * @returns {Promise<void>}
+     * @private
+     */
     _queuePlayerUpdate(game, player, priority) {
         return this.updateQueue.add({
             id: `player-${player.id}`,
@@ -654,17 +843,22 @@ class ThreeDragonAnteGame {
     }
 
     // DRAFT PHASE
+
+    /**
+     * Initiates the draft phase, where players vote to remove cards from the game.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     */
     async startDraftPhase(game) {
         game.state = 'drafting';
         const optionalCards = DECK_DEFINITION.filter(card => card.optional);
         game.draftPool = optionalCards.slice(0, 20);
-        game.fullDraftPool = [...game.draftPool]; // Keep a copy of the full pool for rendering
+        game.fullDraftPool = [...game.draftPool];
 
         game.draftOrder = [...game.players];
 
         game.log.push('**DRAFT PHASE:** The draft for special cards has begun! Each player will vote to REMOVE one card from the pool of 20. The 10 cards that remain will be used in this game.');
 
-        // Generate and cache the initial grid image
         game.draftGridImageBuffer = await this.workerService.run('renderDraftGrid', { cards: game.fullDraftPool });
 
         const updatePromises = game.players.map(p => {
@@ -676,6 +870,12 @@ class ThreeDragonAnteGame {
         await this._requestDraftRemoval(game);
     }
 
+    /**
+     * Sends a DM to the current player asking them to choose a card to remove from the draft.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     * @private
+     */
     async _requestDraftRemoval(game) {
         if (game.draftPicks >= 10) {
             await this.postDraftSetup(game);
@@ -708,6 +908,13 @@ class ThreeDragonAnteGame {
         }
     }
 
+    /**
+     * Handles a player's interaction to remove a card from the draft pool.
+     * @param {Interaction} interaction - The button interaction.
+     * @param {object} game - The game state object.
+     * @param {string} cardName - The name of the card to remove.
+     * @returns {Promise<void>}
+     */
     async handleDraftRemoval(interaction, game, cardName) {
         const player = game.players.find(p => p.id === interaction.user.id);
         if (!player) return interaction.reply({ content: "You're not in this game.", ephemeral: true });
@@ -725,14 +932,12 @@ class ThreeDragonAnteGame {
         game.draftPicks++;
         game.log.push(`${player.user.username} voted to remove **${this._formatCardName(card)}**.`);
 
-        // Update the cached image buffer by drawing the new card back over the previous image
         game.draftGridImageBuffer = await this.workerService.run('renderDraftGrid', {
             cards: game.fullDraftPool,
             buffer: game.draftGridImageBuffer,
             cardToCover: card
         });
 
-        // Queue updates for all players, then request next action
         const updatePromises = game.players.map(p => {
             const priority = p.id === player.id ? 2 : 3;
             this._queueLogUpdate(game, p, priority);
@@ -743,6 +948,13 @@ class ThreeDragonAnteGame {
         await this._requestDraftRemoval(game);
     }
 
+    /**
+     * Handles pagination for the draft card list in DMs.
+     * @param {Interaction} interaction - The button interaction.
+     * @param {object} game - The game state object.
+     * @param {number} newPage - The new page number to display.
+     * @returns {Promise<void>}
+     */
     async handleDraftPage(interaction, game, newPage) {
         await interaction.deferUpdate();
         const player = game.players.find(p => p.id === interaction.user.id);
@@ -753,6 +965,13 @@ class ThreeDragonAnteGame {
         await interaction.editReply(payload);
     }
 
+    /**
+     * Handles pagination for the player's hand in DMs.
+     * @param {Interaction} interaction - The button interaction.
+     * @param {object} game - The game state object.
+     * @param {number} newPage - The new page number to display.
+     * @returns {Promise<void>}
+     */
     async handleHandPage(interaction, game, newPage) {
         await interaction.deferUpdate();
         const player = game.players.find(p => p.id === interaction.user.id);
@@ -763,10 +982,15 @@ class ThreeDragonAnteGame {
         await interaction.editReply(payload);
     }
 
+    /**
+     * Sets up the game after the draft is complete, deals initial hands, and starts the ante phase.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     */
     async postDraftSetup(game) {
         game.log.push('**DRAFT COMPLETE:** The 10 remaining special cards have been added to the deck.');
         const standardCards = DECK_DEFINITION.filter(card => !card.optional);
-        game.deck = [...standardCards, ...game.draftPool]; // The draft pool now contains the 10 remaining cards
+        game.deck = [...standardCards, ...game.draftPool];
         this._shuffle(game.deck);
 
         for (let i = 0; i < 6; i++) {
@@ -779,23 +1003,25 @@ class ThreeDragonAnteGame {
 
         for (const p of game.players) {
             this._queueLogUpdate(game, p, 3);
-            this._queueDraftUpdate(game, p, 3); // Queue the final update
+            this._queueDraftUpdate(game, p, 3);
             this._queuePlayerUpdate(game, p, 3);
-
-            // The draft message will be deleted at the start of the next phase (ante)
-            // to prevent race conditions with the update queue.
         }
 
         await this.startAntePhase(game);
     }
 
     // ANTE PHASE
+
+    /**
+     * Starts the ante phase, where players select a card to contribute to the pot.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     */
     async startAntePhase(game) {
         game.state = 'ante';
         game.antePile = [];
         game.log.push('**ANTE PHASE:** All players, check your DMs to choose a card to ante.');
 
-        // Clean up the draft message from the previous phase
         for (const player of game.players) {
             if (player.dmMessages.draft) {
                 try {
@@ -808,7 +1034,6 @@ class ThreeDragonAnteGame {
             }
         }
 
-        // Update all boards and then request ante from each player
         for (const player of game.players) {
             const updatePromises = [
                 this._queueLogUpdate(game, player, 2),
@@ -819,6 +1044,13 @@ class ThreeDragonAnteGame {
         }
     }
 
+    /**
+     * Sends a DM to a player asking them to choose a card to ante.
+     * @param {object} game - The game state object.
+     * @param {object} player - The player to request the ante from.
+     * @returns {Promise<void>}
+     * @private
+     */
     async _requestAnte(game, player) {
         const embed = new EmbedBuilder().setTitle('Choose Your Ante Card').setDescription('Select one card from your hand to play as your ante.').setColor(0x3498db);
         const rows = [];
@@ -838,6 +1070,13 @@ class ThreeDragonAnteGame {
         } catch (e) { console.error(`Failed to send ante request to ${player.user.tag}`, e); }
     }
 
+    /**
+     * Handles a player's interaction to ante a card.
+     * @param {Interaction} interaction - The button interaction.
+     * @param {object} game - The game state object.
+     * @param {string} cardName - The name of the card being anted.
+     * @returns {Promise<void>}
+     */
     async handleAnte(interaction, game, cardName) {
         const player = game.players.find(p => p.id === interaction.user.id);
         if (!player) return interaction.reply({ content: "You're not in this game.", ephemeral: true });
@@ -857,12 +1096,10 @@ class ThreeDragonAnteGame {
         game.antePile.push({ player, card });
         game.log.push(`${player.user.username} has anted with ${this._formatCardName(card)}.`);
 
-        // Queue high-priority updates for the acting player
         this._queuePlayerUpdate(game, player, 1);
         this._queueLogUpdate(game, player, 1);
         this._queueAnteUpdate(game, player, 1);
 
-        // Queue lower-priority updates for all other players
         for (const p of game.players) {
             if (p.id === player.id) continue;
             this._queueOpponentUpdate(game, p, player, 3);
@@ -875,6 +1112,12 @@ class ThreeDragonAnteGame {
         }
     }
 
+    /**
+     * Reveals the anted cards, determines the leader, and starts the gambit phase.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     * @private
+     */
     async _revealAntes(game) {
         game.log.push('**REVEAL:** All players have anted!');
         const revealLog = game.antePile.map(p => `${p.player.user.username} anted **${this._formatCardName(p.card)}**`).join('\n');
@@ -888,13 +1131,18 @@ class ThreeDragonAnteGame {
     }
 
     // GAMBIT PHASE
+
+    /**
+     * Starts the gambit phase, where players play cards into their flights.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     */
     async startGambitPhase(game) {
         game.state = 'gambit';
         game.log.push('**GAMBIT PHASE:** The gambit begins!');
         game.gambitRounds = 1;
 
         for (const ante of game.antePile) {
-            // Ante cards are part of the flight but their powers don't trigger.
             const cardInFlight = { ...ante.card, triggered: false };
             ante.player.flight.push(cardInFlight);
         }
@@ -905,12 +1153,11 @@ class ThreeDragonAnteGame {
         game.turnOrder = [...game.players.slice(leaderIndex), ...game.players.slice(0, leaderIndex)];
         game.lastRoundPlayed = [];
 
-        // Queue updates for all players
         const updatePromises = game.players.map(p => {
             const priority = p.id === game.leader.id ? 2 : 3;
             this._queuePlayerUpdate(game, p, priority);
             this._queueLogUpdate(game, p, priority);
-            this._queueAnteUpdate(game, p, priority, true); // Show revealed antes
+            this._queueAnteUpdate(game, p, priority, true);
             for (const o of game.players) {
                 if (p.id !== o.id) this._queueOpponentUpdate(game, p, o, priority);
             }
@@ -920,17 +1167,22 @@ class ThreeDragonAnteGame {
         await this._requestCardPlay(game);
     }
 
+    /**
+     * Manages the flow of a round, requesting card plays from players in turn order.
+     * At the end of a round, it determines the next leader and checks if the gambit should end.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     * @private
+     */
     async _requestCardPlay(game) {
-        // If turn order is empty, the round is over.
         if (game.turnOrder.length === 0) {
             game.log.push(`End of Round ${game.gambitRounds}.`);
 
-            // Determine the leader for the next round.
             const validPlays = game.lastRoundPlayed.filter(p1 =>
                 !game.lastRoundPlayed.some(p2 => p1 !== p2 && p1.card.value === p2.card.value)
             );
 
-            let nextRoundLeader = game.roundLeader; // Default to current leader if all are tied.
+            let nextRoundLeader = game.roundLeader;
             if (validPlays.length > 0) {
                 const sortedPlays = validPlays.sort((a, b) => b.card.value - a.card.value);
                 nextRoundLeader = sortedPlays[0].player;
@@ -940,7 +1192,6 @@ class ThreeDragonAnteGame {
             }
             game.roundLeader = nextRoundLeader;
 
-            // Check if the gambit should end.
             if (game.gambitRounds >= 3) {
                 const strengths = game.players.map(p => ({ player: p, strength: this._calculateFlightStrength(p.flight) }));
                 const druidInPlay = game.players.some(p => p.flight.some(c => c.effect === 'Druid'));
@@ -953,20 +1204,18 @@ class ThreeDragonAnteGame {
                 }
 
                 if (strengths.length < 2 || strengths[0].strength !== strengths[1].strength) {
-                    await this.scoreGambit(game); // We have a unique winner.
+                    await this.scoreGambit(game);
                     return;
                 }
                 game.log.push('The gambit continues because there is a tie for the strongest (or weakest) flight.');
             }
 
-            // Start the next round.
             game.gambitRounds++;
             game.log.push(`**Starting Round ${game.gambitRounds}**`);
             const leaderIndex = game.players.findIndex(p => p.id === game.roundLeader.id);
             game.turnOrder = [...game.players.slice(leaderIndex), ...game.players.slice(0, leaderIndex)];
             game.lastRoundPlayed = [];
 
-            // Queue updates for all players before requesting next play.
             const updatePromises = game.players.map(p => this._queueLogUpdate(game, p, 3));
             await Promise.all(updatePromises);
         }
@@ -999,6 +1248,13 @@ class ThreeDragonAnteGame {
         }
     }
 
+    /**
+     * Handles a player's interaction to play a card from their hand.
+     * @param {Interaction} interaction - The button interaction.
+     * @param {object} game - The game state object.
+     * @param {string} cardName - The name of the card being played.
+     * @returns {Promise<void>}
+     */
     async handleCardPlay(interaction, game, cardName) {
         const player = game.players.find(p => p.id === interaction.user.id);
         if (!player) return interaction.reply({ content: "You're not in this game.", ephemeral: true });
@@ -1012,13 +1268,12 @@ class ThreeDragonAnteGame {
         await interaction.message.delete().catch(e => console.error("Failed to delete play message:", e));
 
         const cardFromHand = player.hand.splice(cardIndex, 1)[0];
-        const card = { ...cardFromHand }; // Clone to add 'triggered' property without modifying deck definition.
+        const card = { ...cardFromHand };
         game.log.push(`${player.user.username} played **${this._formatCardName(card)}**.`);
 
         const isRoundLeader = player.id === game.roundLeader.id;
         const previousPlayerCard = game.lastRoundPlayed.length > 0 ? game.lastRoundPlayed[game.lastRoundPlayed.length - 1].card : null;
 
-        // The leader's power always triggers. Others trigger if their card is <= the previous card in the round.
         if (isRoundLeader || (previousPlayerCard && card.value <= previousPlayerCard.value)) {
             card.triggered = true;
             await this._triggerCardPower(game, player, card);
@@ -1032,7 +1287,6 @@ class ThreeDragonAnteGame {
         game.turnOrder.shift();
         const nextPlayer = game.turnOrder.length > 0 ? game.turnOrder[0] : null;
 
-        // Queue updates for the player who just acted (prio 1) and all observers (prio 3)
         for (const p of game.players) {
             if (nextPlayer && p.id === nextPlayer.id) continue;
 
@@ -1046,13 +1300,11 @@ class ThreeDragonAnteGame {
             }
         }
 
-        // Before requesting the next action, sequentially update the next player's board
         if (nextPlayer) {
             const updatePromises = [
                 this._queuePlayerUpdate(game, nextPlayer, 2),
                 this._queueLogUpdate(game, nextPlayer, 2)
             ];
-            // Also queue updates for their opponent views
             for (const o of game.players) {
                 if (nextPlayer.id !== o.id) {
                     updatePromises.push(this._queueOpponentUpdate(game, nextPlayer, o, 2));
@@ -1064,6 +1316,14 @@ class ThreeDragonAnteGame {
         await this._requestCardPlay(game);
     }
 
+    /**
+     * Triggers the effect of a played card.
+     * @param {object} game - The game state object.
+     * @param {object} player - The player who played the card.
+     * @param {object} card - The card whose power is triggering.
+     * @returns {Promise<void>}
+     * @private
+     */
     async _triggerCardPower(game, player, card) {
         game.log.push(`The power of **${this._formatCardName(card)}** triggers!`);
         switch(card.effect) {
@@ -1083,7 +1343,7 @@ class ThreeDragonAnteGame {
                         player.hand.push(drawnCard);
                         game.log.push(`${player.user.username} draws a card (${this._formatCardName(drawnCard)}).`);
                     } else {
-                        break; // No more cards to draw
+                        break;
                     }
                 }
                 break;
@@ -1097,7 +1357,7 @@ class ThreeDragonAnteGame {
                             p.hand.push(drawnCard);
                             game.log.push(`${p.user.username} has a good dragon and draws a card (${this._formatCardName(drawnCard)}).`);
                         } else {
-                            break; // No more cards to draw
+                            break;
                         }
                     }
                 }
@@ -1109,10 +1369,22 @@ class ThreeDragonAnteGame {
     }
 
     // END OF GAMBIT
+
+    /**
+     * Calculates the total strength of a player's flight.
+     * @param {Array<object>} flight - The player's flight of cards.
+     * @returns {number} The total strength.
+     * @private
+     */
     _calculateFlightStrength(flight) {
         return flight.reduce((sum, card) => sum + card.value, 0);
     }
 
+    /**
+     * Scores the gambit, determines the winner, and awards the pot.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     */
     async scoreGambit(game) {
         game.state = 'scoring';
         game.log.push('**SCORING PHASE:** The gambit has ended. Calculating results...');
@@ -1121,9 +1393,9 @@ class ThreeDragonAnteGame {
         const druidInPlay = game.players.some(p => p.flight.some(c => c.effect === 'Druid'));
 
         if (druidInPlay) {
-            strengths.sort((a, b) => a.strength - b.strength); // Weakest wins
+            strengths.sort((a, b) => a.strength - b.strength);
         } else {
-            strengths.sort((a, b) => b.strength - a.strength); // Strongest wins
+            strengths.sort((a, b) => b.strength - a.strength);
         }
 
         const winner = strengths[0].player;
@@ -1134,7 +1406,6 @@ class ThreeDragonAnteGame {
             game.log.push(`**${winner.user.username}** wins the gambit with a strength of ${winnerStrength} and takes the pot of ${game.pot}gp!`);
             game.pot = 0;
         } else {
-            // This case should not be reached if the pre-scoring check is correct.
             game.log.push('There was no winner. The pot rolls over to the next gambit.');
         }
 
@@ -1148,6 +1419,12 @@ class ThreeDragonAnteGame {
         await this._sendReadyCheck(game);
     }
 
+    /**
+     * Sends a "Ready?" check to all players after a gambit concludes.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     * @private
+     */
     async _sendReadyCheck(game) {
         game.players.forEach(p => p.isReady = false);
         const embed = new EmbedBuilder()
@@ -1168,6 +1445,12 @@ class ThreeDragonAnteGame {
         }
     }
 
+    /**
+     * Handles a player's "Ready" interaction.
+     * @param {Interaction} interaction - The button interaction.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     */
     async handleReadyCheck(interaction, game) {
         const player = game.players.find(p => p.id === interaction.user.id);
         if (!player) return interaction.reply({ content: "You're not in this game.", ephemeral: true });
@@ -1182,6 +1465,11 @@ class ThreeDragonAnteGame {
         }
     }
 
+    /**
+     * Prepares for and starts the next gambit after all players are ready.
+     * @param {object} game - The game state object.
+     * @returns {Promise<void>}
+     */
     async startNextGambit(game) {
         game.log.push('All players are ready. Starting the next gambit...');
 
@@ -1191,13 +1479,13 @@ class ThreeDragonAnteGame {
                 if (readyMessage) await readyMessage.delete();
             } catch(e) { console.error(`Failed to delete ready message for ${player.user.tag}`, e); }
 
-            game.discardPile.push(...player.flight); // Discard flight
+            game.discardPile.push(...player.flight);
             player.flight = [];
             for(let i=0; i<2; i++) {
                 const newCard = this._dealCard(game);
                 if (newCard) player.hand.push(newCard);
             }
-            this._queuePlayerUpdate(game, player, 2); // Update player hand embed immediately
+            this._queuePlayerUpdate(game, player, 2);
         }
 
         await this.startAntePhase(game);
