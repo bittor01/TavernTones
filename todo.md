@@ -1,1 +1,3 @@
 - [ ] Remove `src/tda/ThreeDragonAnte.js` as it has been replaced by `src/tda/ThreeDragonAnteGame.js`. All references to the old file should be updated to point to the new file.
+- [ ] Implement `!generate-hoard` command to generate treasure hoards based on user-provided parameters, as described in `api.md`.
+- [ ] Implement `!generate-shop` command to generate shop inventories based on user-provided parameters, as described in `api.md`.
