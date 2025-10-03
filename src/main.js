@@ -15,6 +15,7 @@ const axios = require('axios');
 console.log('Axios loaded.');
 const BackendAudioPlayer = require('./discord/BackendAudioPlayer.js');
 const CommandHandler = require('./discord/CommandHandler.js');
+const deployCommands = require('./discord/deploy-commands.js');
 const MagicItemGenerator = require('./core/MagicItemGenerator.js');
 const VehicleEncounterBuilder = require('./core/VehicleEncounterBuilder.js');
 const FiveEToolsParser = require('./core/5eParser.js');
@@ -22,9 +23,13 @@ const { format5eResult, formatEntries } = require('./core/5eEmbedFormatter.js');
 const DropdownHandler = require('./ui/DropdownHandler.js');
 const fs = require('fs').promises;
 const WorkerService = require('./core/WorkerService.js');
+const ShopGenerator = require('./core/ShopGenerator.js');
+const HoardGenerator = require('./core/HoardGenerator.js');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
 const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
+const CLIENT_ID = process.env.CLIENT_ID;
+const GUILD_ID = process.env.GUILD_ID;
 const BOT_ROLE_ID = process.env.BOT_ROLE_ID;
 const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
 const TEXT_CHANNEL_ID = process.env.TEXT_CHANNEL_ID;
@@ -34,6 +39,8 @@ let workerService;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
+let shopGenerator;
+let hoardGenerator;
 const maSelections = new Map();
 const encounterSelections = new Map();
 const vehicleSelections = new Map();
@@ -152,6 +159,8 @@ async function apploader() {
     await app.whenReady().then(() => {
         console.log('App is ready.');
         fiveEToolsParser = new FiveEToolsParser(logToRenderer); // Initialize parser early
+        shopGenerator = new ShopGenerator(fiveEToolsParser);
+        hoardGenerator = new HoardGenerator(fiveEToolsParser);
 
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
@@ -979,6 +988,13 @@ client.once('clientReady', async () => {
 
     logToRenderer('TavernTones is online!');
 
+    // Deploy slash commands
+    try {
+        await deployCommands(DISCORD_TOKEN, CLIENT_ID, GUILD_ID, logToRenderer);
+    } catch (error) {
+        logToRenderer(`[ERROR] Could not deploy commands: ${error}`);
+    }
+
     //Connect to the voice channel
     const voiceChannel = client.channels.cache.get(VOICE_CHANNEL_ID);
     if (voiceChannel && voiceChannel.isVoiceBased()) {
@@ -1045,6 +1061,62 @@ client.once('clientReady', async () => {
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
     client.on('interactionCreate', async interaction => {
+        if (interaction.isChatInputCommand()) {
+            const { commandName } = interaction;
+
+            if (commandName === 'generate-shop') {
+                await interaction.deferReply();
+
+                const size = interaction.options.getString('size');
+                const numItems = interaction.options.getString('num-items'); // Can be null
+                const priceMultiplier = interaction.options.getNumber('price-multiplier'); // Can be null
+
+                try {
+                    const shop = await shopGenerator.generateShop({ size, numItems, priceMultiplier });
+                    const embed = new EmbedBuilder()
+                        .setColor(0xD4AF37) // Gold color
+                        .setTitle(`Generated ${shop.size} City Shop Inventory`)
+                        .setDescription(shop.items.map(item => `• ${item.name} (${item.rarity}) - **${item.price}**`).join('\n') || 'The shop is empty.');
+
+                    await interaction.editReply({ embeds: [embed] });
+                } catch (error) {
+                    logToRenderer(`Error generating shop: ${error.message}`);
+                    await interaction.editReply({ content: 'An error occurred while generating the shop.', ephemeral: true });
+                }
+                return;
+            }
+
+            if (commandName === 'generate-hoard') {
+                await interaction.deferReply();
+
+                const size = interaction.options.getString('size');
+                const lootMultiplier = interaction.options.getNumber('loot-multiplier');
+
+                try {
+                    const hoard = await hoardGenerator.generateHoard({ size, lootMultiplier });
+
+                    const coinString = Object.entries(hoard.coins)
+                        .map(([currency, amount]) => `${amount.toLocaleString()} ${currency.toUpperCase()}`)
+                        .join(', ');
+
+                    const embed = new EmbedBuilder()
+                        .setColor(0xE6C700)
+                        .setTitle(`Generated ${hoard.size} Treasure Hoard`)
+                        .addFields(
+                            { name: '💰 Coins', value: coinString || 'No coins found.' },
+                            { name: '💎 Items', value: hoard.items.join('\n') || 'No items found.' }
+                        )
+                        .setFooter({ text: `Estimated Total Value: ${hoard.totalValue.toLocaleString()} gp` });
+
+                    await interaction.editReply({ embeds: [embed] });
+                } catch (error) {
+                    logToRenderer(`Error generating hoard: ${error.message}`);
+                    await interaction.editReply({ content: 'An error occurred while generating the hoard.', ephemeral: true });
+                }
+                return;
+            }
+        }
+
         if (interaction.isStringSelectMenu()) {
             const { customId, values, message } = interaction;
             const [customIdBase] = customId.split('|');
