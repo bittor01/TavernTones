@@ -238,7 +238,9 @@ button:disabled {
 .stats-grid input {
     text-align: center;
 }
-#add-creature-form input {
+input[type="text"],
+input[type="password"],
+input[type="number"] {
     width: 100%;
     padding: 6px;
     background-color: #1e1e1e;

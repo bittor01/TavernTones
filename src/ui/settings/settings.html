@@ -3,37 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <title>Settings</title>
+    <link rel="stylesheet" href="../styles.css">
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; }
-        input { width: 100%; padding: 8px; box-sizing: border-box; }
-        button { padding: 10px 15px; }
+        /* Add some specific styles for the settings page */
+        body {
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .settings-container {
+            width: 100%;
+            max-width: 500px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+        #save-button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
-    <h1>Discord Bot Settings</h1>
-    <div class="form-group">
-        <label for="token">Bot Token</label>
-        <input type="password" id="token" placeholder="Enter your Discord bot token">
+    <div class="settings-container box">
+        <h2>Discord Bot Settings</h2>
+        <div class="form-group">
+            <label for="token">Bot Token</label>
+            <input type="password" id="token" placeholder="Enter your Discord bot token">
+        </div>
+        <div class="form-group">
+            <label for="voiceChannel">Voice Channel ID</label>
+            <input type="text" id="voiceChannel" placeholder="Enter the voice channel ID">
+        </div>
+        <div class="form-group">
+            <label for="textChannel">Text Channel ID</label>
+            <input type="text" id="textChannel" placeholder="Enter the text channel ID">
+        </div>
+        <div class="form-group">
+            <label for="botRoleId">Bot Role ID</label>
+            <input type="text" id="botRoleId" placeholder="Enter the role ID for the bot">
+        </div>
+        <div class="form-group">
+            <label for="defaultLocalFolder">Default Music Folder</label>
+            <input type="text" id="defaultLocalFolder" placeholder="Enter the default path for local music files">
+        </div>
+        <button id="save-button">Save and Restart</button>
     </div>
-    <div class="form-group">
-        <label for="voiceChannel">Voice Channel ID</label>
-        <input type="text" id="voiceChannel" placeholder="Enter the voice channel ID">
-    </div>
-    <div class="form-group">
-        <label for="textChannel">Text Channel ID</label>
-        <input type="text" id="textChannel" placeholder="Enter the text channel ID">
-    </div>
-    <div class="form-group">
-        <label for="botRoleId">Bot Role ID</label>
-        <input type="text" id="botRoleId" placeholder="Enter the role ID for the bot">
-    </div>
-     <div class="form-group">
-        <label for="defaultLocalFolder">Default Music Folder</label>
-        <input type="text" id="defaultLocalFolder" placeholder="Enter the default path for local music files">
-    </div>
-    <button id="save-button">Save and Restart</button>
     <script src="settings.js"></script>
 </body>
 </html>
