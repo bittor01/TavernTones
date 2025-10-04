@@ -33,13 +33,17 @@
     },
     "files": [
       "src/",
-      "package.json",
-      "resources/",
-      "randomtables/"
+      "package.json"
     ],
-    "asarUnpack": [
-      "resources/**",
-      "randomtables/**"
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": "resources"
+      },
+      {
+        "from": "randomtables",
+        "to": "randomtables"
+      }
     ],
     "directories": {
       "output": "build"
