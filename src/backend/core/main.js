@@ -20,7 +20,7 @@ const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
 
-let discordConfig = getDiscordConfig();
+let discordConfig;
 
 let connection;
 let musicPlayer;
@@ -161,6 +161,7 @@ function createGamifyWindow() {
 }
 
 async function apploader() {
+    discordConfig = await getDiscordConfig();
     await app.whenReady().then(() => {
         console.log('App is ready.');
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app); // Initialize parser early
@@ -353,21 +354,20 @@ const InitiativeTracker = require('../features/InitiativeTracker.js');
 
 async function ipcloader() {
     // Settings window IPC
-    ipcMain.on('get-discord-config', (event) => {
-        event.sender.send('discord-config', discordConfig);
+    ipcMain.on('get-discord-config', async (event) => {
+        event.sender.send('discord-config', await getDiscordConfig());
     });
 
-    ipcMain.on('set-discord-config', (event, config) => {
-        setDiscordConfig(config);
-        dialog.showMessageBox(null, {
+    ipcMain.on('set-discord-config', async (event, config) => {
+        await setDiscordConfig(config);
+        await dialog.showMessageBox(null, {
             type: 'info',
             title: 'Settings Saved',
             message: 'Your settings have been saved. The application will now restart to apply the changes.',
             buttons: ['OK']
-        }).then(() => {
-            app.relaunch();
-            app.quit();
         });
+        app.relaunch();
+        app.quit();
     });
 
     ipcMain.on('open-settings-window', createSettingsWindow);

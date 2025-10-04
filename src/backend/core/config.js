@@ -1,31 +1,38 @@
-const Store = require('electron-store');
+let store;
 
-const schema = {
-	discord: {
-		type: 'object',
-		properties: {
-			token: { type: 'string' },
-			voiceChannel: { type: 'string' },
-            textChannel: { type: 'string' },
-            botRoleId: { type: 'string' },
-            defaultLocalFolder: { type: 'string' }
-		},
-        default: {}
-	}
-};
+async function getStore() {
+    if (store) return store;
 
-// For a real app, this key should be stored securely and not be hardcoded.
-// For example, it could be derived from a machine-specific identifier.
-const store = new Store({
-    schema,
-    encryptionKey: 'a-bad-secret-key-for-taverntones'
-});
+    const { default: Store } = await import('electron-store');
+    const schema = {
+        discord: {
+            type: 'object',
+            properties: {
+                token: { type: 'string' },
+                voiceChannel: { type: 'string' },
+                textChannel: { type: 'string' },
+                botRoleId: { type: 'string' },
+                defaultLocalFolder: { type: 'string' }
+            },
+            default: {}
+        }
+    };
 
-function getDiscordConfig() {
+    store = new Store({
+        schema,
+        encryptionKey: 'a-bad-secret-key-for-taverntones'
+    });
+
+    return store;
+}
+
+async function getDiscordConfig() {
+    const store = await getStore();
     return store.get('discord');
 }
 
-function setDiscordConfig(config) {
+async function setDiscordConfig(config) {
+    const store = await getStore();
     store.set('discord', config);
 }
 
