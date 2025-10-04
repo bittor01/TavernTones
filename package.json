@@ -49,6 +49,7 @@
     ],
     "directories": {
       "output": "build"
-    }
+    },
+    "publish": null
   }
 }
