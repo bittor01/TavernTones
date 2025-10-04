@@ -30,8 +30,7 @@
     "appId": "com.CrispyChestnuts.TavernTones",
     "win": {
       "target": "portable",
-      "icon": "icon.ico",
-      "publisherName": ""
+      "icon": "icon.ico"
     },
     "files": [
       "src/",
