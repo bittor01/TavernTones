@@ -142,7 +142,7 @@ function createGamifyWindow() {
 async function apploader() {
     await app.whenReady().then(() => {
         console.log('App is ready.');
-        fiveEToolsParser = new FiveEToolsParser(logToRenderer); // Initialize parser early
+        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app.getAppPath()); // Initialize parser early
 
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
