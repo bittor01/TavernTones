@@ -29,7 +29,9 @@
   "build": {
     "appId": "com.CrispyChestnuts.TavernTones",
     "win": {
-      "target": "portable"
+      "target": "portable",
+      "verifyUpdateCodeSignature": false,
+      "icon": "icon.ico"
     },
     "files": [
       "src/",
