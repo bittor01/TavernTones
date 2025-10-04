@@ -216,6 +216,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             case 'gamify-tool-button':
                 window.electron.ipcRenderer.send('open-gamify-tool');
                 break;
+            case 'settings-button':
+                window.electron.ipcRenderer.send('open-settings-window');
+                break;
             case 'next-turn-button':
                 window.electron.ipcRenderer.send('next-turn');
                 break;

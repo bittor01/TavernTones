@@ -1,4 +1,3 @@
-require('dotenv').config({ path: 'environmentvars.env' }); // Load environment variables from .env file
 console.log('Main.js script started');
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 console.log('Electron loaded.');
@@ -16,15 +15,13 @@ console.log('Axios loaded.');
 const BackendAudioPlayer = require('./BackendAudioPlayer.js');
 const CommandHandler = require('../../discord/CommandHandler.js');
 const FiveEToolsParser = require('./5eParser.js');
+const { getDiscordConfig, setDiscordConfig } = require('./config.js');
 const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
 
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
-const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
-const BOT_ROLE_ID = process.env.BOT_ROLE_ID;
-const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
-const TEXT_CHANNEL_ID = process.env.TEXT_CHANNEL_ID;
+let discordConfig = getDiscordConfig();
+
 let connection;
 let musicPlayer;
 let isAppReady = false; // Flag to indicate if the app is ready
@@ -81,6 +78,7 @@ function sleep(ms) {
 //Begin UI
 // Electron Setup
 let mainWindow;
+let settingsWindow;
 let windowloaded = false;
 async function createWindow(showWindow = true) {
     console.log('createWindow() called.');
@@ -105,6 +103,29 @@ async function createWindow(showWindow = true) {
     await mainWindow.loadFile(path.join(__dirname, '../../ui/Index.html'));
     console.log('index.html loaded.');
     windowloaded = true;
+}
+
+function createSettingsWindow() {
+    if (settingsWindow) {
+        settingsWindow.focus();
+        return;
+    }
+
+    settingsWindow = new BrowserWindow({
+        width: 500,
+        height: 600,
+        webPreferences: {
+            preload: path.join(__dirname, '../../ui/settings/settings-preload.js'),
+            contextIsolation: true,
+            enableRemoteModule: false
+        }
+    });
+
+    settingsWindow.loadFile(path.join(__dirname, '../../ui/settings/settings.html'));
+
+    settingsWindow.on('closed', () => {
+        settingsWindow = null;
+    });
 }
 
 let gamifyWindow; // Keep a reference to the window object
@@ -142,12 +163,17 @@ function createGamifyWindow() {
 async function apploader() {
     await app.whenReady().then(() => {
         console.log('App is ready.');
-        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app.getAppPath()); // Initialize parser early
+        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app); // Initialize parser early
 
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
-        // Create the main window, but don't show it if we are launching the gamify tool
-        createWindow(!isGamifyLaunch);
+        if (!discordConfig || !discordConfig.token) {
+            createSettingsWindow();
+        } else {
+            // Create the main window, but don't show it if we are launching the gamify tool
+            createWindow(!isGamifyLaunch);
+        }
+
 
         // If it's a gamify launch, also create the gamify window
         if (isGamifyLaunch) {
@@ -156,9 +182,13 @@ async function apploader() {
 
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length === 0) {
-                createWindow(!isGamifyLaunch);
-                if (isGamifyLaunch) {
-                    createGamifyWindow();
+                if (!discordConfig || !discordConfig.token) {
+                    createSettingsWindow();
+                } else {
+                    createWindow(!isGamifyLaunch);
+                    if (isGamifyLaunch) {
+                        createGamifyWindow();
+                    }
                 }
             }
         });
@@ -322,6 +352,26 @@ async function checkAndShowReminders(creature, turnEvent) {
 const InitiativeTracker = require('../features/InitiativeTracker.js');
 
 async function ipcloader() {
+    // Settings window IPC
+    ipcMain.on('get-discord-config', (event) => {
+        event.sender.send('discord-config', discordConfig);
+    });
+
+    ipcMain.on('set-discord-config', (event, config) => {
+        setDiscordConfig(config);
+        dialog.showMessageBox(null, {
+            type: 'info',
+            title: 'Settings Saved',
+            message: 'Your settings have been saved. The application will now restart to apply the changes.',
+            buttons: ['OK']
+        }).then(() => {
+            app.relaunch();
+            app.quit();
+        });
+    });
+
+    ipcMain.on('open-settings-window', createSettingsWindow);
+
     if (windowloaded) {
         logToRenderer('ipcloader() called.');
         initiativeTracker = new InitiativeTracker(logToRenderer, sendInitiativeUpdate, autosavePath);
@@ -348,14 +398,13 @@ async function ipcloader() {
         });
 
         ipcMain.handle('get-high-score', async () => {
+            const settingsPath = path.join(app.getPath('userData'), 'gamify-settings.json');
             try {
-                const settingsPath = path.join(__dirname, '../../jsontool/gamify-settings.json');
                 const data = await fs.readFile(settingsPath, 'utf8');
                 const settings = JSON.parse(data);
                 return settings.highScore || 0;
             } catch (error) {
                 if (error.code === 'ENOENT') {
-                    const settingsPath = path.join(__dirname, '../../jsontool/gamify-settings.json');
                     await fs.writeFile(settingsPath, JSON.stringify({ highScore: 0 }, null, 2));
                     return 0;
                 }
@@ -365,8 +414,8 @@ async function ipcloader() {
         });
 
         ipcMain.on('save-high-score', async (event, score) => {
+            const settingsPath = path.join(app.getPath('userData'), 'gamify-settings.json');
             try {
-                const settingsPath = path.join(__dirname, '../../jsontool/gamify-settings.json');
                 let settings = {};
                 try {
                     const data = await fs.readFile(settingsPath, 'utf8');
@@ -382,6 +431,7 @@ async function ipcloader() {
         });
 
         async function loadTaskData(taskFilePath) {
+            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
             try {
                 const data = await fs.readFile(taskFilePath, 'utf8');
                 let taskData = JSON.parse(data); // Make mutable
@@ -392,7 +442,7 @@ async function ipcloader() {
                     return { success: true, taskComplete: true, taskData };
                 }
 
-                let itemFilePath = path.join(__dirname, '../../../', taskData.files[fileIndex]);
+                let itemFilePath = path.join(basePath, taskData.files[fileIndex]);
                 let itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
 
                 // Loop to find the next valid item, skipping empty files
@@ -406,7 +456,7 @@ async function ipcloader() {
                         return { success: true, taskComplete: true, taskData };
                     }
 
-                    itemFilePath = path.join(__dirname, '../../../', taskData.files[fileIndex]);
+                    itemFilePath = path.join(basePath, taskData.files[fileIndex]);
                     itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
                 }
 
@@ -449,21 +499,22 @@ async function ipcloader() {
         }
 
         ipcMain.handle('load-task-by-path', async (event, filePath) => {
-            // If the path is absolute (e.g., from a file dialog), use it directly.
-            // Otherwise, join it with the base directory (for internal calls).
-            const taskPath = path.isAbsolute(filePath) ? filePath : path.join(__dirname, '../../../', filePath);
+            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+            const taskPath = path.isAbsolute(filePath) ? filePath : path.join(basePath, filePath);
             return await loadTaskData(taskPath);
         });
 
         ipcMain.handle('get-task-data', async () => {
-            const defaultTaskPath = path.join(__dirname, '../../jsontool/deck-editing-task.json');
+            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+            const defaultTaskPath = path.join(basePath, 'src/jsontool/deck-editing-task.json');
             return await loadTaskData(defaultTaskPath);
         });
 
         ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell, taskFilePath }) => {
+            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
             try {
                 // 1. Save the current spell changes
-                const currentItemFilePath = path.join(__dirname, '../../../', taskData.files[taskData.progress.fileIndex]);
+                const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
                 const currentItemFileData = await fs.readFile(currentItemFilePath, 'utf8');
                 let currentItemList = JSON.parse(currentItemFileData);
                 currentItemList[taskData.progress.itemIndex] = currentSpell;
@@ -486,7 +537,7 @@ async function ipcloader() {
                 await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
 
                 // 4. Get the next spell and its details
-                const nextFilePath = path.join(__dirname, '../../../', taskData.files[taskData.progress.fileIndex]);
+                const nextFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
                 const nextFileData = await fs.readFile(nextFilePath, 'utf8');
                 const nextItemList = JSON.parse(nextFileData);
                 const nextItem = nextItemList[taskData.progress.itemIndex];
@@ -514,8 +565,9 @@ async function ipcloader() {
         });
 
         ipcMain.handle('scrap-and-get-next-item', async (event, { taskData, currentItem, taskFilePath }) => {
+            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
             try {
-                const currentItemFilePath = path.join(__dirname, '../../../', taskData.files[taskData.progress.fileIndex]);
+                const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
                 let currentItemList = JSON.parse(await fs.readFile(currentItemFilePath, 'utf8'));
 
                 // Use the title field for a more robust lookup
@@ -547,6 +599,7 @@ async function ipcloader() {
         });
 
         ipcMain.handle('undo-and-get-previous-spell', async (event, { taskData, previousSpellState, taskFilePath }) => {
+            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
             try {
                 // 1. Determine the previous spell's position
                 let prevFileIndex = taskData.progress.fileIndex;
@@ -557,14 +610,14 @@ async function ipcloader() {
                     if (prevFileIndex < 0) {
                         return { success: false, error: "Already at the beginning." };
                     }
-                    const prevFilePath = path.join(__dirname, '../../../', taskData.files[prevFileIndex]);
+                    const prevFilePath = path.join(basePath, taskData.files[prevFileIndex]);
                     const prevFileData = await fs.readFile(prevFilePath, 'utf8');
                     const prevSpellList = JSON.parse(prevFileData);
                     prevItemIndex = prevSpellList.length - 1;
                 }
 
                 // 2. Save the *previous* state back to the file
-                const targetFilePath = path.join(__dirname, '../../../', taskData.files[prevFileIndex]);
+                const targetFilePath = path.join(basePath, taskData.files[prevFileIndex]);
                 const targetFileData = await fs.readFile(targetFilePath, 'utf8');
                 let targetSpellList = JSON.parse(targetFileData);
                 targetSpellList[prevItemIndex] = previousSpellState;
@@ -599,7 +652,7 @@ async function ipcloader() {
         ipcMain.handle('open-file-dialog', async () => {
             const { filePaths } = await dialog.showOpenDialog(mainWindow, {
                 title: 'Select Music File',
-                defaultPath: DEFAULT_LOCAL_FOLDER,
+                defaultPath: discordConfig.defaultLocalFolder,
                 properties: ['openFile'],
                 filters: [
                     { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
@@ -629,9 +682,14 @@ async function ipcloader() {
                 return;
             }
 
-            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+            if (!discordConfig.textChannel) {
+                logToRenderer('[push-initiative] No text channel configured.');
+                return;
+            }
+
+            const channel = client.channels.cache.get(discordConfig.textChannel);
             if (!channel) {
-                logToRenderer(`[push-initiative] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
+                logToRenderer(`[push-initiative] FAILED to find channel with ID: ${discordConfig.textChannel}`);
                 return;
             }
             logToRenderer(`[push-initiative] Found channel: ${channel.name}`);
@@ -747,9 +805,11 @@ async function ipcloader() {
             const message = initiativeTracker.rollStat(creatureId, rollType, stat, type);
             if (message) {
                 mainWindow.webContents.send('dice-log', message);
-                const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
-                if (channel) {
-                    channel.send(message);
+                if (discordConfig.textChannel) {
+                    const channel = client.channels.cache.get(discordConfig.textChannel);
+                    if (channel) {
+                        channel.send(message);
+                    }
                 }
             }
         });
@@ -758,9 +818,11 @@ async function ipcloader() {
             const message = initiativeTracker.rollAttack(creatureId, rollType);
             if (message) {
                 mainWindow.webContents.send('dice-log', message);
-                const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
-                if (channel) {
-                    channel.send(message);
+                if (discordConfig.textChannel) {
+                    const channel = client.channels.cache.get(discordConfig.textChannel);
+                    if (channel) {
+                        channel.send(message);
+                    }
                 }
             }
         });
@@ -850,9 +912,13 @@ async function ipcloader() {
         });
 
         ipcMain.on('push-dicelog-to-discord', async (event, logContent) => {
-            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+            if (!discordConfig.textChannel) {
+                logToRenderer('[push-dicelog] No text channel configured.');
+                return;
+            }
+            const channel = client.channels.cache.get(discordConfig.textChannel);
             if (!channel) {
-                logToRenderer(`[push-dicelog] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
+                logToRenderer(`[push-dicelog] FAILED to find channel with ID: ${discordConfig.textChannel}`);
                 return;
             }
             try {
@@ -869,9 +935,13 @@ async function ipcloader() {
         });
 
         ipcMain.on('push-statblock-to-discord', async (event, rawDataString) => {
-            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+            if (!discordConfig.textChannel) {
+                logToRenderer('[push-statblock] No text channel configured.');
+                return;
+            }
+            const channel = client.channels.cache.get(discordConfig.textChannel);
             if (!channel) {
-                logToRenderer(`[push-statblock] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
+                logToRenderer(`[push-statblock] FAILED to find channel with ID: ${discordConfig.textChannel}`);
                 return;
             }
             try {
@@ -936,6 +1006,18 @@ client.on('error', error => {
 });
 */
 
+function initializeDiscordBot() {
+    if (!discordConfig || !discordConfig.token) {
+        logToRenderer('Discord token not found. Bot not started.');
+        return;
+    }
+
+    client.login(discordConfig.token).catch(error => {
+        logToRenderer(`Discord login failed: ${error.message}`);
+        dialog.showErrorBox('Discord Login Failed', `Could not log in to Discord. Please check your token in the settings.\n\n${error.message}`);
+    });
+}
+
 client.once('clientReady', async () => {
     const shutdown = async () => {
         try {
@@ -970,7 +1052,7 @@ client.once('clientReady', async () => {
     logToRenderer('TavernTones is online!');
 
     //Connect to the voice channel
-    const voiceChannel = client.channels.cache.get(VOICE_CHANNEL_ID);
+    const voiceChannel = client.channels.cache.get(discordConfig.voiceChannel);
     if (voiceChannel && voiceChannel.isVoiceBased()) {
         try {
             connection = joinVoiceChannel({
@@ -1030,7 +1112,10 @@ client.once('clientReady', async () => {
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
-    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER }, fiveEToolsParser);
+    const basePath = app.isPackaged
+        ? path.dirname(app.getPath('exe'))
+        : app.getAppPath();
+    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID: discordConfig.botRoleId, DEFAULT_LOCAL_FOLDER: discordConfig.defaultLocalFolder }, fiveEToolsParser, basePath);
     client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
@@ -1056,7 +1141,7 @@ client.once('clientReady', async () => {
     });
 });
 
-client.login(DISCORD_TOKEN);
+initializeDiscordBot();
 
 let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
 const startingMemUse = memoryUsage;

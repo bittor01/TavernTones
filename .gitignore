@@ -1,8 +1,18 @@
-environmentvars.env
-.env
-node_modules/
-*.bak
-TavernTones.code-workspace
-settings.json
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+
+# build output
+/build
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# misc
+.DS_Store
 Thumbs.db
-.vscode/
+/jules-scratch/
