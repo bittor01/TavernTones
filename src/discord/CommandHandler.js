@@ -4,11 +4,7 @@ const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { shell } = require('electron');
 const axios = require('axios');
-const EncounterBuilder = require('../backend/features/EncounterBuilder.js');
-const VehicleEncounterBuilder = require('../backend/features/VehicleEncounterBuilder.js');
-const NpcGenerator = require('../backend/features/NpcGenerator.js');
 const DropdownHandler = require('./DropdownHandler.js');
-const ThreeDragonAnteManager = require('../backend/features/ThreeDragonAnte.js');
 
 // These will be initialized in the constructor
 let logToRenderer;
@@ -24,10 +20,6 @@ class CommandHandler {
         logToRenderer = logToRendererInstance;
         musicPlayer = musicPlayerInstance;
         this.fiveEToolsParser = fiveEToolsParserInstance;
-        this.encounterBuilder = new EncounterBuilder(this.fiveEToolsParser);
-        this.vehicleEncounterBuilder = new VehicleEncounterBuilder(this.fiveEToolsParser);
-        this.npcGenerator = new NpcGenerator(this.fiveEToolsParser, askGPT4All);
-        this.tdaManager = new ThreeDragonAnteManager(this.client);
         this.lastResponse = null;
         BOT_ROLE_ID = config.BOT_ROLE_ID;
         DEFAULT_LOCAL_FOLDER = config.DEFAULT_LOCAL_FOLDER;
@@ -40,19 +32,7 @@ class CommandHandler {
             .setDescription('To use any command, be sure to @me!')
             .addFields(
                 { name: '!ping', value: 'Test to see if the bot is working.' },
-                { name: '!3da or !tda', value: 'Starts a game of Three-Dragon Ante in the current channel.' },
-                { name: '!create en <creature>', value: 'Starts the interactive encounter builder.' },
-                { name: '!generate-character', value: 'Starts the interactive character/NPC generator.' },
-                { name: '!generate-trap', value: 'Starts the interactive trap/hazard generator.' },
-                { name: '!vehicle-encounter', value: 'Starts the interactive vehicle encounter generator.' },
-                { name: '!5e <query>', value: 'Search all 5etools data by name.' },
-                { name: '!spell <query>', value: 'Search for a spell by name.' },
-                { name: '!item <query>', value: 'Search for an item by name.' },
-                { name: '!monster <query>', value: 'Search for a monster by name.' },
-                { name: '!feat <query>', value: 'Search for a feat by name.' },
-                { name: '!race <query>', value: 'Search for a race by name.' },
-                { name: '!background <query>', value: 'Search for a background by name.' },
-                { name: '!deep <query>', value: 'Search all 5etools data by name and content.' },
+                { name: '!monster <query>', value: 'Search for a monster by name to add to the initiative tracker.' },
                 { name: '!su (!surge)', value: 'Roll on the Wild Magic Surge table.' },
                 { name: '!sh (!shield)', value: 'Roll on the Wild Magic Shield table.' },
                 { name: '!ro (!roll)', value: 'Roll on random tables. Provide the folder name, then the number of rolls you want to make, then an arbitrary number of weights and tables in pairs. Can be used for things like random weather, random loot, random spells, etc. Example usage: `!ro spells 3 8 lvl1 4 lvl2 2 lvl3 1 lvl4`' },
@@ -102,80 +82,6 @@ class CommandHandler {
         await message.reply({ embeds: [embed], components: [row] });
     }
 
-    async _handleEncounterCreatureSearch(message, results, query) {
-        if (!results || results.length === 0) {
-            await message.reply(`I couldn't find any creatures matching "${query}".`);
-            return;
-        }
-
-        if (results.length > 25) {
-            await message.reply(`I found over 25 results for "${query}". Please be more specific.`);
-            return;
-        }
-
-        const options = results.map(item => ({
-            label: item.name,
-            description: `CR: ${item.cr} | Source: ${item.source}`,
-            value: `${item.category}|${item.source}|${item.name}`.substring(0, 100)
-        }));
-
-        const creatureSelectMenu = new StringSelectMenuBuilder()
-            .setCustomId('encounter-creature-select')
-            .setPlaceholder('Select the main creature')
-            .addOptions(options);
-
-        const difficultySelectMenu = new StringSelectMenuBuilder()
-            .setCustomId('encounter-difficulty-select')
-            .setPlaceholder('Select encounter difficulty')
-            .addOptions([
-                { label: 'Low', value: 'low' },
-                { label: 'Moderate', value: 'moderate' },
-                { label: 'High', value: 'high' },
-            ]);
-
-        const proceedButton = new ButtonBuilder()
-            .setCustomId('encounter-proceed-button')
-            .setLabel('Proceed')
-            .setStyle(ButtonStyle.Success);
-
-        const row1 = new ActionRowBuilder().addComponents(creatureSelectMenu);
-        const row2 = new ActionRowBuilder().addComponents(difficultySelectMenu);
-        const row3 = new ActionRowBuilder().addComponents(proceedButton);
-
-        const embed = new EmbedBuilder()
-            .setColor(0x0099FF)
-            .setTitle(`Encounter Builder`)
-            .setDescription(`Found ${results.length} creatures matching "${query}".\nPlease select a creature and a difficulty, then click "Proceed".`);
-
-        await message.reply({ embeds: [embed], components: [row1, row2, row3] });
-    }
-
-    async _handleEncounterTypeSearch(message, type) {
-        const difficultySelectMenu = new StringSelectMenuBuilder()
-            .setCustomId('encounter-difficulty-select')
-            .setPlaceholder('Select encounter difficulty')
-            .addOptions([
-                { label: 'Low', value: 'low' },
-                { label: 'Moderate', value: 'moderate' },
-                { label: 'High', value: 'high' },
-            ]);
-
-        const proceedButton = new ButtonBuilder()
-            .setCustomId(`encounter-proceed-button|type|${type}`)
-            .setLabel('Proceed')
-            .setStyle(ButtonStyle.Success);
-
-        const row1 = new ActionRowBuilder().addComponents(difficultySelectMenu);
-        const row2 = new ActionRowBuilder().addComponents(proceedButton);
-
-        const embed = new EmbedBuilder()
-            .setColor(0x0099FF)
-            .setTitle(`Encounter Builder: ${type}`)
-            .setDescription(`Building an encounter with the theme "${type}".\nPlease select a difficulty, then click "Proceed".`);
-
-        await message.reply({ embeds: [embed], components: [row1, row2] });
-    }
-
     async handleMessage(message) {
         // Ignore messages from the bot itself
         if (message.author.bot) {
@@ -195,51 +101,11 @@ class CommandHandler {
             try {
                 let typingInterval;
                 switch (true) {
-                    case content.startsWith('!3da') || content.startsWith('!tda'):
-                        logToRenderer('Three-Dragon Ante command detected');
-                        this.tdaManager.handleCommand(message);
-                        break;
                     case content.startsWith('!ping'):
                         logToRenderer('Ping command detected'); // Log when ping command is detected
                         await message.reply('Pong!');
                         logToRenderer('Ping successfully ponged.');
                         break;
-
-                    case content.startsWith('!5e'): {
-                        logToRenderer('5e command detected');
-                        const query = content.substring('!5e'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !5e <search term>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchAllByName(query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!spell'): {
-                        logToRenderer('Spell command detected');
-                        const query = content.substring('!spell'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !spell <spell name>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByName('spells', query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!item'): {
-                        logToRenderer('Item command detected');
-                        const query = content.substring('!item'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !item <item name>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByName('items', query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
 
                     case content.startsWith('!monster'): {
                         logToRenderer('Monster command detected');
@@ -250,127 +116,6 @@ class CommandHandler {
                         }
                         const results = await this.fiveEToolsParser.searchByName('bestiary', query);
                         await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!feat'): {
-                        logToRenderer('Feat command detected');
-                        const query = content.substring('!feat'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !feat <feat name>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByName('feats', query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!background'): {
-                        logToRenderer('Background command detected');
-                        const query = content.substring('!background'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !background <background name>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByName('backgrounds', query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!race'): {
-                        logToRenderer('Race command detected');
-                        const query = content.substring('!race'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !race <race name>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByName('races', query);
-                        // If we find exactly one race, check for lineages
-                        if (results.length === 1 && !results[0].raceName) {
-                            const race = results[0];
-                            const lineages = await this.fiveEToolsParser.getLineages(race.name, race.source);
-                            if (lineages.length > 0) {
-                                const embed = new EmbedBuilder()
-                                    .setColor(0x0099FF)
-                                    .setTitle(`Lineages for ${race.name} (${race.source})`)
-                                    .setDescription(lineages.map(l => `• ${l.name} (${l.source})`).join('\n'));
-                                await message.reply({ embeds: [embed] });
-                                break;
-                            }
-                        }
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!deep'): {
-                        logToRenderer('Deep search command detected');
-                        const query = content.substring('!deep'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !deep <search term>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByContent(query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!create en') || content.startsWith('!create enc') || content.startsWith('!create encounter'): {
-                        logToRenderer('Create Encounter command detected');
-                        const commandMatch = content.match(/!create\s+(?:en|enc|encounter)\s+(.+)/i);
-                        if (!commandMatch || !commandMatch[1]) {
-                            await message.reply('Usage: `@Bot !create en <creature name or type>`');
-                            break;
-                        }
-
-                        const query = commandMatch[1].trim().replace(/_/g, ' ');
-                        const creatureTypes = ["aberration", "beast", "celestial", "construct", "dragon", "elemental", "fey", "fiend", "giant", "humanoid", "monstrosity", "ooze", "plant", "undead"];
-
-                        if (creatureTypes.includes(query.toLowerCase())) {
-                            await this._handleEncounterTypeSearch(message, query);
-                        } else {
-                            const results = await this.fiveEToolsParser.searchByName('bestiary', query);
-                            await this._handleEncounterCreatureSearch(message, results, query);
-                        }
-                        break;
-                    }
-
-                    case content.startsWith('!en'): {
-                        logToRenderer('Encounter table command detected');
-                        const invalidCharsRegex = /[.,:;\/\\?*"<>|&]+/g;
-                        const commandBody = content.substring('!en'.length).trim();
-                        const args = commandBody.replace(invalidCharsRegex, "").trim().split(/\s+/);
-
-                        // Parse weights and table names
-                        const tableEntries = [];
-                        let validArgs = true;
-                        for (let i = 0; i < args.length; i += 2) {
-                            const weight = parseInt(args[i], 10);
-                            const tableName = args[i + 1];
-
-                            if (isNaN(weight) || weight <= 0 || !tableName) {
-                                await message.reply('Invalid format. Please ensure weights are positive integers and table names are valid.');
-                                validArgs = false;
-                                break;
-                            }
-                            tableEntries.push({ weight, tableName });
-                        }
-
-                        if (!validArgs) {
-                            break;
-                        }
-                        if (tableEntries.length === 0) {
-                             await message.reply('No table arguments provided. Please specify weights and table names.');
-                             break;
-                        }
-
-                        const result = await rollFromTable("encountertables", tableEntries, message.channel.id);
-
-                        if (result.success) {
-                            const finalMessage = `Effect: ||${result.text}||`;
-                            await message.reply(finalMessage);
-                        } else {
-                            await message.reply(result.message);
-                        }
                         break;
                     }
 
@@ -657,49 +402,6 @@ class CommandHandler {
                         }
                         break;
 
-                    case content.includes('!ma'):
-                        logToRenderer('Magic Item command detected');
-                        const maEmbed = new EmbedBuilder()
-                            .setColor(0x0099FF)
-                            .setTitle('Magic Item Generator')
-                            .setDescription('Configure your magic item generation using the components below.');
-
-                        const modeSelect = new StringSelectMenuBuilder()
-                            .setCustomId('ma-mode-select')
-                            .setPlaceholder('Select Mode')
-                            .addOptions([
-                                { label: 'Loot', value: 'loot', default: true },
-                                { label: 'Shop', value: 'shop' }
-                            ]);
-
-                        const sizeSelect = new StringSelectMenuBuilder()
-                            .setCustomId('ma-size-select')
-                            .setPlaceholder('Select Size')
-                            .addOptions([
-                                { label: 'Huge', value: 'Huge' },
-                                { label: 'Large', value: 'Large' },
-                                { label: 'Average', value: 'Average', default: true },
-                                { label: 'Small', value: 'Small' },
-                                { label: 'Tiny', value: 'Tiny' }
-                            ]);
-
-                        const configureButton = new ButtonBuilder()
-                            .setCustomId('ma-configure-button')
-                            .setLabel('Configure & Generate')
-                            .setStyle(ButtonStyle.Primary);
-
-                        const cancelButton = new ButtonBuilder()
-                            .setCustomId('ma-cancel-button')
-                            .setLabel('Cancel')
-                            .setStyle(ButtonStyle.Secondary);
-
-                        const row1 = new ActionRowBuilder().addComponents(modeSelect);
-                        const row2 = new ActionRowBuilder().addComponents(sizeSelect);
-                        const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
-
-                        await message.reply({ embeds: [maEmbed], components: [row1, row2, row3] });
-                        break;
-
                     case content.includes('!pa'):
                         logToRenderer('Pause command detected');
                         if (musicPlayer.isPlaying) {
@@ -715,21 +417,6 @@ class CommandHandler {
                         await this._sendHelpEmbed(message);
                         break;
 
-                    case content.startsWith('!vehicle-encounter'):
-                        logToRenderer('Vehicle Encounter command detected');
-                        await this._handleVehicleEncounter(message);
-                        break;
-
-                    case content.startsWith('!generate-character'):
-                        logToRenderer('Generate Character command detected');
-                        await this._handleGenerateCharacter(message);
-                        break;
-
-                    case content.startsWith('!generate-trap'):
-                        logToRenderer('Generate Trap command detected');
-                        await this._handleGenerateTrap(message);
-                        break;
-
                     default:
                         logToRenderer('No recognized command found.');
                         await this._sendHelpEmbed(message);
@@ -739,177 +426,6 @@ class CommandHandler {
                 logToRenderer('Error processing command: ' + error.message);
             }
         }
-    }
-
-    async _handleVehicleEncounter(message) {
-        const embed = new EmbedBuilder()
-            .setColor(0x0099FF)
-            .setTitle('Vehicle Encounter Generator')
-            .setDescription('Select your desired options below. Any unselected options will be randomized.');
-
-        const orderedTags = ['land', 'sea', 'air', 'space', 'SHIP', 'SPELLJAMMER', 'INFWAR', 'OBJECT'];
-
-        const tagOptions = [{ label: 'Any Type', value: 'random', default: true }];
-        orderedTags.forEach(tag => {
-            // A quick mapping for user-friendly labels
-            const labelMap = {
-                'land': 'Land',
-                'sea': 'Sea',
-                'air': 'Air',
-                'space': 'Space',
-                'SHIP': 'Ship',
-                'SPELLJAMMER': 'Spelljammer',
-                'INFWAR': 'Infernal War Machine',
-                'OBJECT': 'Object'
-            };
-            tagOptions.push({ label: labelMap[tag] || tag, value: tag });
-        });
-
-        const tagSelect = new StringSelectMenuBuilder()
-            .setCustomId('vehicle-tag-select')
-            .setPlaceholder('Select Vehicle Tag/Type (Optional)')
-            .addOptions(tagOptions);
-
-        const styleSelect = new StringSelectMenuBuilder()
-            .setCustomId('vehicle-style-select')
-            .setPlaceholder('Select Encounter Style')
-            .addOptions([
-                { label: 'Any Style (Random)', value: 'random', default: true },
-                { label: 'Flagship Fight', value: 'flagship' },
-                { label: 'Balanced Fight', value: 'balanced' },
-            ]);
-
-        const proceedButton = new ButtonBuilder()
-            .setCustomId('vehicle-proceed-button')
-            .setLabel('Proceed')
-            .setStyle(ButtonStyle.Success);
-
-        const row1 = new ActionRowBuilder().addComponents(tagSelect);
-        const row2 = new ActionRowBuilder().addComponents(styleSelect);
-        const row3 = new ActionRowBuilder().addComponents(proceedButton);
-
-        await message.reply({ embeds: [embed], components: [row1, row2, row3] });
-    }
-
-    async _handleGenerateCharacter(message) {
-        const embed = new EmbedBuilder()
-            .setColor(0x0099FF)
-            .setTitle('NPC & Character Idea Generator')
-            .setDescription('Select your desired options below. Any unselected options will be randomized. Lineage and Subclass will appear after selecting a Species and Class.');
-
-        // --- Species Dropdown ---
-        const speciesList = await this.fiveEToolsParser.getSpecies();
-        const speciesOptions = speciesList.map(s => ({
-            label: `${s.name} (${s.source})`,
-            value: `species|${s.name}|${s.source}`
-        })).sort((a, b) => a.label.localeCompare(b.label));
-
-        const speciesHandler = new DropdownHandler({
-            customId: 'npc-species-select',
-            options: speciesOptions,
-            placeholder: 'Select a Species (Optional)',
-            topPinned: [{ label: 'Any Species (Random)', value: 'random' }]
-        });
-        const speciesRow = speciesHandler.createActionRow(1);
-
-        // --- Class Dropdown ---
-        const classList = await this.fiveEToolsParser.getClasses();
-        const classOptions = classList.map(c => ({
-            label: `${c.name} (${c.source})`,
-            value: `class|${c.name}|${c.source}`
-        })).sort((a, b) => a.label.localeCompare(b.label));
-
-        const classHandler = new DropdownHandler({
-            customId: 'npc-class-select',
-            options: classOptions,
-            placeholder: 'Select a Class (Optional)',
-            topPinned: [{ label: 'Any Class (Random)', value: 'random' }]
-        });
-        const classRow = classHandler.createActionRow(1);
-
-        // --- Background Dropdown ---
-        const backgroundList = await this.fiveEToolsParser._loadCategoryData('backgrounds');
-        const backgroundOptions = backgroundList.map(b => ({
-            label: `${b.name} (${b.source})`,
-            value: `background|${b.name}|${b.source}`
-        })).sort((a, b) => a.label.localeCompare(b.label));
-
-        const backgroundHandler = new DropdownHandler({
-            customId: 'npc-background-select',
-            options: backgroundOptions,
-            placeholder: 'Select a Background (Optional)',
-            topPinned: [{ label: 'Any Background (Random)', value: 'random' }]
-        });
-        const backgroundRow = backgroundHandler.createActionRow(1);
-
-        // --- Generate Buttons ---
-        const ideaButton = new ButtonBuilder()
-            .setCustomId('npc-generate-idea')
-            .setLabel('Generate Character Idea')
-            .setStyle(ButtonStyle.Primary);
-
-        const npcButton = new ButtonBuilder()
-            .setCustomId('npc-generate-npc')
-            .setLabel('Generate NPC (Statblock)')
-            .setStyle(ButtonStyle.Success);
-
-        const buttonRow = new ActionRowBuilder().addComponents(ideaButton, npcButton);
-
-        const reply = await message.reply({ embeds: [embed], components: [speciesRow, classRow, backgroundRow, buttonRow] });
-
-        // Store the handlers for this message so we can access them in the interaction handler
-        this.client.npcDropdownHandlers.set(reply.id, {
-            species: speciesHandler,
-            class: classHandler,
-            background: backgroundHandler,
-        });
-    }
-
-    async _handleGenerateTrap(message) {
-        const embed = new EmbedBuilder()
-            .setColor(0x0099FF)
-            .setTitle('Trap & Hazard Generator')
-            .setDescription('Select your desired filters below. Dropdowns will update to show valid combinations. Any unselected options will be randomized.');
-
-        // For the initial display, we show all possible options.
-        // The interaction handler in main.js will be responsible for filtering these lists.
-
-        const tierOptions = [
-            { label: 'Any Tier', value: 'random' }, { label: 'Tier 1 (Levels 1-4)', value: '1' },
-            { label: 'Tier 2 (Levels 5-10)', value: '2' }, { label: 'Tier 3 (Levels 11-16)', value: '3' },
-            { label: 'Tier 4 (Levels 17-20)', value: '4' }
-        ];
-        const threatOptions = [
-            { label: 'Any Threat', value: 'random' }, { label: 'Setback', value: 'setback' },
-            { label: 'Dangerous', value: 'dangerous' }, { label: 'Deadly', value: 'deadly' }
-        ];
-        const typeOptions = [
-            { label: 'Any Type', value: 'random' }, { label: 'Mechanical', value: 'MECH' },
-            { label: 'Magical', value: 'MAG' }, { label: 'Simple', value: 'SMPL' }
-        ];
-        const environmentOptions = [
-            { label: 'Any Environment', value: 'random' }, { label: 'Dungeon / Tomb', value: 'dungeon' },
-            { label: 'Wilderness / Cave', value: 'wilderness' }, { label: 'Urban / Building', value: 'urban' },
-            { label: 'Planar / Magical', value: 'planar' }, { label: 'Aquatic', value: 'aquatic' }
-        ];
-
-        const tierSelect = new StringSelectMenuBuilder().setCustomId('trap-tier-select').setPlaceholder('Select Party Tier (Optional)').addOptions(tierOptions);
-        const threatSelect = new StringSelectMenuBuilder().setCustomId('trap-threat-select').setPlaceholder('Select Threat Level (Optional)').addOptions(threatOptions);
-        const typeSelect = new StringSelectMenuBuilder().setCustomId('trap-type-select').setPlaceholder('Select Trap Type (Optional)').addOptions(typeOptions);
-        const environmentSelect = new StringSelectMenuBuilder().setCustomId('trap-environment-select').setPlaceholder('Select Environment (Optional)').addOptions(environmentOptions);
-
-        const proceedButton = new ButtonBuilder()
-            .setCustomId('trap-proceed-button')
-            .setLabel('Generate')
-            .setStyle(ButtonStyle.Success);
-
-        const row1 = new ActionRowBuilder().addComponents(tierSelect);
-        const row2 = new ActionRowBuilder().addComponents(threatSelect);
-        const row3 = new ActionRowBuilder().addComponents(typeSelect);
-        const row4 = new ActionRowBuilder().addComponents(environmentSelect);
-        const row5 = new ActionRowBuilder().addComponents(proceedButton);
-
-        await message.reply({ embeds: [embed], components: [row1, row2, row3, row4, row5] });
     }
 }
 
