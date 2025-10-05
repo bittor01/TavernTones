@@ -4,7 +4,15 @@ const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { shell } = require('electron');
 const axios = require('axios');
+<<<<<<< HEAD
 const DropdownHandler = require('./DropdownHandler.js');
+=======
+const EncounterBuilder = require('../core/EncounterBuilder.js');
+const VehicleEncounterBuilder = require('../core/VehicleEncounterBuilder.js');
+const NpcGenerator = require('../core/NpcGenerator.js');
+const DropdownHandler = require('../ui/DropdownHandler.js');
+const ThreeDragonAnteGame = require('../tda/ThreeDragonAnteGame.js');
+>>>>>>> master
 
 // These will be initialized in the constructor
 let logToRenderer;
@@ -15,11 +23,22 @@ let DEFAULT_LOCAL_FOLDER;
 
 
 class CommandHandler {
+<<<<<<< HEAD
     constructor(client, logToRendererInstance, musicPlayerInstance, config, fiveEToolsParserInstance, basePath) {
+=======
+    constructor(client, logToRendererInstance, musicPlayerInstance, config, fiveEToolsParserInstance, workerService) {
+>>>>>>> master
         this.client = client;
         logToRenderer = logToRendererInstance;
         musicPlayer = musicPlayerInstance;
         this.fiveEToolsParser = fiveEToolsParserInstance;
+<<<<<<< HEAD
+=======
+        this.encounterBuilder = new EncounterBuilder(this.fiveEToolsParser);
+        this.vehicleEncounterBuilder = new VehicleEncounterBuilder(this.fiveEToolsParser);
+        this.npcGenerator = new NpcGenerator(this.fiveEToolsParser, askGPT4All);
+        this.tdaManager = new ThreeDragonAnteGame(this.client, workerService);
+>>>>>>> master
         this.lastResponse = null;
         BOT_ROLE_ID = config.BOT_ROLE_ID;
         DEFAULT_LOCAL_FOLDER = config.DEFAULT_LOCAL_FOLDER;
@@ -122,7 +141,11 @@ class CommandHandler {
 
                     case content.startsWith('!su'):
                         logToRenderer('Surge command detected');
+<<<<<<< HEAD
                         const surgeFilePath = path.join(this.randomTablesPath, 'surge.json');
+=======
+                        const surgeFilePath = path.join(__dirname, '..', '..', 'randomtables/surge.json');
+>>>>>>> master
                         const surgeData = JSON.parse(fs.readFileSync(surgeFilePath, 'utf8'));
                         const surgeEffect = getRandomEffect(surgeData, userId);
                         if (surgeEffect) {
@@ -146,7 +169,11 @@ class CommandHandler {
 
                     case content.includes('!sh'):
                         logToRenderer('Shield command detected');
+<<<<<<< HEAD
                         const shieldFilePath = path.join(this.randomTablesPath, 'shield.json');
+=======
+                        const shieldFilePath = path.join(__dirname, '..', '..', 'randomtables/shield.json');
+>>>>>>> master
                         const shieldData = JSON.parse(fs.readFileSync(shieldFilePath, 'utf8'));
                         const shieldEffect = getRandomEffect(shieldData, userId);
                         if (shieldEffect) {
@@ -429,8 +456,219 @@ class CommandHandler {
         }
     }
 
+<<<<<<< HEAD
     getValidTableFolders() {
         const randomTablesPath = this.randomTablesPath;
+=======
+    async _handleVehicleEncounter(message) {
+        const embed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle('Vehicle Encounter Generator')
+            .setDescription('Select your desired options below. Any unselected options will be randomized.');
+
+        const orderedTags = ['land', 'sea', 'air', 'space', 'SHIP', 'SPELLJAMMER', 'INFWAR', 'OBJECT'];
+
+        const tagOptions = [{ label: 'Any Type', value: 'random', default: true }];
+        orderedTags.forEach(tag => {
+            // A quick mapping for user-friendly labels
+            const labelMap = {
+                'land': 'Land',
+                'sea': 'Sea',
+                'air': 'Air',
+                'space': 'Space',
+                'SHIP': 'Ship',
+                'SPELLJAMMER': 'Spelljammer',
+                'INFWAR': 'Infernal War Machine',
+                'OBJECT': 'Object'
+            };
+            tagOptions.push({ label: labelMap[tag] || tag, value: tag });
+        });
+
+        const tagSelect = new StringSelectMenuBuilder()
+            .setCustomId('vehicle-tag-select')
+            .setPlaceholder('Select Vehicle Tag/Type (Optional)')
+            .addOptions(tagOptions);
+
+        const styleSelect = new StringSelectMenuBuilder()
+            .setCustomId('vehicle-style-select')
+            .setPlaceholder('Select Encounter Style')
+            .addOptions([
+                { label: 'Any Style (Random)', value: 'random', default: true },
+                { label: 'Flagship Fight', value: 'flagship' },
+                { label: 'Balanced Fight', value: 'balanced' },
+            ]);
+
+        const proceedButton = new ButtonBuilder()
+            .setCustomId('vehicle-proceed-button')
+            .setLabel('Proceed')
+            .setStyle(ButtonStyle.Success);
+
+        const row1 = new ActionRowBuilder().addComponents(tagSelect);
+        const row2 = new ActionRowBuilder().addComponents(styleSelect);
+        const row3 = new ActionRowBuilder().addComponents(proceedButton);
+
+        await message.reply({ embeds: [embed], components: [row1, row2, row3] });
+    }
+
+    async _handleGenerateCharacter(message) {
+        const embed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle('NPC & Character Idea Generator')
+            .setDescription('Select your desired options below. Any unselected options will be randomized. Lineage and Subclass will appear after selecting a Species and Class.');
+
+        // --- Species Dropdown ---
+        const speciesList = await this.fiveEToolsParser.getSpecies();
+        const speciesOptions = speciesList.map(s => ({
+            label: `${s.name} (${s.source})`,
+            value: `species|${s.name}|${s.source}`
+        })).sort((a, b) => a.label.localeCompare(b.label));
+
+        const speciesHandler = new DropdownHandler({
+            customId: 'npc-species-select',
+            options: speciesOptions,
+            placeholder: 'Select a Species (Optional)',
+            topPinned: [{ label: 'Any Species (Random)', value: 'random' }]
+        });
+        const speciesRow = speciesHandler.createActionRow(1);
+
+        // --- Class Dropdown ---
+        const classList = await this.fiveEToolsParser.getClasses();
+        const classOptions = classList.map(c => ({
+            label: `${c.name} (${c.source})`,
+            value: `class|${c.name}|${c.source}`
+        })).sort((a, b) => a.label.localeCompare(b.label));
+
+        const classHandler = new DropdownHandler({
+            customId: 'npc-class-select',
+            options: classOptions,
+            placeholder: 'Select a Class (Optional)',
+            topPinned: [{ label: 'Any Class (Random)', value: 'random' }]
+        });
+        const classRow = classHandler.createActionRow(1);
+
+        // --- Background Dropdown ---
+        const backgroundList = await this.fiveEToolsParser._loadCategoryData('backgrounds');
+        const backgroundOptions = backgroundList.map(b => ({
+            label: `${b.name} (${b.source})`,
+            value: `background|${b.name}|${b.source}`
+        })).sort((a, b) => a.label.localeCompare(b.label));
+
+        const backgroundHandler = new DropdownHandler({
+            customId: 'npc-background-select',
+            options: backgroundOptions,
+            placeholder: 'Select a Background (Optional)',
+            topPinned: [{ label: 'Any Background (Random)', value: 'random' }]
+        });
+        const backgroundRow = backgroundHandler.createActionRow(1);
+
+        // --- Generate Buttons ---
+        const ideaButton = new ButtonBuilder()
+            .setCustomId('npc-generate-idea')
+            .setLabel('Generate Character Idea')
+            .setStyle(ButtonStyle.Primary);
+
+        const npcButton = new ButtonBuilder()
+            .setCustomId('npc-generate-npc')
+            .setLabel('Generate NPC (Statblock)')
+            .setStyle(ButtonStyle.Success);
+
+        const buttonRow = new ActionRowBuilder().addComponents(ideaButton, npcButton);
+
+        const reply = await message.reply({ embeds: [embed], components: [speciesRow, classRow, backgroundRow, buttonRow] });
+
+        // Store the handlers for this message so we can access them in the interaction handler
+        this.client.npcDropdownHandlers.set(reply.id, {
+            species: speciesHandler,
+            class: classHandler,
+            background: backgroundHandler,
+        });
+    }
+
+    async _handleGenerateTrap(message) {
+        const embed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle('Trap & Hazard Generator')
+            .setDescription('Select your desired filters below. Dropdowns will update to show valid combinations. Any unselected options will be randomized.');
+
+        // For the initial display, we show all possible options.
+        // The interaction handler in main.js will be responsible for filtering these lists.
+
+        const tierOptions = [
+            { label: 'Any Tier', value: 'random' }, { label: 'Tier 1 (Levels 1-4)', value: '1' },
+            { label: 'Tier 2 (Levels 5-10)', value: '2' }, { label: 'Tier 3 (Levels 11-16)', value: '3' },
+            { label: 'Tier 4 (Levels 17-20)', value: '4' }
+        ];
+        const threatOptions = [
+            { label: 'Any Threat', value: 'random' }, { label: 'Setback', value: 'setback' },
+            { label: 'Dangerous', value: 'dangerous' }, { label: 'Deadly', value: 'deadly' }
+        ];
+        const typeOptions = [
+            { label: 'Any Type', value: 'random' }, { label: 'Mechanical', value: 'MECH' },
+            { label: 'Magical', value: 'MAG' }, { label: 'Simple', value: 'SMPL' }
+        ];
+        const environmentOptions = [
+            { label: 'Any Environment', value: 'random' }, { label: 'Dungeon / Tomb', value: 'dungeon' },
+            { label: 'Wilderness / Cave', value: 'wilderness' }, { label: 'Urban / Building', value: 'urban' },
+            { label: 'Planar / Magical', value: 'planar' }, { label: 'Aquatic', value: 'aquatic' }
+        ];
+
+        const tierSelect = new StringSelectMenuBuilder().setCustomId('trap-tier-select').setPlaceholder('Select Party Tier (Optional)').addOptions(tierOptions);
+        const threatSelect = new StringSelectMenuBuilder().setCustomId('trap-threat-select').setPlaceholder('Select Threat Level (Optional)').addOptions(threatOptions);
+        const typeSelect = new StringSelectMenuBuilder().setCustomId('trap-type-select').setPlaceholder('Select Trap Type (Optional)').addOptions(typeOptions);
+        const environmentSelect = new StringSelectMenuBuilder().setCustomId('trap-environment-select').setPlaceholder('Select Environment (Optional)').addOptions(environmentOptions);
+
+        const proceedButton = new ButtonBuilder()
+            .setCustomId('trap-proceed-button')
+            .setLabel('Generate')
+            .setStyle(ButtonStyle.Success);
+
+        const row1 = new ActionRowBuilder().addComponents(tierSelect);
+        const row2 = new ActionRowBuilder().addComponents(threatSelect);
+        const row3 = new ActionRowBuilder().addComponents(typeSelect);
+        const row4 = new ActionRowBuilder().addComponents(environmentSelect);
+        const row5 = new ActionRowBuilder().addComponents(proceedButton);
+
+        await message.reply({ embeds: [embed], components: [row1, row2, row3, row4, row5] });
+    }
+}
+
+function getValidTableFolders() {
+    const randomTablesPath = path.join(__dirname, '..', '..', 'randomtables');
+    try {
+        const allEntries = fs.readdirSync(randomTablesPath, { withFileTypes: true });
+        const directories = allEntries
+            .filter(dirent => dirent.isDirectory())
+            .map(dirent => dirent.name);
+        return directories;
+    } catch (error) {
+        logToRenderer(`Error reading '${randomTablesPath}': ${error.message}`);
+        // If the directory doesn't exist or there's another error, return an empty array.
+        return [];
+    }
+}
+
+async function rollFromTable(folderName, tablesConfig, channelId) {
+    const encounterTablesFolder = path.join(__dirname, '..', '..', 'randomtables', folderName);
+
+    // 1. Path Generation (done implicitly in step 2)
+    // 2. File Existence Check
+    const missingTables = [];
+    for (const entry of tablesConfig) {
+        const filePath = path.join(encounterTablesFolder, `${entry.tableName}.json`);
+        if (!fs.existsSync(filePath)) {
+            missingTables.push(entry.tableName);
+        }
+    }
+
+    if (missingTables.length > 0) {
+        return { success: false, message: `Missing tables: ${missingTables.join(', ')}` };
+    }
+
+    // 3. Table Loading
+    const tables = tablesConfig.map(entry => {
+        const filePath = path.join(encounterTablesFolder, `${entry.tableName}.json`);
+        // It's good practice to handle potential errors during file reading and JSON parsing
+>>>>>>> master
         try {
             const allEntries = fs.readdirSync(randomTablesPath, { withFileTypes: true });
             const directories = allEntries
