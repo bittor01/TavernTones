@@ -17,3 +17,5 @@ yarn-error.log*
 Thumbs.db
 /jules-scratch/
 environmentvars.env
+
+# small change
