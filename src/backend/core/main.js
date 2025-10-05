@@ -27,9 +27,10 @@ async function ensureExternalDataFolders() {
     const dataFolderPath = path.join(basePath, 'TavernTones_Data');
 
     // Define source and destination paths
-    const sourceResourcesPath = path.join(app.getAppPath(), 'resources');
+    const sourcePathBase = app.isPackaged ? path.dirname(app.getAppPath()) : app.getAppPath();
+    const sourceResourcesPath = path.join(sourcePathBase, 'resources');
     const destResourcesPath = path.join(dataFolderPath, 'resources');
-    const sourceRandomTablesPath = path.join(app.getAppPath(), 'randomtables');
+    const sourceRandomTablesPath = path.join(sourcePathBase, 'randomtables');
     const destRandomTablesPath = path.join(dataFolderPath, 'randomtables');
 
     const copyIfMissing = async (source, dest, type) => {
