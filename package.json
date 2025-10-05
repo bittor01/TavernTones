@@ -1,10 +1,7 @@
 {
   "name": "taverntones",
   "version": "1.0.0",
-
   "main": "src/backend/core/main.js",
-
-
   "scripts": {
     "start": "electron .",
     "json": "electron . --tool=gamify",
@@ -18,7 +15,6 @@
     "@dice-roller/rpg-dice-roller": "^5.5.1",
     "@discordjs/voice": "^0.17.0",
     "axios": "^1.7.9",
-    "canvas": "^3.2.0",
     "discord.js": "^14.16.1",
     "electron-store": "^11.0.0",
     "ffmpeg": "^0.0.4",
@@ -38,7 +34,6 @@
       "forceCodeSigning": false
     },
     "files": [
-
       "src/",
       "package.json"
     ],

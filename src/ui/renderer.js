@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 100); // 100ms delay to ensure main process is ready
 
     // --- Initial UI Setup ---
+    updateDiscordFeatureState(false); // Disable Discord features by default
+
     addCreatureForm.innerHTML = `
         <h2>Add Combatant</h2>
         <div class="form-row">
@@ -302,6 +304,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- IPC Listeners ---
     window.electron.ipcRenderer.on('log-message', (event, message) => logMessage(message));
+
+    window.electron.ipcRenderer.on('discord-status', (event, { connected }) => {
+        logMessage(`Discord status: ${connected ? 'Connected' : 'Disconnected'}`);
+        updateDiscordFeatureState(connected);
+    });
 
     window.electron.ipcRenderer.on('dice-log', (event, message) => {
         const logEntry = document.createElement('div');
@@ -1069,6 +1076,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) {
             console.error("Failed to parse or render stat block:", e);
             return "Error: Could not display stat block. Data might be malformed.";
+        }
+    }
+
+    function updateDiscordFeatureState(connected) {
+        const pushInitiativeBtn = document.getElementById('push-initiative-btn');
+        const pushPanelBtn = document.getElementById('push-panel-btn');
+
+        const title = connected ? '' : 'Discord not connected';
+        const disabled = !connected;
+
+        if (pushInitiativeBtn) {
+            pushInitiativeBtn.disabled = disabled;
+            pushInitiativeBtn.title = connected ? 'Push the current initiative order to Discord' : title;
+        }
+
+        if (pushPanelBtn) {
+            pushPanelBtn.disabled = disabled;
+            pushPanelBtn.title = connected ? 'Push this panel\'s content to Discord' : title;
         }
     }
 });

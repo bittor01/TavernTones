@@ -22,6 +22,38 @@ const fs = require('fs').promises;
 
 let discordConfig;
 
+async function ensureExternalDataFolders() {
+    const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+    const dataFolderPath = path.join(basePath, 'TavernTones_Data');
+
+    // Define source and destination paths
+    const sourceResourcesPath = path.join(app.getAppPath(), 'resources');
+    const destResourcesPath = path.join(dataFolderPath, 'resources');
+    const sourceRandomTablesPath = path.join(app.getAppPath(), 'randomtables');
+    const destRandomTablesPath = path.join(dataFolderPath, 'randomtables');
+
+    const copyIfMissing = async (source, dest, type) => {
+        try {
+            await fs.access(dest);
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                logToRenderer(`External '${type}' folder not found. Copying default data...`);
+                await fs.cp(source, dest, { recursive: true });
+            } else {
+                throw error; // Rethrow other errors
+            }
+        }
+    };
+
+    try {
+        await copyIfMissing(sourceResourcesPath, destResourcesPath, 'resources');
+        await copyIfMissing(sourceRandomTablesPath, destRandomTablesPath, 'randomtables');
+    } catch (error) {
+        console.error('Error ensuring external data folders:', error);
+        dialog.showErrorBox('Data Folder Error', `Could not create or copy data folders. Please check permissions and restart.\n\n${error.message}`);
+    }
+}
+
 let connection;
 let musicPlayer;
 let isAppReady = false; // Flag to indicate if the app is ready
@@ -162,17 +194,29 @@ function createGamifyWindow() {
 
 async function apploader() {
     discordConfig = await getDiscordConfig();
-    await app.whenReady().then(() => {
+    await app.whenReady().then(async () => {
         console.log('App is ready.');
+        await ensureExternalDataFolders(); // Ensure data folders exist
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app); // Initialize parser early
 
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
+        // Create the main window, but don't show it if we are launching the gamify tool
+        createWindow(!isGamifyLaunch);
+
         if (!discordConfig || !discordConfig.token) {
-            createSettingsWindow();
-        } else {
-            // Create the main window, but don't show it if we are launching the gamify tool
-            createWindow(!isGamifyLaunch);
+            // Use a timeout to ensure the main window is ready before showing the dialog
+            setTimeout(() => {
+                if (mainWindow) {
+                    dialog.showMessageBox(mainWindow, {
+                        type: 'warning',
+                        title: 'Discord Not Configured',
+                        message: 'No Discord credentials found.',
+                        detail: 'The application will start, but all Discord-related features will be disabled. Please configure them in the settings and restart the app to enable them.',
+                        buttons: ['OK']
+                    });
+                }
+            }, 1000);
         }
 
 
@@ -183,17 +227,14 @@ async function apploader() {
 
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length === 0) {
-                if (!discordConfig || !discordConfig.token) {
-                    createSettingsWindow();
-                } else {
-                    createWindow(!isGamifyLaunch);
-                    if (isGamifyLaunch) {
-                        createGamifyWindow();
-                    }
+                createWindow(!isGamifyLaunch);
+                if (isGamifyLaunch) {
+                    createGamifyWindow();
                 }
             }
         });
         isAppReady = true;
+        initializeDiscordBot();
         ipcloader();
     });
 }
@@ -1009,12 +1050,20 @@ client.on('error', error => {
 function initializeDiscordBot() {
     if (!discordConfig || !discordConfig.token) {
         logToRenderer('Discord token not found. Bot not started.');
+        if (mainWindow && mainWindow.webContents) {
+            // Send status to renderer to disable UI elements
+            mainWindow.webContents.send('discord-status', { connected: false });
+        }
         return;
     }
 
     client.login(discordConfig.token).catch(error => {
         logToRenderer(`Discord login failed: ${error.message}`);
         dialog.showErrorBox('Discord Login Failed', `Could not log in to Discord. Please check your token in the settings.\n\n${error.message}`);
+        if (mainWindow && mainWindow.webContents) {
+            // Send status to renderer to disable UI elements
+            mainWindow.webContents.send('discord-status', { connected: false });
+        }
     });
 }
 
@@ -1050,6 +1099,9 @@ client.once('clientReady', async () => {
     app.on('before-quit', shutdown);
 
     logToRenderer('TavernTones is online!');
+    if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('discord-status', { connected: true });
+    }
 
     //Connect to the voice channel
     const voiceChannel = client.channels.cache.get(discordConfig.voiceChannel);
@@ -1140,8 +1192,6 @@ client.once('clientReady', async () => {
         }
     });
 });
-
-initializeDiscordBot();
 
 let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
 const startingMemUse = memoryUsage;

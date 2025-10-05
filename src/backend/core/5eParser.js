@@ -1,11 +1,5 @@
 const fs = require('fs').promises;
 const path = require('path');
-
-<<<<<<<< HEAD:src/backend/core/5eParser.js
-========
-const dataPath = path.join(__dirname, '..', '..', 'resources', '5etoolsdata');
-const randomTablesPath = path.join(__dirname, '..', '..', 'randomtables', 'origin');
->>>>>>>> master:src/core/5eParser.js
 const categorySources = {
     'spells': { type: 'directory', path: 'spells', key: 'spell' },
     'items': { type: 'file', path: 'items.json', key: 'item' },
@@ -25,9 +19,45 @@ class FiveEToolsParser {
         const basePath = app.isPackaged
             ? path.dirname(app.getPath('exe'))
             : app.getAppPath();
-        this.dataPath = path.join(basePath, 'resources', '5etoolsdata');
-        this.randomTablesPath = path.join(basePath, 'randomtables', 'origin');
+        // Point to the new external data folders
+        this.dataPath = path.join(basePath, 'TavernTones_Data', 'resources');
+        this.randomTablesPath = path.join(basePath, 'TavernTones_Data', 'randomtables');
         this.cache = new Map(); // Simple cache to store loaded data
+    }
+
+    async _findAndProcessBestiaryFiles(processJsonData) {
+        const searchPaths = [
+            this.dataPath, // Root of /resources
+            path.join(this.dataPath, 'bestiary'),
+            path.join(this.dataPath, '5etoolsdata', 'bestiary')
+        ];
+
+        const processedFiles = new Set();
+
+        for (const searchPath of searchPaths) {
+            try {
+                await fs.access(searchPath); // Check if directory exists
+            } catch (e) {
+                continue; // Directory doesn't exist, skip to the next one
+            }
+
+            try {
+                const dirents = await fs.readdir(searchPath, { withFileTypes: true });
+                for (const dirent of dirents) {
+                    // Only process files in the root of the search path, don't recurse further
+                    if (dirent.isFile() && path.extname(dirent.name) === '.json') {
+                        const filePath = path.join(searchPath, dirent.name);
+                        if (processedFiles.has(filePath)) continue;
+
+                        const fileContent = await fs.readFile(filePath, 'utf8');
+                        processJsonData(JSON.parse(fileContent));
+                        processedFiles.add(filePath);
+                    }
+                }
+            } catch (error) {
+                this.logToRenderer(`[5eParser] Warning: Could not fully read directory ${searchPath}: ${error.message}`);
+            }
+        }
     }
 
     /**
@@ -64,7 +94,9 @@ class FiveEToolsParser {
         };
 
         try {
-            if (sourceInfo.type === 'directory') {
+            if (category === 'bestiary') {
+                await this._findAndProcessBestiaryFiles(processJsonData);
+            } else if (sourceInfo.type === 'directory') {
                 const categoryPath = path.join(this.dataPath, sourceInfo.path);
                 const files = await fs.readdir(categoryPath);
                 for (const file of files) {
