@@ -24,7 +24,7 @@ let discordConfig;
 let dataBasePath;
 
 async function ensureDataDirectories() {
-    const topLevelPath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+    const topLevelPath = app.isPackaged ? path.dirname(app.getPath('exe')) : path.join(__dirname, '../../..');
     dataBasePath = path.join(topLevelPath, 'TavernTonesData');
     const tasksPath = path.join(dataBasePath, 'tasks');
 
