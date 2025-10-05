@@ -360,7 +360,8 @@ async function ipcloader() {
 
     ipcMain.on('set-discord-config', async (event, config) => {
         await setDiscordConfig(config);
-        await dialog.showMessageBox(null, {
+        const parentWindow = BrowserWindow.fromWebContents(event.sender);
+        await dialog.showMessageBox(parentWindow, {
             type: 'info',
             title: 'Settings Saved',
             message: 'Your settings have been saved. The application will now restart to apply the changes.',
@@ -368,6 +369,17 @@ async function ipcloader() {
         });
         app.relaunch();
         app.quit();
+    });
+
+    ipcMain.handle('select-music-folder', async (event) => {
+        const parentWindow = BrowserWindow.fromWebContents(event.sender);
+        const { filePaths } = await dialog.showOpenDialog(parentWindow, {
+            properties: ['openDirectory']
+        });
+        if (filePaths && filePaths.length > 0) {
+            return filePaths[0];
+        }
+        return null;
     });
 
     ipcMain.on('open-settings-window', createSettingsWindow);
@@ -506,7 +518,9 @@ async function ipcloader() {
 
         ipcMain.handle('get-task-data', async () => {
             const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-            const defaultTaskPath = path.join(basePath, 'src/jsontool/deck-editing-task.json');
+            const defaultTaskPath = app.isPackaged
+                ? path.join(basePath, 'jsontool/deck-editing-task.json')
+                : path.join(basePath, 'src/jsontool/deck-editing-task.json');
             return await loadTaskData(defaultTaskPath);
         });
 

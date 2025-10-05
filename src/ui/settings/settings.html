@@ -25,6 +25,13 @@
             margin-bottom: 5px;
             color: #ccc;
         }
+        .folder-select {
+            display: flex;
+            gap: 10px;
+        }
+        .folder-select input {
+            flex-grow: 1;
+        }
         #save-button {
             width: 100%;
             padding: 10px;
@@ -53,7 +60,10 @@
         </div>
         <div class="form-group">
             <label for="defaultLocalFolder">Default Music Folder</label>
-            <input type="text" id="defaultLocalFolder" placeholder="Enter the default path for local music files">
+            <div class="folder-select">
+                <input type="text" id="defaultLocalFolder" placeholder="Select a folder..." readonly>
+                <button id="browse-folder-button">Browse...</button>
+            </div>
         </div>
         <button id="save-button">Save and Restart</button>
     </div>

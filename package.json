@@ -45,6 +45,10 @@
       {
         "from": "randomtables",
         "to": "randomtables"
+      },
+      {
+        "from": "src/jsontool",
+        "to": "jsontool"
       }
     ],
     "directories": {

@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const botRoleIdInput = document.getElementById('botRoleId');
     const defaultLocalFolderInput = document.getElementById('defaultLocalFolder');
     const saveButton = document.getElementById('save-button');
+    const browseFolderButton = document.getElementById('browse-folder-button');
 
     // Request existing config from main process when window loads
     window.settings.getDiscordConfig();
@@ -17,6 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
             textChannelInput.value = config.textChannel || '';
             botRoleIdInput.value = config.botRoleId || '';
             defaultLocalFolderInput.value = config.defaultLocalFolder || '';
+        }
+    });
+
+    browseFolderButton.addEventListener('click', async () => {
+        const folderPath = await window.settings.selectMusicFolder();
+        if (folderPath) {
+            defaultLocalFolderInput.value = folderPath;
         }
     });
 
