@@ -1,11 +1,10 @@
 {
   "name": "taverntones",
   "version": "1.0.0",
-<<<<<<< HEAD
+
   "main": "src/backend/core/main.js",
-=======
-  "main": "src/main.js",
->>>>>>> master
+
+
   "scripts": {
     "start": "electron .",
     "json": "electron . --tool=gamify",
@@ -39,7 +38,7 @@
       "forceCodeSigning": false
     },
     "files": [
-<<<<<<< HEAD
+
       "src/",
       "package.json"
     ],
@@ -52,14 +51,6 @@
         "from": "randomtables",
         "to": "randomtables"
       }
-=======
-      "environmentvars.env",
-      "src/main.js",
-      "src/ui/preload.js",
-      "index.html",
-      "src/ui/renderer.js",
-      "styles.css"
->>>>>>> master
     ],
     "directories": {
       "output": "build"
