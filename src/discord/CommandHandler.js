@@ -366,8 +366,7 @@ class CommandHandler {
 
                         const fullCommand = message.content.substring(message.content.toLowerCase().indexOf('!pl')).trim();
                         const parts = fullCommand.split(/\s+/); // Split by one or more spaces
-                        // parts[0] is "!pl" itself. commandArgs will be the actual arguments after "!pl".
-                        const commandArgs = parts.slice(1).filter(arg => arg.length > 0); // Filter out empty strings that might result from multiple spaces
+                        const commandArgs = parts.slice(1).filter(arg => arg.length > 0);
 
                         let parsedFolder = null;
                         let parsedSong = null;
@@ -540,200 +539,6 @@ class CommandHandler {
 
         return { success: true, text: effect.text };
     }
-}
-
-// Function to get a random effect from a table, filtering out used unique effects for the user
-function getRandomEffect(table, userId) {
-    const availableEffects = table.filter(effect => !effect.unique || !effect.used.includes(userId));
-    if (availableEffects.length === 0) {
-        return null; // No available effects
-    }
-    const randomIndex = Math.floor(Math.random() * availableEffects.length);
-    return availableEffects[randomIndex];
-}
-
-function evaluateDiceRolls(text, diceLimit = 24000) {
-    const roller = new DiceRoller();
-
-    while (text.includes("[[")) {
-        text = text.replace(/\[\[([^\[\]]+)\]\]/g, (match, diceExpression) => {
-            const roll = roller.roll(diceExpression);
-            let result = roll.total;
-
-            // Cap the result at diceLimit if exceeded
-            if (result > diceLimit) {
-                result = diceLimit;
-            }
-
-            return result;
-        });
-    }
-
-    return text;
-}
-
-async function askGPT4All(prompt, model, addSuffix = true) {
-    let chatmodel = 'Meta-Llama-3-8B-Instruct.Q4_0.gguf'; // Default to ll model
-    if (model === 're') {
-        chatmodel = 'qwen2.5-coder-7b-instruct-q4_0.gguf';
-    }
-
-    // Sanitize the prompt to prevent command injection
-    const sanitizedPrompt = prompt.replace(/"/g, '\\"');
-    let finalPrompt = sanitizedPrompt;
-
-    if (addSuffix) {
-        const tailPrompt = '\n - Thanks for the help!';
-        finalPrompt += tailPrompt;
-    }
-
-    try {
-        const response = await axios.post('http://localhost:4891/v1/chat/completions', {
-            "model": chatmodel,
-            "messages": [{ "role": "user", "content": finalPrompt }],
-            "max_tokens": 8000
-        });
-
-
-        // Log the entire response to inspect its structure
-        logToRenderer(`Response length: ${response.data.choices[0].message.content.length} characters`);
-
-        if (response.data && response.data.choices && response.data.choices[0].message.content) {
-            let reply = response.data.choices[0].message.content.trim();
-
-            // Append references to the reply
-            if (response.data.choices[0].references && response.data.choices[0].references.length > 0) {
-                //logToRenderer(JSON.stringify(response.data.choices[0].references));
-                reply += `\n\n${response.data.choices[0].references.length} Sources:`;
-                let refList = '';
-                for (const ref of response.data.choices[0].references) {
-                    if (!refList.includes(ref.file.toString().trim())) {
-                        refList += `\n${ref.file.toString()}`;
-                    }
-                }
-                reply += refList;
-            }
-            else {
-                reply += `\n\nSource: ***My butt*** (tell Crisp the RAG isn't working)`;
-            }
-
-            // Save the last response
-            lastResponse = response.data;
-
-            return reply;
-
-        } else {
-            throw new Error('Invalid response from GPT-4All server');
-        }
-    } catch (error) {
-        logToRenderer(`Error: ${error.message}`);
-        throw new Error(`An error occurred while running the query: ${error.message}`);
-    }
-}
-
-// Add this function somewhere in main.js, for example, near other helper functions.
-// Ensure fs, path, DEFAULT_LOCAL_FOLDER, and logToRenderer are accessible.
-async function findMusic(folderSearchTerm, songSearchTerm) {
-    logToRenderer(`findMusic: Initiating search with folderSearchTerm='${folderSearchTerm}', songSearchTerm='${songSearchTerm}'.`);
-
-    let targetFolderToSearch;
-    // Determine the folder name to search for. Default to "chill" if no folder term is provided.
-    if (!folderSearchTerm || folderSearchTerm.trim() === "") {
-        targetFolderToSearch = "chill";
-        logToRenderer(`findMusic: folderSearchTerm is empty or null. Using default 'chill' folder.`);
-    } else {
-        targetFolderToSearch = folderSearchTerm;
-    }
-
-    let actualFolderPath = null;
-    let foundFolderOriginalName = null;
-
-    // Phase 1: Find the folder
-    try {
-        // Check if DEFAULT_LOCAL_FOLDER is accessible
-        // DEFAULT_LOCAL_FOLDER should be available from process.env
-        if (!DEFAULT_LOCAL_FOLDER || !fs.existsSync(DEFAULT_LOCAL_FOLDER)) {
-            logToRenderer(`findMusic: Error - DEFAULT_LOCAL_FOLDER ('${DEFAULT_LOCAL_FOLDER}') is not defined or does not exist.`);
-            return null;
-        }
-
-        // Get all directory names from DEFAULT_LOCAL_FOLDER
-        const allEntities = fs.readdirSync(DEFAULT_LOCAL_FOLDER, { withFileTypes: true });
-        const subDirectories = allEntities.filter(dirent => dirent.isDirectory()).map(dirent => dirent.name);
-
-        if (subDirectories.length === 0) {
-            logToRenderer(`findMusic: No sub-folders found within DEFAULT_LOCAL_FOLDER ('${DEFAULT_LOCAL_FOLDER}').`);
-            return null;
-        }
-
-        // Attempt to match the targetFolderToSearch with a directory name (substring match, case-insensitive)
-        const targetFolderLower = targetFolderToSearch.toLowerCase();
-        for (const dirName of subDirectories) {
-            if (dirName.toLowerCase().includes(targetFolderLower)) {
-                actualFolderPath = path.join(DEFAULT_LOCAL_FOLDER, dirName);
-                foundFolderOriginalName = dirName; // Store the actual name of the matched folder
-                logToRenderer(`findMusic: Successfully matched folder: name='${foundFolderOriginalName}', path='${actualFolderPath}'.`);
-                break; // Use the first match
-            }
-        }
-
-        if (!actualFolderPath) {
-            logToRenderer(`findMusic: No folder found containing '${targetFolderToSearch}' within '${DEFAULT_LOCAL_FOLDER}'.`);
-            return null; // Folder not found
-        }
-
-    } catch (error) {
-        logToRenderer(`findMusic: Exception while accessing or reading DEFAULT_LOCAL_FOLDER ('${DEFAULT_LOCAL_FOLDER}'): ${error.message}`);
-        return null;
-    }
-
-    // Phase 2: Find the song within the identified folder
-    try {
-        const filesInFolder = fs.readdirSync(actualFolderPath);
-        // Filter for .mp3 and .wav files
-        const audioFiles = filesInFolder.filter(file => {
-            const ext = path.extname(file).toLowerCase();
-            return ext === '.wav' || ext === '.lnk';
-        });
-
-        if (audioFiles.length === 0) {
-            logToRenderer(`findMusic: No audio files (.wav) found in the folder '${foundFolderOriginalName}'.`);
-            return null;
-        }
-
-        let songFilePath = null;
-
-        // If a songSearchTerm is provided, try to find a matching song
-        if (songSearchTerm && songSearchTerm.trim() !== "") {
-            const songSearchLower = songSearchTerm.toLowerCase();
-            for (const fileName of audioFiles) {
-                const songNameWithoutExt = path.parse(fileName).name; // Get filename without extension
-                if (songNameWithoutExt.toLowerCase().includes(songSearchLower)) {
-                    songFilePath = path.join(actualFolderPath, fileName);
-                    logToRenderer(`findMusic: Successfully matched song: '${fileName}' in folder '${foundFolderOriginalName}'. Full path: '${songFilePath}'.`);
-                    break; // Use the first match
-                }
-            }
-            if (!songFilePath) {
-                logToRenderer(`findMusic: No song found containing '${songSearchTerm}' in folder '${foundFolderOriginalName}'.`);
-                return null; // Specific song not found
-            }
-        } else {
-            // No songSearchTerm provided, so pick a random song from the folder
-            const randomIndex = Math.floor(Math.random() * audioFiles.length);
-            const randomSongName = audioFiles[randomIndex];
-            songFilePath = path.join(actualFolderPath, randomSongName);
-            logToRenderer(`findMusic: No songSearchTerm provided. Selected random song: '${randomSongName}' from folder '${foundFolderOriginalName}'. Full path: '${songFilePath}'.`);
-        }
-
-        return songFilePath; // Return the full path to the song, or null if errors occurred
-
-    } catch (error) {
-        logToRenderer(`findMusic: Exception while reading files from folder '${foundFolderOriginalName}' (path: '${actualFolderPath}'): ${error.message}`);
-        return null;
-    }
-}
-
 
     async findMusic(folderSearchTerm, songSearchTerm) {
         logToRenderer(`findMusic: Initiating search with folderSearchTerm='${folderSearchTerm}', songSearchTerm='${songSearchTerm}'.`);
@@ -824,6 +629,95 @@ async function findMusic(folderSearchTerm, songSearchTerm) {
             logToRenderer(`findMusic: Exception while reading files from folder '${foundFolderOriginalName}': ${error.message}`);
             return null;
         }
+    }
+}
+
+// Function to get a random effect from a table, filtering out used unique effects for the user
+function getRandomEffect(table, userId) {
+    const availableEffects = table.filter(effect => !effect.unique || !effect.used.includes(userId));
+    if (availableEffects.length === 0) {
+        return null; // No available effects
+    }
+    const randomIndex = Math.floor(Math.random() * availableEffects.length);
+    return availableEffects[randomIndex];
+}
+
+function evaluateDiceRolls(text, diceLimit = 24000) {
+    const roller = new DiceRoller();
+
+    while (text.includes("[[")) {
+        text = text.replace(/\[\[([^\[\]]+)\]\]/g, (match, diceExpression) => {
+            const roll = roller.roll(diceExpression);
+            let result = roll.total;
+
+            // Cap the result at diceLimit if exceeded
+            if (result > diceLimit) {
+                result = diceLimit;
+            }
+
+            return result;
+        });
+    }
+
+    return text;
+}
+
+async function askGPT4All(prompt, model, addSuffix = true) {
+    let chatmodel = 'Meta-Llama-3-8B-Instruct.Q4_0.gguf'; // Default to ll model
+    if (model === 're') {
+        chatmodel = 'qwen2.5-coder-7b-instruct-q4_0.gguf';
+    }
+
+    // Sanitize the prompt to prevent command injection
+    const sanitizedPrompt = prompt.replace(/"/g, '\\"');
+    let finalPrompt = sanitizedPrompt;
+
+    if (addSuffix) {
+        const tailPrompt = '\n - Thanks for the help!';
+        finalPrompt += tailPrompt;
+    }
+
+    try {
+        const response = await axios.post('http://localhost:4891/v1/chat/completions', {
+            "model": chatmodel,
+            "messages": [{ "role": "user", "content": finalPrompt }],
+            "max_tokens": 8000
+        });
+
+
+        // Log the entire response to inspect its structure
+        logToRenderer(`Response length: ${response.data.choices[0].message.content.length} characters`);
+
+        if (response.data && response.data.choices && response.data.choices[0].message.content) {
+            let reply = response.data.choices[0].message.content.trim();
+
+            // Append references to the reply
+            if (response.data.choices[0].references && response.data.choices[0].references.length > 0) {
+                //logToRenderer(JSON.stringify(response.data.choices[0].references));
+                reply += `\n\n${response.data.choices[0].references.length} Sources:`;
+                let refList = '';
+                for (const ref of response.data.choices[0].references) {
+                    if (!refList.includes(ref.file.toString().trim())) {
+                        refList += `\n${ref.file.toString()}`;
+                    }
+                }
+                reply += refList;
+            }
+            else {
+                reply += `\n\nSource: ***My butt*** (tell Crisp the RAG isn't working)`;
+            }
+
+            // Save the last response
+            lastResponse = response.data;
+
+            return reply;
+
+        } else {
+            throw new Error('Invalid response from GPT-4All server');
+        }
+    } catch (error) {
+        logToRenderer(`Error: ${error.message}`);
+        throw new Error(`An error occurred while running the query: ${error.message}`);
     }
 }
 

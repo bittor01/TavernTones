@@ -21,7 +21,6 @@ const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
 
 let discordConfig;
-let dataBasePath;
 
 let connection;
 let musicPlayer;
@@ -150,7 +149,7 @@ function createGamifyWindow() {
     });
 
     gamifyWindow.maximize();
-    gamifyWindow.loadFile(path.join(dataBasePath, 'tasks', 'json-gamify.html'));
+    gamifyWindow.loadFile(path.join(__dirname, '../../jsontool/json-gamify.html'));
 
     // Optional: Open DevTools for debugging
     // gamifyWindow.webContents.openDevTools();
@@ -165,14 +164,15 @@ async function apploader() {
     discordConfig = await getDiscordConfig();
     await app.whenReady().then(async () => {
         console.log('App is ready.');
-        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig); // Initialize parser early
 
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
-
-        // Create the main window, but don't show it if we are launching the gamify tool
         await createWindow(!isGamifyLaunch);
 
-        // First, check if the master data folder is configured. This is essential.
+        // --- Crucial: Load base IPC handlers immediately ---
+        isAppReady = true; // Set early so logToRenderer can work
+        loadBaseIpcHandlers();
+
+        // --- Now check for folder configuration ---
         if (!discordConfig.masterDataFolder) {
             logToRenderer("Master data folder not configured. Prompting user to set it up.");
             await dialog.showMessageBox(mainWindow, {
@@ -182,31 +182,34 @@ async function apploader() {
                 buttons: ['Go to Settings']
             });
             createSettingsWindow();
+            // Do not proceed with other initializations until folder is set
+            return;
         }
-        // If the data folder is set, then check for Discord credentials.
-        else if (!discordConfig.token) {
-            logToRenderer("Discord credentials not found. Prompting user.");
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('discord-bot-status', { status: 'offline' });
-                const result = await dialog.showMessageBox(mainWindow, {
-                    type: 'question',
-                    title: 'Discord Bot Not Configured',
-                    message: "It looks like your Discord bot isn't set up yet. You can set it up now or continue without bot features.",
-                    buttons: ['Go to Settings', 'Continue Without Bot'],
-                    defaultId: 0,
-                    cancelId: 1
-                });
 
-                if (result.response === 0) { // 'Go to Settings'
-                    createSettingsWindow();
-                }
+        // --- Data-dependent initializations ---
+        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
+        loadDataDependentIpcHandlers(); // Load the rest of the handlers
+
+        // If the data folder is set, then check for Discord credentials.
+        if (!discordConfig.token) {
+            logToRenderer("Discord credentials not found. Prompting user.");
+            mainWindow.webContents.send('discord-bot-status', { status: 'offline' });
+            const result = await dialog.showMessageBox(mainWindow, {
+                type: 'question',
+                title: 'Discord Bot Not Configured',
+                message: "It looks like your Discord bot isn't set up yet. You can set it up now or continue without bot features.",
+                buttons: ['Go to Settings', 'Continue Without Bot'],
+                defaultId: 0,
+                cancelId: 1
+            });
+
+            if (result.response === 0) { // 'Go to Settings'
+                createSettingsWindow();
             }
         } else {
             initializeDiscordBot();
         }
 
-
-        // If it's a gamify launch, also create the gamify window
         if (isGamifyLaunch) {
             createGamifyWindow();
         }
@@ -219,14 +222,8 @@ async function apploader() {
                 }
             }
         });
-        isAppReady = true;
-        ipcloader();
     });
 }
-
-ipcMain.handle('get-dnd-conditions', async () => {
-    return DND_CONDITIONS;
-});
 
 apploader();
 
@@ -378,29 +375,26 @@ async function checkAndShowReminders(creature, turnEvent) {
 
 const InitiativeTracker = require('../features/InitiativeTracker.js');
 
-async function ipcloader() {
+function loadBaseIpcHandlers() {
+    logToRenderer('Loading base IPC handlers.');
     // Settings window IPC
+    ipcMain.handle('select-master-data-folder', async () => {
+        const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
+            title: 'Select Master Data Folder',
+            properties: ['openDirectory']
+        });
+        if (filePaths && filePaths.length > 0) {
+            return filePaths[0];
+        }
+        return null;
+    });
+
     ipcMain.on('get-discord-config', async (event) => {
         event.sender.send('discord-config', await getDiscordConfig());
     });
 
     ipcMain.on('set-discord-config', async (event, config) => {
         await setDiscordConfig(config);
-
-        // After saving, ensure the subdirectories exist in the new master data folder
-        if (config.masterDataFolder) {
-            try {
-                const subfolders = ['resources', 'randomtables', 'encounters', 'music', 'sounds'];
-                for (const folder of subfolders) {
-                    await fs.mkdir(path.join(config.masterDataFolder, folder), { recursive: true });
-                }
-                logToRenderer(`Ensured subfolders exist in: ${config.masterDataFolder}`);
-            } catch (error) {
-                logToRenderer(`Error creating subfolders: ${error}`);
-                dialog.showErrorBox('Folder Creation Error', `Could not create required subfolders in ${config.masterDataFolder}. Please check permissions.`);
-            }
-        }
-
         await dialog.showMessageBox(null, {
             type: 'info',
             title: 'Settings Saved',
@@ -412,35 +406,18 @@ async function ipcloader() {
     });
 
     ipcMain.on('open-settings-window', createSettingsWindow);
+    ipcMain.on('open-gamify-tool', createGamifyWindow);
 
+    ipcMain.handle('get-dnd-conditions', async () => {
+        return DND_CONDITIONS;
+    });
+}
+
+async function loadDataDependentIpcHandlers() {
     if (windowloaded) {
-        logToRenderer('ipcloader() called.');
+        logToRenderer('Loading data-dependent IPC handlers.');
         initiativeTracker = new InitiativeTracker(logToRenderer, sendInitiativeUpdate, autosavePath);
         // --- All core IPC listeners should be registered after the app is ready ---
-        ipcMain.on('open-gamify-tool', createGamifyWindow);
-
-        ipcMain.handle('select-master-data-folder', async () => {
-            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-                title: 'Select Your Master Data Folder',
-                properties: ['openDirectory']
-            });
-            if (filePaths && filePaths.length > 0) {
-                return filePaths[0];
-            }
-            return null;
-        });
-
-        ipcMain.handle('open-folder-dialog', async () => {
-            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-                title: 'Select Folder',
-                properties: ['openDirectory']
-            });
-
-            if (filePaths && filePaths.length > 0) {
-                return filePaths[0];
-            }
-            return null;
-        });
 
         ipcMain.handle('show-confirm-dialog', async (event, options) => {
             const focusedWindow = BrowserWindow.getFocusedWindow();
@@ -495,6 +472,7 @@ async function ipcloader() {
         });
 
         async function loadTaskData(taskFilePath) {
+            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
             try {
                 const data = await fs.readFile(taskFilePath, 'utf8');
                 let taskData = JSON.parse(data); // Make mutable
@@ -505,7 +483,7 @@ async function ipcloader() {
                     return { success: true, taskComplete: true, taskData };
                 }
 
-                let itemFilePath = path.join(dataBasePath, taskData.files[fileIndex]);
+                let itemFilePath = path.join(basePath, taskData.files[fileIndex]);
                 let itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
 
                 // Loop to find the next valid item, skipping empty files
@@ -519,7 +497,7 @@ async function ipcloader() {
                         return { success: true, taskComplete: true, taskData };
                     }
 
-                    itemFilePath = path.join(dataBasePath, taskData.files[fileIndex]);
+                    itemFilePath = path.join(basePath, taskData.files[fileIndex]);
                     itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
                 }
 
@@ -562,19 +540,22 @@ async function ipcloader() {
         }
 
         ipcMain.handle('load-task-by-path', async (event, filePath) => {
-            const taskPath = path.isAbsolute(filePath) ? filePath : path.join(dataBasePath, 'tasks', filePath);
+            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+            const taskPath = path.isAbsolute(filePath) ? filePath : path.join(basePath, filePath);
             return await loadTaskData(taskPath);
         });
 
         ipcMain.handle('get-task-data', async () => {
-            const defaultTaskPath = path.join(dataBasePath, 'tasks', 'deck-editing-task.json');
+            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+            const defaultTaskPath = path.join(basePath, 'src/jsontool/deck-editing-task.json');
             return await loadTaskData(defaultTaskPath);
         });
 
         ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell, taskFilePath }) => {
+            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
             try {
                 // 1. Save the current spell changes
-                const currentItemFilePath = path.join(dataBasePath, taskData.files[taskData.progress.fileIndex]);
+                const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
                 const currentItemFileData = await fs.readFile(currentItemFilePath, 'utf8');
                 let currentItemList = JSON.parse(currentItemFileData);
                 currentItemList[taskData.progress.itemIndex] = currentSpell;
@@ -597,7 +578,7 @@ async function ipcloader() {
                 await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
 
                 // 4. Get the next spell and its details
-                const nextFilePath = path.join(dataBasePath, taskData.files[taskData.progress.fileIndex]);
+                const nextFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
                 const nextFileData = await fs.readFile(nextFilePath, 'utf8');
                 const nextItemList = JSON.parse(nextFileData);
                 const nextItem = nextItemList[taskData.progress.itemIndex];
@@ -625,8 +606,9 @@ async function ipcloader() {
         });
 
         ipcMain.handle('scrap-and-get-next-item', async (event, { taskData, currentItem, taskFilePath }) => {
+            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
             try {
-                const currentItemFilePath = path.join(dataBasePath, taskData.files[taskData.progress.fileIndex]);
+                const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
                 let currentItemList = JSON.parse(await fs.readFile(currentItemFilePath, 'utf8'));
 
                 // Use the title field for a more robust lookup
@@ -658,6 +640,7 @@ async function ipcloader() {
         });
 
         ipcMain.handle('undo-and-get-previous-spell', async (event, { taskData, previousSpellState, taskFilePath }) => {
+            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
             try {
                 // 1. Determine the previous spell's position
                 let prevFileIndex = taskData.progress.fileIndex;
@@ -668,14 +651,14 @@ async function ipcloader() {
                     if (prevFileIndex < 0) {
                         return { success: false, error: "Already at the beginning." };
                     }
-                    const prevFilePath = path.join(dataBasePath, taskData.files[prevFileIndex]);
+                    const prevFilePath = path.join(basePath, taskData.files[prevFileIndex]);
                     const prevFileData = await fs.readFile(prevFilePath, 'utf8');
                     const prevSpellList = JSON.parse(prevFileData);
                     prevItemIndex = prevSpellList.length - 1;
                 }
 
                 // 2. Save the *previous* state back to the file
-                const targetFilePath = path.join(dataBasePath, taskData.files[prevFileIndex]);
+                const targetFilePath = path.join(basePath, taskData.files[prevFileIndex]);
                 const targetFileData = await fs.readFile(targetFilePath, 'utf8');
                 let targetSpellList = JSON.parse(targetFileData);
                 targetSpellList[prevItemIndex] = previousSpellState;
@@ -708,10 +691,9 @@ async function ipcloader() {
         });
 
         ipcMain.handle('open-file-dialog', async () => {
-            const defaultPath = discordConfig.masterDataFolder ? path.join(discordConfig.masterDataFolder, 'music') : app.getPath('music');
             const { filePaths } = await dialog.showOpenDialog(mainWindow, {
                 title: 'Select Music File',
-                defaultPath: defaultPath,
+                defaultPath: discordConfig.defaultLocalFolder,
                 properties: ['openFile'],
                 filters: [
                     { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
@@ -807,10 +789,9 @@ async function ipcloader() {
 
         ipcMain.on('save-encounter', async () => {
             try {
-                const defaultPath = discordConfig.masterDataFolder ? path.join(discordConfig.masterDataFolder, 'encounters') : app.getPath('userData');
                 const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
                     title: 'Save Encounter',
-                    defaultPath: defaultPath,
+                    defaultPath: app.getPath('userData'),
                     filters: [{ name: 'JSON Files', extensions: ['json'] }]
                 });
 
@@ -837,10 +818,9 @@ async function ipcloader() {
                 return;
             }
 
-            const defaultPath = discordConfig.masterDataFolder ? path.join(discordConfig.masterDataFolder, 'encounters') : app.getPath('userData');
             const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
                 title: 'Load Encounter',
-                defaultPath: defaultPath,
+                defaultPath: app.getPath('userData'),
                 properties: ['openFile'],
                 filters: [{ name: 'JSON Files', extensions: ['json'] }]
             });
@@ -1038,10 +1018,10 @@ async function ipcloader() {
         });
     }
     else {
-        logToRenderer('ipcloader() waiting for window to load...');
+        logToRenderer('loadDataDependentIpcHandlers() waiting for window to load...');
         await sleep(100);
-        ipcloader();
-    }  
+        loadDataDependentIpcHandlers();
+    }
 }
 
 // Function to send log messages to the renderer
@@ -1173,7 +1153,10 @@ client.once('clientReady', async () => {
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
-    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, discordConfig, fiveEToolsParser);
+    const basePath = app.isPackaged
+        ? path.dirname(app.getPath('exe'))
+        : app.getAppPath();
+    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID: discordConfig.botRoleId, DEFAULT_LOCAL_FOLDER: discordConfig.defaultLocalFolder }, fiveEToolsParser, basePath);
     client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
@@ -1198,6 +1181,8 @@ client.once('clientReady', async () => {
         }
     });
 });
+
+initializeDiscordBot();
 
 let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
 const startingMemUse = memoryUsage;
