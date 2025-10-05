@@ -21,6 +21,41 @@ const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
 
 let discordConfig;
+let dataBasePath;
+
+async function ensureDataDirectories() {
+    const topLevelPath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+    dataBasePath = path.join(topLevelPath, 'TavernTonesData');
+    const tasksPath = path.join(dataBasePath, 'tasks');
+
+    try {
+        // Ensure all directories exist. The user is responsible for populating them.
+        await fs.mkdir(path.join(dataBasePath, 'resources'), { recursive: true });
+        await fs.mkdir(path.join(dataBasePath, 'randomtables'), { recursive: true });
+        await fs.mkdir(tasksPath, { recursive: true });
+
+        // For the gamify tool to work, we'll copy its essential files on first run.
+        const gamifyUIPath = path.join(tasksPath, 'json-gamify.html');
+        try {
+            await fs.access(gamifyUIPath);
+        } catch {
+            logToRenderer('First run detected. Copying default gamify tool files...');
+            const sourceUI = path.join(__dirname, '../../jsontool/json-gamify.html');
+            const sourceTask = path.join(__dirname, '../../jsontool/deck-editing-task.json');
+            const destTask = path.join(tasksPath, 'deck-editing-task.json');
+
+            await fs.copyFile(sourceUI, gamifyUIPath);
+            await fs.copyFile(sourceTask, destTask);
+            logToRenderer('Default gamify files copied successfully.');
+        }
+
+        logToRenderer(`Data directories ensured at: ${dataBasePath}`);
+    } catch (error) {
+        logToRenderer(`Error during data directory setup: ${error}`);
+        dialog.showErrorBox('Fatal Error', `Could not create or populate data directories at ${dataBasePath}. Please check permissions and restart. Error: ${error.message}`);
+        app.quit();
+    }
+}
 
 let connection;
 let musicPlayer;
@@ -149,7 +184,7 @@ function createGamifyWindow() {
     });
 
     gamifyWindow.maximize();
-    gamifyWindow.loadFile(path.join(__dirname, '../../jsontool/json-gamify.html'));
+    gamifyWindow.loadFile(path.join(dataBasePath, 'tasks', 'json-gamify.html'));
 
     // Optional: Open DevTools for debugging
     // gamifyWindow.webContents.openDevTools();
@@ -162,17 +197,35 @@ function createGamifyWindow() {
 
 async function apploader() {
     discordConfig = await getDiscordConfig();
-    await app.whenReady().then(() => {
+    await app.whenReady().then(async () => {
         console.log('App is ready.');
-        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app); // Initialize parser early
+        await ensureDataDirectories();
+        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, dataBasePath); // Initialize parser early
 
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
+        // Create the main window, but don't show it if we are launching the gamify tool
+        await createWindow(!isGamifyLaunch);
+
         if (!discordConfig || !discordConfig.token) {
-            createSettingsWindow();
+            logToRenderer("Discord credentials not found. Prompting user.");
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('discord-bot-status', { status: 'offline' });
+                const result = await dialog.showMessageBox(mainWindow, {
+                    type: 'question',
+                    title: 'Discord Bot Not Configured',
+                    message: "It looks like your Discord bot isn't set up yet. You can set it up now or continue without bot features.",
+                    buttons: ['Go to Settings', 'Continue Without Bot'],
+                    defaultId: 0,
+                    cancelId: 1
+                });
+
+                if (result.response === 0) { // 'Go to Settings'
+                    createSettingsWindow();
+                }
+            }
         } else {
-            // Create the main window, but don't show it if we are launching the gamify tool
-            createWindow(!isGamifyLaunch);
+            initializeDiscordBot();
         }
 
 
@@ -183,13 +236,9 @@ async function apploader() {
 
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length === 0) {
-                if (!discordConfig || !discordConfig.token) {
-                    createSettingsWindow();
-                } else {
-                    createWindow(!isGamifyLaunch);
-                    if (isGamifyLaunch) {
-                        createGamifyWindow();
-                    }
+                createWindow(!isGamifyLaunch);
+                if (isGamifyLaunch) {
+                    createGamifyWindow();
                 }
             }
         });
@@ -431,7 +480,6 @@ async function ipcloader() {
         });
 
         async function loadTaskData(taskFilePath) {
-            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
             try {
                 const data = await fs.readFile(taskFilePath, 'utf8');
                 let taskData = JSON.parse(data); // Make mutable
@@ -442,7 +490,7 @@ async function ipcloader() {
                     return { success: true, taskComplete: true, taskData };
                 }
 
-                let itemFilePath = path.join(basePath, taskData.files[fileIndex]);
+                let itemFilePath = path.join(dataBasePath, taskData.files[fileIndex]);
                 let itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
 
                 // Loop to find the next valid item, skipping empty files
@@ -456,7 +504,7 @@ async function ipcloader() {
                         return { success: true, taskComplete: true, taskData };
                     }
 
-                    itemFilePath = path.join(basePath, taskData.files[fileIndex]);
+                    itemFilePath = path.join(dataBasePath, taskData.files[fileIndex]);
                     itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
                 }
 
@@ -499,22 +547,19 @@ async function ipcloader() {
         }
 
         ipcMain.handle('load-task-by-path', async (event, filePath) => {
-            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-            const taskPath = path.isAbsolute(filePath) ? filePath : path.join(basePath, filePath);
+            const taskPath = path.isAbsolute(filePath) ? filePath : path.join(dataBasePath, 'tasks', filePath);
             return await loadTaskData(taskPath);
         });
 
         ipcMain.handle('get-task-data', async () => {
-            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-            const defaultTaskPath = path.join(basePath, 'src/jsontool/deck-editing-task.json');
+            const defaultTaskPath = path.join(dataBasePath, 'tasks', 'deck-editing-task.json');
             return await loadTaskData(defaultTaskPath);
         });
 
         ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell, taskFilePath }) => {
-            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
             try {
                 // 1. Save the current spell changes
-                const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
+                const currentItemFilePath = path.join(dataBasePath, taskData.files[taskData.progress.fileIndex]);
                 const currentItemFileData = await fs.readFile(currentItemFilePath, 'utf8');
                 let currentItemList = JSON.parse(currentItemFileData);
                 currentItemList[taskData.progress.itemIndex] = currentSpell;
@@ -537,7 +582,7 @@ async function ipcloader() {
                 await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
 
                 // 4. Get the next spell and its details
-                const nextFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
+                const nextFilePath = path.join(dataBasePath, taskData.files[taskData.progress.fileIndex]);
                 const nextFileData = await fs.readFile(nextFilePath, 'utf8');
                 const nextItemList = JSON.parse(nextFileData);
                 const nextItem = nextItemList[taskData.progress.itemIndex];
@@ -565,9 +610,8 @@ async function ipcloader() {
         });
 
         ipcMain.handle('scrap-and-get-next-item', async (event, { taskData, currentItem, taskFilePath }) => {
-            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
             try {
-                const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
+                const currentItemFilePath = path.join(dataBasePath, taskData.files[taskData.progress.fileIndex]);
                 let currentItemList = JSON.parse(await fs.readFile(currentItemFilePath, 'utf8'));
 
                 // Use the title field for a more robust lookup
@@ -599,7 +643,6 @@ async function ipcloader() {
         });
 
         ipcMain.handle('undo-and-get-previous-spell', async (event, { taskData, previousSpellState, taskFilePath }) => {
-            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
             try {
                 // 1. Determine the previous spell's position
                 let prevFileIndex = taskData.progress.fileIndex;
@@ -610,14 +653,14 @@ async function ipcloader() {
                     if (prevFileIndex < 0) {
                         return { success: false, error: "Already at the beginning." };
                     }
-                    const prevFilePath = path.join(basePath, taskData.files[prevFileIndex]);
+                    const prevFilePath = path.join(dataBasePath, taskData.files[prevFileIndex]);
                     const prevFileData = await fs.readFile(prevFilePath, 'utf8');
                     const prevSpellList = JSON.parse(prevFileData);
                     prevItemIndex = prevSpellList.length - 1;
                 }
 
                 // 2. Save the *previous* state back to the file
-                const targetFilePath = path.join(basePath, taskData.files[prevFileIndex]);
+                const targetFilePath = path.join(dataBasePath, taskData.files[prevFileIndex]);
                 const targetFileData = await fs.readFile(targetFilePath, 'utf8');
                 let targetSpellList = JSON.parse(targetFileData);
                 targetSpellList[prevItemIndex] = previousSpellState;
@@ -1112,10 +1155,7 @@ client.once('clientReady', async () => {
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
-    const basePath = app.isPackaged
-        ? path.dirname(app.getPath('exe'))
-        : app.getAppPath();
-    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID: discordConfig.botRoleId, DEFAULT_LOCAL_FOLDER: discordConfig.defaultLocalFolder }, fiveEToolsParser, basePath);
+    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID: discordConfig.botRoleId, DEFAULT_LOCAL_FOLDER: discordConfig.defaultLocalFolder }, fiveEToolsParser, dataBasePath);
     client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
@@ -1140,8 +1180,6 @@ client.once('clientReady', async () => {
         }
     });
 });
-
-initializeDiscordBot();
 
 let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
 const startingMemUse = memoryUsage;

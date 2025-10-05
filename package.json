@@ -37,16 +37,7 @@
       "src/",
       "package.json"
     ],
-    "extraResources": [
-      {
-        "from": "resources",
-        "to": "resources"
-      },
-      {
-        "from": "randomtables",
-        "to": "randomtables"
-      }
-    ],
+    "extraResources": [],
     "directories": {
       "output": "build"
     },

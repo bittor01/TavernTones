@@ -15,14 +15,14 @@ const categorySources = {
 const searchableCategories = Object.keys(categorySources);
 
 class FiveEToolsParser {
-    constructor(logToRenderer, app) {
+    constructor(logToRenderer, app, dataBasePath) {
         this.logToRenderer = logToRenderer;
-        const basePath = app.isPackaged
-            ? path.dirname(app.getPath('exe'))
-            : app.getAppPath();
-        this.dataPath = path.join(basePath, 'resources', '5etoolsdata');
-        this.randomTablesPath = path.join(basePath, 'randomtables', 'origin');
+        this.app = app;
+        this.dataPath = path.join(dataBasePath, 'resources');
+        this.randomTablesPath = path.join(dataBasePath, 'randomtables');
         this.cache = new Map(); // Simple cache to store loaded data
+        this.logToRenderer(`[5eParser] dataPath set to: ${this.dataPath}`);
+        this.logToRenderer(`[5eParser] randomTablesPath set to: ${this.randomTablesPath}`);
     }
 
     /**
