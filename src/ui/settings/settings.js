@@ -3,7 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const voiceChannelInput = document.getElementById('voiceChannel');
     const textChannelInput = document.getElementById('textChannel');
     const botRoleIdInput = document.getElementById('botRoleId');
-    const defaultLocalFolderInput = document.getElementById('defaultLocalFolder');
+    const masterDataFolderInput = document.getElementById('masterDataFolder');
+    const selectFolderButton = document.getElementById('select-folder-button');
     const saveButton = document.getElementById('save-button');
 
     // Request existing config from main process when window loads
@@ -16,7 +17,14 @@ document.addEventListener('DOMContentLoaded', () => {
             voiceChannelInput.value = config.voiceChannel || '';
             textChannelInput.value = config.textChannel || '';
             botRoleIdInput.value = config.botRoleId || '';
-            defaultLocalFolderInput.value = config.defaultLocalFolder || '';
+            masterDataFolderInput.value = config.masterDataFolder || '';
+        }
+    });
+
+    selectFolderButton.addEventListener('click', async () => {
+        const folderPath = await window.settings.selectMasterDataFolder();
+        if (folderPath) {
+            masterDataFolderInput.value = folderPath;
         }
     });
 
@@ -26,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
             voiceChannel: voiceChannelInput.value,
             textChannel: textChannelInput.value,
             botRoleId: botRoleIdInput.value,
-            defaultLocalFolder: defaultLocalFolderInput.value
+            masterDataFolder: masterDataFolderInput.value
         };
         window.settings.setDiscordConfig(newConfig);
     });

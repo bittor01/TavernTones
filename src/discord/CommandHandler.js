@@ -11,19 +11,25 @@ let logToRenderer;
 let musicPlayer;
 let lastResponse;
 let BOT_ROLE_ID;
-let DEFAULT_LOCAL_FOLDER;
 
 
 class CommandHandler {
-    constructor(client, logToRendererInstance, musicPlayerInstance, config, fiveEToolsParserInstance, basePath) {
+    constructor(client, logToRendererInstance, musicPlayerInstance, config, fiveEToolsParserInstance) {
         this.client = client;
         logToRenderer = logToRendererInstance;
         musicPlayer = musicPlayerInstance;
         this.fiveEToolsParser = fiveEToolsParserInstance;
         this.lastResponse = null;
-        BOT_ROLE_ID = config.BOT_ROLE_ID;
-        DEFAULT_LOCAL_FOLDER = config.DEFAULT_LOCAL_FOLDER;
-        this.randomTablesPath = path.join(basePath, 'randomtables');
+        this.config = config;
+        BOT_ROLE_ID = this.config.botRoleId;
+
+        if (this.config.masterDataFolder) {
+            this.randomTablesPath = path.join(this.config.masterDataFolder, 'randomtables');
+            this.musicPath = path.join(this.config.masterDataFolder, 'music');
+        } else {
+            this.randomTablesPath = null;
+            this.musicPath = null;
+        }
     }
 
     async _sendHelpEmbed(message) {
@@ -373,7 +379,7 @@ class CommandHandler {
                             parsedSong = commandArgs[1];
                         }
 
-                        let songFilePath = await findMusic(parsedFolder, parsedSong);
+                        let songFilePath = await this.findMusic(parsedFolder, parsedSong);
 
                         if (songFilePath) {
                             if (path.extname(songFilePath).toLowerCase() === '.lnk') {
@@ -728,5 +734,97 @@ async function findMusic(folderSearchTerm, songSearchTerm) {
     }
 }
 
+
+    async findMusic(folderSearchTerm, songSearchTerm) {
+        logToRenderer(`findMusic: Initiating search with folderSearchTerm='${folderSearchTerm}', songSearchTerm='${songSearchTerm}'.`);
+
+        if (!this.musicPath || !fs.existsSync(this.musicPath)) {
+            logToRenderer(`findMusic: Error - Music path ('${this.musicPath}') is not defined or does not exist.`);
+            return null;
+        }
+
+        let targetFolderToSearch;
+        if (!folderSearchTerm || folderSearchTerm.trim() === "") {
+            targetFolderToSearch = "chill";
+            logToRenderer(`findMusic: folderSearchTerm is empty or null. Using default 'chill' folder.`);
+        } else {
+            targetFolderToSearch = folderSearchTerm;
+        }
+
+        let actualFolderPath = null;
+        let foundFolderOriginalName = null;
+
+        try {
+            const allEntities = fs.readdirSync(this.musicPath, { withFileTypes: true });
+            const subDirectories = allEntities.filter(dirent => dirent.isDirectory()).map(dirent => dirent.name);
+
+            if (subDirectories.length === 0) {
+                logToRenderer(`findMusic: No sub-folders found within music path ('${this.musicPath}').`);
+                return null;
+            }
+
+            const targetFolderLower = targetFolderToSearch.toLowerCase();
+            for (const dirName of subDirectories) {
+                if (dirName.toLowerCase().includes(targetFolderLower)) {
+                    actualFolderPath = path.join(this.musicPath, dirName);
+                    foundFolderOriginalName = dirName;
+                    logToRenderer(`findMusic: Successfully matched folder: name='${foundFolderOriginalName}', path='${actualFolderPath}'.`);
+                    break;
+                }
+            }
+
+            if (!actualFolderPath) {
+                logToRenderer(`findMusic: No folder found containing '${targetFolderToSearch}' within '${this.musicPath}'.`);
+                return null;
+            }
+
+        } catch (error) {
+            logToRenderer(`findMusic: Exception while reading music path ('${this.musicPath}'): ${error.message}`);
+            return null;
+        }
+
+        try {
+            const filesInFolder = fs.readdirSync(actualFolderPath);
+            const audioFiles = filesInFolder.filter(file => {
+                const ext = path.extname(file).toLowerCase();
+                return ext === '.wav' || ext === '.mp3' || ext === '.ogg' || ext === '.lnk';
+            });
+
+            if (audioFiles.length === 0) {
+                logToRenderer(`findMusic: No audio files found in folder '${foundFolderOriginalName}'.`);
+                return null;
+            }
+
+            let songFilePath = null;
+
+            if (songSearchTerm && songSearchTerm.trim() !== "") {
+                const songSearchLower = songSearchTerm.toLowerCase();
+                for (const fileName of audioFiles) {
+                    const songNameWithoutExt = path.parse(fileName).name;
+                    if (songNameWithoutExt.toLowerCase().includes(songSearchLower)) {
+                        songFilePath = path.join(actualFolderPath, fileName);
+                        break;
+                    }
+                }
+                if (!songFilePath) {
+                    return null;
+                }
+            } else {
+                const randomIndex = Math.floor(Math.random() * audioFiles.length);
+                songFilePath = path.join(actualFolderPath, audioFiles[randomIndex]);
+            }
+
+            if (songFilePath && path.extname(songFilePath).toLowerCase() === '.lnk') {
+                const shortcut = shell.readShortcutLink(songFilePath);
+                return shortcut.target;
+            }
+            return songFilePath;
+
+        } catch (error) {
+            logToRenderer(`findMusic: Exception while reading files from folder '${foundFolderOriginalName}': ${error.message}`);
+            return null;
+        }
+    }
+}
 
 module.exports = CommandHandler;

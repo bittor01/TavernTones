@@ -23,40 +23,6 @@ const fs = require('fs').promises;
 let discordConfig;
 let dataBasePath;
 
-async function ensureDataDirectories() {
-    const topLevelPath = app.isPackaged ? path.dirname(app.getPath('exe')) : path.join(__dirname, '../../..');
-    dataBasePath = path.join(topLevelPath, 'TavernTonesData');
-    const tasksPath = path.join(dataBasePath, 'tasks');
-
-    try {
-        // Ensure all directories exist. The user is responsible for populating them.
-        await fs.mkdir(path.join(dataBasePath, 'resources'), { recursive: true });
-        await fs.mkdir(path.join(dataBasePath, 'randomtables'), { recursive: true });
-        await fs.mkdir(tasksPath, { recursive: true });
-
-        // For the gamify tool to work, we'll copy its essential files on first run.
-        const gamifyUIPath = path.join(tasksPath, 'json-gamify.html');
-        try {
-            await fs.access(gamifyUIPath);
-        } catch {
-            logToRenderer('First run detected. Copying default gamify tool files...');
-            const sourceUI = path.join(__dirname, '../../jsontool/json-gamify.html');
-            const sourceTask = path.join(__dirname, '../../jsontool/deck-editing-task.json');
-            const destTask = path.join(tasksPath, 'deck-editing-task.json');
-
-            await fs.copyFile(sourceUI, gamifyUIPath);
-            await fs.copyFile(sourceTask, destTask);
-            logToRenderer('Default gamify files copied successfully.');
-        }
-
-        logToRenderer(`Data directories ensured at: ${dataBasePath}`);
-    } catch (error) {
-        logToRenderer(`Error during data directory setup: ${error}`);
-        dialog.showErrorBox('Fatal Error', `Could not create or populate data directories at ${dataBasePath}. Please check permissions and restart. Error: ${error.message}`);
-        app.quit();
-    }
-}
-
 let connection;
 let musicPlayer;
 let isAppReady = false; // Flag to indicate if the app is ready
@@ -199,15 +165,26 @@ async function apploader() {
     discordConfig = await getDiscordConfig();
     await app.whenReady().then(async () => {
         console.log('App is ready.');
-        await ensureDataDirectories();
-        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, dataBasePath); // Initialize parser early
+        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig); // Initialize parser early
 
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
         // Create the main window, but don't show it if we are launching the gamify tool
         await createWindow(!isGamifyLaunch);
 
-        if (!discordConfig || !discordConfig.token) {
+        // First, check if the master data folder is configured. This is essential.
+        if (!discordConfig.masterDataFolder) {
+            logToRenderer("Master data folder not configured. Prompting user to set it up.");
+            await dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'Welcome to TavernTones!',
+                message: 'Please select your master data folder to continue. This is where all your resources, music, and other data will be stored.',
+                buttons: ['Go to Settings']
+            });
+            createSettingsWindow();
+        }
+        // If the data folder is set, then check for Discord credentials.
+        else if (!discordConfig.token) {
             logToRenderer("Discord credentials not found. Prompting user.");
             if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('discord-bot-status', { status: 'offline' });
@@ -409,6 +386,21 @@ async function ipcloader() {
 
     ipcMain.on('set-discord-config', async (event, config) => {
         await setDiscordConfig(config);
+
+        // After saving, ensure the subdirectories exist in the new master data folder
+        if (config.masterDataFolder) {
+            try {
+                const subfolders = ['resources', 'randomtables', 'encounters', 'music', 'sounds'];
+                for (const folder of subfolders) {
+                    await fs.mkdir(path.join(config.masterDataFolder, folder), { recursive: true });
+                }
+                logToRenderer(`Ensured subfolders exist in: ${config.masterDataFolder}`);
+            } catch (error) {
+                logToRenderer(`Error creating subfolders: ${error}`);
+                dialog.showErrorBox('Folder Creation Error', `Could not create required subfolders in ${config.masterDataFolder}. Please check permissions.`);
+            }
+        }
+
         await dialog.showMessageBox(null, {
             type: 'info',
             title: 'Settings Saved',
@@ -426,6 +418,29 @@ async function ipcloader() {
         initiativeTracker = new InitiativeTracker(logToRenderer, sendInitiativeUpdate, autosavePath);
         // --- All core IPC listeners should be registered after the app is ready ---
         ipcMain.on('open-gamify-tool', createGamifyWindow);
+
+        ipcMain.handle('select-master-data-folder', async () => {
+            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+                title: 'Select Your Master Data Folder',
+                properties: ['openDirectory']
+            });
+            if (filePaths && filePaths.length > 0) {
+                return filePaths[0];
+            }
+            return null;
+        });
+
+        ipcMain.handle('open-folder-dialog', async () => {
+            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+                title: 'Select Folder',
+                properties: ['openDirectory']
+            });
+
+            if (filePaths && filePaths.length > 0) {
+                return filePaths[0];
+            }
+            return null;
+        });
 
         ipcMain.handle('show-confirm-dialog', async (event, options) => {
             const focusedWindow = BrowserWindow.getFocusedWindow();
@@ -693,9 +708,10 @@ async function ipcloader() {
         });
 
         ipcMain.handle('open-file-dialog', async () => {
+            const defaultPath = discordConfig.masterDataFolder ? path.join(discordConfig.masterDataFolder, 'music') : app.getPath('music');
             const { filePaths } = await dialog.showOpenDialog(mainWindow, {
                 title: 'Select Music File',
-                defaultPath: discordConfig.defaultLocalFolder,
+                defaultPath: defaultPath,
                 properties: ['openFile'],
                 filters: [
                     { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
@@ -791,9 +807,10 @@ async function ipcloader() {
 
         ipcMain.on('save-encounter', async () => {
             try {
+                const defaultPath = discordConfig.masterDataFolder ? path.join(discordConfig.masterDataFolder, 'encounters') : app.getPath('userData');
                 const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
                     title: 'Save Encounter',
-                    defaultPath: app.getPath('userData'),
+                    defaultPath: defaultPath,
                     filters: [{ name: 'JSON Files', extensions: ['json'] }]
                 });
 
@@ -820,9 +837,10 @@ async function ipcloader() {
                 return;
             }
 
+            const defaultPath = discordConfig.masterDataFolder ? path.join(discordConfig.masterDataFolder, 'encounters') : app.getPath('userData');
             const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
                 title: 'Load Encounter',
-                defaultPath: app.getPath('userData'),
+                defaultPath: defaultPath,
                 properties: ['openFile'],
                 filters: [{ name: 'JSON Files', extensions: ['json'] }]
             });
@@ -1155,7 +1173,7 @@ client.once('clientReady', async () => {
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
-    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID: discordConfig.botRoleId, DEFAULT_LOCAL_FOLDER: discordConfig.defaultLocalFolder }, fiveEToolsParser, dataBasePath);
+    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, discordConfig, fiveEToolsParser);
     client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
