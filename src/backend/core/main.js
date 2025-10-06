@@ -117,7 +117,8 @@ function createSettingsWindow() {
         webPreferences: {
             preload: path.join(__dirname, '../../ui/settings/settings-preload.js'),
             contextIsolation: true,
-            enableRemoteModule: false
+            enableRemoteModule: false,
+            nodeIntegration: true
         }
     });
 
@@ -240,6 +241,14 @@ async function apploader() {
         // Don't show it yet if we might need to show the settings window first.
         await createWindow(false);
         isAppReady = true;
+
+        musicPlayer = new BackendAudioPlayer(logToRenderer, shell);
+        musicPlayer.on('status-change', (status) => {
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('music-player-status', status);
+            }
+        });
+
         ipcloader(); // Load all IPC handlers so settings window can work.
 
         // Now, check for folder configuration.
@@ -1072,12 +1081,6 @@ async function logToRenderer(message) {
         logToRenderer(message);
     }
 }
-musicPlayer = new BackendAudioPlayer(logToRenderer, shell);
-musicPlayer.on('status-change', (status) => {
-    if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('music-player-status', status);
-    }
-});
 
 /*
 client.on('error', error => {
