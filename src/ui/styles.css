@@ -90,6 +90,8 @@ button:disabled {
   line-height: 1.4;
   white-space: pre-wrap; /* Ensures text wraps */
   word-wrap: break-word;
+  display: flex;
+  flex-direction: column;
 }
 
 #music-controls-container {
@@ -287,15 +289,7 @@ input[type="number"] {
     margin-bottom: 8px;
     gap: 10px;
 }
-.combatant-header h4 {
-    margin: 0;
-    font-size: 1.2em;
-    flex-grow: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: help;
-}
+/* This rule is now consolidated into .combatant-name-group h4 below */
 .header-right-group {
     display: flex;
     align-items: center;
@@ -588,14 +582,7 @@ input:disabled {
     text-overflow: ellipsis;
 }
 
-/* Override for existing h4 to remove flex-grow */
-.combatant-header .combatant-name-group + .header-right-group {
-    /* This empty rule is just to show structure, no change needed here */
-}
-
-.combatant-header h4 {
-    flex-grow: 0; /* Remove grow from h4 itself */
-}
+/* These rules are no longer needed after consolidation */
 
 .interactive-stat {
     background-color: #007bff; /* A distinct blue color */
