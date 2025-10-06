@@ -112,8 +112,8 @@ function createSettingsWindow() {
     }
 
     settingsWindow = new BrowserWindow({
-        width: 500,
-        height: 600,
+        width: 600,
+        height: 800,
         webPreferences: {
             preload: path.join(__dirname, '../../ui/settings/settings-preload.js'),
             contextIsolation: true,
@@ -160,10 +160,80 @@ function createGamifyWindow() {
     });
 }
 
+function registerSettingsIpcHandlers() {
+    const selectDirectory = async (title) => {
+        const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
+            title,
+            properties: ['openDirectory']
+        });
+        return filePaths && filePaths.length > 0 ? filePaths[0] : null;
+    };
+
+    ipcMain.handle('select-resources-folder', () => selectDirectory('Select Resources Folder'));
+    ipcMain.handle('select-random-tables-folder', () => selectDirectory('Select Random Tables Folder'));
+    ipcMain.handle('select-tasks-folder', () => selectDirectory('Select Tasks Folder'));
+    ipcMain.handle('select-music-folder', () => selectDirectory('Select Default Music Folder'));
+
+    ipcMain.handle('setup-default-folders', async () => {
+        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Select a Parent Directory for TavernTones Data',
+            properties: ['openDirectory']
+        });
+        if (!filePaths || filePaths.length === 0) return null;
+        const parentDir = filePaths[0];
+        const dataDir = path.join(parentDir, 'TavernTones_Data');
+        try {
+            await fs.mkdir(dataDir, { recursive: true });
+            const paths = {
+                resourcesPath: path.join(dataDir, 'resources'),
+                randomTablesPath: path.join(dataDir, 'randomtables'),
+                tasksPath: path.join(dataDir, 'tasks'),
+                defaultMusicPath: path.join(dataDir, 'music')
+            };
+            for (const p of Object.values(paths)) {
+                await fs.mkdir(p, { recursive: true });
+            }
+            const sourcePath = app.isPackaged ? path.join(process.resourcesPath, 'app') : app.getAppPath();
+            await fs.cp(path.join(sourcePath, 'resources'), paths.resourcesPath, { recursive: true });
+            await fs.cp(path.join(sourcePath, 'randomtables'), paths.randomTablesPath, { recursive: true });
+            await dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'Success',
+                message: `Default folders created inside:\n${dataDir}\n\nPlease place your task files in the 'tasks' folder.`,
+                buttons: ['OK']
+            });
+            return paths;
+        } catch (error) {
+            console.error('Failed to create default folders:', error);
+            await dialog.showErrorBox('Error', 'Failed to create default data folders. Please check permissions and try again.');
+            return null;
+        }
+    });
+
+    ipcMain.on('get-discord-config', async (event) => {
+        event.sender.send('discord-config', await getDiscordConfig());
+    });
+
+    ipcMain.on('set-discord-config', async (event, config) => {
+        await setDiscordConfig(config);
+        await dialog.showMessageBox(null, {
+            type: 'info',
+            title: 'Settings Saved',
+            message: 'Your settings have been saved. The application will now restart to apply the changes.',
+            buttons: ['OK']
+        });
+        app.relaunch();
+        app.quit();
+    });
+
+    ipcMain.on('open-settings-window', createSettingsWindow);
+}
+
 async function apploader() {
     discordConfig = await getDiscordConfig();
     await app.whenReady().then(async () => {
         console.log('App is ready.');
+        registerSettingsIpcHandlers();
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
         // Create the main window first, so we can show dialogs.
@@ -381,91 +451,6 @@ async function checkAndShowReminders(creature, turnEvent) {
 const InitiativeTracker = require('../features/InitiativeTracker.js');
 
 async function ipcloader() {
-    // Helper function to open a directory selection dialog
-    const selectDirectory = async (title) => {
-        const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
-            title,
-            properties: ['openDirectory']
-        });
-        return filePaths && filePaths.length > 0 ? filePaths[0] : null;
-    };
-
-    // IPC Handlers for individual folder browsing
-    ipcMain.handle('select-resources-folder', () => selectDirectory('Select Resources Folder'));
-    ipcMain.handle('select-random-tables-folder', () => selectDirectory('Select Random Tables Folder'));
-    ipcMain.handle('select-tasks-folder', () => selectDirectory('Select Tasks Folder'));
-    ipcMain.handle('select-music-folder', () => selectDirectory('Select Default Music Folder'));
-
-    // IPC Handler for setting up all default folders
-    ipcMain.handle('setup-default-folders', async () => {
-        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: 'Select a Parent Directory for TavernTones Data',
-            properties: ['openDirectory']
-        });
-
-        if (!filePaths || filePaths.length === 0) {
-            return null; // User cancelled
-        }
-
-        const parentDir = filePaths[0];
-        const dataDir = path.join(parentDir, 'TavernTones_Data');
-
-        try {
-            await fs.mkdir(dataDir, { recursive: true });
-
-            const paths = {
-                resourcesPath: path.join(dataDir, 'resources'),
-                randomTablesPath: path.join(dataDir, 'randomtables'),
-                tasksPath: path.join(dataDir, 'tasks'),
-                defaultMusicPath: path.join(dataDir, 'music')
-            };
-
-            // Create all subdirectories
-            for (const p of Object.values(paths)) {
-                await fs.mkdir(p, { recursive: true });
-            }
-
-            // Copy default data
-            const sourcePath = app.isPackaged ? path.join(process.resourcesPath, 'app') : app.getAppPath();
-            await fs.cp(path.join(sourcePath, 'resources'), paths.resourcesPath, { recursive: true });
-            await fs.cp(path.join(sourcePath, 'randomtables'), paths.randomTablesPath, { recursive: true });
-            // For tasks, we'll just create the directory for now, user can place tasks there.
-
-            await dialog.showMessageBox(mainWindow, {
-                type: 'info',
-                title: 'Success',
-                message: `Default folders created inside:\n${dataDir}\n\nPlease place your task files in the 'tasks' folder.`,
-                buttons: ['OK']
-            });
-
-            return paths;
-        } catch (error) {
-            console.error('Failed to create default folders:', error);
-            await dialog.showErrorBox('Error', 'Failed to create default data folders. Please check permissions and try again.');
-            return null;
-        }
-    });
-
-
-    // Settings window IPC
-    ipcMain.on('get-discord-config', async (event) => {
-        event.sender.send('discord-config', await getDiscordConfig());
-    });
-
-    ipcMain.on('set-discord-config', async (event, config) => {
-        await setDiscordConfig(config);
-        await dialog.showMessageBox(null, {
-            type: 'info',
-            title: 'Settings Saved',
-            message: 'Your settings have been saved. The application will now restart to apply the changes.',
-            buttons: ['OK']
-        });
-        app.relaunch();
-        app.quit();
-    });
-
-    ipcMain.on('open-settings-window', createSettingsWindow);
-
     if (windowloaded) {
         logToRenderer('ipcloader() called.');
         initiativeTracker = new InitiativeTracker(logToRenderer, sendInitiativeUpdate, autosavePath);
