@@ -539,96 +539,6 @@ class CommandHandler {
 
         return { success: true, text: effect.text };
     }
-}
-
-// Function to get a random effect from a table, filtering out used unique effects for the user
-function getRandomEffect(table, userId) {
-    const availableEffects = table.filter(effect => !effect.unique || !effect.used.includes(userId));
-    if (availableEffects.length === 0) {
-        return null; // No available effects
-    }
-    const randomIndex = Math.floor(Math.random() * availableEffects.length);
-    return availableEffects[randomIndex];
-}
-
-function evaluateDiceRolls(text, diceLimit = 24000) {
-    const roller = new DiceRoller();
-
-    while (text.includes("[[")) {
-        text = text.replace(/\[\[([^\[\]]+)\]\]/g, (match, diceExpression) => {
-            const roll = roller.roll(diceExpression);
-            let result = roll.total;
-
-            // Cap the result at diceLimit if exceeded
-            if (result > diceLimit) {
-                result = diceLimit;
-            }
-
-            return result;
-        });
-    }
-
-    return text;
-}
-
-async function askGPT4All(prompt, model, addSuffix = true) {
-    let chatmodel = 'Meta-Llama-3-8B-Instruct.Q4_0.gguf'; // Default to ll model
-    if (model === 're') {
-        chatmodel = 'qwen2.5-coder-7b-instruct-q4_0.gguf';
-    }
-
-    // Sanitize the prompt to prevent command injection
-    const sanitizedPrompt = prompt.replace(/"/g, '\\"');
-    let finalPrompt = sanitizedPrompt;
-
-    if (addSuffix) {
-        const tailPrompt = '\n - Thanks for the help!';
-        finalPrompt += tailPrompt;
-    }
-
-    try {
-        const response = await axios.post('http://localhost:4891/v1/chat/completions', {
-            "model": chatmodel,
-            "messages": [{ "role": "user", "content": finalPrompt }],
-            "max_tokens": 8000
-        });
-
-
-        // Log the entire response to inspect its structure
-        logToRenderer(`Response length: ${response.data.choices[0].message.content.length} characters`);
-
-        if (response.data && response.data.choices && response.data.choices[0].message.content) {
-            let reply = response.data.choices[0].message.content.trim();
-
-            // Append references to the reply
-            if (response.data.choices[0].references && response.data.choices[0].references.length > 0) {
-                //logToRenderer(JSON.stringify(response.data.choices[0].references));
-                reply += `\n\n${response.data.choices[0].references.length} Sources:`;
-                let refList = '';
-                for (const ref of response.data.choices[0].references) {
-                    if (!refList.includes(ref.file.toString().trim())) {
-                        refList += `\n${ref.file.toString()}`;
-                    }
-                }
-                reply += refList;
-            }
-            else {
-                reply += `\n\nSource: ***My butt*** (tell Crisp the RAG isn't working)`;
-            }
-
-            // Save the last response
-            lastResponse = response.data;
-
-            return reply;
-
-        } else {
-            throw new Error('Invalid response from GPT-4All server');
-        }
-    } catch (error) {
-        logToRenderer(`Error: ${error.message}`);
-        throw new Error(`An error occurred while running the query: ${error.message}`);
-    }
-}
 
     async findMusic(folderSearchTerm, songSearchTerm) {
         logToRenderer(`findMusic: Initiating search with folderSearchTerm='${folderSearchTerm}', songSearchTerm='${songSearchTerm}'.`);
@@ -729,6 +639,94 @@ async function askGPT4All(prompt, model, addSuffix = true) {
             return null;
         }
     }
+}
+
+// Function to get a random effect from a table, filtering out used unique effects for the user
+function getRandomEffect(table, userId) {
+    const availableEffects = table.filter(effect => !effect.unique || !effect.used.includes(userId));
+    if (availableEffects.length === 0) {
+        return null; // No available effects
+    }
+    const randomIndex = Math.floor(Math.random() * availableEffects.length);
+    return availableEffects[randomIndex];
+}
+
+function evaluateDiceRolls(text, diceLimit = 24000) {
+    const roller = new DiceRoller();
+
+    while (text.includes("[[")) {
+        text = text.replace(/\[\[([^\[\]]+)\]\]/g, (match, diceExpression) => {
+            const roll = roller.roll(diceExpression);
+            let result = roll.total;
+
+            // Cap the result at diceLimit if exceeded
+            if (result > diceLimit) {
+                result = diceLimit;
+            }
+
+            return result;
+        });
+    }
+
+    return text;
+}
+
+async function askGPT4All(prompt, model, addSuffix = true) {
+    let chatmodel = 'Meta-Llama-3-8B-Instruct.Q4_0.gguf'; // Default to ll model
+    if (model === 're') {
+        chatmodel = 'qwen2.5-coder-7b-instruct-q4_0.gguf';
+    }
+
+    // Sanitize the prompt to prevent command injection
+    const sanitizedPrompt = prompt.replace(/"/g, '\\"');
+    let finalPrompt = sanitizedPrompt;
+
+    if (addSuffix) {
+        const tailPrompt = '\n - Thanks for the help!';
+        finalPrompt += tailPrompt;
+    }
+
+    try {
+        const response = await axios.post('http://localhost:4891/v1/chat/completions', {
+            "model": chatmodel,
+            "messages": [{ "role": "user", "content": finalPrompt }],
+            "max_tokens": 8000
+        });
 
 
+        // Log the entire response to inspect its structure
+        logToRenderer(`Response length: ${response.data.choices[0].message.content.length} characters`);
+
+        if (response.data && response.data.choices && response.data.choices[0].message.content) {
+            let reply = response.data.choices[0].message.content.trim();
+
+            // Append references to the reply
+            if (response.data.choices[0].references && response.data.choices[0].references.length > 0) {
+                //logToRenderer(JSON.stringify(response.data.choices[0].references));
+                reply += `\n\n${response.data.choices[0].references.length} Sources:`;
+                let refList = '';
+                for (const ref of response.data.choices[0].references) {
+                    if (!refList.includes(ref.file.toString().trim())) {
+                        refList += `\n${ref.file.toString()}`;
+                    }
+                }
+                reply += refList;
+            }
+            else {
+                reply += `\n\nSource: ***My butt*** (tell Crisp the RAG isn't working)`;
+            }
+
+            // Save the last response
+            lastResponse = response.data;
+
+            return reply;
+
+        } else {
+            throw new Error('Invalid response from GPT-4All server');
+        }
+    } catch (error) {
+        logToRenderer(`Error: ${error.message}`);
+        throw new Error(`An error occurred while running the query: ${error.message}`);
+    }
+}
 module.exports = CommandHandler;
