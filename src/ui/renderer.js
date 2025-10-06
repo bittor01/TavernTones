@@ -303,23 +303,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- IPC Listeners ---
     window.electron.ipcRenderer.on('log-message', (event, message) => logMessage(message));
 
-    window.electron.ipcRenderer.on('discord-bot-status', (event, { status }) => {
-        if (status === 'offline') {
-            logMessage("Discord bot is offline. Disabling related features.");
-            const pushPanelBtn = document.getElementById('push-panel-btn');
-            const pushInitiativeBtn = document.getElementById('push-initiative-btn');
-
-            if (pushPanelBtn) {
-                pushPanelBtn.disabled = true;
-                pushPanelBtn.title = "Discord bot is not configured.";
-            }
-            if (pushInitiativeBtn) {
-                pushInitiativeBtn.disabled = true;
-                pushInitiativeBtn.title = "Discord bot is not configured.";
-            }
-        }
-    });
-
     window.electron.ipcRenderer.on('dice-log', (event, message) => {
         const logEntry = document.createElement('div');
         logEntry.textContent = message;

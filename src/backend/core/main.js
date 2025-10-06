@@ -164,66 +164,71 @@ async function apploader() {
     discordConfig = await getDiscordConfig();
     await app.whenReady().then(async () => {
         console.log('App is ready.');
-
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
-        await createWindow(!isGamifyLaunch);
 
-        // --- Crucial: Load base IPC handlers immediately ---
-        isAppReady = true; // Set early so logToRenderer can work
-        loadBaseIpcHandlers();
+        // Create the main window first, so we can show dialogs.
+        // Don't show it yet if we might need to show the settings window first.
+        await createWindow(false);
+        isAppReady = true;
+        ipcloader(); // Load all IPC handlers so settings window can work.
 
-        // --- Now check for folder configuration ---
-        if (!discordConfig.masterDataFolder) {
-            logToRenderer("Master data folder not configured. Prompting user to set it up.");
+        // Now, check for folder configuration.
+        const { resourcesPath, randomTablesPath, tasksPath } = discordConfig;
+        const pathsConfigured = resourcesPath && randomTablesPath && tasksPath;
+
+        if (!pathsConfigured) {
+            logToRenderer("Essential data folders are not configured.");
             await dialog.showMessageBox(mainWindow, {
-                type: 'info',
-                title: 'Welcome to TavernTones!',
-                message: 'Please select your master data folder to continue. This is where all your resources, music, and other data will be stored.',
+                type: 'warning',
+                title: 'Configuration Required',
+                message: 'One or more essential data folders have not been set up. Please configure them in the settings.',
                 buttons: ['Go to Settings']
             });
             createSettingsWindow();
-            // Do not proceed with other initializations until folder is set
-            return;
+            return; // Halt further initialization.
         }
 
-        // --- Data-dependent initializations ---
+        // If we've reached here, paths are configured, so we can show the main window.
+        if (!isGamifyLaunch) {
+            mainWindow.maximize();
+            mainWindow.show();
+        }
+
+        // Initialize data-dependent components.
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
-        loadDataDependentIpcHandlers(); // Load the rest of the handlers
 
-        // If the data folder is set, then check for Discord credentials.
-        if (!discordConfig.token) {
-            logToRenderer("Discord credentials not found. Prompting user.");
-            mainWindow.webContents.send('discord-bot-status', { status: 'offline' });
-            const result = await dialog.showMessageBox(mainWindow, {
-                type: 'question',
-                title: 'Discord Bot Not Configured',
-                message: "It looks like your Discord bot isn't set up yet. You can set it up now or continue without bot features.",
-                buttons: ['Go to Settings', 'Continue Without Bot'],
-                defaultId: 0,
-                cancelId: 1
-            });
-
-            if (result.response === 0) { // 'Go to Settings'
-                createSettingsWindow();
-            }
+        // Handle Discord Bot setup.
+        if (!discordConfig || !discordConfig.token) {
+            logToRenderer("Discord credentials not found. Bot functionality will be disabled.");
+            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
         } else {
             initializeDiscordBot();
         }
 
+        // If it's a gamify launch, also create the gamify window.
         if (isGamifyLaunch) {
             createGamifyWindow();
         }
 
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length === 0) {
-                createWindow(!isGamifyLaunch);
-                if (isGamifyLaunch) {
-                    createGamifyWindow();
+                // Re-check config on activate, in case it was the only window.
+                if (pathsConfigured) {
+                    createWindow(!isGamifyLaunch);
+                    if (isGamifyLaunch) {
+                        createGamifyWindow();
+                    }
+                } else {
+                    createSettingsWindow();
                 }
             }
         });
     });
 }
+
+ipcMain.handle('get-dnd-conditions', async () => {
+    return DND_CONDITIONS;
+});
 
 apploader();
 
@@ -375,20 +380,74 @@ async function checkAndShowReminders(creature, turnEvent) {
 
 const InitiativeTracker = require('../features/InitiativeTracker.js');
 
-function loadBaseIpcHandlers() {
-    logToRenderer('Loading base IPC handlers.');
-    // Settings window IPC
-    ipcMain.handle('select-master-data-folder', async () => {
+async function ipcloader() {
+    // Helper function to open a directory selection dialog
+    const selectDirectory = async (title) => {
         const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
-            title: 'Select Master Data Folder',
+            title,
             properties: ['openDirectory']
         });
-        if (filePaths && filePaths.length > 0) {
-            return filePaths[0];
+        return filePaths && filePaths.length > 0 ? filePaths[0] : null;
+    };
+
+    // IPC Handlers for individual folder browsing
+    ipcMain.handle('select-resources-folder', () => selectDirectory('Select Resources Folder'));
+    ipcMain.handle('select-random-tables-folder', () => selectDirectory('Select Random Tables Folder'));
+    ipcMain.handle('select-tasks-folder', () => selectDirectory('Select Tasks Folder'));
+    ipcMain.handle('select-music-folder', () => selectDirectory('Select Default Music Folder'));
+
+    // IPC Handler for setting up all default folders
+    ipcMain.handle('setup-default-folders', async () => {
+        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Select a Parent Directory for TavernTones Data',
+            properties: ['openDirectory']
+        });
+
+        if (!filePaths || filePaths.length === 0) {
+            return null; // User cancelled
         }
-        return null;
+
+        const parentDir = filePaths[0];
+        const dataDir = path.join(parentDir, 'TavernTones_Data');
+
+        try {
+            await fs.mkdir(dataDir, { recursive: true });
+
+            const paths = {
+                resourcesPath: path.join(dataDir, 'resources'),
+                randomTablesPath: path.join(dataDir, 'randomtables'),
+                tasksPath: path.join(dataDir, 'tasks'),
+                defaultMusicPath: path.join(dataDir, 'music')
+            };
+
+            // Create all subdirectories
+            for (const p of Object.values(paths)) {
+                await fs.mkdir(p, { recursive: true });
+            }
+
+            // Copy default data
+            const sourcePath = app.isPackaged ? path.join(process.resourcesPath, 'app') : app.getAppPath();
+            await fs.cp(path.join(sourcePath, 'resources'), paths.resourcesPath, { recursive: true });
+            await fs.cp(path.join(sourcePath, 'randomtables'), paths.randomTablesPath, { recursive: true });
+            // For tasks, we'll just create the directory for now, user can place tasks there.
+
+            await dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'Success',
+                message: `Default folders created inside:\n${dataDir}\n\nPlease place your task files in the 'tasks' folder.`,
+                buttons: ['OK']
+            });
+
+            return paths;
+        } catch (error) {
+            console.error('Failed to create default folders:', error);
+            await dialog.showErrorBox('Error', 'Failed to create default data folders. Please check permissions and try again.');
+            return null;
+        }
     });
 
+
+    // Settings window IPC
     ipcMain.on('get-discord-config', async (event) => {
         event.sender.send('discord-config', await getDiscordConfig());
     });
@@ -406,18 +465,12 @@ function loadBaseIpcHandlers() {
     });
 
     ipcMain.on('open-settings-window', createSettingsWindow);
-    ipcMain.on('open-gamify-tool', createGamifyWindow);
 
-    ipcMain.handle('get-dnd-conditions', async () => {
-        return DND_CONDITIONS;
-    });
-}
-
-async function loadDataDependentIpcHandlers() {
     if (windowloaded) {
-        logToRenderer('Loading data-dependent IPC handlers.');
+        logToRenderer('ipcloader() called.');
         initiativeTracker = new InitiativeTracker(logToRenderer, sendInitiativeUpdate, autosavePath);
         // --- All core IPC listeners should be registered after the app is ready ---
+        ipcMain.on('open-gamify-tool', createGamifyWindow);
 
         ipcMain.handle('show-confirm-dialog', async (event, options) => {
             const focusedWindow = BrowserWindow.getFocusedWindow();
@@ -1018,9 +1071,9 @@ async function loadDataDependentIpcHandlers() {
         });
     }
     else {
-        logToRenderer('loadDataDependentIpcHandlers() waiting for window to load...');
+        logToRenderer('ipcloader() waiting for window to load...');
         await sleep(100);
-        loadDataDependentIpcHandlers();
+        ipcloader();
     }
 }
 
@@ -1156,7 +1209,7 @@ client.once('clientReady', async () => {
     const basePath = app.isPackaged
         ? path.dirname(app.getPath('exe'))
         : app.getAppPath();
-    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID: discordConfig.botRoleId, DEFAULT_LOCAL_FOLDER: discordConfig.defaultLocalFolder }, fiveEToolsParser, basePath);
+    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, discordConfig, fiveEToolsParser);
     client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
