@@ -31,7 +31,8 @@
     "win": {
       "target": "portable",
       "icon": "icon.ico",
-      "forceCodeSigning": false
+      "forceCodeSigning": false,
+      "artifactName": "TavernTones.exe"
     },
     "files": [
       "src/",
