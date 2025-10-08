@@ -17,8 +17,10 @@ const CommandHandler = require('../../discord/CommandHandler.js');
 const FiveEToolsParser = require('./5eParser.js');
 const { getDiscordConfig, setDiscordConfig } = require('./config.js');
 const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
+const { mobAttackResults, areaTargets } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
+const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 
 let discordConfig;
 
@@ -71,6 +73,16 @@ async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
     }
 }
 
+// Function to send dice roll log messages to the renderer
+async function logDiceRollToRenderer(message) {
+    if (isAppReady && mainWindow.webContents) {
+        mainWindow.webContents.send('dice-log', message);
+    } else {
+        await sleep(100);
+        logDiceRollToRenderer(message);
+    }
+}
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -113,11 +125,12 @@ function createSettingsWindow() {
 
     settingsWindow = new BrowserWindow({
         width: 500,
-        height: 600,
+        height: 800,
         webPreferences: {
             preload: path.join(__dirname, '../../ui/settings/settings-preload.js'),
             contextIsolation: true,
-            enableRemoteModule: false
+            enableRemoteModule: false,
+            nodeIntegration: true
         }
     });
 
@@ -162,44 +175,76 @@ function createGamifyWindow() {
 
 async function apploader() {
     discordConfig = await getDiscordConfig();
-    await app.whenReady().then(() => {
+    await app.whenReady().then(async () => {
         console.log('App is ready.');
-        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app); // Initialize parser early
-
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
-        if (!discordConfig || !discordConfig.token) {
+        // Create the main window first, so we can show dialogs.
+        // Don't show it yet if we might need to show the settings window first.
+        await createWindow(false);
+        isAppReady = true;
+        ipcloader(); // Load all IPC handlers so settings window can work.
+
+        // Now, check for folder configuration.
+        const { resourcesPath, randomTablesPath, tasksPath } = discordConfig;
+        const pathsConfigured = resourcesPath && randomTablesPath && tasksPath;
+
+        if (!pathsConfigured) {
+            logToRenderer("Essential data folders are not configured.");
+            await dialog.showMessageBox(mainWindow, {
+                type: 'warning',
+                title: 'Configuration Required',
+                message: 'One or more essential data folders have not been set up. Please configure them in the settings.',
+                buttons: ['Go to Settings']
+            });
             createSettingsWindow();
-        } else {
-            // Create the main window, but don't show it if we are launching the gamify tool
-            createWindow(!isGamifyLaunch);
+            return; // Halt further initialization.
         }
 
+        // If we've reached here, paths are configured, so we can show the main window.
+        if (!isGamifyLaunch) {
+            mainWindow.maximize();
+            mainWindow.show();
+        }
 
-        // If it's a gamify launch, also create the gamify window
+        // Initialize data-dependent components.
+        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
+
+        // Handle Discord Bot setup.
+        if (!discordConfig || !discordConfig.token) {
+            logToRenderer("Discord credentials not found. Bot functionality will be disabled.");
+            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+        } else {
+            initializeDiscordBot();
+        }
+
+        // If it's a gamify launch, also create the gamify window.
         if (isGamifyLaunch) {
             createGamifyWindow();
         }
 
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length === 0) {
-                if (!discordConfig || !discordConfig.token) {
-                    createSettingsWindow();
-                } else {
+                // Re-check config on activate, in case it was the only window.
+                if (pathsConfigured) {
                     createWindow(!isGamifyLaunch);
                     if (isGamifyLaunch) {
                         createGamifyWindow();
                     }
+                } else {
+                    createSettingsWindow();
                 }
             }
         });
-        isAppReady = true;
-        ipcloader();
     });
 }
 
 ipcMain.handle('get-dnd-conditions', async () => {
     return DND_CONDITIONS;
+});
+
+ipcMain.handle('get-mob-rules-data', async () => {
+    return { mobAttackResults, areaTargets };
 });
 
 apploader();
@@ -286,6 +331,44 @@ function formatStatBlockForDiscord(monster) {
     return { mainEmbed, longFields };
 }
 
+function formatMobRulesForDiscord(creature) {
+    const attackMod = parseInt(creature.attackMod, 10) || 0;
+    const formatAttackMod = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
+
+    // Format the Mob Attack Results table
+    let attackTable = '```\nRoll Needed | Normal | Advantage | Disadvantage\n------------|--------|-----------|--------------\n';
+    mobAttackResults.forEach(row => {
+        const roll = row.roll.padEnd(11);
+        const normal = row.normal.toString().padEnd(6);
+        const adv = row.adv.toString().padEnd(9);
+        const dis = row.dis.toString();
+        attackTable += `${roll} | ${normal} | ${adv} | ${dis}\n`;
+    });
+    attackTable += '```';
+
+    const mainEmbed = new EmbedBuilder()
+        .setColor(0xFFA500) // Orange for rules
+        .setTitle(`Mob Attack Rules for ${creature.name}`)
+        .setDescription(`This table shows the number of successful hits from a mob based on the d20 roll needed.\nThe mob's attack modifier is **${formatAttackMod(attackMod)}**.`)
+        .addFields({ name: 'Mob Attack Results', value: attackTable });
+
+    // Format the Area Targets table
+    let areaTableString = '';
+    areaTargets.forEach(row => {
+        let parts = [];
+        if (row.cone !== '—') parts.push(`**Cone:** ${row.cone}`);
+        if (row.cube !== '—') parts.push(`**Cube:** ${row.cube}`);
+        if (row.circular !== '—') parts.push(`**Circular:** ${row.circular}`);
+        if (row.line !== '—') parts.push(`**Line:** ${row.line}`);
+        areaTableString += `**${row.targets} targets:** ${parts.join(' | ')}\n`;
+    });
+    areaTableString += `\n*Use Circular for Cylinders, Emanations, and Spheres.`;
+
+    const longFields = [{ name: 'Targets in Area of Effect', value: areaTableString }];
+
+    return { mainEmbed, longFields };
+}
+
 function splitText(text, maxLength = 1024) {
     const chunks = [];
     if (!text) return chunks;
@@ -353,6 +436,72 @@ async function checkAndShowReminders(creature, turnEvent) {
 const InitiativeTracker = require('../features/InitiativeTracker.js');
 
 async function ipcloader() {
+    // Helper function to open a directory selection dialog
+    const selectDirectory = async (title) => {
+        const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
+            title,
+            properties: ['openDirectory']
+        });
+        return filePaths && filePaths.length > 0 ? filePaths[0] : null;
+    };
+
+    // IPC Handlers for individual folder browsing
+    ipcMain.handle('select-resources-folder', () => selectDirectory('Select Resources Folder'));
+    ipcMain.handle('select-random-tables-folder', () => selectDirectory('Select Random Tables Folder'));
+    ipcMain.handle('select-tasks-folder', () => selectDirectory('Select Tasks Folder'));
+    ipcMain.handle('select-music-folder', () => selectDirectory('Select Default Music Folder'));
+
+    // IPC Handler for setting up all default folders
+    ipcMain.handle('setup-default-folders', async () => {
+        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Select a Parent Directory for TavernTones Data',
+            properties: ['openDirectory']
+        });
+
+        if (!filePaths || filePaths.length === 0) {
+            return null; // User cancelled
+        }
+
+        const parentDir = filePaths[0];
+        const dataDir = path.join(parentDir, 'TavernTones_Data');
+
+        try {
+            await fs.mkdir(dataDir, { recursive: true });
+
+            const paths = {
+                resourcesPath: path.join(dataDir, 'resources'),
+                randomTablesPath: path.join(dataDir, 'randomtables'),
+                tasksPath: path.join(dataDir, 'tasks'),
+                defaultMusicPath: path.join(dataDir, 'music')
+            };
+
+            // Create all subdirectories
+            for (const p of Object.values(paths)) {
+                await fs.mkdir(p, { recursive: true });
+            }
+
+            // Copy default data
+            const sourcePath = app.isPackaged ? path.join(process.resourcesPath, 'app') : app.getAppPath();
+            await fs.cp(path.join(sourcePath, 'resources'), paths.resourcesPath, { recursive: true });
+            await fs.cp(path.join(sourcePath, 'randomtables'), paths.randomTablesPath, { recursive: true });
+            // For tasks, we'll just create the directory for now, user can place tasks there.
+
+            await dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'Success',
+                message: `Default folders created inside:\n${dataDir}\n\nPlease place your task files in the 'tasks' folder.`,
+                buttons: ['OK']
+            });
+
+            return paths;
+        } catch (error) {
+            console.error('Failed to create default folders:', error);
+            await dialog.showErrorBox('Error', 'Failed to create default data folders. Please check permissions and try again.');
+            return null;
+        }
+    });
+
+
     // Settings window IPC
     ipcMain.on('get-discord-config', async (event) => {
         event.sender.send('discord-config', await getDiscordConfig());
@@ -372,615 +521,664 @@ async function ipcloader() {
 
     ipcMain.on('open-settings-window', createSettingsWindow);
 
-    if (windowloaded) {
-        logToRenderer('ipcloader() called.');
-        initiativeTracker = new InitiativeTracker(logToRenderer, sendInitiativeUpdate, autosavePath);
-        // --- All core IPC listeners should be registered after the app is ready ---
-        ipcMain.on('open-gamify-tool', createGamifyWindow);
+    logToRenderer('ipcloader() called.');
+    initiativeTracker = new InitiativeTracker(logToRenderer, logDiceRollToRenderer, sendInitiativeUpdate, autosavePath);
+    // --- All core IPC listeners should be registered after the app is ready ---
+    ipcMain.on('open-gamify-tool', createGamifyWindow);
 
-        ipcMain.handle('show-confirm-dialog', async (event, options) => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (!focusedWindow) return { response: options.cancelId || 1 }; // Default to cancel if no window
-            return await dialog.showMessageBox(focusedWindow, options);
+    ipcMain.handle('show-confirm-dialog', async (event, options) => {
+        const focusedWindow = BrowserWindow.getFocusedWindow();
+        if (!focusedWindow) return { response: options.cancelId || 1 }; // Default to cancel if no window
+        return await dialog.showMessageBox(focusedWindow, options);
+    });
+
+    ipcMain.handle('open-task-file-dialog', async () => {
+        const { filePaths } = await dialog.showOpenDialog(gamifyWindow, { // gamifyWindow should be the parent
+            title: 'Select Task File',
+            properties: ['openFile'],
+            filters: [{ name: 'JSON Files', extensions: ['json'] }]
         });
 
-        ipcMain.handle('open-task-file-dialog', async () => {
-            const { filePaths } = await dialog.showOpenDialog(gamifyWindow, { // gamifyWindow should be the parent
-                title: 'Select Task File',
-                properties: ['openFile'],
-                filters: [{ name: 'JSON Files', extensions: ['json'] }]
-            });
+        if (filePaths && filePaths.length > 0) {
+            return filePaths[0];
+        }
+        return null;
+    });
 
-            if (filePaths && filePaths.length > 0) {
-                return filePaths[0];
-            }
-            return null;
-        });
-
-        ipcMain.handle('get-high-score', async () => {
-            const settingsPath = path.join(app.getPath('userData'), 'gamify-settings.json');
-            try {
-                const data = await fs.readFile(settingsPath, 'utf8');
-                const settings = JSON.parse(data);
-                return settings.highScore || 0;
-            } catch (error) {
-                if (error.code === 'ENOENT') {
-                    await fs.writeFile(settingsPath, JSON.stringify({ highScore: 0 }, null, 2));
-                    return 0;
-                }
-                logToRenderer(`Error reading high score: ${error}`);
+    ipcMain.handle('get-high-score', async () => {
+        const settingsPath = path.join(app.getPath('userData'), 'gamify-settings.json');
+        try {
+            const data = await fs.readFile(settingsPath, 'utf8');
+            const settings = JSON.parse(data);
+            return settings.highScore || 0;
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                await fs.writeFile(settingsPath, JSON.stringify({ highScore: 0 }, null, 2));
                 return 0;
             }
-        });
+            logToRenderer(`Error reading high score: ${error}`);
+            return 0;
+        }
+    });
 
-        ipcMain.on('save-high-score', async (event, score) => {
-            const settingsPath = path.join(app.getPath('userData'), 'gamify-settings.json');
+    ipcMain.on('save-high-score', async (event, score) => {
+        const settingsPath = path.join(app.getPath('userData'), 'gamify-settings.json');
+        try {
+            let settings = {};
             try {
-                let settings = {};
-                try {
-                    const data = await fs.readFile(settingsPath, 'utf8');
-                    settings = JSON.parse(data);
-                } catch (readError) {
-                    // File might not exist, that's fine.
-                }
-                settings.highScore = score;
-                await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
-            } catch (error) {
-                logToRenderer(`Error saving high score: ${error}`);
+                const data = await fs.readFile(settingsPath, 'utf8');
+                settings = JSON.parse(data);
+            } catch (readError) {
+                // File might not exist, that's fine.
             }
-        });
+            settings.highScore = score;
+            await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
+        } catch (error) {
+            logToRenderer(`Error saving high score: ${error}`);
+        }
+    });
 
-        async function loadTaskData(taskFilePath) {
-            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-            try {
-                const data = await fs.readFile(taskFilePath, 'utf8');
-                let taskData = JSON.parse(data); // Make mutable
+    async function loadTaskData(taskFilePath) {
+        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+        try {
+            const data = await fs.readFile(taskFilePath, 'utf8');
+            let taskData = JSON.parse(data); // Make mutable
 
-                let { fileIndex, itemIndex } = taskData.progress;
+            let { fileIndex, itemIndex } = taskData.progress;
+
+            if (fileIndex >= taskData.files.length) {
+                return { success: true, taskComplete: true, taskData };
+            }
+
+            let itemFilePath = path.join(basePath, taskData.files[fileIndex]);
+            let itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
+
+            // Loop to find the next valid item, skipping empty files
+            while (itemIndex >= itemList.length) {
+                fileIndex++;
+                itemIndex = 0;
 
                 if (fileIndex >= taskData.files.length) {
+                    taskData.progress.fileIndex = fileIndex;
+                    await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
                     return { success: true, taskComplete: true, taskData };
                 }
 
-                let itemFilePath = path.join(basePath, taskData.files[fileIndex]);
-                let itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
-
-                // Loop to find the next valid item, skipping empty files
-                while (itemIndex >= itemList.length) {
-                    fileIndex++;
-                    itemIndex = 0;
-
-                    if (fileIndex >= taskData.files.length) {
-                        taskData.progress.fileIndex = fileIndex;
-                        await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-                        return { success: true, taskComplete: true, taskData };
-                    }
-
-                    itemFilePath = path.join(basePath, taskData.files[fileIndex]);
-                    itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
-                }
-
-                // Update progress in the task file *before* returning
-                taskData.progress.fileIndex = fileIndex;
-                taskData.progress.itemIndex = itemIndex;
-                await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-
-                const item = itemList[itemIndex];
-                if (!item) {
-                     // This can happen if a file is empty from the start.
-                     // The loop above should handle this, but as a safeguard:
-                    return { success: false, error: "Encountered an empty or invalid file." };
-                }
-
-                // Try to get details if it's a spell, but don't fail if it's not
-                let itemDetails = null;
-                if (item.text && item.text.includes('-')) {
-                    const itemName = item.text.split(' - ')[0].trim();
-                    const spellDetailsResults = await fiveEToolsParser.searchByName('spells', itemName);
-
-                    // Find the exact match from the search results
-                    const exactMatch = spellDetailsResults.find(result => result.name.toLowerCase() === itemName.toLowerCase());
-
-                    itemDetails = exactMatch ? await fiveEToolsParser.getExact('spells', exactMatch.name, exactMatch.source) : null;
-                }
-
-                return {
-                    success: true,
-                    taskData,
-                    taskFilePath: taskFilePath, // Return the path of the loaded task
-                    spell: item, // Keep 'spell' key for frontend compatibility for now
-                    spellDetails: itemDetails,
-                    spellCount: itemList.length,
-                };
-            } catch (error) {
-                logToRenderer(`Error in loadTaskData for ${taskFilePath}: ${error}`);
-                return { success: false, error: error.message };
+                itemFilePath = path.join(basePath, taskData.files[fileIndex]);
+                itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
             }
+
+            // Update progress in the task file *before* returning
+            taskData.progress.fileIndex = fileIndex;
+            taskData.progress.itemIndex = itemIndex;
+            await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+
+            const item = itemList[itemIndex];
+            if (!item) {
+                 // This can happen if a file is empty from the start.
+                 // The loop above should handle this, but as a safeguard:
+                return { success: false, error: "Encountered an empty or invalid file." };
+            }
+
+            // Try to get details if it's a spell, but don't fail if it's not
+            let itemDetails = null;
+            if (item.text && item.text.includes('-')) {
+                const itemName = item.text.split(' - ')[0].trim();
+                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', itemName);
+
+                // Find the exact match from the search results
+                const exactMatch = spellDetailsResults.find(result => result.name.toLowerCase() === itemName.toLowerCase());
+
+                itemDetails = exactMatch ? await fiveEToolsParser.getExact('spells', exactMatch.name, exactMatch.source) : null;
+            }
+
+            return {
+                success: true,
+                taskData,
+                taskFilePath: taskFilePath, // Return the path of the loaded task
+                spell: item, // Keep 'spell' key for frontend compatibility for now
+                spellDetails: itemDetails,
+                spellCount: itemList.length,
+            };
+        } catch (error) {
+            logToRenderer(`Error in loadTaskData for ${taskFilePath}: ${error}`);
+            return { success: false, error: error.message };
+        }
+    }
+
+    ipcMain.handle('load-task-by-path', async (event, filePath) => {
+        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+        const taskPath = path.isAbsolute(filePath) ? filePath : path.join(basePath, filePath);
+        return await loadTaskData(taskPath);
+    });
+
+    ipcMain.handle('get-task-data', async () => {
+        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+        const defaultTaskPath = path.join(basePath, 'src/jsontool/deck-editing-task.json');
+        return await loadTaskData(defaultTaskPath);
+    });
+
+    ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell, taskFilePath }) => {
+        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+        try {
+            // 1. Save the current spell changes
+            const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
+            const currentItemFileData = await fs.readFile(currentItemFilePath, 'utf8');
+            let currentItemList = JSON.parse(currentItemFileData);
+            currentItemList[taskData.progress.itemIndex] = currentSpell;
+            await fs.writeFile(currentItemFilePath, JSON.stringify(currentItemList, null, 2));
+
+            // 2. Update progress
+            taskData.progress.itemIndex++;
+
+            if (taskData.progress.itemIndex >= currentItemList.length) {
+                taskData.progress.itemIndex = 0;
+                taskData.progress.fileIndex++;
+                if (taskData.progress.fileIndex >= taskData.files.length) {
+                    // Task complete!
+                    await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+                    return { success: true, taskComplete: true, taskData };
+                }
+            }
+
+            // 3. Save the new progress to the task file
+            await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+
+            // 4. Get the next spell and its details
+            const nextFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
+            const nextFileData = await fs.readFile(nextFilePath, 'utf8');
+            const nextItemList = JSON.parse(nextFileData);
+            const nextItem = nextItemList[taskData.progress.itemIndex];
+
+            let nextItemDetails = null;
+            if (nextItem.text && nextItem.text.includes('-')) {
+                const nextItemName = nextItem.text.split(' - ')[0].trim();
+                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', nextItemName);
+                const exactMatch = spellDetailsResults.find(result => result.name.toLowerCase() === nextItemName.toLowerCase());
+                nextItemDetails = exactMatch ? await fiveEToolsParser.getExact('spells', exactMatch.name, exactMatch.source) : null;
+            }
+
+            return {
+                success: true,
+                taskData,
+                spell: nextItem,
+                spellDetails: nextItemDetails,
+                spellCount: nextItemList.length,
+            };
+
+        } catch (error) {
+            logToRenderer(`Error in save-and-get-next-spell: ${error}`);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('scrap-and-get-next-item', async (event, { taskData, currentItem, taskFilePath }) => {
+        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+        try {
+            const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
+            let currentItemList = JSON.parse(await fs.readFile(currentItemFilePath, 'utf8'));
+
+            // Use the title field for a more robust lookup
+            const titleField = taskData.ui.titleField || 'name';
+            const itemIndexToRemove = currentItemList.findIndex(item => item[titleField] === currentItem[titleField]);
+
+            if (itemIndexToRemove === -1) {
+                // Fallback for safety, though it's a weak comparison
+                const fallbackIndex = currentItemList.findIndex(item => JSON.stringify(item) === JSON.stringify(currentItem));
+                if (fallbackIndex === -1) {
+                    throw new Error(`Could not find the item with ${titleField} "${currentItem[titleField]}" to scrap in the file.`);
+                }
+                itemIndexToRemove = fallbackIndex;
+            }
+
+            currentItemList.splice(itemIndexToRemove, 1);
+            await fs.writeFile(currentItemFilePath, JSON.stringify(currentItemList, null, 2));
+
+            // After removing, the item at the same index is the next one.
+            // We don't need to change the progress. The robust loadTaskData will handle
+            // cases where the index is now out of bounds (e.g., last item deleted)
+            // or the file has become empty.
+            return await loadTaskData(taskFilePath);
+
+        } catch (error) {
+            logToRenderer(`Error in scrap-and-get-next-item: ${error}`);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('undo-and-get-previous-spell', async (event, { taskData, previousSpellState, taskFilePath }) => {
+        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+        try {
+            // 1. Determine the previous spell's position
+            let prevFileIndex = taskData.progress.fileIndex;
+            let prevItemIndex = taskData.progress.itemIndex - 1;
+
+            if (prevItemIndex < 0) {
+                prevFileIndex--;
+                if (prevFileIndex < 0) {
+                    return { success: false, error: "Already at the beginning." };
+                }
+                const prevFilePath = path.join(basePath, taskData.files[prevFileIndex]);
+                const prevFileData = await fs.readFile(prevFilePath, 'utf8');
+                const prevSpellList = JSON.parse(prevFileData);
+                prevItemIndex = prevSpellList.length - 1;
+            }
+
+            // 2. Save the *previous* state back to the file
+            const targetFilePath = path.join(basePath, taskData.files[prevFileIndex]);
+            const targetFileData = await fs.readFile(targetFilePath, 'utf8');
+            let targetSpellList = JSON.parse(targetFileData);
+            targetSpellList[prevItemIndex] = previousSpellState;
+            await fs.writeFile(targetFilePath, JSON.stringify(targetSpellList, null, 2));
+
+            // 3. Update progress to the previous spell's position
+            taskData.progress.fileIndex = prevFileIndex;
+            taskData.progress.itemIndex = prevItemIndex;
+
+            // 4. Save the new progress to the task file
+            await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+
+            // 5. Get the details for the (now current) spell
+            const spellName = previousSpellState.text.split(' - ')[0];
+            const spellDetailsResults = await fiveEToolsParser.searchByName('spells', spellName);
+            const spellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spells', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
+            const spellCount = targetSpellList.length;
+
+            return {
+                success: true,
+                taskData,
+                spell: previousSpellState,
+                spellDetails,
+                spellCount,
+            };
+        } catch (error) {
+            logToRenderer(`Error in undo-and-get-previous-spell: ${error}`);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('open-file-dialog', async () => {
+        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Select Music File',
+            defaultPath: discordConfig.defaultLocalFolder,
+            properties: ['openFile'],
+            filters: [
+                { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
+            ]
+        });
+
+        if (filePaths && filePaths.length > 0) {
+            // Here, you would typically do something with the selected file path,
+            // like sending it back to the renderer process or loading the music.
+            // For now, we'll just return it.
+            return filePaths[0];
+        }
+        return null;
+    });
+
+
+    ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
+        initiativeTracker.updateInitiative(creatureId, initiative);
+    });
+
+    ipcMain.on('push-initiative', async () => {
+        logToRenderer(`'push-initiative-to-chat' invoked.`);
+        const initiativeOrder = initiativeTracker.getInitiativeOrder();
+        const currentTurnIndex = initiativeTracker.currentTurnIndex;
+        if (initiativeOrder.length === 0) {
+            logToRenderer('[push-initiative] Cannot push, initiative is empty.');
+            return;
         }
 
-        ipcMain.handle('load-task-by-path', async (event, filePath) => {
-            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-            const taskPath = path.isAbsolute(filePath) ? filePath : path.join(basePath, filePath);
-            return await loadTaskData(taskPath);
-        });
+        if (!discordConfig.textChannel) {
+            logToRenderer('[push-initiative] No text channel configured.');
+            return;
+        }
 
-        ipcMain.handle('get-task-data', async () => {
-            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-            const defaultTaskPath = path.join(basePath, 'src/jsontool/deck-editing-task.json');
-            return await loadTaskData(defaultTaskPath);
-        });
+        const channel = client.channels.cache.get(discordConfig.textChannel);
+        if (!channel) {
+            logToRenderer(`[push-initiative] FAILED to find channel with ID: ${discordConfig.textChannel}`);
+            return;
+        }
+        logToRenderer(`[push-initiative] Found channel: ${channel.name}`);
 
-        ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell, taskFilePath }) => {
-            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-            try {
-                // 1. Save the current spell changes
-                const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
-                const currentItemFileData = await fs.readFile(currentItemFilePath, 'utf8');
-                let currentItemList = JSON.parse(currentItemFileData);
-                currentItemList[taskData.progress.itemIndex] = currentSpell;
-                await fs.writeFile(currentItemFilePath, JSON.stringify(currentItemList, null, 2));
+        try {
+            const embed = new EmbedBuilder()
+                .setColor(0x0099FF)
+                .setTitle('Initiative Order')
+                .setTimestamp();
 
-                // 2. Update progress
-                taskData.progress.itemIndex++;
+            let description = '';
+            initiativeOrder.forEach((creature, index) => {
+                const hpBar = createEmojiHpBar(creature);
 
-                if (taskData.progress.itemIndex >= currentItemList.length) {
-                    taskData.progress.itemIndex = 0;
-                    taskData.progress.fileIndex++;
-                    if (taskData.progress.fileIndex >= taskData.files.length) {
-                        // Task complete!
-                        await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-                        return { success: true, taskComplete: true, taskData };
-                    }
+                let conditionEmojis = (creature.conditions || []).map(c => DND_CONDITIONS[c]?.emoji || '');
+                let conditionStr;
+                if (conditionEmojis.length > 3) {
+                    conditionStr = conditionEmojis.slice(0, 3).join('') + '♾️';
+                } else {
+                    conditionStr = conditionEmojis.join('');
                 }
 
-                // 3. Save the new progress to the task file
-                await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+                const activeMarker = index === currentTurnIndex ? '`➤`' : '` `';
+                const initiativeStr = creature.initiative.toString();
+                const nameStr = (creature.name || '');
 
-                // 4. Get the next spell and its details
-                const nextFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
-                const nextFileData = await fs.readFile(nextFilePath, 'utf8');
-                const nextItemList = JSON.parse(nextFileData);
-                const nextItem = nextItemList[taskData.progress.itemIndex];
-
-                let nextItemDetails = null;
-                if (nextItem.text && nextItem.text.includes('-')) {
-                    const nextItemName = nextItem.text.split(' - ')[0].trim();
-                    const spellDetailsResults = await fiveEToolsParser.searchByName('spells', nextItemName);
-                    const exactMatch = spellDetailsResults.find(result => result.name.toLowerCase() === nextItemName.toLowerCase());
-                    nextItemDetails = exactMatch ? await fiveEToolsParser.getExact('spells', exactMatch.name, exactMatch.source) : null;
-                }
-
-                return {
-                    success: true,
-                    taskData,
-                    spell: nextItem,
-                    spellDetails: nextItemDetails,
-                    spellCount: nextItemList.length,
-                };
-
-            } catch (error) {
-                logToRenderer(`Error in save-and-get-next-spell: ${error}`);
-                return { success: false, error: error.message };
-            }
-        });
-
-        ipcMain.handle('scrap-and-get-next-item', async (event, { taskData, currentItem, taskFilePath }) => {
-            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-            try {
-                const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
-                let currentItemList = JSON.parse(await fs.readFile(currentItemFilePath, 'utf8'));
-
-                // Use the title field for a more robust lookup
-                const titleField = taskData.ui.titleField || 'name';
-                const itemIndexToRemove = currentItemList.findIndex(item => item[titleField] === currentItem[titleField]);
-
-                if (itemIndexToRemove === -1) {
-                    // Fallback for safety, though it's a weak comparison
-                    const fallbackIndex = currentItemList.findIndex(item => JSON.stringify(item) === JSON.stringify(currentItem));
-                    if (fallbackIndex === -1) {
-                        throw new Error(`Could not find the item with ${titleField} "${currentItem[titleField]}" to scrap in the file.`);
-                    }
-                    itemIndexToRemove = fallbackIndex;
-                }
-
-                currentItemList.splice(itemIndexToRemove, 1);
-                await fs.writeFile(currentItemFilePath, JSON.stringify(currentItemList, null, 2));
-
-                // After removing, the item at the same index is the next one.
-                // We don't need to change the progress. The robust loadTaskData will handle
-                // cases where the index is now out of bounds (e.g., last item deleted)
-                // or the file has become empty.
-                return await loadTaskData(taskFilePath);
-
-            } catch (error) {
-                logToRenderer(`Error in scrap-and-get-next-item: ${error}`);
-                return { success: false, error: error.message };
-            }
-        });
-
-        ipcMain.handle('undo-and-get-previous-spell', async (event, { taskData, previousSpellState, taskFilePath }) => {
-            const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-            try {
-                // 1. Determine the previous spell's position
-                let prevFileIndex = taskData.progress.fileIndex;
-                let prevItemIndex = taskData.progress.itemIndex - 1;
-
-                if (prevItemIndex < 0) {
-                    prevFileIndex--;
-                    if (prevFileIndex < 0) {
-                        return { success: false, error: "Already at the beginning." };
-                    }
-                    const prevFilePath = path.join(basePath, taskData.files[prevFileIndex]);
-                    const prevFileData = await fs.readFile(prevFilePath, 'utf8');
-                    const prevSpellList = JSON.parse(prevFileData);
-                    prevItemIndex = prevSpellList.length - 1;
-                }
-
-                // 2. Save the *previous* state back to the file
-                const targetFilePath = path.join(basePath, taskData.files[prevFileIndex]);
-                const targetFileData = await fs.readFile(targetFilePath, 'utf8');
-                let targetSpellList = JSON.parse(targetFileData);
-                targetSpellList[prevItemIndex] = previousSpellState;
-                await fs.writeFile(targetFilePath, JSON.stringify(targetSpellList, null, 2));
-
-                // 3. Update progress to the previous spell's position
-                taskData.progress.fileIndex = prevFileIndex;
-                taskData.progress.itemIndex = prevItemIndex;
-
-                // 4. Save the new progress to the task file
-                await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-
-                // 5. Get the details for the (now current) spell
-                const spellName = previousSpellState.text.split(' - ')[0];
-                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', spellName);
-                const spellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spells', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
-                const spellCount = targetSpellList.length;
-
-                return {
-                    success: true,
-                    taskData,
-                    spell: previousSpellState,
-                    spellDetails,
-                    spellCount,
-                };
-            } catch (error) {
-                logToRenderer(`Error in undo-and-get-previous-spell: ${error}`);
-                return { success: false, error: error.message };
-            }
-        });
-
-        ipcMain.handle('open-file-dialog', async () => {
-            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-                title: 'Select Music File',
-                defaultPath: discordConfig.defaultLocalFolder,
-                properties: ['openFile'],
-                filters: [
-                    { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
-                ]
+                // New layout: Init | HP Bar | Name | Conditions
+                const line = `${activeMarker}${hpBar}${conditionStr} ${nameStr}`;
+                description += line + '\n';
             });
 
-            if (filePaths && filePaths.length > 0) {
-                // Here, you would typically do something with the selected file path,
-                // like sending it back to the renderer process or loading the music.
-                // For now, we'll just return it.
-                return filePaths[0];
-            }
-            return null;
-        });
+            embed.setDescription(description);
 
+            logToRenderer(`[push-initiative] Attempting to send embed...`);
+            await channel.send({ embeds: [embed] });
+            logToRenderer('[push-initiative] Successfully pushed initiative to chat.');
+        } catch (error) {
+            logToRenderer(`[push-initiative] FAILED to send embed: ${error}`);
+        }
+    });
 
-        ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
-            initiativeTracker.updateInitiative(creatureId, initiative);
-        });
+    ipcMain.on('next-turn', async () => {
+        const turnInfo = initiativeTracker.nextTurn();
+        if (turnInfo) {
+            await checkAndShowReminders(turnInfo.oldCreature, 'end');
+            await checkAndShowReminders(turnInfo.newCreature, 'start');
+        }
+    });
 
-        ipcMain.on('push-initiative', async () => {
-            logToRenderer(`'push-initiative-to-chat' invoked.`);
-            const initiativeOrder = initiativeTracker.getInitiativeOrder();
-            const currentTurnIndex = initiativeTracker.currentTurnIndex;
-            if (initiativeOrder.length === 0) {
-                logToRenderer('[push-initiative] Cannot push, initiative is empty.');
-                return;
-            }
+    ipcMain.on('copy-creature', (event, { creatureId }) => {
+        const creature = initiativeTracker.getCreature(creatureId);
+        if (creature) {
+            mainWindow.webContents.send('populate-edit-form', creature);
+        }
+    });
 
-            if (!discordConfig.textChannel) {
-                logToRenderer('[push-initiative] No text channel configured.');
-                return;
-            }
-
-            const channel = client.channels.cache.get(discordConfig.textChannel);
-            if (!channel) {
-                logToRenderer(`[push-initiative] FAILED to find channel with ID: ${discordConfig.textChannel}`);
-                return;
-            }
-            logToRenderer(`[push-initiative] Found channel: ${channel.name}`);
-
-            try {
-                const embed = new EmbedBuilder()
-                    .setColor(0x0099FF)
-                    .setTitle('Initiative Order')
-                    .setTimestamp();
-
-                let description = '';
-                initiativeOrder.forEach((creature, index) => {
-                    const hpBar = createEmojiHpBar(creature);
-
-                    let conditionEmojis = (creature.conditions || []).map(c => DND_CONDITIONS[c]?.emoji || '');
-                    let conditionStr;
-                    if (conditionEmojis.length > 3) {
-                        conditionStr = conditionEmojis.slice(0, 3).join('') + '♾️';
-                    } else {
-                        conditionStr = conditionEmojis.join('');
-                    }
-
-                    const activeMarker = index === currentTurnIndex ? '`➤`' : '` `';
-                    const initiativeStr = creature.initiative.toString();
-                    const nameStr = (creature.name || '');
-
-                    // New layout: Init | HP Bar | Name | Conditions
-                    const line = `${activeMarker}${hpBar}${conditionStr} ${nameStr}`;
-                    description += line + '\n';
-                });
-
-                embed.setDescription(description);
-
-                logToRenderer(`[push-initiative] Attempting to send embed...`);
-                await channel.send({ embeds: [embed] });
-                logToRenderer('[push-initiative] Successfully pushed initiative to chat.');
-            } catch (error) {
-                logToRenderer(`[push-initiative] FAILED to send embed: ${error}`);
-            }
-        });
-
-        ipcMain.on('next-turn', async () => {
-            const turnInfo = initiativeTracker.nextTurn();
-            if (turnInfo) {
-                await checkAndShowReminders(turnInfo.oldCreature, 'end');
-                await checkAndShowReminders(turnInfo.newCreature, 'start');
-            }
-        });
-
-        ipcMain.on('copy-creature', (event, { creatureId }) => {
-            const creature = initiativeTracker.getCreature(creatureId);
-            if (creature) {
-                mainWindow.webContents.send('populate-edit-form', creature);
-            }
-        });
-
-        ipcMain.on('save-encounter', async () => {
-            try {
-                const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-                    title: 'Save Encounter',
-                    defaultPath: app.getPath('userData'),
-                    filters: [{ name: 'JSON Files', extensions: ['json'] }]
-                });
-
-                if (!canceled && filePath) {
-                    initiativeTracker.saveEncounterToFile(filePath);
-                }
-            } catch (error) {
-                logToRenderer(`Error saving encounter: ${error.message}`);
-            }
-        });
-
-        ipcMain.handle('load-encounter-dialog', async () => {
-            const confirmResult = await dialog.showMessageBox(mainWindow, {
-                type: 'warning',
-                title: 'Confirm Load',
-                message: 'Are you sure you want to load a new encounter?',
-                detail: 'This will overwrite the current encounter. You may want to save your current progress first.',
-                buttons: ['Load Encounter', 'Cancel'],
-                defaultId: 0,
-                cancelId: 1
-            });
-
-            if (confirmResult.response === 1) { // User clicked 'Cancel'
-                return;
-            }
-
-            const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
-                title: 'Load Encounter',
+    ipcMain.on('save-encounter', async () => {
+        try {
+            const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+                title: 'Save Encounter',
                 defaultPath: app.getPath('userData'),
-                properties: ['openFile'],
                 filters: [{ name: 'JSON Files', extensions: ['json'] }]
             });
 
-            if (!canceled && filePaths && filePaths.length > 0) {
-                const filePath = filePaths[0];
-                initiativeTracker.loadEncounterFromFile(filePath);
+            if (!canceled && filePath) {
+                initiativeTracker.saveEncounterToFile(filePath);
             }
+        } catch (error) {
+            logToRenderer(`Error saving encounter: ${error.message}`);
+        }
+    });
+
+    ipcMain.handle('load-encounter-dialog', async () => {
+        const confirmResult = await dialog.showMessageBox(mainWindow, {
+            type: 'warning',
+            title: 'Confirm Load',
+            message: 'Are you sure you want to load a new encounter?',
+            detail: 'This will overwrite the current encounter. You may want to save your current progress first.',
+            buttons: ['Load Encounter', 'Cancel'],
+            defaultId: 0,
+            cancelId: 1
         });
 
-        ipcMain.on('add-creature', (event, creature) => {
-            const rollLogMessage = initiativeTracker.addCreature(creature);
-            if (rollLogMessage) {
-                mainWindow.webContents.send('dice-log', rollLogMessage);
-            }
+        if (confirmResult.response === 1) { // User clicked 'Cancel'
+            return;
+        }
+
+        const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Load Encounter',
+            defaultPath: app.getPath('userData'),
+            properties: ['openFile'],
+            filters: [{ name: 'JSON Files', extensions: ['json'] }]
         });
 
-        ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
-            initiativeTracker.updateReminders(creatureId, reminders);
-        });
+        if (!canceled && filePaths && filePaths.length > 0) {
+            const filePath = filePaths[0];
+            initiativeTracker.loadEncounterFromFile(filePath);
+        }
+    });
 
-        ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
-            const message = initiativeTracker.rollStat(creatureId, rollType, stat, type);
-            if (message) {
-                mainWindow.webContents.send('dice-log', message);
-                if (discordConfig.textChannel) {
-                    const channel = client.channels.cache.get(discordConfig.textChannel);
-                    if (channel) {
-                        channel.send(message);
-                    }
+    ipcMain.on('add-creature', (event, creature) => {
+        const rollLogMessage = initiativeTracker.addCreature(creature);
+        if (rollLogMessage) {
+            mainWindow.webContents.send('dice-log', rollLogMessage);
+        }
+    });
+
+    ipcMain.on('update-creature', (event, creature) => {
+        initiativeTracker.updateCreature(creature);
+    });
+
+    ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
+        initiativeTracker.updateReminders(creatureId, reminders);
+    });
+
+    ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
+        const message = initiativeTracker.rollStat(creatureId, rollType, stat, type);
+        if (message) {
+            mainWindow.webContents.send('dice-log', message);
+            if (discordConfig.textChannel) {
+                const channel = client.channels.cache.get(discordConfig.textChannel);
+                if (channel) {
+                    channel.send(message);
                 }
             }
-        });
+        }
+    });
 
-        ipcMain.on('roll-attack', (event, { creatureId, rollType }) => {
-            const message = initiativeTracker.rollAttack(creatureId, rollType);
-            if (message) {
-                mainWindow.webContents.send('dice-log', message);
-                if (discordConfig.textChannel) {
-                    const channel = client.channels.cache.get(discordConfig.textChannel);
-                    if (channel) {
-                        channel.send(message);
-                    }
+    ipcMain.on('roll-attack', (event, { creatureId, rollType }) => {
+        const message = initiativeTracker.rollAttack(creatureId, rollType);
+        if (message) {
+            mainWindow.webContents.send('dice-log', message);
+            if (discordConfig.textChannel) {
+                const channel = client.channels.cache.get(discordConfig.textChannel);
+                if (channel) {
+                    channel.send(message);
                 }
             }
-        });
+        }
+    });
 
-        ipcMain.on('reset-encounter', () => {
-            initiativeTracker.resetEncounter();
-        });
+    ipcMain.on('reset-encounter', () => {
+        initiativeTracker.resetEncounter();
+    });
 
-        ipcMain.on('clear-encounter', async () => {
-            const result = await dialog.showMessageBox(mainWindow, {
-                type: 'warning',
-                title: 'Confirm Clear',
-                message: 'Are you sure you want to clear the entire encounter? This cannot be undone.',
-                detail: 'You may want to save the encounter first.',
-                buttons: ['Clear Encounter', 'Cancel'],
-                defaultId: 1,
-                cancelId: 1
-            });
-            if (result.response === 0) { // 'Clear Encounter' button
-                initiativeTracker.clearEncounter();
+    ipcMain.on('clear-encounter', async () => {
+        const result = await dialog.showMessageBox(mainWindow, {
+            type: 'warning',
+            title: 'Confirm Clear',
+            message: 'Are you sure you want to clear the entire encounter? This cannot be undone.',
+            detail: 'You may want to save the encounter first.',
+            buttons: ['Clear Encounter', 'Cancel'],
+            defaultId: 1,
+            cancelId: 1
+        });
+        if (result.response === 0) { // 'Clear Encounter' button
+            initiativeTracker.clearEncounter();
+        }
+    });
+
+    ipcMain.on('edit-creature', (event, { creatureId }) => {
+        const creature = initiativeTracker.editCreature(creatureId);
+        if (creature) {
+            mainWindow.webContents.send('populate-edit-form', creature);
+        }
+    });
+
+    ipcMain.on('remove-creature', (event, { creatureId }) => {
+        initiativeTracker.removeCreature(creatureId);
+    });
+
+    ipcMain.on('previous-turn', async () => {
+        const turnInfo = initiativeTracker.previousTurn();
+        if (turnInfo) {
+            await checkAndShowReminders(turnInfo.oldCreature, 'end');
+            await checkAndShowReminders(turnInfo.newCreature, 'start');
+        }
+    });
+
+    ipcMain.on('add-temp-hp', (event, { creatureId, amount }) => {
+        initiativeTracker.addTempHp(creatureId, amount);
+    });
+
+    ipcMain.on('update-hp', (event, { creatureId, amount }) => {
+        const result = initiativeTracker.updateHp(creatureId, amount);
+        if (result && result.concentrationCheckDC) {
+            dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${result.creature.name} must make a DC ${result.concentrationCheckDC} Constitution saving throw.`, buttons: ['OK']});
+        }
+    });
+
+    ipcMain.on('add-condition', (event, { creatureId, condition }) => {
+        logToRenderer(`Adding condition ${condition} to creature ${creatureId}`);
+        initiativeTracker.addCondition(creatureId, condition);
+    });
+
+    ipcMain.on('remove-condition', (event, { creatureId, condition }) => {
+        initiativeTracker.removeCondition(creatureId, condition);
+    });
+
+    ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
+        initiativeTracker.updateCreatureFlag(creatureId, flag, value);
+    });
+
+    ipcMain.handle('search-monsters', async (event, query) => {
+        logToRenderer(`[IPC] Received "search-monsters" with query: "${query}"`);
+        if (!fiveEToolsParser) {
+            logToRenderer('[IPC] Parser not available.');
+            return [];
+        }
+        const results = await fiveEToolsParser.searchByName('bestiary', query);
+        logToRenderer(`[IPC] Found ${results.length} monsters, returning to renderer.`);
+        return results;
+    });
+
+    ipcMain.handle('get-monster-details', async (event, { name, source }) => {
+        logToRenderer(`[IPC] Received "get-monster-details" for: ${name} (${source})`);
+        if (!fiveEToolsParser) {
+             logToRenderer('[IPC] Parser not available.');
+            return null;
+        }
+        const monster = await fiveEToolsParser.getExact('bestiary', name, source);
+        logToRenderer(`[IPC] Found monster details, returning to renderer.`);
+        return monster;
+    });
+
+    ipcMain.handle('calculate-max-hp', (event, diceNotation) => {
+        try {
+            if (!diceNotation || typeof diceNotation !== 'string' || !diceNotation.match(/d/i)) {
+                return parseInt(diceNotation, 10) || 10;
             }
-        });
+            const roller = new DiceRoller();
+            const roll = roller.roll(diceNotation);
+            return roll.maxTotal;
+        } catch (e) {
+            logToRenderer(`Error calculating max HP for "${diceNotation}": ${e.message}`);
+            return 10; // Fallback
+        }
+    });
 
-        ipcMain.on('edit-creature', (event, { creatureId }) => {
-            const creature = initiativeTracker.editCreature(creatureId);
-            if (creature) {
-                mainWindow.webContents.send('populate-edit-form', creature);
-            }
-        });
+    ipcMain.on('push-dicelog-to-discord', async (event, logContent) => {
+        if (!discordConfig.textChannel) {
+            logToRenderer('[push-dicelog] No text channel configured.');
+            return;
+        }
+        const channel = client.channels.cache.get(discordConfig.textChannel);
+        if (!channel) {
+            logToRenderer(`[push-dicelog] FAILED to find channel with ID: ${discordConfig.textChannel}`);
+            return;
+        }
+        try {
+            const embed = new EmbedBuilder()
+                .setColor(0x0099FF)
+                .setTitle('Dice Rolls')
+                .setDescription(logContent)
+                .setTimestamp();
+            await channel.send({ embeds: [embed] });
+            logToRenderer('[push-dicelog] Successfully pushed dice log to chat.');
+        } catch (error) {
+            logToRenderer(`[push-dicelog] FAILED to send embed: ${error}`);
+        }
+    });
 
-        ipcMain.on('remove-creature', (event, { creatureId }) => {
-            initiativeTracker.removeCreature(creatureId);
-        });
+    ipcMain.on('push-statblock-to-discord', async (event, rawDataString) => {
+        if (!discordConfig.textChannel) {
+            logToRenderer('[push-statblock] No text channel configured.');
+            return;
+        }
+        const channel = client.channels.cache.get(discordConfig.textChannel);
+        if (!channel) {
+            logToRenderer(`[push-statblock] FAILED to find channel with ID: ${discordConfig.textChannel}`);
+            return;
+        }
+        try {
+            const monster = JSON.parse(rawDataString);
+            const { mainEmbed, longFields } = formatStatBlockForDiscord(monster);
 
-        ipcMain.on('previous-turn', async () => {
-            const turnInfo = initiativeTracker.previousTurn();
-            if (turnInfo) {
-                await checkAndShowReminders(turnInfo.oldCreature, 'end');
-                await checkAndShowReminders(turnInfo.newCreature, 'start');
-            }
-        });
+            // Send the main embed
+            const mainMessage = await channel.send({ embeds: [mainEmbed] });
+            logToRenderer('[push-statblock] Successfully pushed main stat block embed.');
 
-        ipcMain.on('add-temp-hp', (event, { creatureId, amount }) => {
-            initiativeTracker.addTempHp(creatureId, amount);
-        });
+            // If there are long fields, create a thread and post them
+            if (longFields.length > 0) {
+                const thread = await mainMessage.startThread({
+                    name: `${monster.name} - Details`,
+                    autoArchiveDuration: 60,
+                });
 
-        ipcMain.on('update-hp', (event, { creatureId, amount }) => {
-            const result = initiativeTracker.updateHp(creatureId, amount);
-            if (result && result.concentrationCheckDC) {
-                dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${result.creature.name} must make a DC ${result.concentrationCheckDC} Constitution saving throw.`, buttons: ['OK']});
-            }
-        });
-
-        ipcMain.on('add-condition', (event, { creatureId, condition }) => {
-            logToRenderer(`Adding condition ${condition} to creature ${creatureId}`);
-            initiativeTracker.addCondition(creatureId, condition);
-        });
-
-        ipcMain.on('remove-condition', (event, { creatureId, condition }) => {
-            initiativeTracker.removeCondition(creatureId, condition);
-        });
-
-        ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
-            initiativeTracker.updateCreatureFlag(creatureId, flag, value);
-        });
-
-        ipcMain.handle('search-monsters', async (event, query) => {
-            logToRenderer(`[IPC] Received "search-monsters" with query: "${query}"`);
-            if (!fiveEToolsParser) {
-                logToRenderer('[IPC] Parser not available.');
-                return [];
-            }
-            const results = await fiveEToolsParser.searchByName('bestiary', query);
-            logToRenderer(`[IPC] Found ${results.length} monsters, returning to renderer.`);
-            return results;
-        });
-
-        ipcMain.handle('get-monster-details', async (event, { name, source }) => {
-            logToRenderer(`[IPC] Received "get-monster-details" for: ${name} (${source})`);
-            if (!fiveEToolsParser) {
-                 logToRenderer('[IPC] Parser not available.');
-                return null;
-            }
-            const monster = await fiveEToolsParser.getExact('bestiary', name, source);
-            logToRenderer(`[IPC] Found monster details, returning to renderer.`);
-            return monster;
-        });
-
-        ipcMain.on('push-dicelog-to-discord', async (event, logContent) => {
-            if (!discordConfig.textChannel) {
-                logToRenderer('[push-dicelog] No text channel configured.');
-                return;
-            }
-            const channel = client.channels.cache.get(discordConfig.textChannel);
-            if (!channel) {
-                logToRenderer(`[push-dicelog] FAILED to find channel with ID: ${discordConfig.textChannel}`);
-                return;
-            }
-            try {
-                const embed = new EmbedBuilder()
-                    .setColor(0x0099FF)
-                    .setTitle('Dice Rolls')
-                    .setDescription(logContent)
-                    .setTimestamp();
-                await channel.send({ embeds: [embed] });
-                logToRenderer('[push-dicelog] Successfully pushed dice log to chat.');
-            } catch (error) {
-                logToRenderer(`[push-dicelog] FAILED to send embed: ${error}`);
-            }
-        });
-
-        ipcMain.on('push-statblock-to-discord', async (event, rawDataString) => {
-            if (!discordConfig.textChannel) {
-                logToRenderer('[push-statblock] No text channel configured.');
-                return;
-            }
-            const channel = client.channels.cache.get(discordConfig.textChannel);
-            if (!channel) {
-                logToRenderer(`[push-statblock] FAILED to find channel with ID: ${discordConfig.textChannel}`);
-                return;
-            }
-            try {
-                const monster = JSON.parse(rawDataString);
-                const { mainEmbed, longFields } = formatStatBlockForDiscord(monster);
-
-                // Send the main embed
-                const mainMessage = await channel.send({ embeds: [mainEmbed] });
-                logToRenderer('[push-statblock] Successfully pushed main stat block embed.');
-
-                // If there are long fields, create a thread and post them
-                if (longFields.length > 0) {
-                    const thread = await mainMessage.startThread({
-                        name: `${monster.name} - Details`,
-                        autoArchiveDuration: 60,
-                    });
-
-                    for (const field of longFields) {
-                        const chunks = splitText(field.value, 1024);
-                        for (let i = 0; i < chunks.length; i++) {
-                            const chunkEmbed = new EmbedBuilder()
-                                .setColor(0x0099FF)
-                                .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
-                                .setDescription(chunks[i]);
-                            await thread.send({ embeds: [chunkEmbed] });
-                        }
+                for (const field of longFields) {
+                    const chunks = splitText(field.value, 1024);
+                    for (let i = 0; i < chunks.length; i++) {
+                        const chunkEmbed = new EmbedBuilder()
+                            .setColor(0x0099FF)
+                            .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
+                            .setDescription(chunks[i]);
+                        await thread.send({ embeds: [chunkEmbed] });
                     }
-                    logToRenderer(`[push-statblock] Sent ${longFields.length} detail section(s) to thread.`);
                 }
-            } catch (error) {
-                logToRenderer(`[push-statblock] FAILED to send embed: ${error}`);
+                logToRenderer(`[push-statblock] Sent ${longFields.length} detail section(s) to thread.`);
             }
-        });
-    }
-    else {
-        logToRenderer('ipcloader() waiting for window to load...');
-        await sleep(100);
-        ipcloader();
-    }  
+        } catch (error) {
+            logToRenderer(`[push-statblock] FAILED to send embed: ${error}`);
+        }
+    });
+
+    ipcMain.on('push-mob-rules-to-discord', async (event, creature) => {
+        if (!discordConfig.textChannel) {
+            logToRenderer('[push-mob-rules] No text channel configured.');
+            return;
+        }
+        const channel = client.channels.cache.get(discordConfig.textChannel);
+        if (!channel) {
+            logToRenderer(`[push-mob-rules] FAILED to find channel with ID: ${discordConfig.textChannel}`);
+            return;
+        }
+        try {
+            const { mainEmbed, longFields } = formatMobRulesForDiscord(creature);
+
+            const mainMessage = await channel.send({ embeds: [mainEmbed] });
+            logToRenderer('[push-mob-rules] Successfully pushed main mob rules embed.');
+
+            if (longFields.length > 0) {
+                const thread = await mainMessage.startThread({
+                    name: `${creature.name} - Area Targets`,
+                    autoArchiveDuration: 60,
+                });
+
+                for (const field of longFields) {
+                    const chunks = splitText(field.value, 4096); // Embed description limit
+                    for (let i = 0; i < chunks.length; i++) {
+                        const chunkEmbed = new EmbedBuilder()
+                            .setColor(0xFFA500)
+                            .setDescription(chunks[i]);
+                        await thread.send({ embeds: [chunkEmbed] });
+                    }
+                }
+                logToRenderer(`[push-mob-rules] Sent area of effect details to thread.`);
+            }
+        } catch (error) {
+            logToRenderer(`[push-mob-rules] FAILED to send embed: ${error}`);
+        }
+    });
 }
 
 // Function to send log messages to the renderer
@@ -1115,7 +1313,7 @@ client.once('clientReady', async () => {
     const basePath = app.isPackaged
         ? path.dirname(app.getPath('exe'))
         : app.getAppPath();
-    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID: discordConfig.botRoleId, DEFAULT_LOCAL_FOLDER: discordConfig.defaultLocalFolder }, fiveEToolsParser, basePath);
+    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, discordConfig, fiveEToolsParser);
     client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 

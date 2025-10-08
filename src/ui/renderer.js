@@ -12,6 +12,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentPanelIndex = 0; // Default to 'Log'
     let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
     let DND_CONDITIONS = {};
+    let MOB_RULES_DATA = {};
+
+    // --- Form State ---
+    let isMobMode = false;
+    let singleCreatureHPForMob = '10';
+    let creatureBeingEdited = null;
 
     // --- Element Refs ---
     const logArea = document.getElementById('logArea');
@@ -26,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Initial Load ---
     DND_CONDITIONS = await window.electron.ipcRenderer.invoke('get-dnd-conditions');
+    MOB_RULES_DATA = await window.electron.ipcRenderer.invoke('get-mob-rules-data');
     window.electron.ipcRenderer.send('window-ready');
     setTimeout(() => {
         window.electron.ipcRenderer.send('request-initial-load');
@@ -39,6 +46,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <label for="creature-name">Combatant:</label>
                 <input type="text" id="creature-name" required>
                 <span id="imported-monster-info-btn" class="info-btn" style="display: none;" title="Show Stat Block">ℹ️</span>
+            </div>
+            <div id="mob-controls" class="form-group" style="display: none; align-items: center;">
+                <label for="mob-size" style="margin-right: 5px;">Count:</label>
+                <input type="number" id="mob-size" min="1" value="5" style="width: 60px;">
             </div>
         </div>
         <div class="form-row">
@@ -78,11 +89,45 @@ document.addEventListener('DOMContentLoaded', async () => {
             <input type="text" id="cha-save" placeholder="+1">
         </div>
         <div class="form-actions">
+            <button type="button" id="convert-to-mob-btn">Convert to Mob</button>
             <button type="button" id="import-monster-btn">Import Combatant</button>
             <button type="submit" class="add-creature-button">Add Combatant</button>
             <button type="button" id="clear-form-btn">Clear</button>
         </div>
     `;
+    // --- Mob Form Logic ---
+    const convertToMobBtn = document.getElementById('convert-to-mob-btn');
+    const mobControls = document.getElementById('mob-controls');
+    const mobSizeInput = document.getElementById('mob-size');
+    const creatureHpInput = document.getElementById('creature-hp');
+
+    async function updateMobHP() {
+        if (!isMobMode) return;
+        const mobSize = parseInt(mobSizeInput.value, 10) || 0;
+        // singleCreatureHPForMob can be a dice formula, so we ask the main process to calculate its max value.
+        const singleHP = await window.electron.ipcRenderer.invoke('calculate-max-hp', singleCreatureHPForMob);
+        if (!isNaN(singleHP) && singleHP > 0) {
+            creatureHpInput.value = mobSize * singleHP;
+        }
+    }
+
+    convertToMobBtn.addEventListener('click', async () => {
+        isMobMode = !isMobMode;
+        if (isMobMode) {
+            singleCreatureHPForMob = creatureHpInput.value || '10';
+            mobControls.style.display = 'flex';
+            convertToMobBtn.textContent = 'Convert to Single';
+            if (!mobSizeInput.value) mobSizeInput.value = 5;
+            await updateMobHP();
+        } else {
+            mobControls.style.display = 'none';
+            convertToMobBtn.textContent = 'Convert to Mob';
+            creatureHpInput.value = singleCreatureHPForMob;
+        }
+    });
+
+    mobSizeInput.addEventListener('input', updateMobHP);
+
 
     // --- Logging ---
     function logMessage(message) {
@@ -173,6 +218,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 addCreatureForm.reset();
                 document.getElementById('imported-monster-info-btn').style.display = 'none';
                 delete addCreatureForm.dataset.monsterRawData;
+                // Reset mob state
+                creatureBeingEdited = null;
+                isMobMode = false;
+                document.getElementById('mob-controls').style.display = 'none';
+                document.getElementById('convert-to-mob-btn').textContent = 'Convert to Mob';
                 break;
             case 'log-toggle-btn':
                 currentPanelIndex = (currentPanelIndex + 1) % logPanels.length;
@@ -256,47 +306,81 @@ document.addEventListener('DOMContentLoaded', async () => {
         const getVal = (id) => document.getElementById(id).value;
         const getInt = (id) => getVal(id) ? parseInt(getVal(id), 10) : null;
 
-        const creature = {
-            id: Date.now(),
-            name: getVal('creature-name'),
-            initiative: getVal('creature-initiative'),
-            hp: getVal('creature-hp') || '10', // Keep as string for dice notation
-            maxHp: getVal('creature-hp') || '10',
-            tempHp: 0, // Initialize tempHp to 0
-            ac: getInt('creature-ac'),
-            speed: getVal('creature-speed'),
-            attackMod: getVal('attack-modifier'),
-            saveDc: getInt('save-dc'),
-            scores: {
-                str: getInt('str-score'),
-                dex: getInt('dex-score'),
-                con: getInt('con-score'),
-                int: getInt('int-score'),
-                wis: getInt('wis-score'),
-                cha: getInt('cha-score'),
-            },
-            saves: {
-                str: getVal('str-save'),
-                dex: getVal('dex-save'),
-                con: getVal('con-save'),
-                int: getVal('int-save'),
-                wis: getVal('wis-save'),
-                cha: getVal('cha-save'),
-            },
-            conditions: [],
-            isConcentrating: false,
-            isFriendly: false,
-            reminders: { start: '', end: '' }
-        };
+        const isEditing = !!creatureBeingEdited;
+        let creature;
 
-        if (addCreatureForm.dataset.monsterRawData) {
-            creature.rawData = addCreatureForm.dataset.monsterRawData;
-            delete addCreatureForm.dataset.monsterRawData; // Clear it after use
+        if (isEditing) {
+            // Start with a copy of the creature being edited to preserve existing state
+            creature = { ...creatureBeingEdited };
+
+            // Overwrite properties from the form
+            creature.name = getVal('creature-name');
+            creature.initiative = getVal('creature-initiative');
+            creature.ac = getInt('creature-ac');
+            creature.speed = getVal('creature-speed');
+            creature.attackMod = getVal('attack-modifier');
+            creature.saveDc = getInt('save-dc');
+            creature.scores = { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), };
+            creature.saves = { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), };
+            creature.isMob = isMobMode;
+            creature.hp = getInt('creature-hp'); // Always take current HP from form for edits
+
+            if (isMobMode) {
+                const singleHP = parseInt(singleCreatureHPForMob, 10) || 10;
+                const newMobSize = getInt('mob-size');
+                creature.singleCreatureHP = singleHP;
+                creature.maxHp = newMobSize * singleHP; // Recalculate max HP based on size
+                creature.mobInitialCount = creatureBeingEdited.isMob ? creatureBeingEdited.mobInitialCount : newMobSize;
+                creature.hpFormula = `${creature.mobInitialCount} x ${creature.singleCreatureHP} HP`;
+            } else {
+                // If converting from a mob, the new max HP is the single creature's HP.
+                // Otherwise, preserve the original max HP.
+                creature.maxHp = creatureBeingEdited.isMob ? creature.hp : creatureBeingEdited.maxHp;
+                creature.hpFormula = getVal('creature-hp');
+                delete creature.mobInitialCount;
+            }
+
+            window.electron.ipcRenderer.send('update-creature', creature);
+
+        } else { // This is a new creature
+            creature = {
+                id: Date.now(),
+                name: getVal('creature-name'),
+                initiative: getVal('creature-initiative'),
+                hp: getVal('creature-hp') || '10', // Keep as string for dice notation in backend
+                ac: getInt('creature-ac'),
+                speed: getVal('creature-speed'),
+                attackMod: getVal('attack-modifier'),
+                saveDc: getInt('save-dc'),
+                scores: { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), },
+                saves: { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), },
+                tempHp: 0, conditions: [], isConcentrating: false, isFriendly: false, reminders: { start: '', end: '' },
+                isMob: isMobMode,
+            };
+
+            if (isMobMode) {
+                 // HP is already set correctly by the mob-size input listener
+                 // but let's ensure it's a string for the backend.
+                 creature.hp = getVal('creature-hp');
+                 creature.singleCreatureHP = parseInt(singleCreatureHPForMob, 10) || 10;
+                 creature.mobInitialCount = getInt('mob-size');
+            }
+
+            if (addCreatureForm.dataset.monsterRawData) {
+                creature.rawData = addCreatureForm.dataset.monsterRawData;
+            }
+
+            window.electron.ipcRenderer.send('add-creature', creature);
         }
 
-        window.electron.ipcRenderer.send('add-creature', creature);
+        // --- Reset Form ---
         addCreatureForm.reset();
         document.getElementById('imported-monster-info-btn').style.display = 'none';
+        delete addCreatureForm.dataset.monsterRawData;
+        creatureBeingEdited = null;
+        isMobMode = false;
+        document.getElementById('mob-controls').style.display = 'none';
+        document.getElementById('convert-to-mob-btn').textContent = 'Convert to Mob';
         document.getElementById('creature-name').focus();
     });
 
@@ -331,18 +415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {
         initiativeOrder = data.initiativeOrder;
         currentTurnIndex = data.currentTurnIndex;
-
-        const newCreatureMap = new Map(initiativeOrder.map(c => [c.id, c]));
-
-        const syncedPanelOrder = combatantPanelOrder
-            .map(oldCreature => newCreatureMap.get(oldCreature.id))
-            .filter(Boolean);
-
-        const syncedPanelIds = new Set(syncedPanelOrder.map(c => c.id));
-        const newCreatures = initiativeOrder.filter(c => !syncedPanelIds.has(c.id));
-
-        combatantPanelOrder = [...syncedPanelOrder, ...newCreatures];
-
+        combatantPanelOrder = [...initiativeOrder];
         renderInitiativeList(initiativeOrder, currentTurnIndex);
         renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
     });
@@ -359,14 +432,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.electron.ipcRenderer.on('populate-edit-form', (event, creature) => {
         if (!creature) return;
+
+        // --- Store the creature for submission ---
+        creatureBeingEdited = creature;
+
+        // --- Populate basic fields ---
         document.getElementById('creature-name').value = creature.name || '';
         document.getElementById('creature-initiative').value = creature.initiative || '';
-        document.getElementById('creature-hp').value = creature.hpFormula || creature.maxHp || '';
+        document.getElementById('creature-hp').value = creature.hp || ''; // Show current HP
         document.getElementById('creature-ac').value = creature.ac || '';
         document.getElementById('creature-speed').value = creature.speed || '';
         document.getElementById('attack-modifier').value = creature.attackMod || '';
         document.getElementById('save-dc').value = creature.saveDc || '';
 
+        // --- Populate stats ---
         const scores = creature.scores || {};
         document.getElementById('str-score').value = scores.str || '';
         document.getElementById('dex-score').value = scores.dex || '';
@@ -374,7 +453,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('int-score').value = scores.int || '';
         document.getElementById('wis-score').value = scores.wis || '';
         document.getElementById('cha-score').value = scores.cha || '';
-
         const saves = creature.saves || {};
         document.getElementById('str-save').value = saves.str || '';
         document.getElementById('dex-save').value = saves.dex || '';
@@ -382,6 +460,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('int-save').value = saves.int || '';
         document.getElementById('wis-save').value = saves.wis || '';
         document.getElementById('cha-save').value = saves.cha || '';
+
+        // --- Handle Mob State ---
+        isMobMode = creature.isMob || false;
+        const mobControls = document.getElementById('mob-controls');
+        const convertToMobBtn = document.getElementById('convert-to-mob-btn');
+        if (isMobMode) {
+            const mobSize = Math.ceil(creature.hp / creature.singleCreatureHP) || 1;
+            document.getElementById('mob-size').value = mobSize;
+            singleCreatureHPForMob = creature.singleCreatureHP;
+            mobControls.style.display = 'flex';
+            convertToMobBtn.textContent = 'Convert to Single';
+        } else {
+            mobControls.style.display = 'none';
+            convertToMobBtn.textContent = 'Convert to Mob';
+            singleCreatureHPForMob = creature.hpFormula || creature.maxHp;
+        }
+
+        // --- Handle imported monster data ---
+        if (creature.rawData) {
+            addCreatureForm.dataset.monsterRawData = creature.rawData;
+            document.getElementById('imported-monster-info-btn').style.display = 'inline-block';
+        } else {
+            delete addCreatureForm.dataset.monsterRawData;
+            document.getElementById('imported-monster-info-btn').style.display = 'none';
+        }
     });
 
     function populateMonsterForm(monster) {
@@ -547,12 +650,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 conditionStr = conditionEmojis.join('');
             }
 
+            let displayName = creature.name;
+            if (creature.isMob) {
+                const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
+                displayName = `Mob of ${currentCount} ${creature.name} (of ${creature.mobInitialCount})`;
+            }
+
             let content = '';
             if (isActive) {
                 content += '<span class="active-chevron">></span>';
             }
             content += `<span class="initiative-score" data-id="${creature.id}">${creature.initiative}</span>`;
-            content += `<span class="creature-name">${creature.name}</span>`;
+            content += `<span class="creature-name">${displayName}</span>`;
             content += `<span class="initiative-conditions">${conditionStr}</span>`;
             content += hpBarHTML;
 
@@ -627,15 +736,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tempHpPercentage = (tempHp / maxHp) * 100;
             const hpColor = getHpColor(hp, maxHp);
 
+            let displayName = creature.name;
+            let attackButtonHTML = '';
+            if (creature.isMob) {
+                const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
+                displayName = `Mob of ${currentCount} ${creature.name} (of ${creature.mobInitialCount})`;
+                attackButtonHTML = `<span class="header-stat interactive-stat mob-rules-btn" data-id="${creature.id}">Mob Rules</span>`;
+            } else {
+                displayName = creature.name;
+                attackButtonHTML = `<span class="header-stat interactive-stat attack-roll-btn" data-id="${creature.id}">Attack: ${creature.attackMod || '+0'}</span>`;
+            }
+
             const hasStatBlock = creature.rawData;
             creatureDiv.innerHTML = `
                 <div class="combatant-header">
                     <div class="combatant-name-group">
-                        <h4>${creature.name}</h4>
+                        <h4>${displayName}</h4>
                         ${hasStatBlock ? `<span class="info-btn combatant-info-btn" data-id="${creature.id}" title="Show Stat Block">ℹ️</span>` : ''}
                     </div>
                     <div class="header-right-group">
-                        <span class="header-stat interactive-stat attack-roll-btn" data-id="${creature.id}">Attack: ${creature.attackMod || '+0'}</span>
+                        ${attackButtonHTML}
                         <span class="header-stat">AC: ${creature.ac ?? '?'}</span>
                         <span class="header-stat">Speed: ${creature.speed || '?'}</span>
                         <span class="header-stat">DC: ${creature.saveDc ?? '?'}</span>
@@ -683,6 +803,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.attack-roll-btn').forEach(b => b.addEventListener('click', e => {
             const id = e.target.dataset.id;
             createPopup('attack-roll', id, e.target);
+        }));
+
+        document.querySelectorAll('.mob-rules-btn').forEach(b => b.addEventListener('click', e => {
+            const id = e.target.dataset.id;
+            createPopup('mob-rules', id, e.target);
         }));
 
         document.querySelectorAll('.stat-roll-btn').forEach(b => b.addEventListener('click', e => {
@@ -806,7 +931,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const itemsHTML = results.map(r => `<div class="popup-result-item" data-name="${r.name}" data-source="${r.source}">${r.name} (${r.source})</div>`).join('');
                 contentHTML = `<div class="popup-results-list">${itemsHTML}</div>`;
             }
+        } else if (type === 'mob-rules') {
+            const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
+            const attackMod = parseInt(creature.attackMod, 10) || 0;
+            const { mobAttackResults, areaTargets } = MOB_RULES_DATA;
+
+            const mobAttackRows = mobAttackResults.map(row => {
+                const ac = row.rollNeeded + attackMod;
+                return `<tr><td>${ac}</td><td>${row.hitsPer4}</td><td>${row.hitsPer5}</td><td>${row.hitsPer6}</td><td>${row.hitsPer8}</td><td>${row.hitsPer10}</td></tr>`;
+            }).join('');
+
+            const areaTargetRows = areaTargets.map(row => {
+                return `<tr><td>${row.targets}</td><td>${row.cone}</td><td>${row.cube}</td><td>${row.circular}</td><td>${row.line}</td></tr>`;
+            }).join('');
+
+            contentHTML = `
+                <div class="mob-rules-popup">
+                    <button id="push-mob-rules-btn" class="small-btn" title="Push to Chat">💬</button>
+                    <h4>Mob Attacks (Atk: ${formatModifier(attackMod)})</h4>
+                    <p class="footnote">The table shows the number of hits an attack action generates against a target's AC, based on the number of creatures in the mob.</p>
+                    <table class="mob-rules-table">
+                        <thead>
+                            <tr><th>AC</th><th>4 in Mob</th><th>5 in Mob</th><th>6 in Mob</th><th>8 in Mob</th><th>10 in Mob</th></tr>
+                        </thead>
+                        <tbody>${mobAttackRows}</tbody>
+                    </table>
+                    <hr>
+                    <h4>Targets in Area of Effect</h4>
+                    <table class="mob-rules-table">
+                         <thead>
+                            <tr><th>Targets</th><th>Cone</th><th>Cube</th><th>Circular*</th><th>Line</th></tr>
+                        </thead>
+                        <tbody>${areaTargetRows}</tbody>
+                    </table>
+                    <p class="footnote"><em>*Use for Cylinders, Emanations, and Spheres.</em></p>
+                </div>
+            `;
         }
+
 
         popup.innerHTML = contentHTML;
         document.body.appendChild(popup);

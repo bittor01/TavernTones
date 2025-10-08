@@ -30,6 +30,21 @@
             padding: 10px;
             margin-top: 10px;
         }
+        .path-input-group {
+            display: flex;
+            align-items: center;
+        }
+        .path-input-group input {
+            flex-grow: 1;
+            margin-right: 5px;
+        }
+        #setup-default-folders {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px; /* Add space between this and the save button */
+            background-color: #218838; /* A slightly different green */
+            border-color: #1e7e34;
+        }
     </style>
 </head>
 <body>
@@ -51,10 +66,37 @@
             <label for="botRoleId">Bot Role ID</label>
             <input type="text" id="botRoleId" placeholder="Enter the role ID for the bot">
         </div>
+        <hr>
+        <h2>Folder Settings</h2>
         <div class="form-group">
-            <label for="defaultLocalFolder">Default Music Folder</label>
-            <input type="text" id="defaultLocalFolder" placeholder="Enter the default path for local music files">
+            <label for="resourcesPath">Resources Path</label>
+            <div class="path-input-group">
+                <input type="text" id="resourcesPath" placeholder="Path to 5etools data, etc." readonly>
+                <button id="browse-resources">Browse</button>
+            </div>
         </div>
+        <div class="form-group">
+            <label for="randomTablesPath">Random Tables Path</label>
+            <div class="path-input-group">
+                <input type="text" id="randomTablesPath" placeholder="Path to random tables" readonly>
+                <button id="browse-random-tables">Browse</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="tasksPath">Tasks Path</label>
+            <div class="path-input-group">
+                <input type="text" id="tasksPath" placeholder="Path to gamify task files" readonly>
+                <button id="browse-tasks">Browse</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="defaultMusicPath">Default Music Path</label>
+            <div class="path-input-group">
+                <input type="text" id="defaultMusicPath" placeholder="Path to default music folder" readonly>
+                <button id="browse-music">Browse</button>
+            </div>
+        </div>
+        <button id="setup-default-folders">Create and Use Default Data Folders</button>
         <button id="save-button">Save and Restart</button>
     </div>
     <script src="settings.js"></script>

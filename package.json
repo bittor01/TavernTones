@@ -31,22 +31,14 @@
     "win": {
       "target": "portable",
       "icon": "icon.ico",
-      "forceCodeSigning": false
+      "forceCodeSigning": false,
+      "artifactName": "TavernTones.exe"
     },
     "files": [
       "src/",
       "package.json"
     ],
-    "extraResources": [
-      {
-        "from": "resources",
-        "to": "resources"
-      },
-      {
-        "from": "randomtables",
-        "to": "randomtables"
-      }
-    ],
+    "extraResources": [],
     "directories": {
       "output": "build"
     },
