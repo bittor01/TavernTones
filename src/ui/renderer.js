@@ -101,23 +101,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mobSizeInput = document.getElementById('mob-size');
     const creatureHpInput = document.getElementById('creature-hp');
 
-    function updateMobHP() {
+    async function updateMobHP() {
         if (!isMobMode) return;
         const mobSize = parseInt(mobSizeInput.value, 10) || 0;
-        const singleHP = parseInt(singleCreatureHPForMob, 10);
+        // singleCreatureHPForMob can be a dice formula, so we ask the main process to calculate its max value.
+        const singleHP = await window.electron.ipcRenderer.invoke('calculate-max-hp', singleCreatureHPForMob);
         if (!isNaN(singleHP) && singleHP > 0) {
             creatureHpInput.value = mobSize * singleHP;
         }
     }
 
-    convertToMobBtn.addEventListener('click', () => {
+    convertToMobBtn.addEventListener('click', async () => {
         isMobMode = !isMobMode;
         if (isMobMode) {
             singleCreatureHPForMob = creatureHpInput.value || '10';
             mobControls.style.display = 'flex';
             convertToMobBtn.textContent = 'Convert to Single';
             if (!mobSizeInput.value) mobSizeInput.value = 5;
-            updateMobHP();
+            await updateMobHP();
         } else {
             mobControls.style.display = 'none';
             convertToMobBtn.textContent = 'Convert to Mob';

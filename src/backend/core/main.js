@@ -20,6 +20,7 @@ const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
 const { mobAttackResults, areaTargets } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
+const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 
 let discordConfig;
 
@@ -69,6 +70,16 @@ async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
     else {
         await sleep(100);
         sendInitiativeUpdate(initiativeOrder, currentTurnIndex);
+    }
+}
+
+// Function to send dice roll log messages to the renderer
+async function logDiceRollToRenderer(message) {
+    if (isAppReady && mainWindow.webContents) {
+        mainWindow.webContents.send('dice-log', message);
+    } else {
+        await sleep(100);
+        logDiceRollToRenderer(message);
     }
 }
 
@@ -511,7 +522,7 @@ async function ipcloader() {
     ipcMain.on('open-settings-window', createSettingsWindow);
 
     logToRenderer('ipcloader() called.');
-    initiativeTracker = new InitiativeTracker(logToRenderer, sendInitiativeUpdate, autosavePath);
+    initiativeTracker = new InitiativeTracker(logToRenderer, logDiceRollToRenderer, sendInitiativeUpdate, autosavePath);
     // --- All core IPC listeners should be registered after the app is ready ---
     ipcMain.on('open-gamify-tool', createGamifyWindow);
 
@@ -1050,6 +1061,20 @@ async function ipcloader() {
         const monster = await fiveEToolsParser.getExact('bestiary', name, source);
         logToRenderer(`[IPC] Found monster details, returning to renderer.`);
         return monster;
+    });
+
+    ipcMain.handle('calculate-max-hp', (event, diceNotation) => {
+        try {
+            if (!diceNotation || typeof diceNotation !== 'string' || !diceNotation.match(/d/i)) {
+                return parseInt(diceNotation, 10) || 10;
+            }
+            const roller = new DiceRoller();
+            const roll = roller.roll(diceNotation);
+            return roll.maxTotal;
+        } catch (e) {
+            logToRenderer(`Error calculating max HP for "${diceNotation}": ${e.message}`);
+            return 10; // Fallback
+        }
     });
 
     ipcMain.on('push-dicelog-to-discord', async (event, logContent) => {

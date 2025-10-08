@@ -3,8 +3,9 @@ const path = require('path');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 
 class InitiativeTracker {
-    constructor(logToRenderer, sendInitiativeUpdate, autosavePath) {
+    constructor(logToRenderer, logDiceRoll, sendInitiativeUpdate, autosavePath) {
         this.logToRenderer = logToRenderer;
+        this.logDiceRoll = logDiceRoll;
         this.sendInitiativeUpdate = sendInitiativeUpdate;
         this.autosavePath = autosavePath;
         this.initiativeOrder = [];
@@ -54,7 +55,7 @@ class InitiativeTracker {
                 try {
                     const roll = new DiceRoller().roll(hpInput);
                     creature.hp = roll.total;
-                    this.logToRenderer(`${creature.name} rolled HP: ${hpInput} = ${roll.total}`);
+                    this.logDiceRoll(`${creature.name} rolled HP: ${hpInput} = ${roll.total}`);
                 } catch (e) {
                     this.logToRenderer(`Invalid HP dice notation "${hpInput}". Defaulting to 10.`);
                     creature.hp = 10;
@@ -98,7 +99,7 @@ class InitiativeTracker {
             const roll = new DiceRoller().roll('1d20').total;
             creature.initiative = roll + modifier;
             rollLogMessage = `${creature.name} rolled initiative: ${roll} ${modifier < 0 ? '-' : '+'} ${Math.abs(modifier)} = ${creature.initiative}`;
-            this.logToRenderer(rollLogMessage);
+            this.logDiceRoll(rollLogMessage);
         } else {
             creature.initiative = parseFloat(initiativeInput) || 0;
         }
@@ -314,7 +315,7 @@ class InitiativeTracker {
         const rollDetails = roll.rolls[0].rolls.map(r => r.value).join(', ');
         const message = `${creature.name} rolled a ${stat.toUpperCase()} ${type} (${rollType})\nResult: ${total} ([${rollDetails}] + ${modifier})`;
 
-        this.logToRenderer(message);
+        this.logDiceRoll(message);
         return message;
     }
 
@@ -334,7 +335,7 @@ class InitiativeTracker {
         const rollDetails = roll.rolls[0].rolls.map(r => r.value).join(', ');
         const message = `${creature.name} rolled an Attack (${rollType})\nResult: ${total} ([${rollDetails}] + ${modifier})`;
 
-        this.logToRenderer(message);
+        this.logDiceRoll(message);
         return message;
     }
 
