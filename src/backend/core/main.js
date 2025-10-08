@@ -1063,6 +1063,7 @@ async function ipcloader() {
         return monster;
     });
 
+    // This is the function that calculates the maximum HP for a mob.
     ipcMain.handle('calculate-max-hp', (event, diceNotation) => {
         try {
             if (!diceNotation || typeof diceNotation !== 'string' || !diceNotation.match(/d/i)) {
