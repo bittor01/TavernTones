@@ -140,6 +140,9 @@ button:disabled {
     font-weight: bold;
     color: #ccc;
     order: 2;
+    width: 30px;
+    flex-shrink: 0;
+    text-align: right;
 }
 .initiative-hp-bar-container {
     width: 120px; /* Fixed width for alignment */

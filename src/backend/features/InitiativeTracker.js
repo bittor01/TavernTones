@@ -51,7 +51,7 @@ class InitiativeTracker {
         if (!creature.maxHp) {
             const hpInput = creature.hp.toString();
             creature.hpFormula = hpInput; // Save the original formula
-            if (hpInput.match(/^\d+d\d+/i)) { // It's a dice roll
+            if (hpInput.match(/d/i)) { // It's a dice roll
                 try {
                     const roll = new DiceRoller().roll(hpInput);
                     creature.hp = roll.total;
