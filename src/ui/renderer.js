@@ -16,7 +16,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Form State ---
     let isMobMode = false;
-    let singleCreatureHPForMob = '10';
+    let singleCreatureHPForMob = '10'; // Can be a dice formula string or a number
+    let calculatedSingleCreatureHP = 10; // Is always the calculated number
     let creatureBeingEdited = null;
 
     // --- Element Refs ---
@@ -105,9 +106,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!isMobMode) return;
         const mobSize = parseInt(mobSizeInput.value, 10) || 0;
         // singleCreatureHPForMob can be a dice formula, so we ask the main process to calculate its max value.
-        const singleHP = await window.electron.ipcRenderer.invoke('calculate-max-hp', singleCreatureHPForMob);
-        if (!isNaN(singleHP) && singleHP > 0) {
-            creatureHpInput.value = mobSize * singleHP;
+        calculatedSingleCreatureHP = await window.electron.ipcRenderer.invoke('calculate-max-hp', singleCreatureHPForMob);
+        if (!isNaN(calculatedSingleCreatureHP) && calculatedSingleCreatureHP > 0) {
+            creatureHpInput.value = mobSize * calculatedSingleCreatureHP;
         }
     }
 
@@ -118,10 +119,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             mobControls.style.display = 'flex';
             convertToMobBtn.textContent = 'Convert to Single';
             if (!mobSizeInput.value) mobSizeInput.value = 5;
-            await updateMobHP();
+            await updateMobHP(); // This will calculate and set the total HP for the mob
         } else {
             mobControls.style.display = 'none';
             convertToMobBtn.textContent = 'Convert to Mob';
+            // When converting back to single, restore the original HP formula/value
             creatureHpInput.value = singleCreatureHPForMob;
         }
     });
@@ -326,18 +328,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             creature.hp = getInt('creature-hp'); // Always take current HP from form for edits
 
             if (isMobMode) {
-                const singleHP = parseInt(singleCreatureHPForMob, 10) || 10;
                 const newMobSize = getInt('mob-size');
-                creature.singleCreatureHP = singleHP;
-                creature.maxHp = newMobSize * singleHP; // Recalculate max HP based on size
+                // Preserve the original hpFormula if converting, otherwise it's already there.
+                if (!creatureBeingEdited.isMob) {
+                    creature.hpFormula = singleCreatureHPForMob;
+                }
+                creature.singleCreatureHP = calculatedSingleCreatureHP;
+                creature.maxHp = newMobSize * calculatedSingleCreatureHP;
                 creature.mobInitialCount = creatureBeingEdited.isMob ? creatureBeingEdited.mobInitialCount : newMobSize;
-                creature.hpFormula = `${creature.mobInitialCount} x ${creature.singleCreatureHP} HP`;
             } else {
-                // If converting from a mob, the new max HP is the single creature's HP.
-                // Otherwise, preserve the original max HP.
-                creature.maxHp = creatureBeingEdited.isMob ? creature.hp : creatureBeingEdited.maxHp;
-                creature.hpFormula = getVal('creature-hp');
+                // If converting from a mob, the hpFormula is still correct on the object.
+                creature.hpFormula = singleCreatureHPForMob;
+                creature.maxHp = creatureBeingEdited.isMob ? calculatedSingleCreatureHP : creatureBeingEdited.maxHp;
                 delete creature.mobInitialCount;
+                delete creature.singleCreatureHP;
             }
 
             window.electron.ipcRenderer.send('update-creature', creature);
@@ -360,10 +364,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (isMobMode) {
                  // HP is already set correctly by the mob-size input listener
-                 // but let's ensure it's a string for the backend.
-                 creature.hp = getVal('creature-hp');
-                 creature.singleCreatureHP = parseInt(singleCreatureHPForMob, 10) || 10;
+                 const totalHp = getInt('creature-hp');
+                 creature.hp = totalHp;
+                 creature.maxHp = totalHp; // Pre-set maxHp to prevent backend from rolling
+                 creature.singleCreatureHP = calculatedSingleCreatureHP;
                  creature.mobInitialCount = getInt('mob-size');
+                 creature.hpFormula = singleCreatureHPForMob; // Preserve the original dice formula
             }
 
             if (addCreatureForm.dataset.monsterRawData) {
@@ -439,7 +445,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // --- Populate basic fields ---
         document.getElementById('creature-name').value = creature.name || '';
         document.getElementById('creature-initiative').value = creature.initiative || '';
-        document.getElementById('creature-hp').value = creature.hp || ''; // Show current HP
+        // When editing, show the formula for single creatures, or current HP for mobs
+        document.getElementById('creature-hp').value = (!creature.isMob && creature.hpFormula) ? creature.hpFormula : (creature.hp || '');
         document.getElementById('creature-ac').value = creature.ac || '';
         document.getElementById('creature-speed').value = creature.speed || '';
         document.getElementById('attack-modifier').value = creature.attackMod || '';
@@ -468,12 +475,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isMobMode) {
             const mobSize = Math.ceil(creature.hp / creature.singleCreatureHP) || 1;
             document.getElementById('mob-size').value = mobSize;
-            singleCreatureHPForMob = creature.singleCreatureHP;
+            // Always store the base formula for potential conversion back to single
+            singleCreatureHPForMob = creature.hpFormula || creature.singleCreatureHP;
+            calculatedSingleCreatureHP = creature.singleCreatureHP; // Store the already calculated value
             mobControls.style.display = 'flex';
             convertToMobBtn.textContent = 'Convert to Single';
         } else {
             mobControls.style.display = 'none';
             convertToMobBtn.textContent = 'Convert to Mob';
+            // Store the formula (or maxHP if no formula) for potential conversion
             singleCreatureHPForMob = creature.hpFormula || creature.maxHp;
         }
 
@@ -737,15 +747,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const hpColor = getHpColor(hp, maxHp);
 
             let displayName = creature.name;
-            let attackButtonHTML = '';
             if (creature.isMob) {
                 const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
                 displayName = `Mob of ${currentCount} ${creature.name} (of ${creature.mobInitialCount})`;
-                attackButtonHTML = `<span class="header-stat interactive-stat mob-rules-btn" data-id="${creature.id}">Mob Rules</span>`;
-            } else {
-                displayName = creature.name;
-                attackButtonHTML = `<span class="header-stat interactive-stat attack-roll-btn" data-id="${creature.id}">Attack: ${creature.attackMod || '+0'}</span>`;
             }
+            const attackButtonHTML = `<span class="header-stat interactive-stat attack-btn" data-id="${creature.id}">Attack: ${creature.attackMod || '+0'}</span>`;
 
             const hasStatBlock = creature.rawData;
             creatureDiv.innerHTML = `
@@ -800,14 +806,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         // Add event listeners for all the new dynamic buttons
-        document.querySelectorAll('.attack-roll-btn').forEach(b => b.addEventListener('click', e => {
-            const id = e.target.dataset.id;
-            createPopup('attack-roll', id, e.target);
-        }));
-
-        document.querySelectorAll('.mob-rules-btn').forEach(b => b.addEventListener('click', e => {
-            const id = e.target.dataset.id;
-            createPopup('mob-rules', id, e.target);
+        document.querySelectorAll('.attack-btn').forEach(b => b.addEventListener('click', e => {
+            const id = parseInt(e.target.dataset.id, 10);
+            const creature = initiativeOrder.find(c => c.id === id);
+            if (creature) {
+                if (creature.isMob) {
+                    createPopup('mob-rules', id, e.target);
+                } else {
+                    createPopup('attack-roll', id, e.target);
+                }
+            }
         }));
 
         document.querySelectorAll('.stat-roll-btn').forEach(b => b.addEventListener('click', e => {
