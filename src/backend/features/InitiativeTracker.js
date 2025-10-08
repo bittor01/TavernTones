@@ -46,22 +46,35 @@ class InitiativeTracker {
     }
 
     addCreature(creature) {
-        // --- HP Handling ---
-        const hpInput = creature.hp.toString();
-        creature.hpFormula = hpInput; // Save the original formula
-        if (hpInput.match(/d/i)) { // It's a dice roll
-            try {
-                const roll = new DiceRoller().roll(hpInput);
-                creature.hp = roll.total;
-                this.logToRenderer(`${creature.name} rolled HP: ${hpInput} = ${roll.total}`);
-            } catch (e) {
-                this.logToRenderer(`Invalid HP dice notation "${hpInput}". Defaulting to 10.`);
-                creature.hp = 10;
+        // If creature doesn't have a maxHp, it's a new creature.
+        if (!creature.maxHp) {
+            const hpInput = creature.hp.toString();
+            creature.hpFormula = hpInput; // Save the original formula
+            if (hpInput.match(/d/i)) { // It's a dice roll
+                try {
+                    const roll = new DiceRoller().roll(hpInput);
+                    creature.hp = roll.total;
+                    this.logToRenderer(`${creature.name} rolled HP: ${hpInput} = ${roll.total}`);
+                } catch (e) {
+                    this.logToRenderer(`Invalid HP dice notation "${hpInput}". Defaulting to 10.`);
+                    creature.hp = 10;
+                }
+            } else { // It's a number
+                creature.hp = parseInt(hpInput, 10) || 10;
             }
-        } else { // It's a number
-            creature.hp = parseInt(hpInput, 10) || 10;
+            creature.maxHp = creature.hp;
         }
-        creature.maxHp = creature.hp;
+
+        // --- Mob Properties Initialization ---
+        if (creature.isMob === undefined) {
+            creature.isMob = false;
+        }
+
+        if (!creature.isMob) {
+            creature.singleCreatureHP = creature.maxHp;
+            delete creature.mobInitialCount;
+        }
+        // For mobs, we trust the renderer to have set hp, maxHp, singleCreatureHP, and mobInitialCount correctly.
 
 
         // Calculate saves from scores if not provided
@@ -136,14 +149,21 @@ class InitiativeTracker {
     }
 
     editCreature(creatureId) {
-        const creature = this.getCreature(creatureId);
-        if (creature) {
-            this.initiativeOrder = this.initiativeOrder.filter(c => c.id !== creatureId);
+        // Return creature data without modifying the list
+        return this.getCreature(creatureId);
+    }
+
+    updateCreature(updatedCreature) {
+        const index = this.initiativeOrder.findIndex(c => c.id === updatedCreature.id);
+        if (index !== -1) {
+            this.initiativeOrder[index] = updatedCreature;
+            this.initiativeOrder.sort((a, b) => b.initiative - a.initiative);
             this._updateFrontend();
             this._saveState();
-            return creature;
+            this.logToRenderer(`Updated ${updatedCreature.name}.`);
+        } else {
+            this.logToRenderer(`Error: Could not find creature with ID ${updatedCreature.id} to update.`);
         }
-        return null;
     }
 
     removeCreature(creatureId) {
@@ -162,11 +182,21 @@ class InitiativeTracker {
                 creature.tempHp -= tempHpDamage;
                 damage -= tempHpDamage;
                 creature.hp -= damage;
+                creature.hp = Math.max(0, creature.hp); // Prevent negative HP
+
                 if (creature.isConcentrating) {
                     concentrationCheckDC = Math.max(10, Math.floor(-amount / 2));
                 }
             } else { // Healing
-                creature.hp += amount;
+                if (creature.isMob && creature.singleCreatureHP > 0) {
+                    // For mobs, healing is capped by the number of remaining members.
+                    const currentMemberCount = Math.ceil(creature.hp / creature.singleCreatureHP);
+                    const currentMaxHp = currentMemberCount * creature.singleCreatureHP;
+                    creature.hp = Math.min(currentMaxHp, creature.hp + amount);
+                } else {
+                    // For single creatures, healing can go above maxHP (overhealing).
+                    creature.hp += amount;
+                }
             }
             this._updateFrontend();
             this._saveState();

@@ -491,6 +491,43 @@ input[type="number"] {
     background-color: #5a5a5a;
 }
 
+/* Mob Rules Popup */
+.mob-rules-popup {
+    padding: 10px;
+    max-width: 500px;
+    position: relative; /* For positioning the push button */
+}
+.mob-rules-popup h4 {
+    margin-top: 0;
+    margin-bottom: 5px;
+    color: #ddd;
+}
+.mob-rules-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+.mob-rules-table th, .mob-rules-table td {
+    border: 1px solid #444;
+    padding: 4px 6px;
+    text-align: center;
+}
+.mob-rules-table th {
+    background-color: #3a3f44;
+}
+.mob-rules-popup .footnote {
+    font-size: 0.8em;
+    color: #aaa;
+    margin-top: 5px;
+    text-align: center;
+}
+#push-mob-rules-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+}
+
 
 /* --- Soundboard Styles --- */
 #soundboard-container {

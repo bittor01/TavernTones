@@ -17,6 +17,7 @@ const CommandHandler = require('../../discord/CommandHandler.js');
 const FiveEToolsParser = require('./5eParser.js');
 const { getDiscordConfig, setDiscordConfig } = require('./config.js');
 const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
+const { mobAttackResults, areaTargets } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
 
@@ -231,6 +232,10 @@ ipcMain.handle('get-dnd-conditions', async () => {
     return DND_CONDITIONS;
 });
 
+ipcMain.handle('get-mob-rules-data', async () => {
+    return { mobAttackResults, areaTargets };
+});
+
 apploader();
 
 
@@ -311,6 +316,44 @@ function formatStatBlockForDiscord(monster) {
     if (monster.reaction && monster.reaction.length > 0) {
         longFields.push({ name: 'Reactions', value: processEntries(monster.reaction) });
     }
+
+    return { mainEmbed, longFields };
+}
+
+function formatMobRulesForDiscord(creature) {
+    const attackMod = parseInt(creature.attackMod, 10) || 0;
+    const formatAttackMod = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
+
+    // Format the Mob Attack Results table
+    let attackTable = '```\nRoll Needed | Normal | Advantage | Disadvantage\n------------|--------|-----------|--------------\n';
+    mobAttackResults.forEach(row => {
+        const roll = row.roll.padEnd(11);
+        const normal = row.normal.toString().padEnd(6);
+        const adv = row.adv.toString().padEnd(9);
+        const dis = row.dis.toString();
+        attackTable += `${roll} | ${normal} | ${adv} | ${dis}\n`;
+    });
+    attackTable += '```';
+
+    const mainEmbed = new EmbedBuilder()
+        .setColor(0xFFA500) // Orange for rules
+        .setTitle(`Mob Attack Rules for ${creature.name}`)
+        .setDescription(`This table shows the number of successful hits from a mob based on the d20 roll needed.\nThe mob's attack modifier is **${formatAttackMod(attackMod)}**.`)
+        .addFields({ name: 'Mob Attack Results', value: attackTable });
+
+    // Format the Area Targets table
+    let areaTableString = '';
+    areaTargets.forEach(row => {
+        let parts = [];
+        if (row.cone !== '—') parts.push(`**Cone:** ${row.cone}`);
+        if (row.cube !== '—') parts.push(`**Cube:** ${row.cube}`);
+        if (row.circular !== '—') parts.push(`**Circular:** ${row.circular}`);
+        if (row.line !== '—') parts.push(`**Line:** ${row.line}`);
+        areaTableString += `**${row.targets} targets:** ${parts.join(' | ')}\n`;
+    });
+    areaTableString += `\n*Use Circular for Cylinders, Emanations, and Spheres.`;
+
+    const longFields = [{ name: 'Targets in Area of Effect', value: areaTableString }];
 
     return { mainEmbed, longFields };
 }
@@ -891,6 +934,10 @@ async function ipcloader() {
         }
     });
 
+    ipcMain.on('update-creature', (event, creature) => {
+        initiativeTracker.updateCreature(creature);
+    });
+
     ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
         initiativeTracker.updateReminders(creatureId, reminders);
     });
@@ -1067,6 +1114,44 @@ async function ipcloader() {
             }
         } catch (error) {
             logToRenderer(`[push-statblock] FAILED to send embed: ${error}`);
+        }
+    });
+
+    ipcMain.on('push-mob-rules-to-discord', async (event, creature) => {
+        if (!discordConfig.textChannel) {
+            logToRenderer('[push-mob-rules] No text channel configured.');
+            return;
+        }
+        const channel = client.channels.cache.get(discordConfig.textChannel);
+        if (!channel) {
+            logToRenderer(`[push-mob-rules] FAILED to find channel with ID: ${discordConfig.textChannel}`);
+            return;
+        }
+        try {
+            const { mainEmbed, longFields } = formatMobRulesForDiscord(creature);
+
+            const mainMessage = await channel.send({ embeds: [mainEmbed] });
+            logToRenderer('[push-mob-rules] Successfully pushed main mob rules embed.');
+
+            if (longFields.length > 0) {
+                const thread = await mainMessage.startThread({
+                    name: `${creature.name} - Area Targets`,
+                    autoArchiveDuration: 60,
+                });
+
+                for (const field of longFields) {
+                    const chunks = splitText(field.value, 4096); // Embed description limit
+                    for (let i = 0; i < chunks.length; i++) {
+                        const chunkEmbed = new EmbedBuilder()
+                            .setColor(0xFFA500)
+                            .setDescription(chunks[i]);
+                        await thread.send({ embeds: [chunkEmbed] });
+                    }
+                }
+                logToRenderer(`[push-mob-rules] Sent area of effect details to thread.`);
+            }
+        } catch (error) {
+            logToRenderer(`[push-mob-rules] FAILED to send embed: ${error}`);
         }
     });
 }
