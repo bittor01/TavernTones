@@ -1,6 +1,31 @@
 const fs = require('fs');
 const path = require('path');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
+const { EmbedBuilder } = require('discord.js');
+
+function formatRoll(creatureName, rollType, checkType, roll, modifier) {
+    const total = roll.total + modifier;
+    const rawRolls = roll.rolls[0].rolls.map(r => r.value);
+    const rollDetails = rawRolls.join(', ');
+
+    // Bold the chosen roll for advantage/disadvantage
+    const detailedRolls = rawRolls.map(r => (r === roll.total) ? `**${r}**` : r).join(', ');
+
+    const message = `${creatureName}'s ${checkType} (${rollType}): ${total} ⟵ [${rollDetails}] + ${modifier}`;
+
+    const embed = new EmbedBuilder()
+        .setColor(0x0099FF)
+        .setTitle(`${creatureName}'s ${checkType}`)
+        .setDescription(`**Result: ${total}**`)
+        .addFields(
+            { name: 'Roll', value: `d20(${detailedRolls})`, inline: true },
+            { name: 'Modifier', value: `${modifier >= 0 ? '+' : ''}${modifier}`, inline: true },
+            { name: 'Type', value: rollType, inline: true }
+        )
+        .setTimestamp();
+
+    return { message, embed };
+}
 
 class InitiativeTracker {
     constructor(logToRenderer, logDiceRoll, sendInitiativeUpdate, autosavePath) {
@@ -346,11 +371,15 @@ class InitiativeTracker {
         if (!creature) return null;
 
         let modifier = 0;
+        let checkType = '';
+
         if (type === 'check') {
             const score = creature.scores ? (creature.scores[stat] || 10) : 10;
             modifier = Math.floor((score - 10) / 2);
+            checkType = `${stat.toUpperCase()} Check`;
         } else { // 'save'
             modifier = creature.saves ? (parseInt(creature.saves[stat], 10) || 0) : 0;
+            checkType = `${stat.toUpperCase()} Save`;
         }
 
         let rollNotation = '1d20';
@@ -358,13 +387,10 @@ class InitiativeTracker {
         if (rollType === 'dis') rollNotation = '2d20kl1';
 
         const roll = new DiceRoller().roll(rollNotation);
-        const total = roll.total + modifier;
+        const result = formatRoll(creature.name, rollType, checkType, roll, modifier);
 
-        const rollDetails = roll.rolls[0].rolls.map(r => r.value).join(', ');
-        const message = `${creature.name} rolled a ${stat.toUpperCase()} ${type} (${rollType})\nResult: ${total} ([${rollDetails}] + ${modifier})`;
-
-        this.logDiceRoll(message);
-        return message;
+        this.logDiceRoll(result.message);
+        return result;
     }
 
     rollAttack(creatureId, rollType) {
@@ -372,19 +398,17 @@ class InitiativeTracker {
         if (!creature) return null;
 
         const modifier = parseInt(creature.attackMod, 10) || 0;
+        const checkType = 'Attack';
 
         let rollNotation = '1d20';
         if (rollType === 'adv') rollNotation = '2d20kh1';
         if (rollType === 'dis') rollNotation = '2d20kl1';
 
         const roll = new DiceRoller().roll(rollNotation);
-        const total = roll.total + modifier;
+        const result = formatRoll(creature.name, rollType, checkType, roll, modifier);
 
-        const rollDetails = roll.rolls[0].rolls.map(r => r.value).join(', ');
-        const message = `${creature.name} rolled an Attack (${rollType})\nResult: ${total} ([${rollDetails}] + ${modifier})`;
-
-        this.logDiceRoll(message);
-        return message;
+        this.logDiceRoll(result.message);
+        return result;
     }
 
     getInitiativeOrder() {

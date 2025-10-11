@@ -937,7 +937,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             contentHTML = `
                 <div class="mob-rules-popup">
-                    <button id="push-mob-rules-btn" class="small-btn" title="Push to Chat">💬</button>
+                    <button id="push-mob-rules-btn" class="small-btn" title="Push to Chat">🖨️</button>
                     <h4>Mob Attacks (Atk: ${formatModifier(attackMod)})</h4>
                     <p class="footnote">The table shows the number of hits an attack action generates against a target's AC, based on the number of creatures in the mob.</p>
                     <table class="mob-rules-table">
@@ -1028,6 +1028,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     popup.remove();
                 });
             });
+        } else if (type === 'mob-rules') {
+            const pushBtn = document.getElementById('push-mob-rules-btn');
+            if (pushBtn) {
+                pushBtn.addEventListener('click', () => {
+                    window.electron.ipcRenderer.send('push-mob-rules-to-discord', { creatureId });
+                    // We don't remove the popup, just send the data
+                });
+            }
         } else if (type === 'edit-initiative') {
             const input = document.getElementById('popup-initiative-input');
             document.getElementById('popup-initiative-ok').addEventListener('click', () => {
@@ -1101,6 +1109,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     popup.remove();
                 });
             });
+        } else if (type === 'mob-rules') {
+            const pushBtn = document.getElementById('push-mob-rules-btn');
+            if (pushBtn) {
+                pushBtn.addEventListener('click', () => {
+                    window.electron.ipcRenderer.send('push-mob-rules-to-discord', { creatureId });
+                    // We don't remove the popup, just send the data
+                });
+            }
         }
 
         // Close popup when clicking outside

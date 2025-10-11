@@ -967,26 +967,14 @@ async function ipcloader() {
     });
 
     ipcMain.on('roll-attack', (event, { creatureId, rollType }) => {
-        const message = initiativeTracker.rollAttack(creatureId, rollType);
-        if (message) {
+        const result = initiativeTracker.rollAttack(creatureId, rollType);
+        if (result) {
+            const { message, embed } = result;
             mainWindow.webContents.send('dice-log', message);
             if (discordConfig.textChannel) {
                 const channel = client.channels.cache.get(discordConfig.textChannel);
                 if (channel) {
-                    channel.send(message);
-                }
-            }
-        }
-    });
-
-    ipcMain.on('roll-attack', (event, { creatureId, rollType }) => {
-        const message = initiativeTracker.rollAttack(creatureId, rollType);
-        if (message) {
-            mainWindow.webContents.send('dice-log', message);
-            if (discordConfig.textChannel) {
-                const channel = client.channels.cache.get(discordConfig.textChannel);
-                if (channel) {
-                    channel.send(message);
+                    channel.send({ embeds: [embed] });
                 }
             }
         }
@@ -1141,7 +1129,13 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.on('push-mob-rules-to-discord', async (event, creature) => {
+    ipcMain.on('push-mob-rules-to-discord', async (event, { creatureId }) => {
+        const creature = initiativeTracker.getCreature(creatureId);
+        if (!creature) {
+            logToRenderer(`[push-mob-rules] Could not find creature with ID: ${creatureId}`);
+            return;
+        }
+
         if (!discordConfig.textChannel) {
             logToRenderer('[push-mob-rules] No text channel configured.');
             return;
@@ -1157,7 +1151,7 @@ async function ipcloader() {
             const mainMessage = await channel.send({ embeds: [mainEmbed] });
             logToRenderer('[push-mob-rules] Successfully pushed main mob rules embed.');
 
-            if (longFields.length > 0) {
+            if (longFields.length > 0 && longFields[0].value) {
                 const thread = await mainMessage.startThread({
                     name: `${creature.name} - Area Targets`,
                     autoArchiveDuration: 60,

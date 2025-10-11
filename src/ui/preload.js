@@ -21,7 +21,8 @@ contextBridge.exposeInMainWorld('electron', {
         'load-sound', 'play-sound', 'stop-sound', 'unload-sound',
         'set-loop', 'set-soundboard-volume', 'request-initial-load',
         'push-dicelog-to-discord', 'push-statblock-to-discord',
-        'open-gamify-tool', 'save-high-score', 'open-settings-window'
+        'open-gamify-tool', 'save-high-score', 'open-settings-window',
+        'roll-attack', 'push-mob-rules-to-discord'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);
@@ -33,7 +34,7 @@ contextBridge.exposeInMainWorld('electron', {
           'load-encounter-dialog', 'search-monsters', 'get-monster-details',
           'get-task-data', 'save-and-get-next-spell', 'undo-and-get-previous-spell',
           'get-high-score', 'load-task-by-path', 'open-task-file-dialog',
-          'scrap-and-get-next-item', 'show-confirm-dialog'
+          'scrap-and-get-next-item', 'show-confirm-dialog', 'get-mob-rules-data'
         ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);
