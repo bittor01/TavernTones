@@ -1063,21 +1063,6 @@ async function ipcloader() {
         return monster;
     });
 
-    // This is the function that calculates the maximum HP for a mob.
-    ipcMain.handle('calculate-max-hp', (event, diceNotation) => {
-        try {
-            if (!diceNotation || typeof diceNotation !== 'string' || !diceNotation.match(/d/i)) {
-                return parseInt(diceNotation, 10) || 10;
-            }
-            const roller = new DiceRoller();
-            const roll = roller.roll(diceNotation);
-            return roll.maxTotal;
-        } catch (e) {
-            logToRenderer(`Error calculating max HP for "${diceNotation}": ${e.message}`);
-            return 10; // Fallback
-        }
-    });
-
     ipcMain.on('push-dicelog-to-discord', async (event, logContent) => {
         if (!discordConfig.textChannel) {
             logToRenderer('[push-dicelog] No text channel configured.');

@@ -23,7 +23,7 @@
     "wav-encoder": "^1.3.0"
   },
   "devDependencies": {
-    "electron": "^32.0.1",
+    "electron": "^32.3.3",
     "electron-builder": "^26.0.12"
   },
   "build": {
