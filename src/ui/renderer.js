@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let singleCreatureHPForMob = '10'; // Can be a dice formula string or a number
     let calculatedSingleCreatureHP = 10; // Is always the calculated number
     let creatureBeingEdited = null;
+    let calculatedMobTotalHp = 0; // To store the calculated total for submission
 
     // --- Element Refs ---
     const logArea = document.getElementById('logArea');
@@ -55,7 +56,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <div class="form-row">
             <div class="form-group"><label for="creature-initiative">Initiative:</label><input type="text" id="creature-initiative" placeholder="+3 or 15"></div>
-            <div class="form-group"><label for="creature-hp">HP:</label><input type="text" id="creature-hp" placeholder="2d8+2"></div>
+            <div class="form-group hp-group">
+                <label for="creature-hp">HP:</label>
+                <input type="text" id="creature-hp" placeholder="2d8+2">
+                <span id="mob-hp-total" class="mob-hp-display"></span>
+            </div>
             <div class="form-group"><label for="creature-ac">AC:</label><input type="number" id="creature-ac" placeholder="15"></div>
         </div>
         <div class="form-row">
@@ -101,16 +106,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mobControls = document.getElementById('mob-controls');
     const mobSizeInput = document.getElementById('mob-size');
     const creatureHpInput = document.getElementById('creature-hp');
+    const mobHpTotalSpan = document.getElementById('mob-hp-total');
 
     async function updateMobHP() {
-        if (!isMobMode) return;
+        if (!isMobMode) {
+            mobHpTotalSpan.style.display = 'none';
+            return;
+        }
+        mobHpTotalSpan.style.display = 'inline';
         const mobSize = parseInt(mobSizeInput.value, 10) || 0;
-        singleCreatureHPForMob = creatureHpInput.value; // This is the key change
-        calculatedSingleCreatureHP = await window.electron.ipcRenderer.invoke('calculate-max-hp', singleCreatureHPForMob);
+        const hpFormula = creatureHpInput.value;
+
+        if (!hpFormula || mobSize <= 0) {
+            mobHpTotalSpan.textContent = '';
+            calculatedMobTotalHp = 0;
+            return;
+        }
+
+        calculatedSingleCreatureHP = await window.electron.ipcRenderer.invoke('calculate-max-hp', hpFormula);
+
         if (!isNaN(calculatedSingleCreatureHP) && calculatedSingleCreatureHP > 0) {
-            // The input for submission should be the total HP.
-            // The user will see this total, but the underlying formula is preserved in singleCreatureHPForMob
-            creatureHpInput.value = mobSize * calculatedSingleCreatureHP;
+            calculatedMobTotalHp = mobSize * calculatedSingleCreatureHP;
+            mobHpTotalSpan.textContent = ` = ${calculatedMobTotalHp} total`;
+        } else {
+            mobHpTotalSpan.textContent = ' (invalid)';
+            calculatedMobTotalHp = 0;
         }
     }
 
@@ -121,21 +141,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             mobControls.style.display = 'flex';
             convertToMobBtn.textContent = 'Convert to Single';
             if (!mobSizeInput.value) mobSizeInput.value = 5;
-            await updateMobHP(); // This will calculate and set the total HP for the mob
         } else {
             mobControls.style.display = 'none';
             convertToMobBtn.textContent = 'Convert to Mob';
-            // When converting back to single, restore the original HP formula/value
             creatureHpInput.value = singleCreatureHPForMob;
         }
+        await updateMobHP();
     });
 
     mobSizeInput.addEventListener('input', updateMobHP);
-    creatureHpInput.addEventListener('blur', () => {
-        if (isMobMode) {
-            updateMobHP();
-        }
-    });
+    creatureHpInput.addEventListener('input', updateMobHP);
 
 
     // --- Logging ---
@@ -370,13 +385,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             if (isMobMode) {
-                 // HP is already set correctly by the mob-size input listener
-                 const totalHp = getInt('creature-hp');
-                 creature.hp = totalHp;
-                 creature.maxHp = totalHp; // Pre-set maxHp to prevent backend from rolling
-                 creature.singleCreatureHP = calculatedSingleCreatureHP;
-                 creature.mobInitialCount = getInt('mob-size');
-                 creature.hpFormula = singleCreatureHPForMob; // Preserve the original dice formula
+                creature.hp = calculatedMobTotalHp;
+                creature.maxHp = calculatedMobTotalHp;
+                creature.singleCreatureHP = calculatedSingleCreatureHP;
+                creature.mobInitialCount = getInt('mob-size');
+                creature.hpFormula = getVal('creature-hp'); // The formula is the raw value of the input
             }
 
             if (addCreatureForm.dataset.monsterRawData) {
