@@ -105,9 +105,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function updateMobHP() {
         if (!isMobMode) return;
         const mobSize = parseInt(mobSizeInput.value, 10) || 0;
-        // singleCreatureHPForMob can be a dice formula, so we ask the main process to calculate its max value.
+        singleCreatureHPForMob = creatureHpInput.value; // This is the key change
         calculatedSingleCreatureHP = await window.electron.ipcRenderer.invoke('calculate-max-hp', singleCreatureHPForMob);
         if (!isNaN(calculatedSingleCreatureHP) && calculatedSingleCreatureHP > 0) {
+            // The input for submission should be the total HP.
+            // The user will see this total, but the underlying formula is preserved in singleCreatureHPForMob
             creatureHpInput.value = mobSize * calculatedSingleCreatureHP;
         }
     }
@@ -129,6 +131,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     mobSizeInput.addEventListener('input', updateMobHP);
+    creatureHpInput.addEventListener('blur', () => {
+        if (isMobMode) {
+            updateMobHP();
+        }
+    });
 
 
     // --- Logging ---

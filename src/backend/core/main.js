@@ -1066,15 +1066,22 @@ async function ipcloader() {
     // This is the function that calculates the maximum HP for a mob.
     ipcMain.handle('calculate-max-hp', (event, diceNotation) => {
         try {
+            // First, handle non-dice strings (e.g., a flat number)
             if (!diceNotation || typeof diceNotation !== 'string' || !diceNotation.match(/d/i)) {
-                return parseInt(diceNotation, 10) || 10;
+                const flatHp = parseInt(diceNotation, 10);
+                return isNaN(flatHp) ? 10 : flatHp;
             }
+            // For dice strings, parse them to get the maximum possible total.
             const roller = new DiceRoller();
-            const roll = roller.roll(diceNotation);
+            // The `roll` method actually performs a roll. To get metadata like the max total,
+            // you just need to pass the notation to the roller's constructor or have it parse the notation.
+            // The DiceRoller library, when you create a new roll object, gives you access to maxTotal.
+            const roll = roller.parse(diceNotation);
             return roll.maxTotal;
         } catch (e) {
             logToRenderer(`Error calculating max HP for "${diceNotation}": ${e.message}`);
-            return 10; // Fallback
+            // Fallback to a reasonable default if parsing fails
+            return 10;
         }
     });
 
