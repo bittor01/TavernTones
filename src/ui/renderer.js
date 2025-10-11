@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         calculatedSingleCreatureHP = await window.electron.ipcRenderer.invoke('calculate-max-hp', hpFormula);
 
-        if (!isNaN(calculatedSingleCreatureHP) && calculatedSingleCreatureHP > 0) {
+        if (calculatedSingleCreatureHP > 0) {
             calculatedMobTotalHp = mobSize * calculatedSingleCreatureHP;
             mobHpTotalSpan.textContent = ` = ${calculatedMobTotalHp} total`;
         } else {

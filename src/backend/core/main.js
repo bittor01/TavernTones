@@ -20,6 +20,7 @@ const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
 const { mobAttackResults, areaTargets } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
+const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 
 let discordConfig;
 
@@ -1066,45 +1067,34 @@ async function ipcloader() {
     ipcMain.handle('calculate-max-hp', (event, diceNotation) => {
         try {
             if (!diceNotation || typeof diceNotation !== 'string') {
-                return 10;
+                return 0;
             }
-
-            // Sanitize and parse the input
-            const sanitized = diceNotation.trim().toLowerCase();
-            const parts = sanitized.split(/([+-])/).map(p => p.trim());
-
-            let total = 0;
-
-            // Handle the initial dice part (e.g., "2d6")
-            const dicePart = parts.shift();
-            if (dicePart.includes('d')) {
-                const [count, sides] = dicePart.split('d').map(n => parseInt(n, 10));
-                if (isNaN(count) || isNaN(sides)) return 10; // Invalid dice format
-                total += count * sides;
-            } else {
-                const flatHp = parseInt(dicePart, 10);
-                if (isNaN(flatHp)) return 10; // Invalid initial number
-                total += flatHp;
-            }
-
-            // Handle subsequent modifiers (e.g., "+5", "-2")
-            while (parts.length > 0) {
-                const operator = parts.shift();
-                const value = parseInt(parts.shift(), 10);
-                if (isNaN(value)) continue; // Skip if value is not a number
-
-                if (operator === '+') {
-                    total += value;
-                } else if (operator === '-') {
-                    total -= value;
+            // Replace "d" with "*" for max calculation, e.g., "2d6" -> "2*6"
+            const expression = diceNotation.toLowerCase().replace(/d/g, '*');
+            // Use a safe evaluation method. This is a simple case, so we can parse it manually.
+            // This regex handles "XdY+Z" or "XdY-Z" or just "XdY"
+            const match = expression.match(/(\d+)\s*\*\s*(\d+)\s*([+-])?\s*(\d+)?/);
+            if (match) {
+                const numDice = parseInt(match[1], 10);
+                const sides = parseInt(match[2], 10);
+                let total = numDice * sides;
+                if (match[3] && match[4]) {
+                    const modifier = parseInt(match[4], 10);
+                    if (match[3] === '+') {
+                        total += modifier;
+                    } else {
+                        total -= modifier;
+                    }
                 }
+                return total;
+            } else {
+                // Handle flat numbers
+                const flatHp = parseInt(diceNotation, 10);
+                return isNaN(flatHp) ? 0 : flatHp;
             }
-
-            return total;
-
         } catch (e) {
             logToRenderer(`Error calculating max HP for "${diceNotation}": ${e.message}`);
-            return 10; // Fallback
+            return 0; // Fallback
         }
     });
 

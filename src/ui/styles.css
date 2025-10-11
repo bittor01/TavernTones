@@ -329,24 +329,6 @@ input[type="number"] {
     flex-grow: 1;
 }
 
-.hp-group {
-    position: relative;
-}
-
-.mob-hp-display {
-    display: none; /* Hidden by default */
-    position: absolute;
-    right: 5px;
-    top: 50%;
-    transform: translateY(-50%);
-    background-color: #1e1e1e;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.9em;
-    color: #a0c8ff;
-    pointer-events: none; /* Prevent it from interfering with clicks on the input */
-}
-
 .hp-display {
     font-weight: bold;
 }
