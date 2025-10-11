@@ -798,75 +798,64 @@ document.addEventListener('DOMContentLoaded', async () => {
             combatantDetailsListDiv.appendChild(creatureDiv);
         });
 
-        // Add event listeners for all the new dynamic buttons
-        document.querySelectorAll('.attack-btn').forEach(b => b.addEventListener('click', e => {
-            const id = parseInt(e.target.dataset.id, 10);
-            const creature = initiativeOrder.find(c => c.id === id);
-            if (creature) {
-                if (creature.isMob) {
-                    createPopup('mob-rules', id, e.target);
-                } else {
-                    createPopup('attack-roll', id, e.target);
+        // Use event delegation for all buttons inside the combatant details list
+        combatantDetailsListDiv.addEventListener('click', (e) => {
+            const target = e.target;
+            const creatureId = parseInt(target.dataset.id, 10);
+            if (isNaN(creatureId)) return;
+
+            const creature = initiativeOrder.find(c => c.id === creatureId);
+
+            if (target.classList.contains('attack-btn')) {
+                if (creature) {
+                    if (creature.isMob) {
+                        createPopup('mob-rules', creatureId, target);
+                    } else {
+                        createPopup('attack-roll', creatureId, target);
+                    }
+                }
+            } else if (target.classList.contains('stat-roll-btn')) {
+                const { type, stat } = target.dataset;
+                createPopup('stat-roll', creatureId, target, { type, stat });
+            } else if (target.classList.contains('hp-change-btn')) {
+                createPopup('hp', creatureId, target);
+            } else if (target.classList.contains('add-condition-btn')) {
+                createPopup('condition', creatureId, target);
+            } else if (target.classList.contains('temp-hp-btn')) {
+                createPopup('temp-hp', creatureId, target);
+            } else if (target.classList.contains('remove-condition-btn')) {
+                const { condition } = target.dataset;
+                window.electron.ipcRenderer.send('remove-condition', { creatureId, condition });
+            } else if (target.classList.contains('reminders-btn')) {
+                createPopup('reminders', creatureId, target);
+            } else if (target.classList.contains('copy-btn')) {
+                window.electron.ipcRenderer.send('copy-creature', { creatureId });
+            } else if (target.classList.contains('edit-btn')) {
+                window.electron.ipcRenderer.send('edit-creature', { creatureId });
+            } else if (target.classList.contains('remove-btn')) {
+                window.electron.ipcRenderer.send('remove-creature', { creatureId });
+            } else if (target.classList.contains('move-to-bottom-btn')) {
+                const creatureIndex = combatantPanelOrder.findIndex(c => c.id === creatureId);
+                if (creatureIndex > -1) {
+                    const [creature] = combatantPanelOrder.splice(creatureIndex, 1);
+                    combatantPanelOrder.push(creature);
+                    renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
                 }
             }
-        }));
+        });
 
-        document.querySelectorAll('.stat-roll-btn').forEach(b => b.addEventListener('click', e => {
-            const id = e.target.dataset.id;
-            const type = e.target.dataset.type;
-            const stat = e.target.dataset.stat;
-            createPopup('stat-roll', id, e.target, { type, stat });
-        }));
+        // Handle checkboxes separately as they use the 'change' event
+        combatantDetailsListDiv.addEventListener('change', (e) => {
+            const target = e.target;
+            const creatureId = parseInt(target.dataset.id, 10);
+            if (isNaN(creatureId)) return;
 
-        document.querySelectorAll('.hp-change-btn').forEach(b => b.addEventListener('click', e => {
-            const id = e.target.dataset.id;
-            createPopup('hp', id, e.target);
-        }));
-        document.querySelectorAll('.add-condition-btn').forEach(b => b.addEventListener('click', e => {
-            const id = e.target.dataset.id;
-            createPopup('condition', id, e.target);
-        }));
-
-        document.querySelectorAll('.temp-hp-btn').forEach(b => b.addEventListener('click', e => {
-            const id = e.target.dataset.id;
-            createPopup('temp-hp', id, e.target);
-        }));
-
-        document.querySelectorAll('.remove-condition-btn').forEach(b => b.addEventListener('click', e => {
-            const { id, condition } = e.target.dataset;
-            window.electron.ipcRenderer.send('remove-condition', { creatureId: parseInt(id), condition });
-        }));
-        document.querySelectorAll('.concentration-cb').forEach(cb => cb.addEventListener('change', e => {
-            const id = e.target.dataset.id;
-            window.electron.ipcRenderer.send('update-creature-flag', { creatureId: parseInt(id), flag: 'isConcentrating', value: e.target.checked });
-        }));
-        document.querySelectorAll('.friendly-cb').forEach(cb => cb.addEventListener('change', e => {
-            const id = e.target.dataset.id;
-            window.electron.ipcRenderer.send('update-creature-flag', { creatureId: parseInt(id), flag: 'isFriendly', value: e.target.checked });
-        }));
-        document.querySelectorAll('.reminders-btn').forEach(b => b.addEventListener('click', e => {
-            const id = e.target.dataset.id;
-            createPopup('reminders', id, e.target);
-        }));
-
-        document.querySelectorAll('.copy-btn').forEach(b => b.addEventListener('click', e => {
-            window.electron.ipcRenderer.send('copy-creature', { creatureId: parseInt(e.target.dataset.id) });
-        }));
-        document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', e => {
-            window.electron.ipcRenderer.send('edit-creature', { creatureId: parseInt(e.target.dataset.id) });
-        }));
-        document.querySelectorAll('.remove-btn').forEach(b => b.addEventListener('click', e => {
-            window.electron.ipcRenderer.send('remove-creature', { creatureId: parseInt(e.target.dataset.id) });
-        }));
-        document.querySelectorAll('.move-to-bottom-btn').forEach(b => b.addEventListener('click', e => {
-            const creatureId = parseInt(e.target.dataset.id);
-            const creatureIndex = combatantPanelOrder.findIndex(c => c.id === creatureId);
-            if (creatureIndex > -1) {
-                const [creature] = combatantPanelOrder.splice(creatureIndex, 1);
-                combatantPanelOrder.push(creature);
-                renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
+            if (target.classList.contains('concentration-cb')) {
+                window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isConcentrating', value: e.target.checked });
+            } else if (target.classList.contains('friendly-cb')) {
+                window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isFriendly', value: e.target.checked });
             }
-        }));
+        });
     }
 
     function createPopup(type, creatureId, targetElement, data = {}) {
@@ -933,7 +922,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 contentHTML = `<div class="popup-results-list">${itemsHTML}</div>`;
             }
         } else if (type === 'mob-rules') {
-            const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
+            const creature = initiativeOrder.find(c => c.id === creatureId);
             const attackMod = parseInt(creature.attackMod, 10) || 0;
             const { mobAttackResults, areaTargets } = MOB_RULES_DATA;
 
