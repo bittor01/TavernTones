@@ -47,8 +47,10 @@ class InitiativeTracker {
     }
 
     addCreature(creature) {
-        // If creature doesn't have a maxHp, it's a new creature.
-        if (!creature.maxHp) {
+        // If the creature is a mob, its HP is pre-calculated and passed from the frontend.
+        // We trust the frontend to have set hp, maxHp, singleCreatureHP, and mobInitialCount correctly.
+        // If it's not a mob and doesn't have maxHp, then we calculate it.
+        if (!creature.isMob && !creature.maxHp) {
             const hpInput = creature.hp.toString();
             creature.hpFormula = hpInput; // Save the original formula
             if (hpInput.match(/d/i)) { // It's a dice roll
@@ -64,6 +66,12 @@ class InitiativeTracker {
                 creature.hp = parseInt(hpInput, 10) || 10;
             }
             creature.maxHp = creature.hp;
+        } else if (creature.isMob) {
+            // For mobs, the hp and maxHp are already set by the renderer.
+            // We just need to ensure the hpFormula is preserved.
+            if (!creature.hpFormula) {
+                creature.hpFormula = creature.singleCreatureHP.toString();
+            }
         }
 
         // --- Mob Properties Initialization ---
