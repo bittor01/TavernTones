@@ -979,6 +979,19 @@ async function ipcloader() {
         }
     });
 
+    ipcMain.on('roll-attack', (event, { creatureId, rollType }) => {
+        const message = initiativeTracker.rollAttack(creatureId, rollType);
+        if (message) {
+            mainWindow.webContents.send('dice-log', message);
+            if (discordConfig.textChannel) {
+                const channel = client.channels.cache.get(discordConfig.textChannel);
+                if (channel) {
+                    channel.send(message);
+                }
+            }
+        }
+    });
+
     ipcMain.on('reset-encounter', () => {
         initiativeTracker.resetEncounter();
     });
