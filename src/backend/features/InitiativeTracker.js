@@ -48,29 +48,51 @@ class InitiativeTracker {
 
     addCreature(creature) {
         if (creature.isMob) {
-            const hpFormula = creature.hp.toString();
-            creature.hpFormula = hpFormula;
+            const hpFormula = creature.hp.toString().toLowerCase().replace(/\s/g, ''); // clean string
+            creature.hpFormula = creature.hp.toString(); // save original formula
             try {
-                const expression = hpFormula.toLowerCase().replace(/d/g, '*');
-                const match = expression.match(/(\d+)\s*\*\s*(\d+)\s*([+-])?\s*(\d+)?/);
-                let singleCreatureHp = 0;
-                if (match) {
-                    const numDice = parseInt(match[1], 10);
-                    const sides = parseInt(match[2], 10);
-                    singleCreatureHp = numDice * sides;
-                    if (match[3] && match[4]) {
-                        const modifier = parseInt(match[4], 10);
-                        if (match[3] === '+') singleCreatureHp += modifier;
-                        else singleCreatureHp -= modifier;
-                    }
-                } else {
-                    singleCreatureHp = parseInt(hpFormula, 10) || 0;
+                let formulaToParse = hpFormula;
+                if (formulaToParse.startsWith('d')) {
+                    formulaToParse = '1' + formulaToParse;
                 }
+
+                // Replace 'd' with '*' to make it a mathematical expression
+                const expression = formulaToParse.replace('d', '*');
+
+                // Super simple, safe evaluator for expressions like "A*B+C" or "A*B-C" or "A*B" or "C"
+                let singleCreatureHp;
+                const parts = expression.split(/([+-])/); // Split by operator, keeping the operator
+
+                // Evaluate the first part, which could be "A*B" or just "C"
+                const basePart = parts[0];
+                if (basePart.includes('*')) {
+                    const [numDice, sides] = basePart.split('*').map(s => parseInt(s, 10));
+                    singleCreatureHp = numDice * sides;
+                } else {
+                    singleCreatureHp = parseInt(basePart, 10);
+                }
+
+                // Apply modifier if it exists
+                if (parts.length > 1) {
+                    const operator = parts[1];
+                    const modifier = parseInt(parts[2], 10);
+                    if (operator === '+') {
+                        singleCreatureHp += modifier;
+                    } else if (operator === '-') {
+                        singleCreatureHp -= modifier;
+                    }
+                }
+
+                if (isNaN(singleCreatureHp)) {
+                    throw new Error("HP formula resulted in NaN.");
+                }
+
                 creature.singleCreatureHP = singleCreatureHp;
                 creature.hp = singleCreatureHp * creature.mobInitialCount;
                 creature.maxHp = creature.hp;
             } catch (e) {
                 this.logToRenderer(`Invalid Mob HP formula "${hpFormula}". Defaulting to 10 per creature.`);
+                creature.singleCreatureHP = 10;
                 creature.hp = 10 * creature.mobInitialCount;
                 creature.maxHp = creature.hp;
             }
