@@ -20,7 +20,6 @@ const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
 const { mobAttackResults, areaTargets } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
-const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 
 let discordConfig;
 
@@ -1066,22 +1065,46 @@ async function ipcloader() {
     // This is the function that calculates the maximum HP for a mob.
     ipcMain.handle('calculate-max-hp', (event, diceNotation) => {
         try {
-            // First, handle non-dice strings (e.g., a flat number)
-            if (!diceNotation || typeof diceNotation !== 'string' || !diceNotation.match(/d/i)) {
-                const flatHp = parseInt(diceNotation, 10);
-                return isNaN(flatHp) ? 10 : flatHp;
+            if (!diceNotation || typeof diceNotation !== 'string') {
+                return 10;
             }
-            // For dice strings, parse them to get the maximum possible total.
-            const roller = new DiceRoller();
-            // The `roll` method actually performs a roll. To get metadata like the max total,
-            // you just need to pass the notation to the roller's constructor or have it parse the notation.
-            // The DiceRoller library, when you create a new roll object, gives you access to maxTotal.
-            const roll = roller.parse(diceNotation);
-            return roll.maxTotal;
+
+            // Sanitize and parse the input
+            const sanitized = diceNotation.trim().toLowerCase();
+            const parts = sanitized.split(/([+-])/).map(p => p.trim());
+
+            let total = 0;
+
+            // Handle the initial dice part (e.g., "2d6")
+            const dicePart = parts.shift();
+            if (dicePart.includes('d')) {
+                const [count, sides] = dicePart.split('d').map(n => parseInt(n, 10));
+                if (isNaN(count) || isNaN(sides)) return 10; // Invalid dice format
+                total += count * sides;
+            } else {
+                const flatHp = parseInt(dicePart, 10);
+                if (isNaN(flatHp)) return 10; // Invalid initial number
+                total += flatHp;
+            }
+
+            // Handle subsequent modifiers (e.g., "+5", "-2")
+            while (parts.length > 0) {
+                const operator = parts.shift();
+                const value = parseInt(parts.shift(), 10);
+                if (isNaN(value)) continue; // Skip if value is not a number
+
+                if (operator === '+') {
+                    total += value;
+                } else if (operator === '-') {
+                    total -= value;
+                }
+            }
+
+            return total;
+
         } catch (e) {
             logToRenderer(`Error calculating max HP for "${diceNotation}": ${e.message}`);
-            // Fallback to a reasonable default if parsing fails
-            return 10;
+            return 10; // Fallback
         }
     });
 

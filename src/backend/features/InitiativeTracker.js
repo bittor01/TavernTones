@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 
 class InitiativeTracker {
