@@ -50,7 +50,34 @@ class InitiativeTracker {
         // If the creature is a mob, its HP is pre-calculated and passed from the frontend.
         // We trust the frontend to have set hp, maxHp, singleCreatureHP, and mobInitialCount correctly.
         // If it's not a mob and doesn't have maxHp, then we calculate it.
-        if (!creature.isMob && !creature.maxHp) {
+        if (creature.isMob) {
+            const hpFormula = creature.hp.toString();
+            creature.hpFormula = hpFormula;
+            try {
+                const expression = hpFormula.toLowerCase().replace(/d/g, '*');
+                const match = expression.match(/(\d+)\s*\*\s*(\d+)\s*([+-])?\s*(\d+)?/);
+                let singleCreatureHp = 0;
+                if (match) {
+                    const numDice = parseInt(match[1], 10);
+                    const sides = parseInt(match[2], 10);
+                    singleCreatureHp = numDice * sides;
+                    if (match[3] && match[4]) {
+                        const modifier = parseInt(match[4], 10);
+                        if (match[3] === '+') singleCreatureHp += modifier;
+                        else singleCreatureHp -= modifier;
+                    }
+                } else {
+                    singleCreatureHp = parseInt(hpFormula, 10) || 0;
+                }
+                creature.singleCreatureHP = singleCreatureHp;
+                creature.hp = singleCreatureHp * creature.mobInitialCount;
+                creature.maxHp = creature.hp;
+            } catch (e) {
+                this.logToRenderer(`Invalid Mob HP formula "${hpFormula}". Defaulting to 10 per creature.`);
+                creature.hp = 10 * creature.mobInitialCount;
+                creature.maxHp = creature.hp;
+            }
+        } else if (!creature.maxHp) {
             const hpInput = creature.hp.toString();
             creature.hpFormula = hpInput; // Save the original formula
             if (hpInput.match(/d/i)) { // It's a dice roll
