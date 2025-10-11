@@ -47,9 +47,6 @@ class InitiativeTracker {
     }
 
     addCreature(creature) {
-        // If the creature is a mob, its HP is pre-calculated and passed from the frontend.
-        // We trust the frontend to have set hp, maxHp, singleCreatureHP, and mobInitialCount correctly.
-        // If it's not a mob and doesn't have maxHp, then we calculate it.
         if (creature.isMob) {
             const hpFormula = creature.hp.toString();
             creature.hpFormula = hpFormula;

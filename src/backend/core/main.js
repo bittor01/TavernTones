@@ -1066,37 +1066,15 @@ async function ipcloader() {
     // This is the function that calculates the maximum HP for a mob.
     ipcMain.handle('calculate-max-hp', (event, diceNotation) => {
         try {
-            if (!diceNotation || typeof diceNotation !== 'string') {
-                return 0;
+            if (!diceNotation || typeof diceNotation !== 'string' || !diceNotation.match(/d/i)) {
+                return parseInt(diceNotation, 10) || 10;
             }
-
-            // Replace "d" with "*" for max calculation, e.g., "2d6" -> "2*6"
-            const expression = diceNotation.toLowerCase().replace(/d/g, '*');
-
-            // Use a safe evaluation method. This is a simple case, so we can parse it manually.
-            // This regex handles "XdY+Z" or "XdY-Z" or just "XdY"
-            const match = expression.match(/(\d+)\s*\*\s*(\d+)\s*([+-])?\s*(\d+)?/);
-            if (match) {
-                const numDice = parseInt(match[1], 10);
-                const sides = parseInt(match[2], 10);
-                let total = numDice * sides;
-                if (match[3] && match[4]) {
-                    const modifier = parseInt(match[4], 10);
-                    if (match[3] === '+') {
-                        total += modifier;
-                    } else {
-                        total -= modifier;
-                    }
-                }
-                return total;
-            } else {
-                // Handle flat numbers
-                const flatHp = parseInt(diceNotation, 10);
-                return isNaN(flatHp) ? 0 : flatHp;
-            }
+            const roller = new DiceRoller();
+            const roll = roller.roll(diceNotation);
+            return roll.maxTotal;
         } catch (e) {
             logToRenderer(`Error calculating max HP for "${diceNotation}": ${e.message}`);
-            return 0; // Fallback
+            return 10; // Fallback
         }
     });
 
