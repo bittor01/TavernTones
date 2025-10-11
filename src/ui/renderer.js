@@ -347,18 +347,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             creature.scores = { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), };
             creature.saves = { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), };
             creature.isMob = isMobMode;
-            creature.hp = getInt('creature-hp'); // Always take current HP from form for edits
 
             if (isMobMode) {
-                const newMobSize = getInt('mob-size');
-                // Preserve the original hpFormula if converting, otherwise it's already there.
-                if (!creatureBeingEdited.isMob) {
-                    creature.hpFormula = singleCreatureHPForMob;
-                }
+                creature.hp = calculatedMobTotalHp;
+                creature.maxHp = calculatedMobTotalHp;
                 creature.singleCreatureHP = calculatedSingleCreatureHP;
-                creature.maxHp = newMobSize * calculatedSingleCreatureHP;
-                creature.mobInitialCount = creatureBeingEdited.isMob ? creatureBeingEdited.mobInitialCount : newMobSize;
+                creature.mobInitialCount = getInt('mob-size');
+                creature.hpFormula = getVal('creature-hp');
             } else {
+                creature.hp = getVal('creature-hp');
                 // If converting from a mob, the hpFormula is still correct on the object.
                 creature.hpFormula = singleCreatureHPForMob;
                 creature.maxHp = creatureBeingEdited.isMob ? calculatedSingleCreatureHP : creatureBeingEdited.maxHp;

@@ -1069,8 +1069,10 @@ async function ipcloader() {
             if (!diceNotation || typeof diceNotation !== 'string') {
                 return 0;
             }
+
             // Replace "d" with "*" for max calculation, e.g., "2d6" -> "2*6"
             const expression = diceNotation.toLowerCase().replace(/d/g, '*');
+
             // Use a safe evaluation method. This is a simple case, so we can parse it manually.
             // This regex handles "XdY+Z" or "XdY-Z" or just "XdY"
             const match = expression.match(/(\d+)\s*\*\s*(\d+)\s*([+-])?\s*(\d+)?/);
