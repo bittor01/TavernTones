@@ -177,11 +177,58 @@ document.addEventListener('DOMContentLoaded', async () => {
             const monster = JSON.parse(rawDataString);
             statBlockArea.innerHTML = renderStatBlock(rawDataString);
             showPanel('statBlockArea', monster.name || 'Stat Block'); // Update title and show panel
-            currentStatBlockData = rawDataString; // Set the data for the push button
+            currentStatBlockData = { type: 'statblock', data: rawDataString }; // Set the data for the push button
         } catch (e) {
             statBlockArea.innerHTML = '<p>Error: Could not parse creature data.</p>';
             showPanel('statBlockArea', 'Error');
         }
+    }
+
+    function displayMobRules(creatureId) {
+        const statBlockArea = document.getElementById('statBlockArea');
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        if (!creature) {
+            statBlockArea.innerHTML = '<p>Could not find mob data.</p>';
+            showPanel('statBlockArea', 'Error');
+            return;
+        }
+
+        const attackMod = parseInt(creature.attackMod, 10) || 0;
+        const { mobAttackResults, areaTargets } = MOB_RULES_DATA;
+
+        const mobAttackRows = mobAttackResults.map(row => {
+            const ac = row.rollNeeded + attackMod;
+            return `<tr><td>${ac}</td><td>${row.hitsPer4 || 0}</td><td>${row.hitsPer5 || 0}</td><td>${row.hitsPer6 || 0}</td><td>${row.hitsPer8 || 0}</td><td>${row.hitsPer10 || 0}</td></tr>`;
+        }).join('');
+
+        const areaTargetRows = areaTargets.map(row => {
+            return `<tr><td>${row.targets}</td><td>${row.cone}</td><td>${row.cube}</td><td>${row.circular}</td><td>${row.line}</td></tr>`;
+        }).join('');
+
+        const contentHTML = `
+            <h3>Mob Rules</h3>
+            <h4>Mob Attacks (Atk: ${formatModifier(attackMod)})</h4>
+            <p class="footnote">The table shows the number of hits an attack action generates against a target's AC, based on the number of creatures in the mob.</p>
+            <table class="mob-rules-table">
+                <thead>
+                    <tr><th>AC</th><th>4 in Mob</th><th>5 in Mob</th><th>6 in Mob</th><th>8 in Mob</th><th>10 in Mob</th></tr>
+                </thead>
+                <tbody>${mobAttackRows}</tbody>
+            </table>
+            <hr>
+            <h4>Targets in Area of Effect</h4>
+            <table class="mob-rules-table">
+                    <thead>
+                    <tr><th>Targets</th><th>Cone</th><th>Cube</th><th>Circular*</th><th>Line</th></tr>
+                </thead>
+                <tbody>${areaTargetRows}</tbody>
+            </table>
+            <p class="footnote"><em>*Use for Cylinders, Emanations, and Spheres.</em></p>
+        `;
+
+        statBlockArea.innerHTML = contentHTML;
+        showPanel('statBlockArea', 'Mob Rules');
+        currentStatBlockData = { type: 'mob-rules', data: creatureId }; // Set data for push button
     }
 
     // --- Event Listeners ---
@@ -241,7 +288,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         window.electron.ipcRenderer.send('push-dicelog-to-discord', logContent);
                     }
                 } else if (activePanelId === 'statBlockArea' && currentStatBlockData) {
-                    window.electron.ipcRenderer.send('push-statblock-to-discord', currentStatBlockData);
+                    if (currentStatBlockData.type === 'statblock') {
+                        window.electron.ipcRenderer.send('push-statblock-to-discord', currentStatBlockData.data);
+                    } else if (currentStatBlockData.type === 'mob-rules') {
+                        window.electron.ipcRenderer.send('push-mob-rules-to-discord', { creatureId: currentStatBlockData.data });
+                    }
                 }
                 break;
             }
@@ -656,7 +707,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             let displayName = creature.name;
             if (creature.isMob) {
                 const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
-                displayName = `Mob of ${currentCount} ${creature.name} (of ${creature.mobInitialCount})`;
+                displayName = `${creature.name} (${currentCount})`;
             }
 
             let content = '';
@@ -742,7 +793,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             let displayName = creature.name;
             if (creature.isMob) {
                 const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
-                displayName = `Mob of ${currentCount} ${creature.name} (of ${creature.mobInitialCount})`;
+                displayName = `${creature.name} (${currentCount})`;
             }
             const attackButtonHTML = `<span class="header-stat interactive-stat attack-btn" data-id="${creature.id}">Attack: ${creature.attackMod || '+0'}</span>`;
 
@@ -809,7 +860,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (target.classList.contains('attack-btn')) {
                 if (creature) {
                     if (creature.isMob) {
-                        createPopup('mob-rules', creatureId, target);
+                        displayMobRules(creatureId);
                     } else {
                         createPopup('attack-roll', creatureId, target);
                     }
@@ -921,42 +972,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const itemsHTML = results.map(r => `<div class="popup-result-item" data-name="${r.name}" data-source="${r.source}">${r.name} (${r.source})</div>`).join('');
                 contentHTML = `<div class="popup-results-list">${itemsHTML}</div>`;
             }
-        } else if (type === 'mob-rules') {
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-            const attackMod = parseInt(creature.attackMod, 10) || 0;
-            const { mobAttackResults, areaTargets } = MOB_RULES_DATA;
-
-            const mobAttackRows = mobAttackResults.map(row => {
-                const ac = row.rollNeeded + attackMod;
-                return `<tr><td>${ac}</td><td>${row.hitsPer4}</td><td>${row.hitsPer5}</td><td>${row.hitsPer6}</td><td>${row.hitsPer8}</td><td>${row.hitsPer10}</td></tr>`;
-            }).join('');
-
-            const areaTargetRows = areaTargets.map(row => {
-                return `<tr><td>${row.targets}</td><td>${row.cone}</td><td>${row.cube}</td><td>${row.circular}</td><td>${row.line}</td></tr>`;
-            }).join('');
-
-            contentHTML = `
-                <div class="mob-rules-popup">
-                    <button id="push-mob-rules-btn" class="small-btn" title="Push to Chat">🖨️</button>
-                    <h4>Mob Attacks (Atk: ${formatModifier(attackMod)})</h4>
-                    <p class="footnote">The table shows the number of hits an attack action generates against a target's AC, based on the number of creatures in the mob.</p>
-                    <table class="mob-rules-table">
-                        <thead>
-                            <tr><th>AC</th><th>4 in Mob</th><th>5 in Mob</th><th>6 in Mob</th><th>8 in Mob</th><th>10 in Mob</th></tr>
-                        </thead>
-                        <tbody>${mobAttackRows}</tbody>
-                    </table>
-                    <hr>
-                    <h4>Targets in Area of Effect</h4>
-                    <table class="mob-rules-table">
-                         <thead>
-                            <tr><th>Targets</th><th>Cone</th><th>Cube</th><th>Circular*</th><th>Line</th></tr>
-                        </thead>
-                        <tbody>${areaTargetRows}</tbody>
-                    </table>
-                    <p class="footnote"><em>*Use for Cylinders, Emanations, and Spheres.</em></p>
-                </div>
-            `;
         }
 
 
@@ -1028,14 +1043,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     popup.remove();
                 });
             });
-        } else if (type === 'mob-rules') {
-            const pushBtn = document.getElementById('push-mob-rules-btn');
-            if (pushBtn) {
-                pushBtn.addEventListener('click', () => {
-                    window.electron.ipcRenderer.send('push-mob-rules-to-discord', { creatureId });
-                    // We don't remove the popup, just send the data
-                });
-            }
         } else if (type === 'edit-initiative') {
             const input = document.getElementById('popup-initiative-input');
             document.getElementById('popup-initiative-ok').addEventListener('click', () => {
@@ -1109,14 +1116,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     popup.remove();
                 });
             });
-        } else if (type === 'mob-rules') {
-            const pushBtn = document.getElementById('push-mob-rules-btn');
-            if (pushBtn) {
-                pushBtn.addEventListener('click', () => {
-                    window.electron.ipcRenderer.send('push-mob-rules-to-discord', { creatureId });
-                    // We don't remove the popup, just send the data
-                });
-            }
         }
 
         // Close popup when clicking outside

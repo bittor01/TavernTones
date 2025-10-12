@@ -336,21 +336,23 @@ function formatMobRulesForDiscord(creature) {
     const formatAttackMod = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
 
     // Format the Mob Attack Results table
-    let attackTable = '```\nRoll Needed | Normal | Advantage | Disadvantage\n------------|--------|-----------|--------------\n';
+    let attackTable = '```\n To Hit | Hits (4) | Hits (5) | Hits (6) | Hits (8) | Hits (10)\n--------|----------|----------|----------|----------|----------\n';
     mobAttackResults.forEach(row => {
-        const roll = row.roll.padEnd(11);
-        const normal = row.normal.toString().padEnd(6);
-        const adv = row.adv.toString().padEnd(9);
-        const dis = row.dis.toString();
-        attackTable += `${roll} | ${normal} | ${adv} | ${dis}\n`;
+        const acToHit = (row.rollNeeded + attackMod).toString().padEnd(6);
+        const hits4 = (row.hitsPer4 || 0).toString().padEnd(8);
+        const hits5 = (row.hitsPer5 || 0).toString().padEnd(8);
+        const hits6 = (row.hitsPer6 || 0).toString().padEnd(8);
+        const hits8 = (row.hitsPer8 || 0).toString().padEnd(8);
+        const hits10 = (row.hitsPer10 || 0).toString();
+        attackTable += ` ${acToHit} | ${hits4} | ${hits5} | ${hits6} | ${hits8} | ${hits10}\n`;
     });
     attackTable += '```';
 
     const mainEmbed = new EmbedBuilder()
         .setColor(0xFFA500) // Orange for rules
         .setTitle(`Mob Attack Rules for ${creature.name}`)
-        .setDescription(`This table shows the number of successful hits from a mob based on the d20 roll needed.\nThe mob's attack modifier is **${formatAttackMod(attackMod)}**.`)
-        .addFields({ name: 'Mob Attack Results', value: attackTable });
+        .setDescription(`This table shows the number of successful hits from a mob of a certain size based on the AC to hit.\nThe mob's attack modifier is **${formatAttackMod(attackMod)}**.`)
+        .addFields({ name: 'Mob Attack Hits vs. AC', value: attackTable });
 
     // Format the Area Targets table
     let areaTableString = '';
@@ -862,7 +864,11 @@ async function ipcloader() {
 
                 const activeMarker = index === currentTurnIndex ? '`➤`' : '` `';
                 const initiativeStr = creature.initiative.toString();
-                const nameStr = (creature.name || '');
+                let nameStr = creature.name || '';
+                if (creature.isMob) {
+                    const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
+                    nameStr = `Mob of ${currentCount} ${creature.name}`;
+                }
 
                 // New layout: Init | HP Bar | Name | Conditions
                 const line = `${activeMarker}${hpBar}${conditionStr} ${nameStr}`;
@@ -954,13 +960,14 @@ async function ipcloader() {
     });
 
     ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
-        const message = initiativeTracker.rollStat(creatureId, rollType, stat, type);
-        if (message) {
+        const result = initiativeTracker.rollStat(creatureId, rollType, stat, type);
+        if (result) {
+            const { message, embed } = result;
             mainWindow.webContents.send('dice-log', message);
             if (discordConfig.textChannel) {
                 const channel = client.channels.cache.get(discordConfig.textChannel);
                 if (channel) {
-                    channel.send(message);
+                    channel.send({ embeds: [embed] });
                 }
             }
         }

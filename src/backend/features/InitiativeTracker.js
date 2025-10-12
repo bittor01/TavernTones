@@ -389,7 +389,6 @@ class InitiativeTracker {
         const roll = new DiceRoller().roll(rollNotation);
         const result = formatRoll(creature.name, rollType, checkType, roll, modifier);
 
-        this.logDiceRoll(result.message);
         return result;
     }
 
@@ -407,7 +406,6 @@ class InitiativeTracker {
         const roll = new DiceRoller().roll(rollNotation);
         const result = formatRoll(creature.name, rollType, checkType, roll, modifier);
 
-        this.logDiceRoll(result.message);
         return result;
     }
 
