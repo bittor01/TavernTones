@@ -165,20 +165,53 @@ class InitiativeTracker {
             }
         });
 
-        const initiativeInput = creature.initiative.toString(); // Ensure it's a string
+        const initiativeInput = creature.initiative.toString().trim().toLowerCase();
         let rollLogMessage = null;
-        if (initiativeInput.match(/d/i)) { // It's a dice roll
+
+        let rollType = 'flat';
+        let initiativeString = initiativeInput;
+
+        if (initiativeInput.endsWith(' adv')) {
+            rollType = 'adv';
+            initiativeString = initiativeInput.slice(0, -4).trim();
+        } else if (initiativeInput.endsWith(' dis')) {
+            rollType = 'dis';
+            initiativeString = initiativeInput.slice(0, -4).trim();
+        }
+
+        // If it's a modifier string like "+5" or "-1"
+        if (initiativeString.startsWith('+') || initiativeString.startsWith('-')) {
+            let notation = '1d20';
+            if (rollType === 'adv') notation = '2d20kh1';
+            if (rollType === 'dis') notation = '2d20kl1';
+
+            const modifier = parseInt(initiativeString, 10) || 0;
+            const roll = new DiceRoller().roll(notation);
+            creature.initiative = roll.total + modifier;
+
+            const rawRolls = roll.rolls[0].rolls.map(r => r.value);
+            const chosenRoll = roll.rolls[0].value;
+            const detailedRolls = rawRolls.map(r => (r === chosenRoll) ? `**${r}**` : r).join(', ');
+
+            rollLogMessage = `${creature.name} rolled initiative (${rollType}): ${creature.initiative} ⟵ [${detailedRolls}] ${modifier >= 0 ? '+' : ''} ${Math.abs(modifier)}`;
+            this.logDiceRoll(rollLogMessage);
+        }
+        // If it's a full dice string like "1d20+2"
+        else if (/d/i.test(initiativeString)) {
+            // Note: adv/dis is ignored here. This is a reasonable limitation for now.
             try {
-                const roll = new DiceRoller().roll(initiativeInput);
+                const roll = new DiceRoller().roll(initiativeString);
                 creature.initiative = roll.total;
-                rollLogMessage = `${creature.name} rolled initiative: ${initiativeInput} = ${roll.total}`;
+                rollLogMessage = `${creature.name} rolled initiative: ${initiativeString} = ${roll.total}`;
                 this.logDiceRoll(rollLogMessage);
             } catch (e) {
-                this.logToRenderer(`Invalid initiative dice notation "${initiativeInput}". Defaulting to 10.`);
                 creature.initiative = 10;
+                this.logToRenderer(`Invalid initiative dice notation: "${initiativeString}". Defaulting to 10.`);
             }
-        } else {
-            creature.initiative = parseFloat(initiativeInput) || 0;
+        }
+        // If it's just a number
+        else {
+            creature.initiative = parseFloat(initiativeString) || 0;
         }
 
         this.initiativeOrder.push(creature);
