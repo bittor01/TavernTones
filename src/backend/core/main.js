@@ -17,7 +17,7 @@ const CommandHandler = require('../../discord/CommandHandler.js');
 const FiveEToolsParser = require('./5eParser.js');
 const { getDiscordConfig, setDiscordConfig } = require('./config.js');
 const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
-const { mobAttackResults, areaTargets } = require('../data/mobRules.js');
+const { mobRules } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
@@ -244,7 +244,7 @@ ipcMain.handle('get-dnd-conditions', async () => {
 });
 
 ipcMain.handle('get-mob-rules-data', async () => {
-    return { mobAttackResults, areaTargets };
+    return mobRules;
 });
 
 apploader();
@@ -332,28 +332,36 @@ function formatStatBlockForDiscord(monster) {
 }
 
 function formatMobRulesForDiscord(creature) {
-    const attackMod = parseInt(creature.attackMod, 10) || 0;
-    const formatAttackMod = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
+    const { description, resultsTable } = mobRules;
 
-    // Format the Mob Attack Results table
-    let attackTable = '```\n To Hit | Hits (4) | Hits (5) | Hits (6) | Hits (8) | Hits (10)\n--------|----------|----------|----------|----------|----------\n';
-    mobAttackResults.forEach(row => {
-        const acToHit = (row.rollNeeded + attackMod).toString().padEnd(6);
-        const hits4 = (row.hitsPer4 || 0).toString().padEnd(8);
-        const hits5 = (row.hitsPer5 || 0).toString().padEnd(8);
-        const hits6 = (row.hitsPer6 || 0).toString().padEnd(8);
-        const hits8 = (row.hitsPer8 || 0).toString().padEnd(8);
-        const hits10 = (row.hitsPer10 || 0).toString();
-        attackTable += ` ${acToHit} | ${hits4} | ${hits5} | ${hits6} | ${hits8} | ${hits10}\n`;
+    // Create the header for the table
+    const header = "Roll Needed | Normal | w/Adv | w/Dis | 1/4 | 1/5 | 1/6 | 1/8 | 1/10";
+    const divider = "-------------|--------|-------|-------|-----|-----|-----|-----|------";
+
+    // Format each row of the table
+    const tableRows = resultsTable.map(row => {
+        return [
+            row.rollNeeded.padEnd(12),
+            row.normal.padEnd(6),
+            row.withAdvantage.padEnd(5),
+            row.withDisadvantage.padEnd(5),
+            row.outOf4.padEnd(3),
+            row.outOf5.padEnd(3),
+            row.outOf6.padEnd(3),
+            row.outOf8.padEnd(3),
+            row.outOf10.padEnd(4)
+        ].join(' | ');
     });
-    attackTable += '```';
+
+    const formattedTable = "```" + [header, divider, ...tableRows].join('\n') + "```";
 
     const mainEmbed = new EmbedBuilder()
         .setColor(0xFFA500) // Orange for rules
-        .setTitle(`Mob Attack Rules for ${creature.name}`)
-        .setDescription(`This table shows the number of successful hits from a mob of a certain size based on the AC to hit.\nThe mob's attack modifier is **${formatAttackMod(attackMod)}**.`)
-        .addFields({ name: 'Mob Attack Hits vs. AC', value: attackTable });
+        .setTitle(`Mob Combat Rules`)
+        .setDescription(description.trim()) // Use the new description
+        .addFields({ name: 'Mob Results', value: formattedTable });
 
+    // The new format doesn't have separate long fields, so we return an empty array.
     return { mainEmbed, longFields: [] };
 }
 
