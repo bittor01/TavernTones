@@ -1166,10 +1166,11 @@ async function ipcloader() {
                 });
 
                 for (const field of longFields) {
-                    const chunks = splitText(field.value, 4096); // Embed description limit
+                    const chunks = splitText(field.value, 2000); // Use a safer, smaller chunk size
                     for (let i = 0; i < chunks.length; i++) {
                         const chunkEmbed = new EmbedBuilder()
                             .setColor(0xFFA500)
+                             .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
                             .setDescription(chunks[i]);
                         await thread.send({ embeds: [chunkEmbed] });
                     }
