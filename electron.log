@@ -1,0 +1,10 @@
+Main.js script started
+Electron loaded.
+Path loaded.
+Discord.js Client loaded.
+Discord.js Voice loaded.
+Discord client instantiated.
+Axios loaded.
+[4541:1013/020526.353205:ERROR:ozone_platform_x11.cc(245)] Missing X server or $DISPLAY
+[4541:1013/020526.353270:ERROR:env.cc(258)] The platform failed to initialize.  Exiting.
+/app/node_modules/electron/dist/electron exited with signal SIGSEGV

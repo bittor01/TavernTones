@@ -355,7 +355,7 @@ function formatMobRulesForDiscord(creature) {
         .addFields({ name: 'Mob Attack Hits vs. AC', value: attackTable });
 
     // Format the Area Targets table
-    let areaTableString = '';
+    let areaTableString = `The Targets in Area of Effect table offers a guideline. To use the table, find the column for the shape of the area, then read down until you find its size. Then check the rightmost column to see about how many creatures are caught in the area. If you imagine that the targets are spread out, decrease the number by 1d3. If they're bunched up, you can increase the number by 1d3. Of course, an area can't encompass more creatures than are present in an encounter.\n\nYour judgment always outweighs these guidelines, and it's fine to err on the side of affecting more creatures. For example, if eight zombies are crowded around a Fighter when the Bard centers a Shatter spell on the Fighter's space, the spell's area should definitely engulf all eight zombies, even though according to the table, a 10-foot-radius Sphere includes only three creatures.\n\n`;
     areaTargets.forEach(row => {
         let parts = [];
         if (row.cone !== '—') parts.push(`**Cone:** ${row.cone}`);
@@ -364,7 +364,7 @@ function formatMobRulesForDiscord(creature) {
         if (row.line !== '—') parts.push(`**Line:** ${row.line}`);
         areaTableString += `**${row.targets} targets:** ${parts.join(' | ')}\n`;
     });
-    areaTableString += `\n*Use Circular for Cylinders, Emanations, and Spheres.`;
+    areaTableString += `\n*Use this column for Cylinders, Emanations (using the size of the Emanation rather than its radius), and Spheres.`;
 
     const longFields = [{ name: 'Targets in Area of Effect', value: areaTableString }];
 
@@ -896,7 +896,8 @@ async function ipcloader() {
     ipcMain.on('copy-creature', (event, { creatureId }) => {
         const creature = initiativeTracker.getCreature(creatureId);
         if (creature) {
-            mainWindow.webContents.send('populate-edit-form', creature);
+            const newCreature = { ...creature, id: Date.now() };
+            mainWindow.webContents.send('populate-edit-form', newCreature);
         }
     });
 
