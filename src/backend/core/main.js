@@ -526,6 +526,11 @@ async function ipcloader() {
     logToRenderer('ipcloader() called.');
     initiativeTracker = new InitiativeTracker(logToRenderer, logDiceRollToRenderer, sendInitiativeUpdate, autosavePath);
     // --- All core IPC listeners should be registered after the app is ready ---
+    ipcMain.on('request-initial-load', () => {
+        if (initiativeTracker) {
+            initiativeTracker.sendFullState();
+        }
+    });
     ipcMain.on('open-gamify-tool', createGamifyWindow);
 
     ipcMain.handle('show-confirm-dialog', async (event, options) => {
@@ -1166,11 +1171,14 @@ async function ipcloader() {
                 });
 
                 for (const field of longFields) {
-                    const chunks = splitText(field.value, 2000); // Use a safer, smaller chunk size
+                    // Discord embed descriptions have a max length of 4096, but we use a smaller
+                    // chunk size to be safe and improve readability.
+                    const chunks = splitText(field.value, 2000);
                     for (let i = 0; i < chunks.length; i++) {
                         const chunkEmbed = new EmbedBuilder()
                             .setColor(0xFFA500)
-                             .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
+                             // Add a title to each chunk for clarity, especially when there are multiple.
+                            .setTitle(chunks.length > 1 ? `${field.name} (Part ${i + 1}/${chunks.length})` : field.name)
                             .setDescription(chunks[i]);
                         await thread.send({ embeds: [chunkEmbed] });
                     }

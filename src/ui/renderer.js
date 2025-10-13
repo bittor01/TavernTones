@@ -34,10 +34,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Initial Load ---
     DND_CONDITIONS = await window.electron.ipcRenderer.invoke('get-dnd-conditions');
     MOB_RULES_DATA = await window.electron.ipcRenderer.invoke('get-mob-rules-data');
+    // Send a signal to the main process that the window is ready for data.
     window.electron.ipcRenderer.send('window-ready');
+    // Specifically request the initial load after a short delay to ensure the main process is ready.
     setTimeout(() => {
         window.electron.ipcRenderer.send('request-initial-load');
-    }, 100); // 100ms delay to ensure main process is ready
+    }, 100);
 
     // --- Initial UI Setup ---
     addCreatureForm.innerHTML = `
@@ -217,7 +219,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             </table>
             <hr>
             <h4>Targets in Area of Effect</h4>
-            <p class="footnote">The Targets in Area of Effect table offers a guideline. To use the table, find the column for the shape of the area, then read down until you find its size. Then check the rightmost column to see about how many creatures are caught in the area. If you imagine that the targets are spread out, decrease the number by 1d3. If they're bunched up, you can increase the number by 1d3. Of course, an area can't encompass more creatures than are present in an encounter.<br><br>Your judgment always outweighs these guidelines, and it's fine to err on the side of affecting more creatures. For example, if eight zombies are crowded around a Fighter when the Bard centers a Shatter spell on the Fighter's space, the spell's area should definitely engulf all eight zombies, even though according to the table, a 10-foot-radius Sphere includes only three creatures.</p>
+            <div class="footnote">
+                The Targets in Area of Effect table offers a guideline. To use the table, find the column for the shape of the area, then read down until you find its size. Then check the rightmost column to see about how many creatures are caught in the area. If you imagine that the targets are spread out, decrease the number by 1d3. If they're bunched up, you can increase the number by 1d3. Of course, an area can't encompass more creatures than are present in an encounter.
+                <br><br>
+                Your judgment always outweighs these guidelines, and it's fine to err on the side of affecting more creatures. For example, if eight zombies are crowded around a Fighter when the Bard centers a Shatter spell on the Fighter's space, the spell's area should definitely engulf all eight zombies, even though according to the table, a 10-foot-radius Sphere includes only three creatures.
+            </div>
             <table class="mob-rules-table">
                     <thead>
                     <tr><th>Targets</th><th>Cone</th><th>Cube</th><th>Circular*</th><th>Line</th></tr>

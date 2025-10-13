@@ -64,6 +64,11 @@ class InitiativeTracker {
             this.initiativeOrder = [];
             this.currentTurnIndex = 0;
         }
+        // Do not update frontend automatically on load to prevent race condition.
+        // The frontend will request the state when it's ready.
+    }
+
+    sendFullState() {
         this._updateFrontend();
     }
 
