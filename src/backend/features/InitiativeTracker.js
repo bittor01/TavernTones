@@ -167,12 +167,16 @@ class InitiativeTracker {
 
         const initiativeInput = creature.initiative.toString(); // Ensure it's a string
         let rollLogMessage = null;
-        if (initiativeInput.startsWith('+') || initiativeInput.startsWith('-')) {
-            const modifier = parseInt(initiativeInput, 10);
-            const roll = new DiceRoller().roll('1d20').total;
-            creature.initiative = roll + modifier;
-            rollLogMessage = `${creature.name} rolled initiative: ${roll} ${modifier < 0 ? '-' : '+'} ${Math.abs(modifier)} = ${creature.initiative}`;
-            this.logDiceRoll(rollLogMessage);
+        if (initiativeInput.match(/d/i)) { // It's a dice roll
+            try {
+                const roll = new DiceRoller().roll(initiativeInput);
+                creature.initiative = roll.total;
+                rollLogMessage = `${creature.name} rolled initiative: ${initiativeInput} = ${roll.total}`;
+                this.logDiceRoll(rollLogMessage);
+            } catch (e) {
+                this.logToRenderer(`Invalid initiative dice notation "${initiativeInput}". Defaulting to 10.`);
+                creature.initiative = 10;
+            }
         } else {
             creature.initiative = parseFloat(initiativeInput) || 0;
         }
