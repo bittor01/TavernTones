@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function displayMobRules(creatureId) {
         const statBlockArea = document.getElementById('statBlockArea');
-        const { description, resultsTable } = MOB_RULES_DATA.mobRules;
+        const { description, resultsTable } = MOB_RULES_DATA;
 
         if (!description || !resultsTable) {
             statBlockArea.innerHTML = '<p>Mob rules data is missing or malformed.</p>';
@@ -550,6 +550,69 @@ document.addEventListener('DOMContentLoaded', async () => {
             delete addCreatureForm.dataset.monsterRawData;
             document.getElementById('imported-monster-info-btn').style.display = 'none';
         }
+    });
+
+    window.electron.ipcRenderer.on('populate-add-form', (event, creature) => {
+        if (!creature) return;
+
+        // This is for "Copying" a creature. It populates the form but doesn't
+        // put the form into "edit mode".
+        creatureBeingEdited = null; // Ensure we are not in edit mode
+
+        // Populate basic fields
+        document.getElementById('creature-name').value = creature.name || '';
+        document.getElementById('creature-initiative').value = creature.initiative || '';
+        document.getElementById('creature-hp').value = creature.hpFormula || creature.hp || '';
+        document.getElementById('creature-ac').value = creature.ac || '';
+        document.getElementById('creature-speed').value = creature.speed || '';
+        document.getElementById('attack-modifier').value = creature.attackMod || '';
+        document.getElementById('save-dc').value = creature.saveDc || '';
+
+        // Populate stats
+        const scores = creature.scores || {};
+        document.getElementById('str-score').value = scores.str || '';
+        document.getElementById('dex-score').value = scores.dex || '';
+        document.getElementById('con-score').value = scores.con || '';
+        document.getElementById('int-score').value = scores.int || '';
+        document.getElementById('wis-score').value = scores.wis || '';
+        document.getElementById('cha-score').value = scores.cha || '';
+        const saves = creature.saves || {};
+        document.getElementById('str-save').value = saves.str || '';
+        document.getElementById('dex-save').value = saves.dex || '';
+        document.getElementById('con-save').value = saves.con || '';
+        document.getElementById('int-save').value = saves.int || '';
+        document.getElementById('wis-save').value = saves.wis || '';
+        document.getElementById('cha-save').value = saves.cha || '';
+
+        // Handle Mob State
+        isMobMode = creature.isMob || false;
+        const mobControls = document.getElementById('mob-controls');
+        const convertToMobBtn = document.getElementById('convert-to-mob-btn');
+        if (isMobMode) {
+            // When copying a mob, we need to know the count. We can derive it.
+            const mobSize = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 1;
+            document.getElementById('mob-size').value = mobSize;
+            singleCreatureHPForMob = creature.hpFormula || creature.singleCreatureHP;
+            mobControls.style.display = 'flex';
+            convertToMobBtn.textContent = 'Convert to Single';
+        } else {
+            mobControls.style.display = 'none';
+            convertToMobBtn.textContent = 'Convert to Mob';
+            singleCreatureHPForMob = creature.hpFormula || creature.maxHp;
+        }
+
+        // Handle imported monster data
+        if (creature.rawData) {
+            addCreatureForm.dataset.monsterRawData = creature.rawData;
+            document.getElementById('imported-monster-info-btn').style.display = 'inline-block';
+        } else {
+            delete addCreatureForm.dataset.monsterRawData;
+            document.getElementById('imported-monster-info-btn').style.display = 'none';
+        }
+
+        // Scroll to the top and focus the name field for a better user experience
+        window.scrollTo(0, 0);
+        document.getElementById('creature-name').focus();
     });
 
     function populateMonsterForm(monster) {

@@ -41,7 +41,7 @@ contextBridge.exposeInMainWorld('electron', {
       }
     },
     on: (channel, func) => {
-      const validChannels = ['log-message', 'music-player-status', 'dice-log', 'update-initiative-list', 'populate-edit-form', 'soundboard-state-change'];
+      const validChannels = ['log-message', 'music-player-status', 'dice-log', 'update-initiative-list', 'populate-edit-form', 'soundboard-state-change', 'populate-add-form'];
       if (validChannels.includes(channel)) {
         const subscription = (event, ...args) => func(event, ...args);
         ipcRenderer.on(channel, subscription);

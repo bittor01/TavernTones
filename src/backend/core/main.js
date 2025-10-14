@@ -895,8 +895,10 @@ async function ipcloader() {
     ipcMain.on('copy-creature', (event, { creatureId }) => {
         const creature = initiativeTracker.getCreature(creatureId);
         if (creature) {
+            // When copying, we want to populate the "Add" form, not the "Edit" form.
+            // We give it a new ID to ensure it's a distinct creature.
             const newCreature = { ...creature, id: Date.now() };
-            mainWindow.webContents.send('populate-edit-form', newCreature);
+            mainWindow.webContents.send('populate-add-form', newCreature);
         }
     });
 

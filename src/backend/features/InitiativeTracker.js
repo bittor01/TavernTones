@@ -265,8 +265,14 @@ class InitiativeTracker {
     }
 
     editCreature(creatureId) {
-        // Return creature data without modifying the list
-        return this.getCreature(creatureId);
+        const creatureIndex = this.initiativeOrder.findIndex(c => c.id === creatureId);
+        if (creatureIndex !== -1) {
+            const [creature] = this.initiativeOrder.splice(creatureIndex, 1);
+            this._updateFrontend();
+            this._saveState();
+            return creature;
+        }
+        return null;
     }
 
     updateCreature(updatedCreature) {
