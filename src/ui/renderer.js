@@ -188,35 +188,53 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function displayMobRules(creatureId) {
         const statBlockArea = document.getElementById('statBlockArea');
-        const creature = initiativeOrder.find(c => c.id === creatureId);
-        if (!creature) {
-            statBlockArea.innerHTML = '<p>Could not find mob data.</p>';
+        const { description, resultsTable } = MOB_RULES_DATA.mobRules;
+
+        if (!description || !resultsTable) {
+            statBlockArea.innerHTML = '<p>Mob rules data is missing or malformed.</p>';
             showPanel('statBlockArea', 'Error');
             return;
         }
 
-        const attackMod = parseInt(creature.attackMod, 10) || 0;
-        const { mobAttackResults, areaTargets } = MOB_RULES_DATA;
+        const tableHeader = `
+            <thead>
+                <tr>
+                    <th>Roll Needed</th>
+                    <th>Normal</th>
+                    <th>w/Adv</th>
+                    <th>w/Dis</th>
+                    <th>1/4</th>
+                    <th>1/5</th>
+                    <th>1/6</th>
+                    <th>1/8</th>
+                    <th>1/10</th>
+                </tr>
+            </thead>
+        `;
 
-        const mobAttackRows = mobAttackResults.map(row => {
-            const ac = row.rollNeeded + attackMod;
-            return `<tr><td>${ac}</td><td>${row.hitsPer4 || 0}</td><td>${row.hitsPer5 || 0}</td><td>${row.hitsPer6 || 0}</td><td>${row.hitsPer8 || 0}</td><td>${row.hitsPer10 || 0}</td></tr>`;
-        }).join('');
-
-        const areaTargetRows = areaTargets.map(row => {
-            return `<tr><td>${row.targets}</td><td>${row.cone}</td><td>${row.cube}</td><td>${row.circular}</td><td>${row.line}</td></tr>`;
-        }).join('');
+        const tableBody = resultsTable.map(row => `
+            <tr>
+                <td>${row.rollNeeded}</td>
+                <td>${row.normal}</td>
+                <td>${row.withAdvantage}</td>
+                <td>${row.withDisadvantage}</td>
+                <td>${row.outOf4}</td>
+                <td>${row.outOf5}</td>
+                <td>${row.outOf6}</td>
+                <td>${row.outOf8}</td>
+                <td>${row.outOf10}</td>
+            </tr>
+        `).join('');
 
         const contentHTML = `
-            <h3>Mob Rules</h3>
-            <h4>Mob Attacks (Atk: ${formatModifier(attackMod)})</h4>
-            <p class="footnote">The table shows the number of hits an attack action generates against a target's AC, based on the number of creatures in the mob.</p>
-            <table class="mob-rules-table">
-                <thead>
-                    <tr><th>AC</th><th>4 in Mob</th><th>5 in Mob</th><th>6 in Mob</th><th>8 in Mob</th><th>10 in Mob</th></tr>
-                </thead>
-                <tbody>${mobAttackRows}</tbody>
-            </table>
+            <div class="mob-rules-container">
+                ${description.replace(/\n/g, '<br>')}
+                <h3>Mob Results</h3>
+                <table class="mob-rules-table">
+                    ${tableHeader}
+                    <tbody>${tableBody}</tbody>
+                </table>
+            </div>
         `;
 
         statBlockArea.innerHTML = contentHTML;
