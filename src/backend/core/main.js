@@ -357,7 +357,7 @@ function formatMobRulesForDiscord(creature) {
 
     const mainEmbed = new EmbedBuilder()
         .setColor(0xFFA500) // Orange for rules
-        .setTitle(`Mob Combat Rules`)
+        .setTitle(`Mob Combat Rules: ${creature.name}`)
         .setDescription(description.trim()) // Use the new description
         .addFields({ name: 'Mob Results', value: formattedTable });
 
@@ -1155,32 +1155,9 @@ async function ipcloader() {
             return;
         }
         try {
-            const { mainEmbed, longFields } = formatMobRulesForDiscord(creature);
-
-            const mainMessage = await channel.send({ embeds: [mainEmbed] });
-            logToRenderer('[push-mob-rules] Successfully pushed main mob rules embed.');
-
-            if (longFields.length > 0 && longFields[0].value) {
-                const thread = await mainMessage.startThread({
-                    name: `${creature.name} - Area Targets`,
-                    autoArchiveDuration: 60,
-                });
-
-                for (const field of longFields) {
-                    // Discord embed descriptions have a max length of 4096, but we use a smaller
-                    // chunk size to be safe and improve readability.
-                    const chunks = splitText(field.value, 2000);
-                    for (let i = 0; i < chunks.length; i++) {
-                        const chunkEmbed = new EmbedBuilder()
-                            .setColor(0xFFA500)
-                             // Add a title to each chunk for clarity, especially when there are multiple.
-                            .setTitle(chunks.length > 1 ? `${field.name} (Part ${i + 1}/${chunks.length})` : field.name)
-                            .setDescription(chunks[i]);
-                        await thread.send({ embeds: [chunkEmbed] });
-                    }
-                }
-                logToRenderer(`[push-mob-rules] Sent area of effect details to thread.`);
-            }
+            const { mainEmbed } = formatMobRulesForDiscord(creature);
+            await channel.send({ embeds: [mainEmbed] });
+            logToRenderer('[push-mob-rules] Successfully pushed mob rules embed.');
         } catch (error) {
             logToRenderer(`[push-mob-rules] FAILED to send embed: ${error}`);
         }
