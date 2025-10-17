@@ -1174,16 +1174,14 @@ async function ipcloader() {
             return;
         }
 
-        // Calculate path immediately to prevent race condition
-        const { imagePath: relativeImagePath } = mobRules;
-        const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-        const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativeImagePath);
-
+        let absoluteImagePath; // Define here to ensure it's available in the catch block
         try {
             logToRenderer('[push-mob-rules] Formatting mob rules for Discord.');
-            const { mainEmbed } = formatMobRulesForDiscord(creatureName);
+            const { mainEmbed, imagePath: relativeImagePath } = formatMobRulesForDiscord(creatureName);
 
-            logToRenderer(`[push-mob-rules] Using pre-calculated absolute image path: ${absoluteImagePath}`);
+            const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
+            absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativeImagePath);
+            logToRenderer(`[push-mob-rules] Using absolute image path: ${absoluteImagePath}`);
 
             logToRenderer('[push-mob-rules] Attempting to send embed with image to Discord...');
             await channel.send({
@@ -1197,7 +1195,8 @@ async function ipcloader() {
         } catch (error) {
             logToRenderer(`[push-mob-rules] FAILED to send embed: ${error.message}`);
             logToRenderer(`[push-mob-rules] Error stack: ${error.stack}`);
-            dialog.showErrorBox('Discord Error', `Failed to send mob rules to Discord. Please ensure the image file exists at the calculated path: ${absoluteImagePath}\n\n${error.message}`);
+            const pathForError = absoluteImagePath || 'Path not calculated';
+            dialog.showErrorBox('Discord Error', `Failed to send mob rules to Discord. Please ensure the image file exists at the calculated path: ${pathForError}\n\n${error.message}`);
         }
     });
 }
