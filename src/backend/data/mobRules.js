@@ -30,7 +30,19 @@ const mobRules = {
             },
             {
                 name: "Average Results",
-                value: "Whenever you would otherwise make a number of D20 Tests for identical monsters, the Mob Results table can help you determine the number of successful D20 Tests the monsters get without having to roll dice. Follow these steps:\n\n**Step 1.** Determine the minimum d20 roll the monsters need to succeed on the D20 Test using the following formula:\n*Roll needed = target number − monster's bonus*\n\n**Step 2.** Find the roll needed on the Mob Results table. If all the monsters have Advantage on the roll (for example, if they're attacking and have the Pack Tactics trait, or if they're making a saving throw against a spell and have the Magic Resistance trait), find the roll needed in the With Advantage column. If all the monsters have Disadvantage (for example, if they're attacking a creature protected by the Blur spell), use the With Disadvantage column. Otherwise, use the Normal column.\n\n**Step 3.** Read across the table to find a fractional number of successes you can easily apply to the group of monsters. That's the fraction of monsters that succeed on the D20 Test."
+                value: "Whenever you would otherwise make a number of D20 Tests for identical monsters, the Mob Results table can help you determine the number of successful D20 Tests the monsters get without having to roll dice. Follow these steps:"
+            },
+            {
+                name: "Step 1: Determine Roll Needed",
+                value: "Determine the minimum d20 roll the monsters need to succeed on the D20 Test using the following formula:\n*Roll needed = target number − monster's bonus*"
+            },
+            {
+                name: "Step 2: Find Roll on Table",
+                value: "Find the roll needed on the Mob Results table. If all the monsters have Advantage on the roll (e.g., Pack Tactics, Magic Resistance), find the roll needed in the With Advantage column. If all the monsters have Disadvantage (e.g., attacking a creature protected by Blur), use the With Disadvantage column. Otherwise, use the Normal column."
+            },
+            {
+                name: "Step 3: Find Success Fraction",
+                value: "Read across the table to find a fractional number of successes you can easily apply to the group of monsters. That's the fraction of monsters that succeed on the D20 Test."
             }
         ]
     }
