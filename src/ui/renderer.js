@@ -33,7 +33,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Initial Load ---
     DND_CONDITIONS = await window.electron.ipcRenderer.invoke('get-dnd-conditions');
+    console.log('[UI] Fetching mob rules data...');
     MOB_RULES_DATA = await window.electron.ipcRenderer.invoke('get-mob-rules-data');
+    console.log('[UI] Mob rules data received:', MOB_RULES_DATA);
     // Send a signal to the main process that the window is ready for data.
     window.electron.ipcRenderer.send('window-ready');
     // Specifically request the initial load after a short delay to ensure the main process is ready.
@@ -187,23 +189,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function displayMobRules(creatureId) {
+        console.log('[UI] displayMobRules called for creature ID:', creatureId);
         const statBlockArea = document.getElementById('statBlockArea');
+
+        console.log('[UI] Current MOB_RULES_DATA:', MOB_RULES_DATA);
+        // It's possible MOB_RULES_DATA is null or not an object, so check that first.
+        if (!MOB_RULES_DATA) {
+            console.error('[UI] MOB_RULES_DATA is null or undefined.');
+            statBlockArea.innerHTML = '<p>Fatal Error: Mob rules data object is not available.</p>';
+            showPanel('statBlockArea', 'Error');
+            return;
+        }
+
         const { ui, imagePath } = MOB_RULES_DATA;
 
         if (!ui || !ui.text || !imagePath) {
+            console.error('[UI] Mob rules data is missing or malformed.', { ui, imagePath });
             statBlockArea.innerHTML = '<p>Mob rules data is missing or malformed.</p>';
             showPanel('statBlockArea', 'Error');
             return;
         }
 
+        console.log('[UI] Requesting image as data URL for path:', imagePath);
         const imageUrl = await window.electron.ipcRenderer.invoke('get-image-as-data-url', imagePath);
 
         if (!imageUrl) {
+            console.error('[UI] Failed to get image URL from main process.');
             statBlockArea.innerHTML = '<p>Failed to load mob rules image.</p>';
             showPanel('statBlockArea', 'Error');
             return;
         }
 
+        console.log('[UI] Successfully got image URL. Rendering content.');
         const contentHTML = `
             <div class="mob-rules-container">
                 ${ui.text}
@@ -216,6 +233,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const creature = initiativeOrder.find(c => c.id === creatureId);
         const creatureName = creature ? creature.name : 'Unknown Mob';
         currentStatBlockData = { type: 'mob-rules', data: { creatureName } };
+        console.log('[UI] Mob rules displayed. Set currentStatBlockData for push button:', currentStatBlockData);
     }
 
     // --- Event Listeners ---

@@ -244,7 +244,19 @@ ipcMain.handle('get-dnd-conditions', async () => {
 });
 
 ipcMain.handle('get-mob-rules-data', async () => {
-    return mobRules;
+    logToRenderer('[IPC] Received request for mob rules data.');
+    try {
+        // Basic check to ensure mobRules is not null or undefined
+        if (mobRules && mobRules.ui && mobRules.ui.text) {
+            logToRenderer(`[IPC] Sending mob rules data. Text length: ${mobRules.ui.text.length}`);
+        } else {
+            logToRenderer('[IPC] Mob rules data is missing or malformed.');
+        }
+        return mobRules;
+    } catch (error) {
+        logToRenderer(`[IPC] Error in get-mob-rules-data: ${error.message}`);
+        return null; // Return null to prevent further errors on the frontend
+    }
 });
 
 ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
