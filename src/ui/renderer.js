@@ -33,9 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Initial Load ---
     DND_CONDITIONS = await window.electron.ipcRenderer.invoke('get-dnd-conditions');
-    logMessage('[UI] Fetching mob rules data...');
     MOB_RULES_DATA = await window.electron.ipcRenderer.invoke('get-mob-rules-data');
-    logMessage(`[UI] Mob rules data received: ${JSON.stringify(MOB_RULES_DATA)}`);
     // Send a signal to the main process that the window is ready for data.
     window.electron.ipcRenderer.send('window-ready');
     // Specifically request the initial load after a short delay to ensure the main process is ready.
@@ -320,25 +318,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 break;
             case 'push-panel-btn': {
                 const activePanelId = logPanels[currentPanelIndex].id;
-                logMessage(`[UI] Push to chat button clicked. Active panel: ${activePanelId}`);
                 if (activePanelId === 'diceLog') {
                     const diceLog = document.getElementById('diceLog');
-                    const entries = Array.from(diceLog.children).slice(-12);
+                    const entries = Array.from(diceLog.children).slice(-12); // Get last 12 entries
                     const logContent = entries.map(entry => entry.textContent).join('\n');
                     if (logContent) {
-                        logMessage('[UI] Pushing dice log to Discord.');
                         window.electron.ipcRenderer.send('push-dicelog-to-discord', logContent);
                     }
-                } else if (activePanelId === 'statBlockArea') {
-                    logMessage(`[UI] Pushing stat block area content. Current data: ${JSON.stringify(currentStatBlockData)}`);
-                    if (currentStatBlockData && currentStatBlockData.type === 'statblock') {
-                        logMessage('[UI] Pushing statblock to Discord.');
+                } else if (activePanelId === 'statBlockArea' && currentStatBlockData) {
+                    if (currentStatBlockData.type === 'statblock') {
                         window.electron.ipcRenderer.send('push-statblock-to-discord', currentStatBlockData.data);
-                    } else if (currentStatBlockData && currentStatBlockData.type === 'mob-rules') {
-                        logMessage('[UI] Pushing mob rules to Discord.');
+                    } else if (currentStatBlockData.type === 'mob-rules') {
+                        // The data now contains the creature's name directly.
                         window.electron.ipcRenderer.send('push-mob-rules-to-discord', currentStatBlockData.data);
-                    } else {
-                        logMessage(`[UI] Error: Push button clicked for stat block, but currentStatBlockData is invalid or null. Data: ${JSON.stringify(currentStatBlockData)}`);
                     }
                 }
                 break;
@@ -983,18 +975,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const creature = initiativeOrder.find(c => c.id === creatureId);
 
             if (target.classList.contains('attack-btn')) {
-                logMessage(`[UI] Attack button clicked for creature ID: ${creatureId}`);
                 if (creature) {
-                    logMessage(`[UI] Creature found: ${creature.name}, isMob: ${creature.isMob}`);
                     if (creature.isMob) {
-                        logMessage('[UI] Creature is a mob, calling displayMobRules...');
                         displayMobRules(creatureId);
                     } else {
-                        logMessage('[UI] Creature is not a mob, creating attack roll popup...');
                         createPopup('attack-roll', creatureId, target);
                     }
-                } else {
-                    logMessage(`[UI] Error: Attack button clicked, but no creature found for ID: ${creatureId}`);
                 }
             } else if (target.classList.contains('stat-roll-btn')) {
                 const { type, stat } = target.dataset;
