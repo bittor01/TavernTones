@@ -260,24 +260,20 @@ ipcMain.handle('get-mob-rules-data', async () => {
 });
 
 ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
+    const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
+    const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativePath);
+    logToRenderer(`[IPC] get-image-as-data-url: Attempting to read image from absolute path: ${absoluteImagePath}`);
+
     try {
-        logToRenderer(`[Debug] Received request for image: ${relativePath}`);
-        const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-        logToRenderer(`[Debug] App is packaged: ${app.isPackaged}. Base path: ${basePath}`);
-
-        const imagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativePath);
-        logToRenderer(`[Debug] Constructed image path: ${imagePath}`);
-
-        const data = await fs.readFile(imagePath);
-        logToRenderer(`[Debug] Successfully read image file of size: ${data.length} bytes.`);
-        const extension = path.extname(imagePath).substring(1);
+        const data = await fs.readFile(absoluteImagePath);
+        const extension = path.extname(absoluteImagePath).substring(1);
         const dataUrl = `data:image/${extension};base64,${data.toString('base64')}`;
-        logToRenderer(`[Debug] Created data URL of length: ${dataUrl.length}`);
-        return dataUrl;
+        logToRenderer(`[IPC] get-image-as-data-url: Successfully read and encoded image.`);
+        return { success: true, dataUrl: dataUrl };
     } catch (error) {
-        logToRenderer(`[Debug] Error reading image for data URL: ${error.toString()}`);
-        logToRenderer(`[Debug] Error stack: ${error.stack}`);
-        return null;
+        const errorMessage = `Failed to read image file at '${absoluteImagePath}'. Error: ${error.message}`;
+        logToRenderer(`[IPC] get-image-as-data-url: ${errorMessage}`);
+        return { success: false, error: errorMessage };
     }
 });
 

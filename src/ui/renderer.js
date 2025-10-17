@@ -192,7 +192,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         logMessage(`[UI] displayMobRules called for creature ID: ${creatureId}`);
         const statBlockArea = document.getElementById('statBlockArea');
 
-        logMessage(`[UI] Current MOB_RULES_DATA: ${JSON.stringify(MOB_RULES_DATA)}`);
         if (!MOB_RULES_DATA) {
             logMessage('[UI] Error: MOB_RULES_DATA is null or undefined.');
             statBlockArea.innerHTML = '<p>Fatal Error: Mob rules data object is not available.</p>';
@@ -210,11 +209,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         logMessage(`[UI] Requesting image as data URL for path: ${imagePath}`);
-        const imageUrl = await window.electron.ipcRenderer.invoke('get-image-as-data-url', imagePath);
+        const result = await window.electron.ipcRenderer.invoke('get-image-as-data-url', imagePath);
 
-        if (!imageUrl) {
-            logMessage('[UI] Error: Failed to get image URL from main process.');
-            statBlockArea.innerHTML = '<p>Failed to load mob rules image.</p>';
+        if (!result.success) {
+            logMessage(`[UI] Error from main process: ${result.error}`);
+            statBlockArea.innerHTML = `<p>Failed to load mob rules image. Please check the log.</p>`;
             showPanel('statBlockArea', 'Error');
             return;
         }
@@ -223,7 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const contentHTML = `
             <div class="mob-rules-container">
                 ${ui.text}
-                <img src="${imageUrl}" alt="Mob Rules Table" style="width: 100%; height: auto;"/>
+                <img src="${result.dataUrl}" alt="Mob Rules Table" style="width: 100%; height: auto;"/>
             </div>
         `;
 
