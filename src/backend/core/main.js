@@ -331,47 +331,17 @@ function formatStatBlockForDiscord(monster) {
     return { mainEmbed, longFields };
 }
 
-function formatMobRulesForDiscord(creature) {
-    const { description, resultsTable } = mobRules;
-
-    // Helper function to format a chunk of the table
-    const formatTableChunk = (data) => {
-        const header = "Roll Needed | Normal | w/Adv | w/Dis | 1/4 | 1/5 | 1/6 | 1/8 | 1/10";
-        const divider = "-------------|--------|-------|-------|-----|-----|-----|-----|------";
-        const tableRows = data.map(row => {
-            return [
-                row.rollNeeded.padEnd(12),
-                row.normal.padEnd(6),
-                row.withAdvantage.padEnd(5),
-                row.withDisadvantage.padEnd(5),
-                row.outOf4.padEnd(3),
-                row.outOf5.padEnd(3),
-                row.outOf6.padEnd(3),
-                row.outOf8.padEnd(3),
-                row.outOf10.padEnd(4)
-            ].join(' | ');
-        });
-        return "```" + [header, divider, ...tableRows].join('\n') + "```";
-    };
-
-    // Split the table data into two halves
-    const midPoint = Math.ceil(resultsTable.length / 2);
-    const firstHalf = resultsTable.slice(0, midPoint);
-    const secondHalf = resultsTable.slice(midPoint);
-
-    const formattedTable1 = formatTableChunk(firstHalf);
-    const formattedTable2 = formatTableChunk(secondHalf);
+function formatMobRulesForDiscord(creatureName) {
+    const { discord: discordData, imagePath } = mobRules;
 
     const mainEmbed = new EmbedBuilder()
         .setColor(0xFFA500) // Orange for rules
-        .setTitle(`Mob Combat Rules: ${creature.name}`)
-        .setDescription(description.trim())
-        .addFields(
-            { name: 'Mob Results (Part 1)', value: formattedTable1, inline: false },
-            { name: 'Mob Results (Part 2)', value: formattedTable2, inline: false }
-        );
+        .setTitle(`${discordData.title}: ${creatureName}`)
+        .setDescription(discordData.description)
+        .addFields(discordData.fields)
+        .setImage(`attachment://${path.basename(imagePath)}`); // Set the image to be an attachment
 
-    return { mainEmbed };
+    return { mainEmbed, imagePath };
 }
 
 function splitText(text, maxLength = 1024) {
@@ -1147,10 +1117,9 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.on('push-mob-rules-to-discord', async (event, { creatureId }) => {
-        const creature = initiativeTracker.getCreature(creatureId);
-        if (!creature) {
-            logToRenderer(`[push-mob-rules] Could not find creature with ID: ${creatureId}`);
+    ipcMain.on('push-mob-rules-to-discord', async (event, { creatureName }) => {
+        if (!creatureName) {
+            logToRenderer(`[push-mob-rules] Creature name not provided.`);
             return;
         }
 
@@ -1164,11 +1133,20 @@ async function ipcloader() {
             return;
         }
         try {
-            const { mainEmbed } = formatMobRulesForDiscord(creature);
-            await channel.send({ embeds: [mainEmbed] });
-            logToRenderer('[push-mob-rules] Successfully pushed mob rules embed.');
+            const { mainEmbed, imagePath: relativeImagePath } = formatMobRulesForDiscord(creatureName);
+            const absoluteImagePath = path.join(app.getAppPath(), relativeImagePath);
+
+            await channel.send({
+                embeds: [mainEmbed],
+                files: [{
+                    attachment: absoluteImagePath,
+                    name: path.basename(relativeImagePath)
+                }]
+            });
+            logToRenderer('[push-mob-rules] Successfully pushed mob rules embed with image.');
         } catch (error) {
             logToRenderer(`[push-mob-rules] FAILED to send embed: ${error}`);
+            dialog.showErrorBox('Discord Error', `Failed to send mob rules to Discord. Please ensure the image file exists at: ${relativeImagePath}\n\n${error.message}`);
         }
     });
 }

@@ -188,58 +188,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function displayMobRules(creatureId) {
         const statBlockArea = document.getElementById('statBlockArea');
-        const { description, resultsTable } = MOB_RULES_DATA;
+        // The MOB_RULES_DATA now has a different structure.
+        const { ui, imagePath } = MOB_RULES_DATA;
 
-        if (!description || !resultsTable) {
+        if (!ui || !ui.text || !imagePath) {
             statBlockArea.innerHTML = '<p>Mob rules data is missing or malformed.</p>';
             showPanel('statBlockArea', 'Error');
             return;
         }
 
-        const tableHeader = `
-            <thead>
-                <tr>
-                    <th>Roll Needed</th>
-                    <th>Normal</th>
-                    <th>w/Adv</th>
-                    <th>w/Dis</th>
-                    <th>1/4</th>
-                    <th>1/5</th>
-                    <th>1/6</th>
-                    <th>1/8</th>
-                    <th>1/10</th>
-                </tr>
-            </thead>
-        `;
-
-        const tableBody = resultsTable.map(row => `
-            <tr>
-                <td>${row.rollNeeded}</td>
-                <td>${row.normal}</td>
-                <td>${row.withAdvantage}</td>
-                <td>${row.withDisadvantage}</td>
-                <td>${row.outOf4}</td>
-                <td>${row.outOf5}</td>
-                <td>${row.outOf6}</td>
-                <td>${row.outOf8}</td>
-                <td>${row.outOf10}</td>
-            </tr>
-        `).join('');
+        // The text is already formatted with HTML in mobRules.js
+        const absoluteImagePath = window.electron.path.join(window.electron.app.getAppPath(), imagePath);
+        const imageSrc = `file://${absoluteImagePath}`;
 
         const contentHTML = `
             <div class="mob-rules-container">
-                ${description.replace(/\n/g, '<br>')}
-                <h3>Mob Results</h3>
-                <table class="mob-rules-table">
-                    ${tableHeader}
-                    <tbody>${tableBody}</tbody>
-                </table>
+                ${ui.text}
+                <img src="${imageSrc}" alt="Mob Rules Table" style="width: 100%; height: auto;"/>
             </div>
         `;
 
         statBlockArea.innerHTML = contentHTML;
         showPanel('statBlockArea', 'Mob Rules');
-        currentStatBlockData = { type: 'mob-rules', data: creatureId }; // Set data for push button
+        // The data for the push button now includes the creature's name for context in Discord.
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+        const creatureName = creature ? creature.name : 'Unknown Mob';
+        currentStatBlockData = { type: 'mob-rules', data: { creatureName } };
     }
 
     // --- Event Listeners ---
@@ -302,7 +276,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (currentStatBlockData.type === 'statblock') {
                         window.electron.ipcRenderer.send('push-statblock-to-discord', currentStatBlockData.data);
                     } else if (currentStatBlockData.type === 'mob-rules') {
-                        window.electron.ipcRenderer.send('push-mob-rules-to-discord', { creatureId: currentStatBlockData.data });
+                        // The data now contains the creature's name directly.
+                        window.electron.ipcRenderer.send('push-mob-rules-to-discord', currentStatBlockData.data);
                     }
                 }
                 break;
