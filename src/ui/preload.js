@@ -34,8 +34,7 @@ contextBridge.exposeInMainWorld('electron', {
           'load-encounter-dialog', 'search-monsters', 'get-monster-details',
           'get-task-data', 'save-and-get-next-spell', 'undo-and-get-previous-spell',
           'get-high-score', 'load-task-by-path', 'open-task-file-dialog',
-          'scrap-and-get-next-item', 'show-confirm-dialog', 'get-mob-rules-data',
-          'get-image-as-data-url'
+          'scrap-and-get-next-item', 'show-confirm-dialog', 'get-mob-rules-data'
         ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);
