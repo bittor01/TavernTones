@@ -285,19 +285,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 break;
             case 'push-panel-btn': {
                 const activePanelId = logPanels[currentPanelIndex].id;
+                console.log(`[UI] Push to chat button clicked. Active panel: ${activePanelId}`);
                 if (activePanelId === 'diceLog') {
                     const diceLog = document.getElementById('diceLog');
-                    const entries = Array.from(diceLog.children).slice(-12); // Get last 12 entries
+                    const entries = Array.from(diceLog.children).slice(-12);
                     const logContent = entries.map(entry => entry.textContent).join('\n');
                     if (logContent) {
+                        console.log('[UI] Pushing dice log to Discord.');
                         window.electron.ipcRenderer.send('push-dicelog-to-discord', logContent);
                     }
-                } else if (activePanelId === 'statBlockArea' && currentStatBlockData) {
-                    if (currentStatBlockData.type === 'statblock') {
+                } else if (activePanelId === 'statBlockArea') {
+                    console.log('[UI] Pushing stat block area content. Current data:', currentStatBlockData);
+                    if (currentStatBlockData && currentStatBlockData.type === 'statblock') {
+                        console.log('[UI] Pushing statblock to Discord.');
                         window.electron.ipcRenderer.send('push-statblock-to-discord', currentStatBlockData.data);
-                    } else if (currentStatBlockData.type === 'mob-rules') {
-                        // The data now contains the creature's name directly.
+                    } else if (currentStatBlockData && currentStatBlockData.type === 'mob-rules') {
+                        console.log('[UI] Pushing mob rules to Discord.');
                         window.electron.ipcRenderer.send('push-mob-rules-to-discord', currentStatBlockData.data);
+                    } else {
+                        console.error('[UI] Push button clicked for stat block, but currentStatBlockData is invalid or null.', currentStatBlockData);
                     }
                 }
                 break;
@@ -942,12 +948,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const creature = initiativeOrder.find(c => c.id === creatureId);
 
             if (target.classList.contains('attack-btn')) {
+                console.log(`[UI] Attack button clicked for creature ID: ${creatureId}`);
                 if (creature) {
+                    console.log(`[UI] Creature found: ${creature.name}, isMob: ${creature.isMob}`);
                     if (creature.isMob) {
+                        console.log('[UI] Creature is a mob, calling displayMobRules...');
                         displayMobRules(creatureId);
                     } else {
+                        console.log('[UI] Creature is not a mob, creating attack roll popup...');
                         createPopup('attack-roll', creatureId, target);
                     }
+                } else {
+                    console.error(`[UI] Attack button clicked, but no creature found for ID: ${creatureId}`);
                 }
             } else if (target.classList.contains('stat-roll-btn')) {
                 const { type, stat } = target.dataset;
