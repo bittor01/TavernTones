@@ -249,14 +249,22 @@ ipcMain.handle('get-mob-rules-data', async () => {
 
 ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
     try {
+        logToRenderer(`[Debug] Received request for image: ${relativePath}`);
         const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-        // The "to" field in extraResources makes it a top-level folder
+        logToRenderer(`[Debug] App is packaged: ${app.isPackaged}. Base path: ${basePath}`);
+
         const imagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativePath);
+        logToRenderer(`[Debug] Constructed image path: ${imagePath}`);
+
         const data = await fs.readFile(imagePath);
+        logToRenderer(`[Debug] Successfully read image file of size: ${data.length} bytes.`);
         const extension = path.extname(imagePath).substring(1);
-        return `data:image/${extension};base64,${data.toString('base64')}`;
+        const dataUrl = `data:image/${extension};base64,${data.toString('base64')}`;
+        logToRenderer(`[Debug] Created data URL of length: ${dataUrl.length}`);
+        return dataUrl;
     } catch (error) {
-        logToRenderer(`Error reading image for data URL: ${error}`);
+        logToRenderer(`[Debug] Error reading image for data URL: ${error.toString()}`);
+        logToRenderer(`[Debug] Error stack: ${error.stack}`);
         return null;
     }
 });
