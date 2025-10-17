@@ -334,35 +334,44 @@ function formatStatBlockForDiscord(monster) {
 function formatMobRulesForDiscord(creature) {
     const { description, resultsTable } = mobRules;
 
-    // Create the header for the table
-    const header = "Roll Needed | Normal | w/Adv | w/Dis | 1/4 | 1/5 | 1/6 | 1/8 | 1/10";
-    const divider = "-------------|--------|-------|-------|-----|-----|-----|-----|------";
+    // Helper function to format a chunk of the table
+    const formatTableChunk = (data) => {
+        const header = "Roll Needed | Normal | w/Adv | w/Dis | 1/4 | 1/5 | 1/6 | 1/8 | 1/10";
+        const divider = "-------------|--------|-------|-------|-----|-----|-----|-----|------";
+        const tableRows = data.map(row => {
+            return [
+                row.rollNeeded.padEnd(12),
+                row.normal.padEnd(6),
+                row.withAdvantage.padEnd(5),
+                row.withDisadvantage.padEnd(5),
+                row.outOf4.padEnd(3),
+                row.outOf5.padEnd(3),
+                row.outOf6.padEnd(3),
+                row.outOf8.padEnd(3),
+                row.outOf10.padEnd(4)
+            ].join(' | ');
+        });
+        return "```" + [header, divider, ...tableRows].join('\n') + "```";
+    };
 
-    // Format each row of the table
-    const tableRows = resultsTable.map(row => {
-        return [
-            row.rollNeeded.padEnd(12),
-            row.normal.padEnd(6),
-            row.withAdvantage.padEnd(5),
-            row.withDisadvantage.padEnd(5),
-            row.outOf4.padEnd(3),
-            row.outOf5.padEnd(3),
-            row.outOf6.padEnd(3),
-            row.outOf8.padEnd(3),
-            row.outOf10.padEnd(4)
-        ].join(' | ');
-    });
+    // Split the table data into two halves
+    const midPoint = Math.ceil(resultsTable.length / 2);
+    const firstHalf = resultsTable.slice(0, midPoint);
+    const secondHalf = resultsTable.slice(midPoint);
 
-    const formattedTable = "```" + [header, divider, ...tableRows].join('\n') + "```";
+    const formattedTable1 = formatTableChunk(firstHalf);
+    const formattedTable2 = formatTableChunk(secondHalf);
 
     const mainEmbed = new EmbedBuilder()
         .setColor(0xFFA500) // Orange for rules
         .setTitle(`Mob Combat Rules: ${creature.name}`)
-        .setDescription(description.trim()) // Use the new description
-        .addFields({ name: 'Mob Results', value: formattedTable });
+        .setDescription(description.trim())
+        .addFields(
+            { name: 'Mob Results (Part 1)', value: formattedTable1, inline: false },
+            { name: 'Mob Results (Part 2)', value: formattedTable2, inline: false }
+        );
 
-    // The new format doesn't have separate long fields, so we return an empty array.
-    return { mainEmbed, longFields: [] };
+    return { mainEmbed };
 }
 
 function splitText(text, maxLength = 1024) {
