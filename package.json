@@ -36,10 +36,14 @@
     },
     "files": [
       "src/",
-      "package.json",
-      "resources/MobRules/MobRules.png"
+      "package.json"
     ],
-    "extraResources": [],
+    "extraResources": [
+      {
+        "from": "resources/MobRules",
+        "to": "MobRules"
+      }
+    ],
     "directories": {
       "output": "build"
     },

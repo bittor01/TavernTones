@@ -250,9 +250,10 @@ ipcMain.handle('get-mob-rules-data', async () => {
 ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
     try {
         const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-        const absolutePath = path.join(basePath, relativePath);
-        const data = await fs.readFile(absolutePath);
-        const extension = path.extname(relativePath).substring(1);
+        // The "to" field in extraResources makes it a top-level folder
+        const imagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativePath);
+        const data = await fs.readFile(imagePath);
+        const extension = path.extname(imagePath).substring(1);
         return `data:image/${extension};base64,${data.toString('base64')}`;
     } catch (error) {
         logToRenderer(`Error reading image for data URL: ${error}`);
@@ -1148,7 +1149,8 @@ async function ipcloader() {
         try {
             const { mainEmbed, imagePath: relativeImagePath } = formatMobRulesForDiscord(creatureName);
             const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-            const absoluteImagePath = path.join(basePath, relativeImagePath);
+            const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativeImagePath);
+
 
             await channel.send({
                 embeds: [mainEmbed],
