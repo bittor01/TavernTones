@@ -247,6 +247,18 @@ ipcMain.handle('get-mob-rules-data', async () => {
     return mobRules;
 });
 
+ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
+    try {
+        const absolutePath = path.join(app.getAppPath(), relativePath);
+        const data = await fs.readFile(absolutePath);
+        const extension = path.extname(relativePath).substring(1);
+        return `data:image/${extension};base64,${data.toString('base64')}`;
+    } catch (error) {
+        logToRenderer(`Error reading image for data URL: ${error}`);
+        return null;
+    }
+});
+
 apploader();
 
 

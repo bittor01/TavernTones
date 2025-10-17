@@ -186,9 +186,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function displayMobRules(creatureId) {
+    async function displayMobRules(creatureId) {
         const statBlockArea = document.getElementById('statBlockArea');
-        // The MOB_RULES_DATA now has a different structure.
         const { ui, imagePath } = MOB_RULES_DATA;
 
         if (!ui || !ui.text || !imagePath) {
@@ -197,20 +196,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // The text is already formatted with HTML in mobRules.js
-        const absoluteImagePath = window.electron.path.join(window.electron.app.getAppPath(), imagePath);
-        const imageSrc = `file://${absoluteImagePath}`;
+        const imageUrl = await window.electron.ipcRenderer.invoke('get-image-as-data-url', imagePath);
+
+        if (!imageUrl) {
+            statBlockArea.innerHTML = '<p>Failed to load mob rules image.</p>';
+            showPanel('statBlockArea', 'Error');
+            return;
+        }
 
         const contentHTML = `
             <div class="mob-rules-container">
                 ${ui.text}
-                <img src="${imageSrc}" alt="Mob Rules Table" style="width: 100%; height: auto;"/>
+                <img src="${imageUrl}" alt="Mob Rules Table" style="width: 100%; height: auto;"/>
             </div>
         `;
 
         statBlockArea.innerHTML = contentHTML;
         showPanel('statBlockArea', 'Mob Rules');
-        // The data for the push button now includes the creature's name for context in Discord.
         const creature = initiativeOrder.find(c => c.id === creatureId);
         const creatureName = creature ? creature.name : 'Unknown Mob';
         currentStatBlockData = { type: 'mob-rules', data: { creatureName } };
