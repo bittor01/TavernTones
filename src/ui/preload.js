@@ -22,7 +22,7 @@ contextBridge.exposeInMainWorld('electron', {
         'set-loop', 'set-soundboard-volume', 'request-initial-load',
         'push-dicelog-to-discord', 'push-statblock-to-discord',
         'open-gamify-tool', 'save-high-score', 'open-settings-window',
-        'roll-attack', 'push-mob-rules-to-discord', 'log-mob-rules-image-path'
+        'roll-attack', 'push-mob-rules-to-discord'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);

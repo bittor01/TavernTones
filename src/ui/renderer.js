@@ -39,7 +39,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Specifically request the initial load after a short delay to ensure the main process is ready.
     setTimeout(() => {
         window.electron.ipcRenderer.send('request-initial-load');
-        window.electron.ipcRenderer.send('log-mob-rules-image-path');
     }, 100);
 
     // --- Initial UI Setup ---
