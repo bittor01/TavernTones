@@ -33,9 +33,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Initial Load ---
     DND_CONDITIONS = await window.electron.ipcRenderer.invoke('get-dnd-conditions');
-    console.log('[UI] Fetching mob rules data...');
+    logMessage('[UI] Fetching mob rules data...');
     MOB_RULES_DATA = await window.electron.ipcRenderer.invoke('get-mob-rules-data');
-    console.log('[UI] Mob rules data received:', MOB_RULES_DATA);
+    logMessage(`[UI] Mob rules data received: ${JSON.stringify(MOB_RULES_DATA)}`);
     // Send a signal to the main process that the window is ready for data.
     window.electron.ipcRenderer.send('window-ready');
     // Specifically request the initial load after a short delay to ensure the main process is ready.
@@ -189,13 +189,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function displayMobRules(creatureId) {
-        console.log('[UI] displayMobRules called for creature ID:', creatureId);
+        logMessage(`[UI] displayMobRules called for creature ID: ${creatureId}`);
         const statBlockArea = document.getElementById('statBlockArea');
 
-        console.log('[UI] Current MOB_RULES_DATA:', MOB_RULES_DATA);
-        // It's possible MOB_RULES_DATA is null or not an object, so check that first.
+        logMessage(`[UI] Current MOB_RULES_DATA: ${JSON.stringify(MOB_RULES_DATA)}`);
         if (!MOB_RULES_DATA) {
-            console.error('[UI] MOB_RULES_DATA is null or undefined.');
+            logMessage('[UI] Error: MOB_RULES_DATA is null or undefined.');
             statBlockArea.innerHTML = '<p>Fatal Error: Mob rules data object is not available.</p>';
             showPanel('statBlockArea', 'Error');
             return;
@@ -204,23 +203,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { ui, imagePath } = MOB_RULES_DATA;
 
         if (!ui || !ui.text || !imagePath) {
-            console.error('[UI] Mob rules data is missing or malformed.', { ui, imagePath });
+            logMessage(`[UI] Error: Mob rules data is missing or malformed. UI: ${!!ui}, Text: ${!!ui.text}, Path: ${!!imagePath}`);
             statBlockArea.innerHTML = '<p>Mob rules data is missing or malformed.</p>';
             showPanel('statBlockArea', 'Error');
             return;
         }
 
-        console.log('[UI] Requesting image as data URL for path:', imagePath);
+        logMessage(`[UI] Requesting image as data URL for path: ${imagePath}`);
         const imageUrl = await window.electron.ipcRenderer.invoke('get-image-as-data-url', imagePath);
 
         if (!imageUrl) {
-            console.error('[UI] Failed to get image URL from main process.');
+            logMessage('[UI] Error: Failed to get image URL from main process.');
             statBlockArea.innerHTML = '<p>Failed to load mob rules image.</p>';
             showPanel('statBlockArea', 'Error');
             return;
         }
 
-        console.log('[UI] Successfully got image URL. Rendering content.');
+        logMessage('[UI] Successfully got image URL. Rendering content.');
         const contentHTML = `
             <div class="mob-rules-container">
                 ${ui.text}
@@ -233,7 +232,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const creature = initiativeOrder.find(c => c.id === creatureId);
         const creatureName = creature ? creature.name : 'Unknown Mob';
         currentStatBlockData = { type: 'mob-rules', data: { creatureName } };
-        console.log('[UI] Mob rules displayed. Set currentStatBlockData for push button:', currentStatBlockData);
+        logMessage(`[UI] Mob rules displayed. Set currentStatBlockData for push button: ${JSON.stringify(currentStatBlockData)}`);
     }
 
     // --- Event Listeners ---
@@ -285,25 +284,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 break;
             case 'push-panel-btn': {
                 const activePanelId = logPanels[currentPanelIndex].id;
-                console.log(`[UI] Push to chat button clicked. Active panel: ${activePanelId}`);
+                logMessage(`[UI] Push to chat button clicked. Active panel: ${activePanelId}`);
                 if (activePanelId === 'diceLog') {
                     const diceLog = document.getElementById('diceLog');
                     const entries = Array.from(diceLog.children).slice(-12);
                     const logContent = entries.map(entry => entry.textContent).join('\n');
                     if (logContent) {
-                        console.log('[UI] Pushing dice log to Discord.');
+                        logMessage('[UI] Pushing dice log to Discord.');
                         window.electron.ipcRenderer.send('push-dicelog-to-discord', logContent);
                     }
                 } else if (activePanelId === 'statBlockArea') {
-                    console.log('[UI] Pushing stat block area content. Current data:', currentStatBlockData);
+                    logMessage(`[UI] Pushing stat block area content. Current data: ${JSON.stringify(currentStatBlockData)}`);
                     if (currentStatBlockData && currentStatBlockData.type === 'statblock') {
-                        console.log('[UI] Pushing statblock to Discord.');
+                        logMessage('[UI] Pushing statblock to Discord.');
                         window.electron.ipcRenderer.send('push-statblock-to-discord', currentStatBlockData.data);
                     } else if (currentStatBlockData && currentStatBlockData.type === 'mob-rules') {
-                        console.log('[UI] Pushing mob rules to Discord.');
+                        logMessage('[UI] Pushing mob rules to Discord.');
                         window.electron.ipcRenderer.send('push-mob-rules-to-discord', currentStatBlockData.data);
                     } else {
-                        console.error('[UI] Push button clicked for stat block, but currentStatBlockData is invalid or null.', currentStatBlockData);
+                        logMessage(`[UI] Error: Push button clicked for stat block, but currentStatBlockData is invalid or null. Data: ${JSON.stringify(currentStatBlockData)}`);
                     }
                 }
                 break;
@@ -948,18 +947,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const creature = initiativeOrder.find(c => c.id === creatureId);
 
             if (target.classList.contains('attack-btn')) {
-                console.log(`[UI] Attack button clicked for creature ID: ${creatureId}`);
+                logMessage(`[UI] Attack button clicked for creature ID: ${creatureId}`);
                 if (creature) {
-                    console.log(`[UI] Creature found: ${creature.name}, isMob: ${creature.isMob}`);
+                    logMessage(`[UI] Creature found: ${creature.name}, isMob: ${creature.isMob}`);
                     if (creature.isMob) {
-                        console.log('[UI] Creature is a mob, calling displayMobRules...');
+                        logMessage('[UI] Creature is a mob, calling displayMobRules...');
                         displayMobRules(creatureId);
                     } else {
-                        console.log('[UI] Creature is not a mob, creating attack roll popup...');
+                        logMessage('[UI] Creature is not a mob, creating attack roll popup...');
                         createPopup('attack-roll', creatureId, target);
                     }
                 } else {
-                    console.error(`[UI] Attack button clicked, but no creature found for ID: ${creatureId}`);
+                    logMessage(`[UI] Error: Attack button clicked, but no creature found for ID: ${creatureId}`);
                 }
             } else if (target.classList.contains('stat-roll-btn')) {
                 const { type, stat } = target.dataset;
