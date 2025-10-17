@@ -1154,12 +1154,19 @@ async function ipcloader() {
             logToRenderer(`[push-mob-rules] FAILED to find channel with ID: ${discordConfig.textChannel}`);
             return;
         }
+        let absoluteImagePath; // Define here to be available in catch block
         try {
+            logToRenderer('[push-mob-rules] Formatting mob rules for Discord.');
             const { mainEmbed, imagePath: relativeImagePath } = formatMobRulesForDiscord(creatureName);
+            logToRenderer(`[push-mob-rules] Relative image path from mobRules.js: ${relativeImagePath}`);
+
             const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-            const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativeImagePath);
+            logToRenderer(`[push-mob-rules] Base path for image is: ${basePath} (isPackaged: ${app.isPackaged})`);
 
+            absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativeImagePath);
+            logToRenderer(`[push-mob-rules] Calculated absolute image path: ${absoluteImagePath}`);
 
+            logToRenderer('[push-mob-rules] Attempting to send embed with image to Discord...');
             await channel.send({
                 embeds: [mainEmbed],
                 files: [{
@@ -1169,8 +1176,10 @@ async function ipcloader() {
             });
             logToRenderer('[push-mob-rules] Successfully pushed mob rules embed with image.');
         } catch (error) {
-            logToRenderer(`[push-mob-rules] FAILED to send embed: ${error}`);
-            dialog.showErrorBox('Discord Error', `Failed to send mob rules to Discord. Please ensure the image file exists at: ${relativeImagePath}\n\n${error.message}`);
+            logToRenderer(`[push-mob-rules] FAILED to send embed: ${error.message}`);
+            logToRenderer(`[push-mob-rules] Error stack: ${error.stack}`);
+            const imagePathForError = absoluteImagePath || 'Not calculated yet';
+            dialog.showErrorBox('Discord Error', `Failed to send mob rules to Discord. Please ensure the image file exists at the calculated path: ${imagePathForError}\n\n${error.message}`);
         }
     });
 }
