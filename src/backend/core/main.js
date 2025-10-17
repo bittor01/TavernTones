@@ -262,18 +262,15 @@ ipcMain.handle('get-mob-rules-data', async () => {
 ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
     const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
     const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativePath);
-    logToRenderer(`[IPC] get-image-as-data-url: Attempting to read image from absolute path: ${absoluteImagePath}`);
 
     try {
         const data = await fs.readFile(absoluteImagePath);
         const extension = path.extname(absoluteImagePath).substring(1);
         const dataUrl = `data:image/${extension};base64,${data.toString('base64')}`;
-        logToRenderer(`[IPC] get-image-as-data-url: Successfully read and encoded image.`);
-        return { success: true, dataUrl: dataUrl };
+        return { success: true, dataUrl: dataUrl, absolutePath: absoluteImagePath };
     } catch (error) {
-        const errorMessage = `Failed to read image file at '${absoluteImagePath}'. Error: ${error.message}`;
-        logToRenderer(`[IPC] get-image-as-data-url: ${errorMessage}`);
-        return { success: false, error: errorMessage };
+        const errorMessage = `Failed to read image file. Error: ${error.message}`;
+        return { success: false, error: errorMessage, absolutePath: absoluteImagePath };
     }
 });
 

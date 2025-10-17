@@ -189,7 +189,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function displayMobRules(creatureId) {
-        logMessage(`[UI] displayMobRules called for creature ID: ${creatureId}`);
         const statBlockArea = document.getElementById('statBlockArea');
 
         if (!MOB_RULES_DATA) {
@@ -208,17 +207,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        logMessage(`[UI] Requesting image as data URL for path: ${imagePath}`);
+        logMessage(`[UI] Requesting image for mob rules using relative path: ${imagePath}`);
         const result = await window.electron.ipcRenderer.invoke('get-image-as-data-url', imagePath);
 
+        logMessage(`[UI] Backend attempted to load image from absolute path: ${result.absolutePath}`);
+
         if (!result.success) {
-            logMessage(`[UI] Error from main process: ${result.error}`);
+            logMessage(`[UI] Backend Error: ${result.error}`);
             statBlockArea.innerHTML = `<p>Failed to load mob rules image. Please check the log.</p>`;
             showPanel('statBlockArea', 'Error');
             return;
         }
 
-        logMessage('[UI] Successfully got image URL. Rendering content.');
         const contentHTML = `
             <div class="mob-rules-container">
                 ${ui.text}
@@ -231,7 +231,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const creature = initiativeOrder.find(c => c.id === creatureId);
         const creatureName = creature ? creature.name : 'Unknown Mob';
         currentStatBlockData = { type: 'mob-rules', data: { creatureName } };
-        logMessage(`[UI] Mob rules displayed. Set currentStatBlockData for push button: ${JSON.stringify(currentStatBlockData)}`);
     }
 
     // --- Event Listeners ---
