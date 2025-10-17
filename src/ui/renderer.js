@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Specifically request the initial load after a short delay to ensure the main process is ready.
     setTimeout(() => {
         window.electron.ipcRenderer.send('request-initial-load');
+        window.electron.ipcRenderer.send('log-mob-rules-image-path');
     }, 100);
 
     // --- Initial UI Setup ---
@@ -218,13 +219,52 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const contentHTML = `
+            <style>
+                .mob-rules-container h3, .mob-rules-container p, .mob-rules-container ul {
+                    margin-top: 0.5em;
+                    margin-bottom: 0.5em;
+                }
+                .mob-rules-container ul {
+                    padding-left: 20px;
+                }
+                #image-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                    cursor: pointer;
+                }
+                #image-overlay img {
+                    max-width: 90%;
+                    max-height: 90%;
+                    object-fit: contain;
+                }
+            </style>
             <div class="mob-rules-container">
                 ${ui.text}
-                <img src="${result.dataUrl}" alt="Mob Rules Table" style="width: 100%; height: auto;"/>
+                <img id="mob-rules-image" src="${result.dataUrl}" alt="Mob Rules Table" style="width: 100%; height: auto; cursor: zoom-in;"/>
             </div>
         `;
 
         statBlockArea.innerHTML = contentHTML;
+
+        document.getElementById('mob-rules-image').addEventListener('click', () => {
+            const overlay = document.createElement('div');
+            overlay.id = 'image-overlay';
+            const img = document.createElement('img');
+            img.src = result.dataUrl;
+            overlay.appendChild(img);
+            overlay.addEventListener('click', () => {
+                overlay.remove();
+            });
+            document.body.appendChild(overlay);
+        });
         showPanel('statBlockArea', 'Mob Rules');
         const creature = initiativeOrder.find(c => c.id === creatureId);
         const creatureName = creature ? creature.name : 'Unknown Mob';
