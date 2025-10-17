@@ -37,7 +37,7 @@
     "files": [
       "src/",
       "package.json",
-      "resources/"
+      "resources/MobRules/MobRules.png"
     ],
     "extraResources": [],
     "directories": {
