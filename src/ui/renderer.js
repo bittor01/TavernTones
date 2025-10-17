@@ -188,34 +188,82 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function displayMobRules(creatureId) {
         const statBlockArea = document.getElementById('statBlockArea');
+
+        if (!MOB_RULES_DATA) {
+            logMessage('[UI] Error: MOB_RULES_DATA is null or undefined.');
+            statBlockArea.innerHTML = '<p>Fatal Error: Mob rules data object is not available.</p>';
+            showPanel('statBlockArea', 'Error');
+            return;
+        }
+
         const { ui, imagePath } = MOB_RULES_DATA;
 
         if (!ui || !ui.text || !imagePath) {
+            logMessage(`[UI] Error: Mob rules data is missing or malformed. UI: ${!!ui}, Text: ${!!ui.text}, Path: ${!!imagePath}`);
             statBlockArea.innerHTML = '<p>Mob rules data is missing or malformed.</p>';
             showPanel('statBlockArea', 'Error');
             return;
         }
 
-        const imageUrl = await window.electron.ipcRenderer.invoke('get-image-as-data-url', imagePath);
+        const result = await window.electron.ipcRenderer.invoke('get-image-as-data-url', imagePath);
 
-        if (!imageUrl) {
-            statBlockArea.innerHTML = '<p>Failed to load mob rules image.</p>';
+        if (!result.success) {
+            statBlockArea.innerHTML = `<p>Failed to load mob rules image. See log for details.</p>`;
             showPanel('statBlockArea', 'Error');
             return;
         }
 
         const contentHTML = `
+            <style>
+                .mob-rules-container h3, .mob-rules-container p, .mob-rules-container ul {
+                    margin-top: 0.5em;
+                    margin-bottom: 0.5em;
+                }
+                .mob-rules-container ul {
+                    padding-left: 20px;
+                }
+                #image-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                    cursor: pointer;
+                }
+                #image-overlay img {
+                    max-width: 90%;
+                    max-height: 90%;
+                    object-fit: contain;
+                }
+            </style>
             <div class="mob-rules-container">
                 ${ui.text}
-                <img src="${imageUrl}" alt="Mob Rules Table" style="width: 100%; height: auto;"/>
+                <img id="mob-rules-image" src="${result.dataUrl}" alt="Mob Rules Table" style="width: 100%; height: auto; cursor: zoom-in;"/>
             </div>
         `;
 
         statBlockArea.innerHTML = contentHTML;
+
+        document.getElementById('mob-rules-image').addEventListener('click', () => {
+            const overlay = document.createElement('div');
+            overlay.id = 'image-overlay';
+            const img = document.createElement('img');
+            img.src = result.dataUrl;
+            overlay.appendChild(img);
+            overlay.addEventListener('click', () => {
+                overlay.remove();
+            });
+            document.body.appendChild(overlay);
+        });
         showPanel('statBlockArea', 'Mob Rules');
         const creature = initiativeOrder.find(c => c.id === creatureId);
         const creatureName = creature ? creature.name : 'Unknown Mob';
-        currentStatBlockData = { type: 'mob-rules', data: { creatureName } };
+        currentStatBlockData = { type: 'mob-rules', data: { creatureName, absoluteImagePath: result.absolutePath } };
     }
 
     // --- Event Listeners ---
@@ -278,7 +326,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (currentStatBlockData.type === 'statblock') {
                         window.electron.ipcRenderer.send('push-statblock-to-discord', currentStatBlockData.data);
                     } else if (currentStatBlockData.type === 'mob-rules') {
-                        // The data now contains the creature's name directly.
                         window.electron.ipcRenderer.send('push-mob-rules-to-discord', currentStatBlockData.data);
                     }
                 }
