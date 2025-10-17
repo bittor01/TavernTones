@@ -8,7 +8,7 @@
 #>
 
 # --- Configuration ---
-$MaxRetries = 3
+$MaxRetries = 9
 $ExecutablePath = "build/TavernTones.exe"
 $DataDirToKeep = "build/Data"
 # ---------------------
@@ -21,15 +21,18 @@ function Invoke-WithRetry {
         [Parameter(Mandatory=$true)]
         [string[]]$Arguments, 
         [Parameter(Mandatory=$true)]
-        [string]$ErrorName
+        [string]$ErrorName,
+        [Parameter(Mandatory=$false)]
+        [string]$WorkingDirectory
     )
     
     $Attempt = 0
     $Succeeded = $false
     $LogArguments = $Arguments -join ' '
-    $FullArguments = @($Arguments) 
+    # No need for $FullArguments = @($Arguments) if $Arguments is already a string array
     
-    $CurrentMaxRetries = $MaxRetries
+    $CurrentMaxRetries = $global:MaxRetries
+    
     $ContinueLoop = $true
     while ($ContinueLoop) {
         $Attempt++
@@ -43,8 +46,15 @@ function Invoke-WithRetry {
         Write-Host "Attempt ${RetryDisplay}: Running '$Command $LogArguments' for ${ErrorName}..." -ForegroundColor Yellow
         
         try {
-            # Execute the command directly to stream output
-            & $Command @FullArguments
+            if ($WorkingDirectory) {
+                Set-Location $WorkingDirectory
+            }
+            
+            # THE CRITICAL FIX: Use the comma and @ array notation to ensure arguments are passed correctly.
+            # We must use @Arguments to correctly pass the array of strings to the external command.
+            # THE ROBUST FIX: Use a sub-expression to guarantee proper argument parsing for native executables.
+            $CommandString = "$Command " + ($Arguments -join ' ')
+            Invoke-Expression -Command $CommandString
             
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "SUCCESS: $ErrorName completed successfully." -ForegroundColor Green
@@ -63,27 +73,36 @@ function Invoke-WithRetry {
             Start-Sleep -Seconds 5 
         }
     }
+    
+    Set-Location $ScriptBaseDir
 
     if (-not $Succeeded) {
         Write-Host "FATAL ERROR: $ErrorName failed after $($CurrentMaxRetries) attempts. Aborting script." -ForegroundColor Red
-        exit 1
+        return $false
     }
     return $true
 }
 
+
 # Function to determine the latest branch from remote
 function Get-LatestRemoteBranch {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$WorkingDirectory
+    )
     Write-Host "Fetching all remote branches to find the most recent commit..." -ForegroundColor Magenta
     
     # 1. Fetch all remote data (Output suppressed to prevent the 'True' output bug)
-    if (-not (Invoke-WithRetry -Command "git" -Arguments @("fetch", "--all") -ErrorName "Git Fetch All")) {
+    if (-not (Invoke-WithRetry -Command "git" -Arguments @("fetch", "--all") -ErrorName "Git Fetch All" -WorkingDirectory $WorkingDirectory)) {
         return $null
     }
     
     # 2. List all remote branches and their last commit date, then find the newest.
+    Set-Location $WorkingDirectory
     $LatestCommitBranch = git for-each-ref --sort=-committerdate --format='%(committerdate:iso):%(refname:short)' refs/remotes/origin | 
-                          Select-Object -First 1
-                          
+                            Select-Object -First 1
+    Set-Location $ScriptBaseDir # Restore location
+                            
     if (-not $LatestCommitBranch) {
         Write-Host "ERROR: Could not determine the latest remote branch." -ForegroundColor Red
         return $null
@@ -98,22 +117,33 @@ function Get-LatestRemoteBranch {
 
 # --- Main Script Execution ---
 
+# Global variable to hold the script's original location (make sure this is still defined)
+$ScriptBaseDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host "     Starting Automated Build and Run" -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
+
 
 # 1. GIT PULL/CHECKOUT
 # ----------------------
 Write-Host "`n--- Git Update ---" -ForegroundColor Yellow
 
-$TargetBranch = Get-LatestRemoteBranch
+# Global variable to hold the script's original location (define at the top if not already)
+$ScriptBaseDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+
+$GitWorkingDir = "."
+
+$TargetBranch = Get-LatestRemoteBranch -WorkingDirectory $GitWorkingDir
 if (-not $TargetBranch) { exit 1 } 
 
 # Checkout the determined branch
-Invoke-WithRetry -Command "git" -Arguments @("checkout", $TargetBranch) -ErrorName "Git Checkout"
+# FIX: Use if ( -not (...) ) to both check for success and suppress the $true output
+if (-not (Invoke-WithRetry -Command "git" -Arguments @("checkout", $TargetBranch) -ErrorName "Git Checkout" -WorkingDirectory $GitWorkingDir)) { exit 1 }
 
 # Pull the latest code for that branch
-Invoke-WithRetry -Command "git" -Arguments @("pull") -ErrorName "Git Pull"
+# FIX: Use if ( -not (...) ) to both check for success and suppress the $true output
+if (-not (Invoke-WithRetry -Command "git" -Arguments @("pull") -ErrorName "Git Pull" -WorkingDirectory $GitWorkingDir)) { exit 1 }
 
 
 # 2. CLEANUP BUILD DIRECTORY (Excluding /build/Data)
