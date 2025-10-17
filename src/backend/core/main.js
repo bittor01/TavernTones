@@ -1,4 +1,4 @@
-console.log('Main.js script started');
+console.log('Main.js script started - JULES WAS HERE');
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 console.log('Electron loaded.');
 const path = require('path');
@@ -244,64 +244,37 @@ ipcMain.handle('get-dnd-conditions', async () => {
 });
 
 ipcMain.handle('get-mob-rules-data', async () => {
-    logToRenderer('[IPC] Received request for mob rules data.');
-    try {
-        // Basic check to ensure mobRules is not null or undefined
-        if (mobRules && mobRules.ui && mobRules.ui.text) {
-            logToRenderer(`[IPC] Sending mob rules data. Text length: ${mobRules.ui.text.length}`);
-        } else {
-            logToRenderer('[IPC] Mob rules data is missing or malformed.');
-        }
-        return mobRules;
-    } catch (error) {
-        logToRenderer(`[IPC] Error in get-mob-rules-data: ${error.message}`);
-        return null; // Return null to prevent further errors on the frontend
-    }
+    return mobRules;
 });
 
+
 ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
-    logToRenderer(`[IPC] Received 'get-image-as-data-url' request with relative path: ${relativePath}`);
+    console.log(`[IPC] Received 'get-image-as-data-url' request with relative path: ${relativePath}`);
+    const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
+    console.log(`[IPC] Determined base path: ${basePath} (isPackaged: ${app.isPackaged})`);
 
-    const basePath = app.getAppPath();
-    const absoluteImagePath = path.join(basePath, relativePath);
-
-    logToRenderer(`[IPC] Constructed absolute image path: ${absoluteImagePath}`);
+    const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativePath);
+    console.log(`[IPC] Constructed absolute image path: ${absoluteImagePath}`);
 
     try {
-        await fs.access(absoluteImagePath); // Check if the file exists and is accessible
-        logToRenderer(`[IPC] File exists at ${absoluteImagePath}. Reading file...`);
-
+        console.log(`[IPC] Attempting to read file at: ${absoluteImagePath}`);
         const data = await fs.readFile(absoluteImagePath);
         const extension = path.extname(absoluteImagePath).substring(1);
         const dataUrl = `data:image/${extension};base64,${data.toString('base64')}`;
-
-        logToRenderer(`[IPC] Successfully read and encoded image.`);
+        console.log(`[IPC] Successfully read and encoded image.`);
         return { success: true, dataUrl: dataUrl, absolutePath: absoluteImagePath };
-
     } catch (error) {
-        const errorMessage = `Failed to access or read image file at ${absoluteImagePath}. Error: ${error.message}`;
-        logToRenderer(`[IPC] Error: ${errorMessage}`);
-
-        // Fallback for packaged app
-        const packagedPath = path.join(process.resourcesPath, 'app', relativePath);
-        logToRenderer(`[IPC] Falling back to packaged path: ${packagedPath}`);
-
-        try {
-            await fs.access(packagedPath);
-            logToRenderer(`[IPC] File exists at fallback path ${packagedPath}. Reading file...`);
-
-            const packagedData = await fs.readFile(packagedPath);
-            const packagedExtension = path.extname(packagedPath).substring(1);
-            const packagedDataUrl = `data:image/${packagedExtension};base64,${packagedData.toString('base64')}`;
-
-            logToRenderer(`[IPC] Successfully read and encoded image from fallback path.`);
-            return { success: true, dataUrl: packagedDataUrl, absolutePath: packagedPath };
-        } catch (fallbackError) {
-            const finalErrorMessage = `Failed to access or read image from both primary and fallback paths. Fallback error: ${fallbackError.message}`;
-            logToRenderer(`[IPC] Error: ${finalErrorMessage}`);
-            return { success: false, error: finalErrorMessage, absolutePath: absoluteImagePath };
-        }
+        const errorMessage = `Failed to read image file. Error: ${error.message}`;
+        console.log(`[IPC] Error: ${errorMessage}`);
+        return { success: false, error: errorMessage, absolutePath: absoluteImagePath };
     }
+});
+
+ipcMain.on('log-mob-rules-image-path', () => {
+    const { imagePath: relativeImagePath } = mobRules;
+    const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
+    const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativeImagePath);
+    logToRenderer(`[Startup] Mob rules image absolute path is: ${absoluteImagePath}`);
 });
 
 apploader();
@@ -1174,13 +1147,6 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.on('log-mob-rules-image-path', () => {
-        const { imagePath: relativeImagePath } = mobRules;
-        const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-        const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativeImagePath);
-        logToRenderer(`[Startup] Mob rules image absolute path is: ${absoluteImagePath}`);
-    });
-
     ipcMain.on('push-mob-rules-to-discord', async (event, { creatureName, absoluteImagePath }) => {
         if (!creatureName || !absoluteImagePath) {
             const errorMsg = `[push-mob-rules] Error: Missing creatureName or absoluteImagePath.`;
@@ -1203,8 +1169,6 @@ async function ipcloader() {
             logToRenderer(`[push-mob-rules] Received push request for ${creatureName} with image path: ${absoluteImagePath}`);
 
             // This function creates the embed structure.
-            // It also sets an .setImage() reference using the basename of the original relative path.
-            // This is okay, because the basename of the relative and absolute paths will be the same ('MobRules.png').
             const { mainEmbed } = formatMobRulesForDiscord(creatureName);
 
             logToRenderer('[push-mob-rules] Attempting to send embed with image to Discord...');
@@ -1221,6 +1185,13 @@ async function ipcloader() {
             logToRenderer(`[push-mob-rules] Error stack: ${error.stack}`);
             dialog.showErrorBox('Discord Error', `Failed to send mob rules to Discord. Please ensure the image file exists at the provided path: ${absoluteImagePath}\n\n${error.message}`);
         }
+    });
+
+    ipcMain.on('log-mob-rules-image-path', () => {
+        const { imagePath: relativeImagePath } = mobRules;
+        const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
+        const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativeImagePath);
+        logToRenderer(`[Startup] Mob rules image absolute path is: ${absoluteImagePath}`);
     });
 }
 

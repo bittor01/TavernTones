@@ -206,11 +206,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // No need to log here, the backend will log everything now.
         const result = await window.electron.ipcRenderer.invoke('get-image-as-data-url', imagePath);
 
         if (!result.success) {
-            // The backend already logged the error, so we just need to update the UI.
             statBlockArea.innerHTML = `<p>Failed to load mob rules image. See log for details.</p>`;
             showPanel('statBlockArea', 'Error');
             return;
