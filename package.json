@@ -36,7 +36,8 @@
     },
     "files": [
       "src/",
-      "package.json"
+      "package.json",
+      "resources/"
     ],
     "extraResources": [],
     "directories": {
