@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         showPanel('statBlockArea', 'Mob Rules');
         const creature = initiativeOrder.find(c => c.id === creatureId);
         const creatureName = creature ? creature.name : 'Unknown Mob';
-        currentStatBlockData = { type: 'mob-rules', data: { creatureName } };
+        currentStatBlockData = { type: 'mob-rules', data: { creatureName, absoluteImagePath: result.absolutePath } };
     }
 
     // --- Event Listeners ---

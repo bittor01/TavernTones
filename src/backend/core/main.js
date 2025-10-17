@@ -261,23 +261,46 @@ ipcMain.handle('get-mob-rules-data', async () => {
 
 ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
     logToRenderer(`[IPC] Received 'get-image-as-data-url' request with relative path: ${relativePath}`);
-    const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-    logToRenderer(`[IPC] Determined base path: ${basePath} (isPackaged: ${app.isPackaged})`);
 
-    const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativePath);
+    const basePath = app.getAppPath();
+    const absoluteImagePath = path.join(basePath, relativePath);
+
     logToRenderer(`[IPC] Constructed absolute image path: ${absoluteImagePath}`);
 
     try {
-        logToRenderer(`[IPC] Attempting to read file at: ${absoluteImagePath}`);
+        await fs.access(absoluteImagePath); // Check if the file exists and is accessible
+        logToRenderer(`[IPC] File exists at ${absoluteImagePath}. Reading file...`);
+
         const data = await fs.readFile(absoluteImagePath);
         const extension = path.extname(absoluteImagePath).substring(1);
         const dataUrl = `data:image/${extension};base64,${data.toString('base64')}`;
+
         logToRenderer(`[IPC] Successfully read and encoded image.`);
         return { success: true, dataUrl: dataUrl, absolutePath: absoluteImagePath };
+
     } catch (error) {
-        const errorMessage = `Failed to read image file. Error: ${error.message}`;
+        const errorMessage = `Failed to access or read image file at ${absoluteImagePath}. Error: ${error.message}`;
         logToRenderer(`[IPC] Error: ${errorMessage}`);
-        return { success: false, error: errorMessage, absolutePath: absoluteImagePath };
+
+        // Fallback for packaged app
+        const packagedPath = path.join(process.resourcesPath, 'app', relativePath);
+        logToRenderer(`[IPC] Falling back to packaged path: ${packagedPath}`);
+
+        try {
+            await fs.access(packagedPath);
+            logToRenderer(`[IPC] File exists at fallback path ${packagedPath}. Reading file...`);
+
+            const packagedData = await fs.readFile(packagedPath);
+            const packagedExtension = path.extname(packagedPath).substring(1);
+            const packagedDataUrl = `data:image/${packagedExtension};base64,${packagedData.toString('base64')}`;
+
+            logToRenderer(`[IPC] Successfully read and encoded image from fallback path.`);
+            return { success: true, dataUrl: packagedDataUrl, absolutePath: packagedPath };
+        } catch (fallbackError) {
+            const finalErrorMessage = `Failed to access or read image from both primary and fallback paths. Fallback error: ${fallbackError.message}`;
+            logToRenderer(`[IPC] Error: ${finalErrorMessage}`);
+            return { success: false, error: finalErrorMessage, absolutePath: absoluteImagePath };
+        }
     }
 });
 
@@ -1158,9 +1181,11 @@ async function ipcloader() {
         logToRenderer(`[Startup] Mob rules image absolute path is: ${absoluteImagePath}`);
     });
 
-    ipcMain.on('push-mob-rules-to-discord', async (event, { creatureName }) => {
-        if (!creatureName) {
-            logToRenderer(`[push-mob-rules] Creature name not provided.`);
+    ipcMain.on('push-mob-rules-to-discord', async (event, { creatureName, absoluteImagePath }) => {
+        if (!creatureName || !absoluteImagePath) {
+            const errorMsg = `[push-mob-rules] Error: Missing creatureName or absoluteImagePath.`;
+            logToRenderer(errorMsg);
+            dialog.showErrorBox('Discord Error', `Could not push mob rules. Data from UI was incomplete.`);
             return;
         }
 
@@ -1174,29 +1199,27 @@ async function ipcloader() {
             return;
         }
 
-        let absoluteImagePath; // Define here to ensure it's available in the catch block
         try {
-            logToRenderer('[push-mob-rules] Formatting mob rules for Discord.');
-            const { mainEmbed, imagePath: relativeImagePath } = formatMobRulesForDiscord(creatureName);
+            logToRenderer(`[push-mob-rules] Received push request for ${creatureName} with image path: ${absoluteImagePath}`);
 
-            const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-            absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativeImagePath);
-            logToRenderer(`[push-mob-rules] Using absolute image path: ${absoluteImagePath}`);
+            // This function creates the embed structure.
+            // It also sets an .setImage() reference using the basename of the original relative path.
+            // This is okay, because the basename of the relative and absolute paths will be the same ('MobRules.png').
+            const { mainEmbed } = formatMobRulesForDiscord(creatureName);
 
             logToRenderer('[push-mob-rules] Attempting to send embed with image to Discord...');
             await channel.send({
                 embeds: [mainEmbed],
                 files: [{
                     attachment: absoluteImagePath,
-                    name: path.basename(relativeImagePath)
+                    name: path.basename(absoluteImagePath) // This MUST match what's in `setImage`
                 }]
             });
             logToRenderer('[push-mob-rules] Successfully pushed mob rules embed with image.');
         } catch (error) {
             logToRenderer(`[push-mob-rules] FAILED to send embed: ${error.message}`);
             logToRenderer(`[push-mob-rules] Error stack: ${error.stack}`);
-            const pathForError = absoluteImagePath || 'Path not calculated';
-            dialog.showErrorBox('Discord Error', `Failed to send mob rules to Discord. Please ensure the image file exists at the calculated path: ${pathForError}\n\n${error.message}`);
+            dialog.showErrorBox('Discord Error', `Failed to send mob rules to Discord. Please ensure the image file exists at the provided path: ${absoluteImagePath}\n\n${error.message}`);
         }
     });
 }
