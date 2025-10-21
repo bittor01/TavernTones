@@ -196,18 +196,10 @@ class CommandHandler {
                         const iterationCountStr = roArgs[1];
                         const tableArgs = roArgs.slice(2);
 
-                        // Validate folderName and prevent path traversal
-                        const folderPath = path.join(this.randomTablesPath, folderName);
-                        const resolvedPath = path.resolve(folderPath);
-                        const resolvedBasePath = path.resolve(this.randomTablesPath);
-
-                        if (!resolvedPath.startsWith(resolvedBasePath)) {
-                            await message.reply(`'${folderName}' is not a valid folder.`);
-                            break;
-                        }
-
-                        if (!fs.existsSync(resolvedPath) || !fs.statSync(resolvedPath).isDirectory()) {
-                            await message.reply(`Folder '${folderName}' not found or is not a directory.`);
+                        // Validate folderName
+                        const validFolders = this.getValidTableFolders();
+                        if (!validFolders.includes(folderName)) {
+                            await message.reply(`Folder '${folderName}' not found. Valid folders are: ${validFolders.join(', ')}.`);
                             break;
                         }
 

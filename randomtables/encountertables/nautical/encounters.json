@@ -2,501 +2,709 @@
   {
     "text": "A Blue sea dragon demands tribute, Gold, Valuables, or Blood",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "A Crate with a cures Crown made of blue scales and golden thorns",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "A Floating bottle with a Treasure map inside! (DC 18 to spot)",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "A Floating Treasure chest filled with GOLD! PAYDAY! (Dex DC 17 to catch) (STR DC 15 to lift it out)",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "A Legendary Party boat floats by, almost like a floating city and they try to get the party to join!",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "A Merchant ship who is willing to trade goods!",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "A twenty-meter tall wave crashes into the hull of the ship, dealing 2d10 bludgeoning damage to the ship and players. (Players can make a DC 18 Dexterity saving throw to half the damage to themselves).",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "A forest of giant kelp starts brushing against the bottom of the ship.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "A group of sea elves swims up beside your ship, inviting you to visit an underwater city.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "A large sea creature surfaces nearby",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "A marshy isthmus blocks the way ahead, the crew may have to get out and pull the ship across",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "A mass of bubbles and cavitation beneath the ship cause it sink suddenly, before the bubbles cease and the now swamped vessel and crew must struggle to the surface.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "A mesmerizing song on the wind beckons to you. Sailors must save or jump overboard and swim toward what each of them imagines is the source.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "A pre-existing naval battle between two opposing fleets. Dare they try to navigate around them, or will they push forwards and into the crossfire?",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "A school of killer whales use their collective strength to push your ship off course. It seems like they want you to follow them.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "A sea monster leaps from the water and lands on the deck. It keeps pacing along the deck and stares over the rails while shivering.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "A tear in the Material Plane leading to the Elemental Plane of Water, causing more and more water to violently pour into the sea along with whatever creatures may follow... These could be the roughest waves seen to date!",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "A water elemental emerges from the sea, attacking you and screaming about pollution.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Ahead of the ship you can see a massive storm event. The distance to it and its size are indiscernible, but it looks like a hurricane, and the sudden choppy wake only confirms it.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "An Aquamarine Sea Dragon appears, and, with cooperation, blesses the crew",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "An unfavorable wind blowing the ship towards shore. Sailing into the wind means tacking, which is hard and exhausting work for the crew and navigator.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "An unexpected desert island (Very small) In the distance, with an NPC trying to flag the ship (DC 18 perception)",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "An airship (see Unearthed Arcana: Of Ships and the Sea for star block) flies overhead and shoots a ballista (3d10 piercing damage) at your vessel.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Beautiful sunset, no clouds, decent winds but not very fast",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "Castaways on a lifeboat needing help,",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "Choppy grey waters that elude to a storm despite a mostly clear sky",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Choppy seas on a sunny day. Tritons and Kuo-ta wage battle just beneath the surface.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Clear skies and favorable wind.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "Clear skies wind against",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Clear sunny skies no wind",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Cloudy and Rainy with Favorable winds",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "Cloudy and Rainy with capsizable waves",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Cloudy and the wind is running away with the ship",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Cloudy with choppy seas, struggle to maintain direction",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Cold air, travel waters become half ocean half ice sludge; impedes travel to a slow pace",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Crimson floods the sky and the moon seems closer than usual. The water seems to be behaving... for now.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Dark night, not a star in the sky - making night time navigation difficult",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Dark, cloudy sky and cold air. Dark shadows swim beneath what at first glance appears to be an empty ocean",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Discover a strong ocean current. Bonus points to speed if traveling in the same direction.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "Doldrums - scorching heat, clear sky, no wind whatsoever. Better have packed fresh water.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Foggy and no wind to guide direction",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Frenzy of flying fish feeding in fog upon which the frequency and size of the fish increases over time eventually overwhelming even the largest ships as the fattest whale sized flying fish slap down onto the decks",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Gale-force winds push you to your location at four times the traveling speed of your vessel for one hour. Each hour, any player on the top of the deck has to make a DC 10 Dexterity saving throw in order to no be thrown off the ship.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "Green waters that move unnaturally, it's unclear if it really is water or not",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Heavy winds creating a waterspout",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Hundreds of sea birds start landing on the deck.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "In the middle of the deep the water becomes still; Lilly pads grow on the surface and the water is rich with vegetation and life.. the water is sweet and pleasant to drink",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "Incredibly cold and slightly snowy, poor visibility",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "It is overcast but otherwise calm, but the air is filled with static and occasionally lightning strikes in the distance.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "It is raining cats and dogs. All the meowing and barking is going to get annoying very quickly. The cats and dogs that land on deck seem ready to go to war.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Jagged rocky spires suddenly jutting out of the ocean, corpses of boats litter them - requires expert and slow movement",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Lightning strikes the water up ahead.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Mega waves sweeping across the deck of the boat",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Patches of the sea start bubbling, causing boats to sink",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Perfect weather. All clear.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "Progressively larger icebergs float by, nearly hitting your ship, Mementos from each characters past bob up to the surface, yet when reached for, they reveal themselves as mirages. DC 12 DEX check to avoid falling in.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Sargasaum. No wind or current, seaweed and garbage everywhere",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Scorching hot and stale winds",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Scratching sounds coming from outside the hull, heard below decks",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Several large ships seem to be chasing a smaller ship.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Shallow reefs or rocks make travel dangerous.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Some titanic sized creature surfaces underneath the ship, lifting the ship out of the water. The creature is large enough to not have even noticed the ship or it's crew.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Stormy the winds rip the sails",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Stormy, un-tamable winds",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Strange magnetic ore in the coral reefs causes the compass to spin in circles.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Suddenly a meteor strikes the ocean not even 200 ft. ahead of the ship. The massive energy from the impact suddenly creates a massive tidal wave like effect and heats the water so it burns to the touch.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Sunny with light winds moving into sandbars",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Sunny, but with a light rain and a cold breeze",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "The air is thick and humid, so much so that you can see the misty vapors as the light wind moves it.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "The boat sails past jetsam from a carnival boat",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "The boat sails past thousands of dead fish",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "The boatswain spies a spectral ship off the port bow!",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "The party is visited by a god of chaos, and is willing to play a game, for a fee",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "The sea and air taste sweet, not salty",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "The sea is unusually calm, flat as far as the eye can see, makes a perfect reflection of the sky",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "The seas are brimming with fish and life, dolphins accompany the boat as it glides though the water",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "The water Begins to smell of rotten eggs (Con save)",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "The water exudes a greenish mist, but is otherwise calm as one would expect from good weather at sea.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "The water in a 100-meter radius of the boat turns into magic ice which can be broken with either a DC 22 Strength check or the use of a damaging 1st-level spell or higher.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "The water is abnormally glassy, like an untouched lake.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "The water is abnormally salty and the ship seems unstably buoyant.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "The water seems normal. Fish are jumping out of the water in delight of the clear skies.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "The water seems to be... boiling?",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "The water seems to be accelerating towards port side. With careful inspection through a spyglass, you can see a large whirlpool in the distance.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "The water suddenly goes silent and stops moving as the boat slides through the wake",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
-    "text": "There are a suspicious amount of fish in these waters, almost as if they\u2019re fleeing something",
+    "text": "There are a suspicious amount of fish in these waters, almost as if they’re fleeing something",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "There is a mirage of boats floating upside down beneath the water",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "They are visited by a god one of the party members worship and is blessed.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "Unfavorable winds or currents requiring 'kedging' (using rowboats, ropes, pulleys, poles, and anchors to move the ship manually).",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "Water in the area starts freezing, creating chunks of ice.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "You find a Derelict ship that's better than theirs, with no crew on board.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "You hear arrhythmic soft thumps against the hull of the ship. Looking overboard is a sea of floating lifeless bodies.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "You here a mysterious scratching from below deck. Further investigation reveals that it's coming from underneath the ship.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "You see a group of Sauhaugin riding towards you atop a pack of sharks. You're under attack!",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "You spy a derelict ship. Upon closer inspection, it looks like the entire crew was massacred by something.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "You spy a large tower in the middle of the sea. As you get closer, you see several docks around it with several ships already docked. The tower is the entrance to an underwater city.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "You spot a ship circling a giant whirlpool. The ship cant quite seem to get enough speed to break free from the whirlpools grip.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "You are sailing into a lot of large rocks and many wrecked ships. This is a ship graveyard.",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
-    "text": "\u201cWhat\u2019s that singing I hear off in the distance?\u201d",
+    "text": "“What’s that singing I hear off in the distance?”",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "glowing woman appears in front of the ship. (Ghost Encounter)",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Bombard Leviathan, captained by Myrtle Hunt (giff warlord*) and crewed by 8 giff shipmates* and 3 mages† - 1d10 + 2",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Damselfly ship Voidwinder, captained by Krig Kalu (hadozee explorer*) and crewed by 1 drow† and 7 hadozee shipmates* - 2d6 + 3",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Flying fish ship Horizon, captained by Thaal Vod (renegade mind flayer arcanist†) and crewed by 9 plasmoid warriors* - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Hammerhead ship Jander Sunstar, captained by Veluna Valderak (vampirate captain*) and crewed by 13 vampirates* and 1 priest† - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Lamprey ship Astral Prize, crewed by 15 psurlon ringers,*† including Captain Uscath - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Living ship Eldervine, captained by Queth (aartuk elder*) and crewed by 2 aartuk starhorrors,*† 8 aartuk weedlings,* and Eldervine (treant) - 1d10",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Nautiloid Neurophage, crewed by 4 mind flayers† and 16 kuo-toa, with 1d6 grells and 1d6 intellect devourers as passengers - 1d6",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Nightspider Malevolence, captained by Yeshk (neogi void hunter*†) and crewed by 24 neogi pirates* and 5 umber hulks - 1d6",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Scorpion ship Claws of Huraj, captained by Huraj (hobgoblin captain) and crewed by 1 bugbear (first mate), 8 hobgoblins, and 2 hobgoblin priests† - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Shrike ship Fedifensor, captained by Yaj (githyanki xenomancer*†) and crewed by 10 githyanki buccaneers*† - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Space galleon Eleventh, captained by Xorpha Eleven-Eyes (beholder) and crewed by 1 spectator (first mate), 3 cult fanatics,† and 16 cultists - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Space galleon Great Kindori, captained by Mystan the Mighty (djinni†) and crewed by 1 invisible stalker (first mate), 1 couatl,† 17 aarakocra, and 1 rug of smothering - 2d6 + 2",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Squid ship Syken's Reach, captained by the pirate Arviglas Syken (human bandit captain) and crewed by 1 cambion† (Syken's daughter, Tenebra) and 11 thugs - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Star moth Apex, captained by Xaleen (astral elf commander*†) and crewed by 11 astral elf warriors* and 1 astral elf aristocrat*† - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Turtle ship Snorkel, captained by Shelby Norkel (gnome mage†) and crewed by 15 autognomes* - 1d10 + 3",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Tyrant ship Doomdreamer, crewed by 2d4 + 2 beholders - 1d8",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Wasp ship Adventure, abandoned and adrift (25 percent chance that its spelljamming helm is still aboard)",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Smooth Sailing!🚢",
+    "unique": false,
+    "used": [],
+    "vibe": "boon"
   }
 ]
