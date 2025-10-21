@@ -1,0 +1,17 @@
+[
+  {
+    "text": "A message in a bottle leads to a hidden treasure",
+    "unique": true,
+    "used": []
+  },
+  {
+    "text": "A floating crate contains valuable spices",
+    "unique": false,
+    "used": []
+  },
+  {
+    "text": "The party discovers a previously uncharted island",
+    "unique": true,
+    "used": []
+  }
+]
