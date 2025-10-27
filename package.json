@@ -5,7 +5,7 @@
   "scripts": {
     "start": "electron .",
     "json": "electron . --tool=gamify",
-    "build": "electron-builder --win"
+    "build": "node scripts/build-with-retries.js"
   },
   "keywords": [],
   "author": "CrispyChestnuts",
@@ -25,7 +25,8 @@
   },
   "devDependencies": {
     "electron": "^32.0.1",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "fs-extra": "^11.3.2"
   },
   "build": {
     "appId": "com.CrispyChestnuts.TavernTones",

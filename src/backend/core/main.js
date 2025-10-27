@@ -95,7 +95,7 @@ let windowloaded = false;
 async function createWindow(showWindow = true) {
     console.log('createWindow() called.');
     mainWindow = new BrowserWindow({
-        show: false, // Do not show the window until it's ready
+        show: true, // Always show the window for Playwright
         webPreferences: {
             preload: path.join(__dirname, '../../ui/preload.js'),
             contextIsolation: true,
@@ -104,13 +104,8 @@ async function createWindow(showWindow = true) {
         }
     });
 
-    if (showWindow) {
-        mainWindow.maximize();
-        mainWindow.show();
-        console.log('Window created and shown.');
-    } else {
-        console.log('Window created minimized.');
-    }
+    mainWindow.maximize();
+    console.log('Window created and shown.');
 
     await mainWindow.loadFile(path.join(__dirname, '../../ui/Index.html'));
     console.log('index.html loaded.');
@@ -174,6 +169,7 @@ function createGamifyWindow() {
 }
 
 async function apploader() {
+    app.disableHardwareAcceleration();
     discordConfig = await getDiscordConfig();
     await app.whenReady().then(async () => {
         console.log('App is ready.');
@@ -1318,7 +1314,6 @@ client.once('clientReady', async () => {
         logToRenderer(`IPC 'toggle-preview' received.`);
         musicPlayer.togglePreview(options);
     });
-musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultLocalFolder);
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
