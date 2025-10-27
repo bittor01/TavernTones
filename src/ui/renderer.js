@@ -489,16 +489,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
+        logMessage(`Music status update: ${JSON.stringify(status)}`);
         isPlaying = status.isPlaying;
         playPauseButton.textContent = isPlaying ? 'Pause' : 'Play';
         previewButton.disabled = !status.activeFilePath && !status.pendingFilePath;
 
-        // Handle Active Track
+        // Handle Pending Track
         if (status.isCaching && status.pendingFilePath) {
-            pendingFileLabel.textContent = `(Caching...) ${window.electron.path.basename(status.pendingFilePath)}`;
+            pendingFileLabel.textContent = `(Caching...) ${status.pendingFilePath}`;
             pendingFileLabelContainer.style.display = 'block';
         } else if (status.pendingFilePath) {
-            pendingFileLabel.textContent = window.electron.path.basename(status.pendingFilePath);
+            pendingFileLabel.textContent = status.pendingFilePath;
             pendingFileLabelContainer.style.display = 'block';
         } else {
             pendingFileLabelContainer.style.display = 'none';
@@ -506,7 +507,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Handle Active Track
         if (status.activeFilePath) {
-            activeFileLabel.textContent = window.electron.path.basename(status.activeFilePath);
+            activeFileLabel.textContent = status.activeFilePath;
             playPauseButton.disabled = false;
         } else {
             activeFileLabel.textContent = 'No track loaded';
