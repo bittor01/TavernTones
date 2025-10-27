@@ -519,6 +519,12 @@ async function ipcloader() {
     ipcMain.on('open-settings-window', createSettingsWindow);
 
     logToRenderer('ipcloader() called.');
+    musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultLocalFolder);
+    musicPlayer.on('status-change', (status) => {
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('music-player-status', status);
+        }
+    });
     initiativeTracker = new InitiativeTracker(logToRenderer, logDiceRollToRenderer, sendInitiativeUpdate, autosavePath);
     // --- All core IPC listeners should be registered after the app is ready ---
     ipcMain.on('request-initial-load', () => {
@@ -1190,12 +1196,6 @@ async function logToRenderer(message) {
         logToRenderer(message);
     }
 }
-musicPlayer = new BackendAudioPlayer(logToRenderer, shell);
-musicPlayer.on('status-change', (status) => {
-    if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('music-player-status', status);
-    }
-});
 
 /*
 client.on('error', error => {
@@ -1296,16 +1296,29 @@ client.once('clientReady', async () => {
         logToRenderer('Voice channel not found or is not a voice channel!');
     }
 
-    // Simplified IPC Handlers
-    ipcMain.on('play-music', (event, filePathFromRenderer) => {
-        logToRenderer(`IPC 'play-music' received for: ${filePathFromRenderer || 'current track'}`);
-        musicPlayer.playFile(filePathFromRenderer);
+    // Music Player IPC Handlers
+    ipcMain.on('load-music-file', (event, filePath) => {
+        logToRenderer(`IPC 'load-music-file' received for: ${filePath}`);
+        if (filePath) {
+            musicPlayer.loadFile(filePath);
+        }
+    });
+
+    ipcMain.on('play-music', () => {
+        logToRenderer(`IPC 'play-music' (command) received.`);
+        musicPlayer.play();
     });
 
     ipcMain.on('pause-music', () => {
         logToRenderer(`IPC 'pause-music' received.`);
         musicPlayer.pause();
     });
+
+    ipcMain.on('toggle-preview', (event, options) => {
+        logToRenderer(`IPC 'toggle-preview' received.`);
+        musicPlayer.togglePreview(options);
+    });
+musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultLocalFolder);
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 

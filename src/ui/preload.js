@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electron', {
       const validChannels = [
         'push-initiative',
         'play-music', 'pause-music', 'roll-dice',
+        'load-music-file', 'toggle-preview',
         'add-creature', 'next-turn', 'previous-turn',
         'update-hp', 'add-condition', 'remove-condition',
         'update-creature-flag', 'show-reminders-dialog',

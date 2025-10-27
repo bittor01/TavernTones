@@ -25,7 +25,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
     const diceLog = document.getElementById('diceLog');
     const playPauseButton = document.getElementById('playPauseButton');
-    const selectedFileLabel = document.getElementById('selectedFileLabel');
+    const activeFileLabel = document.getElementById('activeFileLabel');
+    const pendingFileLabel = document.getElementById('pendingFileLabel');
+    const pendingFileLabelContainer = document.getElementById('pendingFileLabelContainer');
+    const previewButton = document.getElementById('previewButton');
     const addCreatureForm = document.getElementById('add-creature-form');
     const initiativeListDiv = document.getElementById('initiative-list');
     const combatantDetailsListDiv = document.getElementById('combatant-details-list');
@@ -363,16 +366,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             case 'selectFileButton':
                 window.electron.ipcRenderer.invoke('open-file-dialog').then(filePath => {
                     if (filePath) {
-                        window.electron.ipcRenderer.send('play-music', filePath);
+                        window.electron.ipcRenderer.send('load-music-file', filePath);
                     }
                 });
                 break;
             case 'playPauseButton':
+                window.electron.ipcRenderer.send('toggle-preview', { stop: true }); // Ensure preview stops
                 if (isPlaying) {
                     window.electron.ipcRenderer.send('pause-music');
                 } else {
                     window.electron.ipcRenderer.send('play-music');
                 }
+                break;
+            case 'previewButton':
+                window.electron.ipcRenderer.send('toggle-preview');
                 break;
         }
     });
@@ -484,15 +491,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
         isPlaying = status.isPlaying;
         playPauseButton.textContent = isPlaying ? 'Pause' : 'Play';
+        previewButton.disabled = !status.activeFilePath && !status.pendingFilePath;
 
-        if (status.isCaching) {
-            selectedFileLabel.textContent = `(Caching...) ${window.electron.path.basename(status.filePath)}`;
-            playPauseButton.disabled = true;
-        } else if (status.filePath) {
-            selectedFileLabel.textContent = window.electron.path.basename(status.filePath);
+        // Handle Active Track
+        if (status.isCaching && status.pendingFilePath) {
+            pendingFileLabel.textContent = `(Caching...) ${window.electron.path.basename(status.pendingFilePath)}`;
+            pendingFileLabelContainer.style.display = 'block';
+        } else if (status.pendingFilePath) {
+            pendingFileLabel.textContent = window.electron.path.basename(status.pendingFilePath);
+            pendingFileLabelContainer.style.display = 'block';
+        } else {
+            pendingFileLabelContainer.style.display = 'none';
+        }
+
+        // Handle Active Track
+        if (status.activeFilePath) {
+            activeFileLabel.textContent = window.electron.path.basename(status.activeFilePath);
             playPauseButton.disabled = false;
         } else {
-            selectedFileLabel.textContent = 'No file selected';
+            activeFileLabel.textContent = 'No track loaded';
             playPauseButton.disabled = true;
         }
     });

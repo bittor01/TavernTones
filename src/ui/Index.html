@@ -32,9 +32,15 @@
         <div class="controls">
           <button id="playPauseButton" disabled>Play</button>
           <button id="selectFileButton">Select File</button>
+          <button id="previewButton" disabled>Preview</button>
+        </div>
+        <div class="fileLabel" id="pendingFileLabelContainer" style="display: none;">
+          <span>Pending:</span>
+          <span id="pendingFileLabel"></span>
         </div>
         <div class="fileLabel">
-          <span id="selectedFileLabel">No file selected</span>
+          <span>Active:</span>
+          <span id="activeFileLabel">No track loaded</span>
         </div>
       </div>
     </div>
