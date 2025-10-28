@@ -545,6 +545,34 @@ async function ipcloader() {
     });
     ipcMain.on('open-gamify-tool', createGamifyWindow);
 
+    // Music Player IPC Handlers
+    ipcMain.on('load-music-file', (event, filePath) => {
+        logToRenderer(`IPC 'load-music-file' received for: ${filePath}`);
+        if (filePath) {
+            musicPlayer.loadFile(filePath);
+        }
+    });
+
+    ipcMain.on('play-music', () => {
+        logToRenderer(`IPC 'play-music' (command) received.`);
+        musicPlayer.play();
+    });
+
+    ipcMain.on('pause-music', () => {
+        logToRenderer(`IPC 'pause-music' received.`);
+        musicPlayer.pause();
+    });
+
+    ipcMain.handle('get-preview-audio-data', async () => {
+        const filePath = musicPlayer.getPreviewFilePath();
+        if (!filePath) {
+            return { success: false, error: 'No file available for preview.' };
+        }
+        // Encode the file path to handle special characters and create a URL
+        const safeUrl = `safe-media://${encodeURI(filePath.replace(/\\/g, '/'))}`;
+        return { success: true, url: safeUrl };
+    });
+
     ipcMain.handle('show-confirm-dialog', async (event, options) => {
         const focusedWindow = BrowserWindow.getFocusedWindow();
         if (!focusedWindow) return { response: options.cancelId || 1 }; // Default to cancel if no window
@@ -1307,33 +1335,6 @@ client.once('clientReady', async () => {
         logToRenderer('Voice channel not found or is not a voice channel!');
     }
 
-    // Music Player IPC Handlers
-    ipcMain.on('load-music-file', (event, filePath) => {
-        logToRenderer(`IPC 'load-music-file' received for: ${filePath}`);
-        if (filePath) {
-            musicPlayer.loadFile(filePath);
-        }
-    });
-
-    ipcMain.on('play-music', () => {
-        logToRenderer(`IPC 'play-music' (command) received.`);
-        musicPlayer.play();
-    });
-
-    ipcMain.on('pause-music', () => {
-        logToRenderer(`IPC 'pause-music' received.`);
-        musicPlayer.pause();
-    });
-
-    ipcMain.handle('get-preview-audio-data', async () => {
-        const filePath = musicPlayer.getPreviewFilePath();
-        if (!filePath) {
-            return { success: false, error: 'No file available for preview.' };
-        }
-        // Encode the file path to handle special characters and create a URL
-        const safeUrl = `safe-media://${encodeURI(filePath.replace(/\\/g, '/'))}`;
-        return { success: true, url: safeUrl };
-    });
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
