@@ -194,7 +194,6 @@ async function apploader() {
         // Don't show it yet if we might need to show the settings window first.
         await createWindow(false);
         isAppReady = true;
-        ipcloader(); // Load all IPC handlers so settings window can work.
 
         // Now, check for folder configuration.
         const { resourcesPath, randomTablesPath, tasksPath } = discordConfig;
@@ -218,7 +217,9 @@ async function apploader() {
             mainWindow.show();
         }
 
-        // Initialize data-dependent components.
+        // Initialize components
+        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultLocalFolder);
+        ipcloader(); // Load all IPC handlers
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
         // Handle Discord Bot setup.
@@ -530,7 +531,6 @@ async function ipcloader() {
     ipcMain.on('open-settings-window', createSettingsWindow);
 
     logToRenderer('ipcloader() called.');
-    musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultLocalFolder);
     musicPlayer.on('status-change', (status) => {
         if (mainWindow && mainWindow.webContents) {
             mainWindow.webContents.send('music-player-status', status);
