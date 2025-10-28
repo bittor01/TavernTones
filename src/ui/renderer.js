@@ -385,7 +385,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else {
                     window.electron.ipcRenderer.invoke('get-preview-audio-data').then(result => {
                         if (result.success) {
-                            previewAudioPlayer.src = result.dataUrl;
+                            previewAudioPlayer.src = result.url; // Use the custom protocol URL
                             previewAudioPlayer.play();
                         } else {
                             logMessage(`Preview Error: ${result.error}`);

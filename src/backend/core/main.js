@@ -1,5 +1,5 @@
 console.log('Main.js script started');
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
 console.log('Electron loaded.');
 const path = require('path');
 console.log('Path loaded.');
@@ -176,6 +176,17 @@ function createGamifyWindow() {
 async function apploader() {
     discordConfig = await getDiscordConfig();
     await app.whenReady().then(async () => {
+        protocol.registerFileProtocol('safe-media', (request, callback) => {
+            const url = request.url.substr(13); // 'safe-media://'.length
+            const decodedPath = decodeURI(url);
+            try {
+                return callback(decodedPath);
+            }
+            catch (error) {
+                console.error('Failed to register protocol', error);
+                return callback('404');
+            }
+        });
         console.log('App is ready.');
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
@@ -1319,16 +1330,9 @@ client.once('clientReady', async () => {
         if (!filePath) {
             return { success: false, error: 'No file available for preview.' };
         }
-
-        try {
-            const data = await fs.readFile(filePath);
-            const extension = path.extname(filePath).substring(1);
-            const dataUrl = `data:audio/${extension};base64,${data.toString('base64')}`;
-            return { success: true, dataUrl };
-        } catch (error) {
-            logToRenderer(`Error reading preview file: ${error.message}`);
-            return { success: false, error: `Failed to read audio file: ${error.message}` };
-        }
+        // Encode the file path to handle special characters and create a URL
+        const safeUrl = `safe-media://${encodeURI(filePath.replace(/\\/g, '/'))}`;
+        return { success: true, url: safeUrl };
     });
 
     logToRenderer(`Logged in as ${client.user.tag}`);
