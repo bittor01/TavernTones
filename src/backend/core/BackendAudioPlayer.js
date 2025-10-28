@@ -206,11 +206,7 @@ class BackendAudioPlayer extends EventEmitter {
     // --- Public API ---
 
     async loadFile(filePath) {
-        const cacheSuccess = await this._cacheFileToPending(filePath);
-        if (cacheSuccess && !this.activeFile) {
-            this.log('No active file, moving loaded file to active immediately.');
-            this._movePendingToActive();
-        }
+        await this._cacheFileToPending(filePath);
         this._emitStatusUpdate(); // Ensure UI is updated with new pending file
     }
 
@@ -218,11 +214,20 @@ class BackendAudioPlayer extends EventEmitter {
         if (this.playerStatus === AudioPlayerStatus.Paused) {
             this.player.unpause();
             this.log('Playback resumed.');
-        } else if (this.playerStatus === AudioPlayerStatus.Idle && this.activeFile) {
-            this.log('Playback starting from idle state.');
-            this._play();
+        } else if (this.playerStatus === AudioPlayerStatus.Idle) {
+            if (!this.activeFile && this.pendingFile) {
+                this.log('No active file, promoting pending file and playing.');
+                this._movePendingToActive();
+            }
+
+            if (this.activeFile) {
+                this.log('Playback starting from idle state.');
+                this._play();
+            } else {
+                this.log('Play command received, but no active or pending file to play.');
+            }
         } else {
-            this.log('Play command received, but nothing to play or already playing.');
+            this.log('Play command received, but already playing or in a non-idle state.');
         }
     }
 
