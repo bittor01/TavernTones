@@ -1367,8 +1367,6 @@ client.once('clientReady', async () => {
     });
 });
 
-initializeDiscordBot();
-
 let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
 const startingMemUse = memoryUsage;
 setInterval(() => {
