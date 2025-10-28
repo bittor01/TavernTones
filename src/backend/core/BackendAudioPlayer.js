@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { Readable } = require('stream');
 const { EventEmitter } = require('events');
-const player = require('play-sound')(opts = {});
+const player = require('play-sound')({ player: 'powershell' });
 
 class BackendAudioPlayer extends EventEmitter {
     constructor(logCallback, shell, musicFolder) {
@@ -256,8 +256,7 @@ class BackendAudioPlayer extends EventEmitter {
         const fileToPreview = this.pendingFilePath || this.activeFilePath;
         if (fileToPreview) {
             this.log(`Starting preview for: ${fileToPreview}`);
-            // Enclose the path in quotes to handle spaces
-            this.previewAudio = player.play(`"${fileToPreview}"`, (err) => {
+            this.previewAudio = player.play(fileToPreview, (err) => {
                 if (err && !err.killed) {
                     this.log(`Preview error: ${err}`);
                 }
