@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const { Readable } = require('stream');
 const { EventEmitter } = require('events');
-const player = require('play-sound')({ player: 'powershell' });
 
 class BackendAudioPlayer extends EventEmitter {
     constructor(logCallback, shell, musicFolder) {
@@ -29,7 +28,6 @@ class BackendAudioPlayer extends EventEmitter {
         // Discord.js Voice components
         this.player = createAudioPlayer();
         this.connection = null;
-        this.previewAudio = null;
 
         this.setupPlayerEvents();
         this._emitStatusUpdate(); // Emit initial state
@@ -217,7 +215,6 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     play() {
-        if (this.previewAudio) this.previewAudio.kill();
         if (this.playerStatus === AudioPlayerStatus.Paused) {
             this.player.unpause();
             this.log('Playback resumed.');
@@ -232,7 +229,6 @@ class BackendAudioPlayer extends EventEmitter {
     pause() {
         if (this.playerStatus === AudioPlayerStatus.Playing) {
             this.log(`Playback paused for: ${this.activeFilePath}`);
-            if (this.previewAudio) this.previewAudio.kill();
             this.player.pause(true); // This is synchronous and will emit 'paused' event.
 
             if (this.pendingFile) {
@@ -245,27 +241,8 @@ class BackendAudioPlayer extends EventEmitter {
         }
     }
 
-    togglePreview(options = {}) {
-        if (this.previewAudio) {
-            this.previewAudio.kill();
-            this.previewAudio = null;
-            this.log('Preview stopped.');
-            if (options.stop) return; // If we're just stopping, don't restart
-        }
-
-        const fileToPreview = this.pendingFilePath || this.activeFilePath;
-        if (fileToPreview) {
-            this.log(`Starting preview for: ${fileToPreview}`);
-            this.previewAudio = player.play(fileToPreview, (err) => {
-                if (err && !err.killed) {
-                    this.log(`Preview error: ${err}`);
-                }
-                this.previewAudio = null;
-                this.log('Preview finished.');
-            });
-        } else {
-            this.log('Preview toggled but no file to preview.');
-        }
+    getPreviewFilePath() {
+        return this.pendingFilePath || this.activeFilePath;
     }
 }
 

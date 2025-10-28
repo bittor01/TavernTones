@@ -1314,9 +1314,21 @@ client.once('clientReady', async () => {
         musicPlayer.pause();
     });
 
-    ipcMain.on('toggle-preview', (event, options) => {
-        logToRenderer(`IPC 'toggle-preview' received.`);
-        musicPlayer.togglePreview(options);
+    ipcMain.handle('get-preview-audio-data', async () => {
+        const filePath = musicPlayer.getPreviewFilePath();
+        if (!filePath) {
+            return { success: false, error: 'No file available for preview.' };
+        }
+
+        try {
+            const data = await fs.readFile(filePath);
+            const extension = path.extname(filePath).substring(1);
+            const dataUrl = `data:audio/${extension};base64,${data.toString('base64')}`;
+            return { success: true, dataUrl };
+        } catch (error) {
+            logToRenderer(`Error reading preview file: ${error.message}`);
+            return { success: false, error: `Failed to read audio file: ${error.message}` };
+        }
     });
 
     logToRenderer(`Logged in as ${client.user.tag}`);

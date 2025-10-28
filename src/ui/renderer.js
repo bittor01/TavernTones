@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const pendingFileLabel = document.getElementById('pendingFileLabel');
     const pendingFileLabelContainer = document.getElementById('pendingFileLabelContainer');
     const previewButton = document.getElementById('previewButton');
+    const previewAudioPlayer = document.getElementById('preview-audio-player');
     const addCreatureForm = document.getElementById('add-creature-form');
     const initiativeListDiv = document.getElementById('initiative-list');
     const combatantDetailsListDiv = document.getElementById('combatant-details-list');
@@ -371,7 +372,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 break;
             case 'playPauseButton':
-                window.electron.ipcRenderer.send('toggle-preview', { stop: true }); // Ensure preview stops
+                previewAudioPlayer.pause();
                 if (isPlaying) {
                     window.electron.ipcRenderer.send('pause-music');
                 } else {
@@ -379,7 +380,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 break;
             case 'previewButton':
-                window.electron.ipcRenderer.send('toggle-preview');
+                if (!previewAudioPlayer.paused) {
+                    previewAudioPlayer.pause();
+                } else {
+                    window.electron.ipcRenderer.invoke('get-preview-audio-data').then(result => {
+                        if (result.success) {
+                            previewAudioPlayer.src = result.dataUrl;
+                            previewAudioPlayer.play();
+                        } else {
+                            logMessage(`Preview Error: ${result.error}`);
+                        }
+                    });
+                }
                 break;
         }
     });
@@ -489,7 +501,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
-        logMessage(`Music status update: ${JSON.stringify(status)}`);
         isPlaying = status.isPlaying;
         playPauseButton.textContent = isPlaying ? 'Pause' : 'Play';
         previewButton.disabled = !status.activeFilePath && !status.pendingFilePath;

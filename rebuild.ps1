@@ -31,7 +31,7 @@ function Invoke-WithRetry {
     $LogArguments = $Arguments -join ' '
     # No need for $FullArguments = @($Arguments) if $Arguments is already a string array
     
-    $CurrentMaxRetries = $script:MaxRetries
+    $CurrentMaxRetries = $global:MaxRetries
     
     $ContinueLoop = $true
     while ($ContinueLoop) {
@@ -128,6 +128,9 @@ Write-Host "=============================================" -ForegroundColor Cyan
 # 1. GIT PULL/CHECKOUT
 # ----------------------
 Write-Host "`n--- Git Update ---" -ForegroundColor Yellow
+
+# Global variable to hold the script's original location (define at the top if not already)
+$ScriptBaseDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 $GitWorkingDir = "."
 
