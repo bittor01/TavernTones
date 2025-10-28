@@ -256,7 +256,8 @@ class BackendAudioPlayer extends EventEmitter {
         const fileToPreview = this.pendingFilePath || this.activeFilePath;
         if (fileToPreview) {
             this.log(`Starting preview for: ${fileToPreview}`);
-            this.previewAudio = player.play(fileToPreview, (err) => {
+            // Enclose the path in quotes to handle spaces
+            this.previewAudio = player.play(`"${fileToPreview}"`, (err) => {
                 if (err && !err.killed) {
                     this.log(`Preview error: ${err}`);
                 }
