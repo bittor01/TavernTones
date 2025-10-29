@@ -19,7 +19,7 @@ const { getDiscordConfig, setDiscordConfig } = require('./config.js');
 const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
 const { mobRules } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
-const fs = require('fs').promises;
+const fs = require('fs'); // Use the synchronous version for logging
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 
 let discordConfig;
@@ -175,6 +175,13 @@ function createGamifyWindow() {
 
 async function apploader() {
     discordConfig = await getDiscordConfig();
+
+    // --- Diagnostic Logging ---
+    const logPath = path.join(app.getPath('userData'), 'TavernTones.log');
+    const logContent = `[${new Date().toISOString()}] Loaded configuration:\n${JSON.stringify(discordConfig, null, 2)}\n\n`;
+    fs.writeFileSync(logPath, logContent, { flag: 'a' }); // 'a' flag appends to the file
+    // --- End of Diagnostic Logging ---
+
     await app.whenReady().then(async () => {
         protocol.registerFileProtocol('safe-media', (request, callback) => {
             const url = request.url.substr(13); // 'safe-media://'.length
@@ -607,6 +614,10 @@ async function ipcloader() {
             return filePaths[0];
         }
         return null;
+    });
+
+    ipcMain.handle('get-log-path', async () => {
+        return app.getPath('userData');
     });
 
     ipcMain.handle('get-high-score', async () => {
