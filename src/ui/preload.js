@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electron', {
         'remove-creature', 'move-creature-bottom',
         'reset-encounter', 'clear-encounter', 'update-initiative',
         'copy-creature', 'window-ready',
+        'load-music-file', // Added for music player
         'load-sound', 'play-sound', 'stop-sound', 'unload-sound',
         'set-loop', 'set-soundboard-volume', 'request-initial-load',
         'push-dicelog-to-discord', 'push-statblock-to-discord',
@@ -35,7 +36,7 @@ contextBridge.exposeInMainWorld('electron', {
           'get-task-data', 'save-and-get-next-spell', 'undo-and-get-previous-spell',
           'get-high-score', 'load-task-by-path', 'open-task-file-dialog',
           'scrap-and-get-next-item', 'show-confirm-dialog', 'get-mob-rules-data',
-          'get-image-as-data-url'
+          'get-image-as-data-url', 'get-preview-audio-data' // Added for music player
         ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);

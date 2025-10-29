@@ -7,3 +7,19 @@ This document provides a high-level overview of the TavernTones application and 
 - **[UI Documentation](./ui.md)**: Documentation for the Electron-based user interface, including the Initiative Tracker and Soundboard.
 
 - **[File Reference](./file_reference.md)**: A reference guide to the purpose of important files and directories in the project (will be updated at the end of this reorganization).
+
+# Development Notes
+
+## Headless Environment and Hardware Acceleration
+
+When running the application in a headless environment for testing (e.g., using `xvfb-run` for Playwright), you may encounter a startup crash related to the GPU process. This is because Electron's hardware acceleration is not compatible with a virtual display.
+
+To fix this, you must temporarily disable hardware acceleration in `src/backend/core/main.js` by adding the following line:
+
+```javascript
+app.disableHardwareAcceleration();
+```
+
+Place this line **before** the `app.whenReady()` block.
+
+**IMPORTANT:** This line should be commented out or removed before creating a final production build, as hardware acceleration is desirable for performance on a user's machine.

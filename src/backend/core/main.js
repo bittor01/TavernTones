@@ -281,6 +281,10 @@ ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
     }
 });
 
+// Disable hardware acceleration for headless environments (e.g., Playwright)
+// This prevents crashes related to GPU initialization.
+app.disableHardwareAcceleration();
+
 apploader();
 
 

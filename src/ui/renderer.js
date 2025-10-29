@@ -35,9 +35,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const combatantDetailsListDiv = document.getElementById('combatant-details-list');
     const maxLogEntries = 50;
 
-    // --- Initial Load ---
-    DND_CONDITIONS = await window.electron.ipcRenderer.invoke('get-dnd-conditions');
-    MOB_RULES_DATA = await window.electron.ipcRenderer.invoke('get-mob-rules-data');
+    // --- Initial Load (Non-blocking) ---
+    // Fetch initial data without blocking the UI rendering.
+    window.electron.ipcRenderer.invoke('get-dnd-conditions').then(conditions => {
+        DND_CONDITIONS = conditions;
+    });
+    window.electron.ipcRenderer.invoke('get-mob-rules-data').then(rules => {
+        MOB_RULES_DATA = rules;
+    });
+
     // Send a signal to the main process that the window is ready for data.
     window.electron.ipcRenderer.send('window-ready');
     // Specifically request the initial load after a short delay to ensure the main process is ready.
