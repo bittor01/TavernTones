@@ -12,7 +12,7 @@ async function getStore() {
                 voiceChannel: { type: 'string' },
                 textChannel: { type: 'string' },
                 botRoleId: { type: 'string' },
-                defaultLocalFolder: { type: 'string' }
+                defaultMusicPath: { type: 'string' }
             },
             default: {}
         }
@@ -38,7 +38,7 @@ async function getDiscordConfig() {
         voiceChannel: '',
         textChannel: '',
         botRoleId: '',
-        defaultLocalFolder: ''
+        defaultMusicPath: ''
     };
 
     return { ...defaults, ...config };

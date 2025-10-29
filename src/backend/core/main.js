@@ -19,7 +19,7 @@ const { getDiscordConfig, setDiscordConfig } = require('./config.js');
 const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
 const { mobRules } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
-const fs = require('fs'); // Use the synchronous version for logging
+const fs = require('fs').promises;
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 
 let discordConfig;
@@ -176,12 +176,6 @@ function createGamifyWindow() {
 async function apploader() {
     discordConfig = await getDiscordConfig();
 
-    // --- Diagnostic Logging ---
-    const logPath = path.join(app.getPath('userData'), 'TavernTones.log');
-    const logContent = `[${new Date().toISOString()}] Loaded configuration:\n${JSON.stringify(discordConfig, null, 2)}\n\n`;
-    fs.writeFileSync(logPath, logContent, { flag: 'a' }); // 'a' flag appends to the file
-    // --- End of Diagnostic Logging ---
-
     await app.whenReady().then(async () => {
         protocol.registerFileProtocol('safe-media', (request, callback) => {
             const url = request.url.substr(13); // 'safe-media://'.length
@@ -225,7 +219,7 @@ async function apploader() {
         }
 
         // Initialize components
-        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultLocalFolder);
+        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
         ipcloader(); // Load all IPC handlers
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
@@ -535,7 +529,7 @@ async function ipcloader() {
         discordConfig = config;
         // The music player instance also needs to be told about the new path.
         if (musicPlayer) {
-            musicPlayer.musicFolder = config.defaultLocalFolder;
+            musicPlayer.musicFolder = config.defaultMusicPath;
             logToRenderer(`[IPC] Updated music player's default folder to: ${musicPlayer.musicFolder}`);
         }
         // --- End of update ---
@@ -614,10 +608,6 @@ async function ipcloader() {
             return filePaths[0];
         }
         return null;
-    });
-
-    ipcMain.handle('get-log-path', async () => {
-        return app.getPath('userData');
     });
 
     ipcMain.handle('get-high-score', async () => {
@@ -873,10 +863,9 @@ async function ipcloader() {
     });
 
     ipcMain.handle('open-file-dialog', async () => {
-        logToRenderer(`[IPC] Opening file dialog. Default path is: ${discordConfig.defaultLocalFolder}`);
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
             title: 'Select Music File',
-            defaultPath: discordConfig.defaultLocalFolder,
+            defaultPath: discordConfig.defaultMusicPath,
             properties: ['openFile'],
             filters: [
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }

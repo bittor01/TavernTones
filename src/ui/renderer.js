@@ -299,11 +299,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         switch (targetId) {
-            case 'show-log-path-button':
-                window.electron.ipcRenderer.invoke('get-log-path').then(path => {
-                    logMessage(`[DIAGNOSTIC] Log file path: ${path}`);
-                });
-                break;
             case 'import-monster-btn':
                 createPopup('monster-search', null, event.target);
                 break;
