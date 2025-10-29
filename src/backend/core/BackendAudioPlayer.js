@@ -63,8 +63,9 @@ class BackendAudioPlayer extends EventEmitter {
             this.activeFilePath = null;
 
             if (this.pendingFile) {
-                this.log('Idle: Pending file found, promoting it to active.');
+                this.log('Idle: Pending file found, promoting it to active and playing.');
                 this._movePendingToActive();
+                this._play(); // Start playback for the newly promoted track.
             } else if (this.loopToggle && finishedFile) {
                 this.log(`Idle: Looping active file: ${finishedFilePath}`);
                 this.activeFile = finishedFile;

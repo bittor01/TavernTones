@@ -522,14 +522,27 @@ async function ipcloader() {
 
     ipcMain.on('set-discord-config', async (event, config) => {
         await setDiscordConfig(config);
+
+        // --- Update the live configuration ---
+        // The in-memory config needs to be updated to reflect the newly saved settings.
+        discordConfig = config;
+        // The music player instance also needs to be told about the new path.
+        if (musicPlayer) {
+            musicPlayer.musicFolder = config.defaultLocalFolder;
+            logToRenderer(`[IPC] Updated music player's default folder to: ${musicPlayer.musicFolder}`);
+        }
+        // --- End of update ---
+
         await dialog.showMessageBox(null, {
             type: 'info',
             title: 'Settings Saved',
-            message: 'Your settings have been saved. The application will now restart to apply the changes.',
+            message: 'Your settings have been saved. Please close and reopen the application to apply all changes.',
             buttons: ['OK']
         });
-        app.relaunch();
-        app.quit();
+        // Close the settings window after saving
+        if (settingsWindow) {
+            settingsWindow.close();
+        }
     });
 
     ipcMain.on('open-settings-window', createSettingsWindow);
