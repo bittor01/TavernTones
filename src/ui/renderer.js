@@ -522,14 +522,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             pendingFileLabelContainer.style.display = 'none';
         }
 
-        // Handle Active Track
+        // Handle Active Track & Button State
         if (status.activeFilePath) {
             activeFileLabel.textContent = status.activeFilePath;
-            playPauseButton.disabled = false;
         } else {
             activeFileLabel.textContent = 'No track loaded';
-            playPauseButton.disabled = true;
         }
+
+        // The play button should be enabled if there's any track available to be played,
+        // either already active or pending.
+        playPauseButton.disabled = !status.activeFilePath && !status.pendingFilePath;
     });
 
     window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {
