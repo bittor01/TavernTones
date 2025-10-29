@@ -211,24 +211,43 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     play() {
+        // Scenario 1: A new track is pending and the current one is paused.
+        // The desired behavior is to replace the paused track and play the new one.
+        if (this.playerStatus === AudioPlayerStatus.Paused && this.pendingFile) {
+            this.log('Play command received while paused with a pending track. Swapping and playing.');
+            this.player.stop(); // This triggers the 'idle' state.
+                               // The 'idle' handler will automatically promote the pending file and play it.
+            // We return here because the idle handler will take over.
+            return;
+        }
+
+        // Scenario 2: The player is paused, but there's no new track.
+        // The desired behavior is to simply resume playback.
         if (this.playerStatus === AudioPlayerStatus.Paused) {
             this.player.unpause();
             this.log('Playback resumed.');
-        } else if (this.playerStatus === AudioPlayerStatus.Idle) {
-            if (!this.activeFile && this.pendingFile) {
-                this.log('No active file, promoting pending file and playing.');
+            return;
+        }
+
+        // Scenario 3: The player is idle.
+        if (this.playerStatus === AudioPlayerStatus.Idle) {
+            // If there's a pending file, it should become the active one.
+            if (this.pendingFile) {
+                this.log('No active file, promoting pending file.');
                 this._movePendingToActive();
             }
-
+            // If there's now an active file, play it.
             if (this.activeFile) {
                 this.log('Playback starting from idle state.');
                 this._play();
             } else {
                 this.log('Play command received, but no active or pending file to play.');
             }
-        } else {
-            this.log('Play command received, but already playing or in a non-idle state.');
+            return;
         }
+
+        // Fallback for any other state (e.g., already playing)
+        this.log('Play command received, but already playing or in a non-idle state.');
     }
 
     pause() {

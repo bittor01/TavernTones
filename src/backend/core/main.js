@@ -849,6 +849,7 @@ async function ipcloader() {
     });
 
     ipcMain.handle('open-file-dialog', async () => {
+        logToRenderer(`[IPC] Opening file dialog. Default path is: ${discordConfig.defaultLocalFolder}`);
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
             title: 'Select Music File',
             defaultPath: discordConfig.defaultLocalFolder,
