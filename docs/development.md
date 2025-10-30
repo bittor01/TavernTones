@@ -23,12 +23,3 @@ app.disableHardwareAcceleration();
 Place this line **before** the `app.whenReady()` block.
 
 **IMPORTANT:** This line should be commented out or removed before creating a final production build, as hardware acceleration is desirable for performance on a user's machine.
-
-# Future Enhancements
-
-This section lists planned features and improvements for future development cycles.
-
-## Soundboard
-- **Advanced Playlist Management**: Instead of a simple "Clear All" button, implement a popup dialog for the `🗑️` button that gives the user options to remove the last sound played, the last sound added, or the entire playlist.
-- **Save/Load Presets**: Add functionality to manually save the current soundboard configuration to a named JSON file (e.g., "Campaign A Sounds") and load these presets back in. This will allow users to have different soundboard setups for different games.
-- **Per-Stack Volume Sliders**: Add an individual volume slider to each sound stack, allowing for finer control over the audio mix.

@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
     let isPlaying = false;
     let initiativeOrder = [];
@@ -403,162 +403,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // --- Soundboard Listeners ---
-    let soundboardState = [];
-    const soundboardGrid = document.getElementById('soundboard-grid');
-    const soundboardVolume = document.getElementById('soundboard-volume');
-
-    function initializeSoundboard() {
-        window.electron.ipcRenderer.invoke('soundboard-load').then(loadedState => {
-            if (loadedState && loadedState.length > 0) {
-                soundboardState = loadedState;
-            } else {
-                // Default initial state
-                for (let i = 0; i < 9; i++) {
-                    soundboardState.push({
-                        id: i,
-                        emoji: '➕',
-                        playlist: [],
-                        currentIndex: 0,
-                        loop: false,
-                        shuffle: false,
-                        isPlaying: false
-                    });
-                }
-            }
-            renderSoundboard();
-        }).catch(err => {
-            console.error("Failed to load soundboard state, initializing with defaults.", err);
-            // Initialize with default state on error
-            for (let i = 0; i < 9; i++) {
-                soundboardState.push({
-                    id: i,
-                    emoji: '➕',
-                    playlist: [],
-                    currentIndex: 0,
-                    loop: false,
-                    shuffle: false,
-                    isPlaying: false
-                });
-            }
-            renderSoundboard();
-        });
-    }
-
-    function renderSoundboard() {
-        soundboardGrid.innerHTML = '';
-        soundboardState.forEach(slot => {
-            const isLoaded = slot.playlist.length > 0;
-            const playButtonContent = slot.isPlaying ? '⏸️' : slot.emoji;
-
-            const slotEl = document.createElement('div');
-            slotEl.className = 'soundboard-slot';
-
-            slotEl.innerHTML = `
-                <button class="soundboard-main-btn ${isLoaded ? '' : 'unloaded'}" data-id="${slot.id}">${playButtonContent}</button>
-                <div class="soundboard-controls" style="${isLoaded ? '' : 'display: none;'}">
-                    <button class="soundboard-btn" data-action="delete" data-id="${slot.id}" title="Clear Playlist">🗑️</button>
-                    <button class="soundboard-btn ${slot.shuffle ? 'active' : ''}" data-action="shuffle" data-id="${slot.id}" title="Shuffle">🔀</button>
-                    <button class="soundboard-btn" data-action="add" data-id="${slot.id}" title="Add Sound">➕</button>
-                    <button class="soundboard-btn ${slot.loop ? 'active' : ''}" data-action="loop" data-id="${slot.id}" title="Loop">🔁</button>
-                </div>
-            `;
-            soundboardGrid.appendChild(slotEl);
-        });
-        window.electron.ipcRenderer.send('soundboard-save', soundboardState);
-    }
-
-    function isValidEmoji(str) {
-        const emojiRegex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/;
-        return emojiRegex.test(str) && str.length < 3; // Basic check for single emoji
-    }
-
-    soundboardGrid.addEventListener('click', async (e) => {
-        const button = e.target.closest('.soundboard-main-btn, .soundboard-btn');
-        if (!button) return;
-
-        const id = parseInt(button.dataset.id, 10);
-        const action = button.dataset.action;
-        const slot = soundboardState[id];
-
-        if (button.classList.contains('soundboard-main-btn')) {
-            if (slot.playlist.length === 0) {
-                // Initial setup: Add the first file
-                const filePath = await window.electron.ipcRenderer.invoke('open-file-dialog');
-                if (!filePath) return;
-
-                let emoji = null;
-                while (!emoji) {
-                    const input = prompt("Please enter a single emoji for this sound stack:", "🎵");
-                    if (input === null) return; // User cancelled
-                    if (isValidEmoji(input)) {
-                        emoji = input;
-                    } else {
-                        alert("Invalid input. Please enter a single emoji.");
-                    }
-                }
-
-                slot.playlist.push(filePath);
-                slot.emoji = emoji;
-                renderSoundboard();
-            } else {
-                // Play or Stop the current sound
-                if (slot.isPlaying) {
-                    // Stop the sound
-                    window.electron.ipcRenderer.send('soundboard-stop-effect', { id: slot.playingId });
-                    slot.isPlaying = false;
-                    slot.playingId = null;
-                } else {
-                    // Play the sound
-                    const currentTrack = slot.playlist[slot.currentIndex];
-                    if (currentTrack) {
-                        const volume = parseFloat(soundboardVolume.value);
-                        const uniqueId = `${id}-${slot.currentIndex}-${Date.now()}`;
-                        window.electron.ipcRenderer.send('soundboard-play', { id: uniqueId, filePath: currentTrack, volume });
-                        slot.isPlaying = true;
-                        slot.playingId = uniqueId;
-
-                        // Advance index for next play
-                        if (slot.shuffle) {
-                            slot.currentIndex = Math.floor(Math.random() * slot.playlist.length);
-                        } else {
-                            slot.currentIndex++;
-                        }
-
-                        if (slot.currentIndex >= slot.playlist.length) {
-                             slot.currentIndex = slot.loop ? 0 : slot.playlist.length - 1;
-                        }
-                    }
-                }
-                renderSoundboard(); // Update UI
-            }
-        } else if (action) {
-            switch (action) {
-                case 'delete':
-                    slot.playlist = [];
-                    slot.emoji = '➕';
-                    slot.currentIndex = 0;
-                    break;
-                case 'shuffle':
-                    slot.shuffle = !slot.shuffle;
-                    break;
-                case 'add':
-                    const filePath = await window.electron.ipcRenderer.invoke('open-file-dialog');
-                    if(filePath) slot.playlist.push(filePath);
-                    break;
-                case 'loop':
-                    slot.loop = !slot.loop;
-                    break;
-            }
-            renderSoundboard();
-        }
+    // The soundboard is now initialized after receiving a signal from the main process.
+    window.electron.ipcRenderer.on('ipc-handlers-ready', () => {
+        initializeSoundboard();
     });
 
-    soundboardVolume.addEventListener('input', (e) => {
-        window.electron.ipcRenderer.send('soundboard-set-volume', parseFloat(e.target.value));
+    document.getElementById('soundboard-volume').addEventListener('input', (e) => {
+        // This will later send an IPC message, e.g., window.electron.ipcRenderer.send('set-soundboard-volume', e.target.value);
     });
-
-    initializeSoundboard();
-
 
     addCreatureForm.addEventListener('submit', (event) => {
         event.preventDefault();
@@ -909,8 +761,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const fullStatBlock = JSON.stringify(monster);
         addCreatureForm.dataset.monsterRawData = fullStatBlock;
     }
-
-    renderSoundboard();
 
     // --- Soundboard State ---
     let soundboardState = [];
