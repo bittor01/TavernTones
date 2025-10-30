@@ -407,12 +407,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     const soundboardGrid = document.getElementById('soundboard-grid');
     const soundboardVolume = document.getElementById('soundboard-volume');
 
-    async function initializeSoundboard() {
-        const loadedState = await window.electron.ipcRenderer.invoke('soundboard-load');
-        if (loadedState && loadedState.length > 0) {
-            soundboardState = loadedState;
-        } else {
-            // Default initial state
+    function initializeSoundboard() {
+        window.electron.ipcRenderer.invoke('soundboard-load').then(loadedState => {
+            if (loadedState && loadedState.length > 0) {
+                soundboardState = loadedState;
+            } else {
+                // Default initial state
+                for (let i = 0; i < 9; i++) {
+                    soundboardState.push({
+                        id: i,
+                        emoji: '➕',
+                        playlist: [],
+                        currentIndex: 0,
+                        loop: false,
+                        shuffle: false,
+                        isPlaying: false
+                    });
+                }
+            }
+            renderSoundboard();
+        }).catch(err => {
+            console.error("Failed to load soundboard state, initializing with defaults.", err);
+            // Initialize with default state on error
             for (let i = 0; i < 9; i++) {
                 soundboardState.push({
                     id: i,
@@ -424,8 +440,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     isPlaying: false
                 });
             }
-        }
-        renderSoundboard();
+            renderSoundboard();
+        });
     }
 
     function renderSoundboard() {
