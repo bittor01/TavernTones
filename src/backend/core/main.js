@@ -13,6 +13,7 @@ console.log('Discord client instantiated.');
 const axios = require('axios');
 console.log('Axios loaded.');
 const BackendAudioPlayer = require('./BackendAudioPlayer.js');
+const SoundboardAudioMixer = require('./SoundboardAudioMixer.js');
 const CommandHandler = require('../../discord/CommandHandler.js');
 const FiveEToolsParser = require('./5eParser.js');
 const { getDiscordConfig, setDiscordConfig } = require('./config.js');
@@ -26,6 +27,7 @@ let discordConfig;
 
 let connection;
 let musicPlayer;
+let soundboardMixer;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
@@ -33,6 +35,7 @@ let fiveEToolsParser;
 
 // --- State Management ---
 const autosavePath = path.join(app.getPath('userData'), 'autosave.json');
+const soundboardAutosavePath = path.join(app.getPath('userData'), 'soundboard.json');
 
 const DND_CONDITIONS = {
     "Blinded": { emoji: "🙈", color: "#6c757d", text: "You can't see and automatically fail any ability check that requires sight. Attack rolls against you have Advantage, and your attack rolls have Disadvantage." },
@@ -220,6 +223,7 @@ async function apploader() {
 
         // Initialize components
         musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
+        soundboardMixer = new SoundboardAudioMixer(logToRenderer);
         ipcloader(); // Load all IPC handlers
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
@@ -566,19 +570,21 @@ async function ipcloader() {
     // Music Player IPC Handlers
     ipcMain.on('load-music-file', (event, filePath) => {
         logToRenderer(`IPC 'load-music-file' received for: ${filePath}`);
-        if (filePath) {
-            musicPlayer.loadFile(filePath);
+        if (filePath && soundboardMixer) {
+            soundboardMixer.updateMainTrack({ path: filePath, volume: 1.0 });
         }
     });
 
     ipcMain.on('play-music', () => {
-        logToRenderer(`IPC 'play-music' (command) received.`);
-        musicPlayer.play();
+        logToRenderer(`IPC 'play-music' (command) received. This now starts the main track on the mixer.`);
+        // This is now handled by loading a file, but we can add logic here if needed.
     });
 
     ipcMain.on('pause-music', () => {
         logToRenderer(`IPC 'pause-music' received.`);
-        musicPlayer.pause();
+        if (soundboardMixer) {
+            soundboardMixer.updateMainTrack(null);
+        }
     });
 
     ipcMain.handle('get-preview-audio-data', async () => {
@@ -1241,6 +1247,62 @@ async function ipcloader() {
             dialog.showErrorBox('Discord Error', `Failed to read image file or send to Discord. Please check the file at: ${absoluteImagePath}\n\n${error.message}`);
         }
     });
+
+    // --- Soundboard IPC Handlers ---
+    ipcMain.on('soundboard-play', (event, { id, filePath, volume }) => {
+        if (soundboardMixer) {
+            logToRenderer(`[IPC] Received soundboard-play: ${filePath}`);
+            soundboardMixer.addSoundEffect(id, filePath, volume);
+        }
+    });
+
+    ipcMain.on('soundboard-stop-effect', (event, { id }) => {
+        if (soundboardMixer) {
+            logToRenderer(`[IPC] Received soundboard-stop-effect: ${id}`);
+            soundboardMixer.removeSoundEffect(id);
+        }
+    });
+
+    // Note: The mixer doesn't have a dedicated volume control yet.
+    // This handler is a placeholder for when that functionality is added.
+    // For now, volume is passed per-sound.
+    ipcMain.on('soundboard-set-volume', (event, volume) => {
+        if (soundboardMixer) {
+             logToRenderer(`[IPC] Soundboard volume set to ${volume}. Note: Per-sound volume is used.`);
+            // soundboardMixer.setMasterVolume(volume);
+        }
+    });
+
+    ipcMain.on('soundboard-clear', () => {
+        if (soundboardMixer) {
+            logToRenderer('[IPC] Clearing all soundboard effects.');
+            soundboardMixer.clearAll();
+        }
+    });
+
+    ipcMain.on('soundboard-save', async (event, soundboardState) => {
+        try {
+            await fs.writeFile(soundboardAutosavePath, JSON.stringify(soundboardState, null, 2));
+            logToRenderer('[IPC] Soundboard state saved.');
+        } catch (error) {
+            logToRenderer(`[IPC] Error saving soundboard state: ${error.message}`);
+        }
+    });
+
+    ipcMain.handle('soundboard-load', async () => {
+        try {
+            const data = await fs.readFile(soundboardAutosavePath, 'utf8');
+            logToRenderer('[IPC] Soundboard state loaded.');
+            return JSON.parse(data);
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                logToRenderer('[IPC] No soundboard autosave file found.');
+                return null; // File doesn't exist, return null
+            }
+            logToRenderer(`[IPC] Error loading soundboard state: ${error.message}`);
+            return null;
+        }
+    });
 }
 
 // Function to send log messages to the renderer
@@ -1318,7 +1380,7 @@ client.once('clientReady', async () => {
             // Listen for connection status changes
             connection.on(VoiceConnectionStatus.Ready, () => {
                 logToRenderer('The bot has connected to the channel!');
-                musicPlayer.setConnection(connection); // Pass connection to the player
+                soundboardMixer.setConnection(connection);
             });
 
             connection.on(VoiceConnectionStatus.Disconnected, () => {
