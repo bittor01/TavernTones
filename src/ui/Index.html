@@ -32,9 +32,15 @@
         <div class="controls">
           <button id="playPauseButton" disabled>Play</button>
           <button id="selectFileButton">Select File</button>
+          <button id="previewButton" disabled>Preview</button>
+        </div>
+        <div class="fileLabel" id="pendingFileLabelContainer" style="display: none;">
+          <span>Pending:</span>
+          <span id="pendingFileLabel"></span>
         </div>
         <div class="fileLabel">
-          <span id="selectedFileLabel">No file selected</span>
+          <span>Active:</span>
+          <span id="activeFileLabel">No track loaded</span>
         </div>
       </div>
     </div>
@@ -45,6 +51,7 @@
           <div class="panel-header">
             <h2>Controls</h2>
             <div class="panel-header-controls">
+                <button id="settings-button" class="small-btn" title="Settings">⚙️</button>
                 <button id="gamify-tool-button" class="small-btn" title="Open JSON Tool">👾</button>
                 <button id="reset-encounter-mid" class="small-btn" title="Reset Encounter">⏪</button>
                 <button id="clear-encounter-mid" class="small-btn" title="Clear Encounter">🗑️</button>
@@ -98,6 +105,7 @@
       </div>
     </div>
   </div>
+  <audio id="preview-audio-player" style="display: none;"></audio>
   <script src="renderer.js"></script>
 </body>
 </html>

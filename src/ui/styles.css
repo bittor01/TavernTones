@@ -140,6 +140,9 @@ button:disabled {
     font-weight: bold;
     color: #ccc;
     order: 2;
+    width: 30px;
+    flex-shrink: 0;
+    text-align: right;
 }
 .initiative-hp-bar-container {
     width: 120px; /* Fixed width for alignment */
@@ -238,7 +241,9 @@ button:disabled {
 .stats-grid input {
     text-align: center;
 }
-#add-creature-form input {
+input[type="text"],
+input[type="password"],
+input[type="number"] {
     width: 100%;
     padding: 6px;
     background-color: #1e1e1e;
@@ -249,7 +254,6 @@ button:disabled {
 .add-creature-button {
     width: 100%;
     padding: 10px;
-    margin-top: 8px;
 }
 #add-creature-form hr {
     border-color: #444;
@@ -487,6 +491,43 @@ button:disabled {
 }
 .popup-result-item:hover {
     background-color: #5a5a5a;
+}
+
+/* Mob Rules Popup */
+.mob-rules-popup {
+    padding: 10px;
+    max-width: 500px;
+    position: relative; /* For positioning the push button */
+}
+.mob-rules-popup h4 {
+    margin-top: 0;
+    margin-bottom: 5px;
+    color: #ddd;
+}
+.mob-rules-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+.mob-rules-table th, .mob-rules-table td {
+    border: 1px solid #444;
+    padding: 4px 6px;
+    text-align: center;
+}
+.mob-rules-table th {
+    background-color: #3a3f44;
+}
+.mob-rules-popup .footnote {
+    font-size: 0.8em;
+    color: #aaa;
+    margin-top: 5px;
+    text-align: center;
+}
+#push-mob-rules-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
 }
 
 

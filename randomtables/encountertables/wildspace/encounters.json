@@ -2,116 +2,139 @@
   {
     "text": "1d4 chwinga astronauts,* each mounted on 1 space guppy* - 1d6 + 4",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "1 cosmic horror* (30 percent chance it is asleep) - 1d6",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
-    "text": "1 esthetic* piloted by 1 reigar*\u2020 - 1d12",
+    "text": "1 esthetic* piloted by 1 reigar*† - 1d12",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "1 eye monger* - 1d6",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "1 feyr* - 1d6",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "1 giant octopus that has a flying speed of 60 feet and doesn't need to breathe air - 1d10",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "1d6 jammer leeches* - 1d8",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "1d4 kindori* - 1d6 + 3",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
-    "text": "1 kindori* with 1 druid\u2020 living in a hut on its back - 2d6 + 3",
+    "text": "1 kindori* with 1 druid† living in a hut on its back - 2d6 + 3",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "1 kraken that has a flying speed of 60 feet and doesn't need to breathe air - 1d6",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "1 lunar dragon* (your choice of young, adult, or ancient) - 1d10",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "A tavern or inn built on an asteroid, with docks where ships can berth",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "1d6 murder comets* - 1d6",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "1d4 brown scavvers* - 1d8",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "1 night scavver* and 2d6 gray scavvers* - 1d8",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "1 void scavver* - 1d6",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "A shipwreck that might still have treasure or creatures aboard it (choose a ship from chapter 2 of the Astral Adventurer's Guide)",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   },
   {
     "text": "1 solar dragon* (your choice of young, adult, or ancient) - 2d6",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "1d6 space eels* - 1d10",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "1 starlight apparition* - 2d6 + 2",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "3d6 stirges that don't need to breathe air - 1d6",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "1d6 will-o'-wisps - 1d10",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "1 spelljamming ship (roll on the Ship Encounters table)",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   }
 ]

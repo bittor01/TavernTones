@@ -1,0 +1,212 @@
+[
+  {
+    "text": "Thunderstorm",
+    "unique": false,
+    "used": [],
+    "vibe": "bane",
+    "season": "spring"
+  },
+  {
+    "text": "Heavy Rain",
+    "unique": false,
+    "used": [],
+    "vibe": "bane",
+    "season": "spring"
+  },
+  {
+    "text": "Rain",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "spring"
+  },
+  {
+    "text": "Light Clouds",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "spring"
+  },
+  {
+    "text": "Clear Skies",
+    "unique": false,
+    "used": [],
+    "vibe": "boon",
+    "season": "spring"
+  },
+  {
+    "text": "High Winds",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "spring"
+  },
+  {
+    "text": "Scorching Heat",
+    "unique": false,
+    "used": [],
+    "vibe": "bane",
+    "season": "spring"
+  },
+  {
+    "text": "Strange Phenomena",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "spring"
+  },
+  {
+    "text": "Thunderstorm",
+    "unique": false,
+    "used": [],
+    "vibe": "bane",
+    "season": "summer"
+  },
+  {
+    "text": "Rain",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "summer"
+  },
+  {
+    "text": "Light Clouds",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "summer"
+  },
+  {
+    "text": "Clear Skies",
+    "unique": false,
+    "used": [],
+    "vibe": "boon",
+    "season": "summer"
+  },
+  {
+    "text": "High Winds",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "summer"
+  },
+  {
+    "text": "Scorching Heat",
+    "unique": false,
+    "used": [],
+    "vibe": "bane",
+    "season": "summer"
+  },
+  {
+    "text": "Strange Phenomena",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "summer"
+  },
+  {
+    "text": "Thunderstorm",
+    "unique": false,
+    "used": [],
+    "vibe": "bane",
+    "season": "fall"
+  },
+  {
+    "text": "Snow/Rain",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "fall"
+  },
+  {
+    "text": "Heavy Clouds",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "fall"
+  },
+  {
+    "text": "Light Clouds",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "fall"
+  },
+  {
+    "text": "Clear Skies",
+    "unique": false,
+    "used": [],
+    "vibe": "boon",
+    "season": "fall"
+  },
+  {
+    "text": "High Winds",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "fall"
+  },
+  {
+    "text": "Scorching Heat",
+    "unique": false,
+    "used": [],
+    "vibe": "bane",
+    "season": "fall"
+  },
+  {
+    "text": "Strange Phenomena",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "fall"
+  },
+  {
+    "text": "Blizzard/Thunderstorm",
+    "unique": false,
+    "used": [],
+    "vibe": "bane",
+    "season": "winter"
+  },
+  {
+    "text": "Snow/Rain",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "winter"
+  },
+  {
+    "text": "Freezing Cold",
+    "unique": false,
+    "used": [],
+    "vibe": "bane",
+    "season": "winter"
+  },
+  {
+    "text": "Heavy Clouds",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "winter"
+  },
+  {
+    "text": "Light Clouds",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "winter"
+  },
+  {
+    "text": "Clear Skies",
+    "unique": false,
+    "used": [],
+    "vibe": "boon",
+    "season": "winter"
+  },
+  {
+    "text": "Strange Phenomena",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral",
+    "season": "winter"
+  }
+]

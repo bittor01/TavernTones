@@ -1,8 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-const dataPath = path.join(__dirname, '../../resources/5etoolsdata');
-const randomTablesPath = path.join(__dirname, '../../randomtables/origin');
 const categorySources = {
     'spells': { type: 'directory', path: 'spells', key: 'spell' },
     'items': { type: 'file', path: 'items.json', key: 'item' },
@@ -17,8 +15,19 @@ const categorySources = {
 const searchableCategories = Object.keys(categorySources);
 
 class FiveEToolsParser {
-    constructor(logToRenderer) {
+    constructor(logToRenderer, app, config) {
         this.logToRenderer = logToRenderer;
+
+        if (!config || !config.resourcesPath || !config.randomTablesPath) {
+            this.logToRenderer('[5eParser] ERROR: Configuration with folder paths not provided. Parser will not function.');
+            this.dataPath = '';
+            this.randomTablesPath = '';
+            this.cache = new Map();
+            return;
+        }
+
+        this.dataPath = path.join(config.resourcesPath, '5etoolsdata');
+        this.randomTablesPath = path.join(config.randomTablesPath, 'origin');
         this.cache = new Map(); // Simple cache to store loaded data
     }
 
@@ -57,7 +66,7 @@ class FiveEToolsParser {
 
         try {
             if (sourceInfo.type === 'directory') {
-                const categoryPath = path.join(dataPath, sourceInfo.path);
+                const categoryPath = path.join(this.dataPath, sourceInfo.path);
                 const files = await fs.readdir(categoryPath);
                 for (const file of files) {
                     if (path.extname(file) === '.json') {
@@ -67,7 +76,7 @@ class FiveEToolsParser {
                     }
                 }
             } else { // type === 'file'
-                const filePath = path.join(dataPath, sourceInfo.path);
+                const filePath = path.join(this.dataPath, sourceInfo.path);
                 const fileContent = await fs.readFile(filePath, 'utf8');
                 processJsonData(JSON.parse(fileContent));
             }
@@ -351,10 +360,10 @@ class FiveEToolsParser {
         this.logToRenderer(`[5eParser] Could not find traits for background: ${backgroundName} [${backgroundSource}]. Using fallback tables.`);
 
         try {
-            const traitData = JSON.parse(await fs.readFile(path.join(randomTablesPath, 'traits.json'), 'utf-8'));
-            const idealData = JSON.parse(await fs.readFile(path.join(randomTablesPath, 'ideals.json'), 'utf-8'));
-            const bondData = JSON.parse(await fs.readFile(path.join(randomTablesPath, 'bonds.json'), 'utf-8'));
-            const flawData = JSON.parse(await fs.readFile(path.join(randomTablesPath, 'flaws.json'), 'utf-8'));
+            const traitData = JSON.parse(await fs.readFile(path.join(this.randomTablesPath, 'traits.json'), 'utf-8'));
+            const idealData = JSON.parse(await fs.readFile(path.join(this.randomTablesPath, 'ideals.json'), 'utf-8'));
+            const bondData = JSON.parse(await fs.readFile(path.join(this.randomTablesPath, 'bonds.json'), 'utf-8'));
+            const flawData = JSON.parse(await fs.readFile(path.join(this.randomTablesPath, 'flaws.json'), 'utf-8'));
 
             const fallbackTraits = {
                 trait: [],

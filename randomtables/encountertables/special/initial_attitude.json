@@ -2,16 +2,19 @@
   {
     "text": "Hostile",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "bane"
   },
   {
     "text": "Indifferent",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "neutral"
   },
   {
     "text": "Friendly",
     "unique": false,
-    "used": []
+    "used": [],
+    "vibe": "boon"
   }
 ]

@@ -1,6 +1,5 @@
-require('dotenv').config({ path: 'environmentvars.env' }); // Load environment variables from .env file
 console.log('Main.js script started');
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
 console.log('Electron loaded.');
 const path = require('path');
 console.log('Path loaded.');
@@ -15,28 +14,21 @@ const axios = require('axios');
 console.log('Axios loaded.');
 const BackendAudioPlayer = require('./BackendAudioPlayer.js');
 const CommandHandler = require('../../discord/CommandHandler.js');
-const MagicItemGenerator = require('../features/MagicItemGenerator.js');
-const VehicleEncounterBuilder = require('../features/VehicleEncounterBuilder.js');
 const FiveEToolsParser = require('./5eParser.js');
-const { format5eResult, formatEntries } = require('../../discord/5eEmbedFormatter.js');
+const { getDiscordConfig, setDiscordConfig } = require('./config.js');
+const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
+const { mobRules } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
+const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN; // Use the token from environment variables
-const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
-const BOT_ROLE_ID = process.env.BOT_ROLE_ID;
-const DEFAULT_LOCAL_FOLDER = process.env.DEFAULT_LOCAL_FOLDER;
-const TEXT_CHANNEL_ID = process.env.TEXT_CHANNEL_ID;
+let discordConfig;
+
 let connection;
 let musicPlayer;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
-const maSelections = new Map();
-const encounterSelections = new Map();
-const vehicleSelections = new Map();
-const npcSelections = new Map();
-const trapSelections = new Map();
 
 
 // --- State Management ---
@@ -81,6 +73,16 @@ async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
     }
 }
 
+// Function to send dice roll log messages to the renderer
+async function logDiceRollToRenderer(message) {
+    if (isAppReady && mainWindow.webContents) {
+        mainWindow.webContents.send('dice-log', message);
+    } else {
+        await sleep(100);
+        logDiceRollToRenderer(message);
+    }
+}
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -88,6 +90,7 @@ function sleep(ms) {
 //Begin UI
 // Electron Setup
 let mainWindow;
+let settingsWindow;
 let windowloaded = false;
 async function createWindow(showWindow = true) {
     console.log('createWindow() called.');
@@ -112,6 +115,30 @@ async function createWindow(showWindow = true) {
     await mainWindow.loadFile(path.join(__dirname, '../../ui/Index.html'));
     console.log('index.html loaded.');
     windowloaded = true;
+}
+
+function createSettingsWindow() {
+    if (settingsWindow) {
+        settingsWindow.focus();
+        return;
+    }
+
+    settingsWindow = new BrowserWindow({
+        width: 500,
+        height: 800,
+        webPreferences: {
+            preload: path.join(__dirname, '../../ui/settings/settings-preload.js'),
+            contextIsolation: true,
+            enableRemoteModule: false,
+            nodeIntegration: true
+        }
+    });
+
+    settingsWindow.loadFile(path.join(__dirname, '../../ui/settings/settings.html'));
+
+    settingsWindow.on('closed', () => {
+        settingsWindow = null;
+    });
 }
 
 let gamifyWindow; // Keep a reference to the window object
@@ -147,36 +174,117 @@ function createGamifyWindow() {
 }
 
 async function apploader() {
-    await app.whenReady().then(() => {
-        console.log('App is ready.');
-        fiveEToolsParser = new FiveEToolsParser(logToRenderer); // Initialize parser early
+    discordConfig = await getDiscordConfig();
 
+    await app.whenReady().then(async () => {
+        protocol.registerFileProtocol('safe-media', (request, callback) => {
+            const url = request.url.substr(13); // 'safe-media://'.length
+            const decodedPath = decodeURI(url);
+            try {
+                return callback(decodedPath);
+            }
+            catch (error) {
+                console.error('Failed to register protocol', error);
+                return callback('404');
+            }
+        });
+        console.log('App is ready.');
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
-        // Create the main window, but don't show it if we are launching the gamify tool
-        createWindow(!isGamifyLaunch);
+        // Create the main window first, so we can show dialogs.
+        // Don't show it yet if we might need to show the settings window first.
+        await createWindow(false);
+        isAppReady = true;
 
-        // If it's a gamify launch, also create the gamify window
+        // Now, check for folder configuration.
+        const { resourcesPath, randomTablesPath, tasksPath } = discordConfig;
+        const pathsConfigured = resourcesPath && randomTablesPath && tasksPath;
+
+        if (!pathsConfigured) {
+            logToRenderer("Essential data folders are not configured.");
+            await dialog.showMessageBox(mainWindow, {
+                type: 'warning',
+                title: 'Configuration Required',
+                message: 'One or more essential data folders have not been set up. Please configure them in the settings.',
+                buttons: ['Go to Settings']
+            });
+            createSettingsWindow();
+            return; // Halt further initialization.
+        }
+
+        // If we've reached here, paths are configured, so we can show the main window.
+        if (!isGamifyLaunch) {
+            mainWindow.maximize();
+            mainWindow.show();
+        }
+
+        // Initialize components
+        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
+        ipcloader(); // Load all IPC handlers
+        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
+
+        // Handle Discord Bot setup.
+        if (!discordConfig || !discordConfig.token) {
+            logToRenderer("Discord credentials not found. Bot functionality will be disabled.");
+            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+        } else {
+            initializeDiscordBot();
+        }
+
+        // If it's a gamify launch, also create the gamify window.
         if (isGamifyLaunch) {
             createGamifyWindow();
         }
 
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length === 0) {
-                createWindow(!isGamifyLaunch);
-                if (isGamifyLaunch) {
-                    createGamifyWindow();
+                // Re-check config on activate, in case it was the only window.
+                if (pathsConfigured) {
+                    createWindow(!isGamifyLaunch);
+                    if (isGamifyLaunch) {
+                        createGamifyWindow();
+                    }
+                } else {
+                    createSettingsWindow();
                 }
             }
         });
-        isAppReady = true;
-        ipcloader();
     });
 }
 
 ipcMain.handle('get-dnd-conditions', async () => {
     return DND_CONDITIONS;
 });
+
+ipcMain.handle('get-mob-rules-data', async () => {
+    return mobRules;
+});
+
+ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
+    logToRenderer(`[IPC] Received 'get-image-as-data-url' request with relative path: ${relativePath}`);
+    const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
+    logToRenderer(`[IPC] Determined base path: ${basePath} (isPackaged: ${app.isPackaged})`);
+
+    const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativePath);
+    logToRenderer(`[IPC] Constructed absolute image path: ${absoluteImagePath}`);
+
+    try {
+        logToRenderer(`[IPC] Attempting to read file at: ${absoluteImagePath}`);
+        const data = await fs.readFile(absoluteImagePath);
+        const extension = path.extname(absoluteImagePath).substring(1);
+        const dataUrl = `data:image/${extension};base64,${data.toString('base64')}`;
+        logToRenderer(`[IPC] Successfully read and encoded image.`);
+        return { success: true, dataUrl: dataUrl, absolutePath: absoluteImagePath };
+    } catch (error) {
+        const errorMessage = `Failed to read image file. Error: ${error.message}`;
+        logToRenderer(`[IPC] Error: ${errorMessage}`);
+        return { success: false, error: errorMessage, absolutePath: absoluteImagePath };
+    }
+});
+
+// Disable hardware acceleration for headless environments (e.g., Playwright)
+// This prevents crashes related to GPU initialization.
+app.disableHardwareAcceleration();
 
 apploader();
 
@@ -262,6 +370,19 @@ function formatStatBlockForDiscord(monster) {
     return { mainEmbed, longFields };
 }
 
+function formatMobRulesForDiscord(creatureName) {
+    const { discord: discordData, imagePath } = mobRules;
+
+    const mainEmbed = new EmbedBuilder()
+        .setColor(0xFFA500) // Orange for rules
+        .setTitle(`${discordData.title}: ${creatureName}`)
+        .setDescription(discordData.description)
+        .addFields(...discordData.fields)
+        .setImage(`attachment://${path.basename(imagePath)}`); // Set the image to be an attachment
+
+    return { mainEmbed, imagePath };
+}
+
 function splitText(text, maxLength = 1024) {
     const chunks = [];
     if (!text) return chunks;
@@ -329,595 +450,797 @@ async function checkAndShowReminders(creature, turnEvent) {
 const InitiativeTracker = require('../features/InitiativeTracker.js');
 
 async function ipcloader() {
-    if (windowloaded) {
-        logToRenderer('ipcloader() called.');
-        initiativeTracker = new InitiativeTracker(logToRenderer, sendInitiativeUpdate, autosavePath);
-        // --- All core IPC listeners should be registered after the app is ready ---
-        ipcMain.on('open-gamify-tool', createGamifyWindow);
+    // Helper function to open a directory selection dialog
+    const selectDirectory = async (title) => {
+        const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
+            title,
+            properties: ['openDirectory']
+        });
+        return filePaths && filePaths.length > 0 ? filePaths[0] : null;
+    };
 
-        ipcMain.handle('show-confirm-dialog', async (event, options) => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (!focusedWindow) return { response: options.cancelId || 1 }; // Default to cancel if no window
-            return await dialog.showMessageBox(focusedWindow, options);
+    // IPC Handlers for individual folder browsing
+    ipcMain.handle('select-resources-folder', () => selectDirectory('Select Resources Folder'));
+    ipcMain.handle('select-random-tables-folder', () => selectDirectory('Select Random Tables Folder'));
+    ipcMain.handle('select-tasks-folder', () => selectDirectory('Select Tasks Folder'));
+    ipcMain.handle('select-music-folder', () => selectDirectory('Select Default Music Folder'));
+
+    // IPC Handler for setting up all default folders
+    ipcMain.handle('setup-default-folders', async () => {
+        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Select a Parent Directory for TavernTones Data',
+            properties: ['openDirectory']
         });
 
-        ipcMain.handle('open-task-file-dialog', async () => {
-            const { filePaths } = await dialog.showOpenDialog(gamifyWindow, { // gamifyWindow should be the parent
-                title: 'Select Task File',
-                properties: ['openFile'],
-                filters: [{ name: 'JSON Files', extensions: ['json'] }]
+        if (!filePaths || filePaths.length === 0) {
+            return null; // User cancelled
+        }
+
+        const parentDir = filePaths[0];
+        const dataDir = path.join(parentDir, 'TavernTones_Data');
+
+        try {
+            await fs.mkdir(dataDir, { recursive: true });
+
+            const paths = {
+                resourcesPath: path.join(dataDir, 'resources'),
+                randomTablesPath: path.join(dataDir, 'randomtables'),
+                tasksPath: path.join(dataDir, 'tasks'),
+                defaultMusicPath: path.join(dataDir, 'music')
+            };
+
+            // Create all subdirectories
+            for (const p of Object.values(paths)) {
+                await fs.mkdir(p, { recursive: true });
+            }
+
+            // Copy default data
+            const sourcePath = app.isPackaged ? path.join(process.resourcesPath, 'app') : app.getAppPath();
+            await fs.cp(path.join(sourcePath, 'resources'), paths.resourcesPath, { recursive: true });
+            await fs.cp(path.join(sourcePath, 'randomtables'), paths.randomTablesPath, { recursive: true });
+            // For tasks, we'll just create the directory for now, user can place tasks there.
+
+            await dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'Success',
+                message: `Default folders created inside:\n${dataDir}\n\nPlease place your task files in the 'tasks' folder.`,
+                buttons: ['OK']
             });
 
-            if (filePaths && filePaths.length > 0) {
-                return filePaths[0];
-            }
+            return paths;
+        } catch (error) {
+            console.error('Failed to create default folders:', error);
+            await dialog.showErrorBox('Error', 'Failed to create default data folders. Please check permissions and try again.');
             return null;
+        }
+    });
+
+
+    // Settings window IPC
+    ipcMain.on('get-discord-config', async (event) => {
+        event.sender.send('discord-config', await getDiscordConfig());
+    });
+
+    ipcMain.on('set-discord-config', async (event, config) => {
+        await setDiscordConfig(config);
+
+        // --- Update the live configuration ---
+        // The in-memory config needs to be updated to reflect the newly saved settings.
+        discordConfig = config;
+        // The music player instance also needs to be told about the new path.
+        if (musicPlayer) {
+            musicPlayer.musicFolder = config.defaultMusicPath;
+            logToRenderer(`[IPC] Updated music player's default folder to: ${musicPlayer.musicFolder}`);
+        }
+        // --- End of update ---
+
+        await dialog.showMessageBox(null, {
+            type: 'info',
+            title: 'Settings Saved',
+            message: 'Your settings have been saved. Please close and reopen the application to apply all changes.',
+            buttons: ['OK']
+        });
+        // Close the settings window after saving
+        if (settingsWindow) {
+            settingsWindow.close();
+        }
+    });
+
+    ipcMain.on('open-settings-window', createSettingsWindow);
+
+    logToRenderer('ipcloader() called.');
+    musicPlayer.on('status-change', (status) => {
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('music-player-status', status);
+        }
+    });
+    initiativeTracker = new InitiativeTracker(logToRenderer, logDiceRollToRenderer, sendInitiativeUpdate, autosavePath);
+    // --- All core IPC listeners should be registered after the app is ready ---
+    ipcMain.on('request-initial-load', () => {
+        if (initiativeTracker) {
+            initiativeTracker.sendFullState();
+        }
+    });
+    ipcMain.on('open-gamify-tool', createGamifyWindow);
+
+    // Music Player IPC Handlers
+    ipcMain.on('load-music-file', (event, filePath) => {
+        logToRenderer(`IPC 'load-music-file' received for: ${filePath}`);
+        if (filePath) {
+            musicPlayer.loadFile(filePath);
+        }
+    });
+
+    ipcMain.on('play-music', () => {
+        logToRenderer(`IPC 'play-music' (command) received.`);
+        musicPlayer.play();
+    });
+
+    ipcMain.on('pause-music', () => {
+        logToRenderer(`IPC 'pause-music' received.`);
+        musicPlayer.pause();
+    });
+
+    ipcMain.handle('get-preview-audio-data', async () => {
+        const filePath = musicPlayer.getPreviewFilePath();
+        if (!filePath) {
+            return { success: false, error: 'No file available for preview.' };
+        }
+        // Encode the file path to handle special characters and create a URL
+        const safeUrl = `safe-media://${encodeURI(filePath.replace(/\\/g, '/'))}`;
+        return { success: true, url: safeUrl };
+    });
+
+    ipcMain.handle('show-confirm-dialog', async (event, options) => {
+        const focusedWindow = BrowserWindow.getFocusedWindow();
+        if (!focusedWindow) return { response: options.cancelId || 1 }; // Default to cancel if no window
+        return await dialog.showMessageBox(focusedWindow, options);
+    });
+
+    ipcMain.handle('open-task-file-dialog', async () => {
+        const { filePaths } = await dialog.showOpenDialog(gamifyWindow, { // gamifyWindow should be the parent
+            title: 'Select Task File',
+            properties: ['openFile'],
+            filters: [{ name: 'JSON Files', extensions: ['json'] }]
         });
 
-        ipcMain.handle('get-high-score', async () => {
-            try {
-                const settingsPath = path.join(__dirname, '../../jsontool/gamify-settings.json');
-                const data = await fs.readFile(settingsPath, 'utf8');
-                const settings = JSON.parse(data);
-                return settings.highScore || 0;
-            } catch (error) {
-                if (error.code === 'ENOENT') {
-                    const settingsPath = path.join(__dirname, '../../jsontool/gamify-settings.json');
-                    await fs.writeFile(settingsPath, JSON.stringify({ highScore: 0 }, null, 2));
-                    return 0;
-                }
-                logToRenderer(`Error reading high score: ${error}`);
+        if (filePaths && filePaths.length > 0) {
+            return filePaths[0];
+        }
+        return null;
+    });
+
+    ipcMain.handle('get-high-score', async () => {
+        const settingsPath = path.join(app.getPath('userData'), 'gamify-settings.json');
+        try {
+            const data = await fs.readFile(settingsPath, 'utf8');
+            const settings = JSON.parse(data);
+            return settings.highScore || 0;
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                await fs.writeFile(settingsPath, JSON.stringify({ highScore: 0 }, null, 2));
                 return 0;
             }
-        });
+            logToRenderer(`Error reading high score: ${error}`);
+            return 0;
+        }
+    });
 
-        ipcMain.on('save-high-score', async (event, score) => {
+    ipcMain.on('save-high-score', async (event, score) => {
+        const settingsPath = path.join(app.getPath('userData'), 'gamify-settings.json');
+        try {
+            let settings = {};
             try {
-                const settingsPath = path.join(__dirname, '../../jsontool/gamify-settings.json');
-                let settings = {};
-                try {
-                    const data = await fs.readFile(settingsPath, 'utf8');
-                    settings = JSON.parse(data);
-                } catch (readError) {
-                    // File might not exist, that's fine.
-                }
-                settings.highScore = score;
-                await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
-            } catch (error) {
-                logToRenderer(`Error saving high score: ${error}`);
+                const data = await fs.readFile(settingsPath, 'utf8');
+                settings = JSON.parse(data);
+            } catch (readError) {
+                // File might not exist, that's fine.
             }
-        });
+            settings.highScore = score;
+            await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
+        } catch (error) {
+            logToRenderer(`Error saving high score: ${error}`);
+        }
+    });
 
-        async function loadTaskData(taskFilePath) {
-            try {
-                const data = await fs.readFile(taskFilePath, 'utf8');
-                let taskData = JSON.parse(data); // Make mutable
+    async function loadTaskData(taskFilePath) {
+        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+        try {
+            const data = await fs.readFile(taskFilePath, 'utf8');
+            let taskData = JSON.parse(data); // Make mutable
 
-                let { fileIndex, itemIndex } = taskData.progress;
+            let { fileIndex, itemIndex } = taskData.progress;
+
+            if (fileIndex >= taskData.files.length) {
+                return { success: true, taskComplete: true, taskData };
+            }
+
+            let itemFilePath = path.join(basePath, taskData.files[fileIndex]);
+            let itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
+
+            // Loop to find the next valid item, skipping empty files
+            while (itemIndex >= itemList.length) {
+                fileIndex++;
+                itemIndex = 0;
 
                 if (fileIndex >= taskData.files.length) {
+                    taskData.progress.fileIndex = fileIndex;
+                    await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
                     return { success: true, taskComplete: true, taskData };
                 }
 
-                let itemFilePath = path.join(__dirname, '../../../', taskData.files[fileIndex]);
-                let itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
-
-                // Loop to find the next valid item, skipping empty files
-                while (itemIndex >= itemList.length) {
-                    fileIndex++;
-                    itemIndex = 0;
-
-                    if (fileIndex >= taskData.files.length) {
-                        taskData.progress.fileIndex = fileIndex;
-                        await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-                        return { success: true, taskComplete: true, taskData };
-                    }
-
-                    itemFilePath = path.join(__dirname, '../../../', taskData.files[fileIndex]);
-                    itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
-                }
-
-                // Update progress in the task file *before* returning
-                taskData.progress.fileIndex = fileIndex;
-                taskData.progress.itemIndex = itemIndex;
-                await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-
-                const item = itemList[itemIndex];
-                if (!item) {
-                     // This can happen if a file is empty from the start.
-                     // The loop above should handle this, but as a safeguard:
-                    return { success: false, error: "Encountered an empty or invalid file." };
-                }
-
-                // Try to get details if it's a spell, but don't fail if it's not
-                let itemDetails = null;
-                if (item.text && item.text.includes('-')) {
-                    const itemName = item.text.split(' - ')[0].trim();
-                    const spellDetailsResults = await fiveEToolsParser.searchByName('spells', itemName);
-
-                    // Find the exact match from the search results
-                    const exactMatch = spellDetailsResults.find(result => result.name.toLowerCase() === itemName.toLowerCase());
-
-                    itemDetails = exactMatch ? await fiveEToolsParser.getExact('spells', exactMatch.name, exactMatch.source) : null;
-                }
-
-                return {
-                    success: true,
-                    taskData,
-                    taskFilePath: taskFilePath, // Return the path of the loaded task
-                    spell: item, // Keep 'spell' key for frontend compatibility for now
-                    spellDetails: itemDetails,
-                    spellCount: itemList.length,
-                };
-            } catch (error) {
-                logToRenderer(`Error in loadTaskData for ${taskFilePath}: ${error}`);
-                return { success: false, error: error.message };
+                itemFilePath = path.join(basePath, taskData.files[fileIndex]);
+                itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
             }
+
+            // Update progress in the task file *before* returning
+            taskData.progress.fileIndex = fileIndex;
+            taskData.progress.itemIndex = itemIndex;
+            await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+
+            const item = itemList[itemIndex];
+            if (!item) {
+                 // This can happen if a file is empty from the start.
+                 // The loop above should handle this, but as a safeguard:
+                return { success: false, error: "Encountered an empty or invalid file." };
+            }
+
+            // Try to get details if it's a spell, but don't fail if it's not
+            let itemDetails = null;
+            if (item.text && item.text.includes('-')) {
+                const itemName = item.text.split(' - ')[0].trim();
+                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', itemName);
+
+                // Find the exact match from the search results
+                const exactMatch = spellDetailsResults.find(result => result.name.toLowerCase() === itemName.toLowerCase());
+
+                itemDetails = exactMatch ? await fiveEToolsParser.getExact('spells', exactMatch.name, exactMatch.source) : null;
+            }
+
+            return {
+                success: true,
+                taskData,
+                taskFilePath: taskFilePath, // Return the path of the loaded task
+                spell: item, // Keep 'spell' key for frontend compatibility for now
+                spellDetails: itemDetails,
+                spellCount: itemList.length,
+            };
+        } catch (error) {
+            logToRenderer(`Error in loadTaskData for ${taskFilePath}: ${error}`);
+            return { success: false, error: error.message };
+        }
+    }
+
+    ipcMain.handle('load-task-by-path', async (event, filePath) => {
+        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+        const taskPath = path.isAbsolute(filePath) ? filePath : path.join(basePath, filePath);
+        return await loadTaskData(taskPath);
+    });
+
+    ipcMain.handle('get-task-data', async () => {
+        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+        const defaultTaskPath = path.join(basePath, 'src/jsontool/deck-editing-task.json');
+        return await loadTaskData(defaultTaskPath);
+    });
+
+    ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell, taskFilePath }) => {
+        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+        try {
+            // 1. Save the current spell changes
+            const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
+            const currentItemFileData = await fs.readFile(currentItemFilePath, 'utf8');
+            let currentItemList = JSON.parse(currentItemFileData);
+            currentItemList[taskData.progress.itemIndex] = currentSpell;
+            await fs.writeFile(currentItemFilePath, JSON.stringify(currentItemList, null, 2));
+
+            // 2. Update progress
+            taskData.progress.itemIndex++;
+
+            if (taskData.progress.itemIndex >= currentItemList.length) {
+                taskData.progress.itemIndex = 0;
+                taskData.progress.fileIndex++;
+                if (taskData.progress.fileIndex >= taskData.files.length) {
+                    // Task complete!
+                    await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+                    return { success: true, taskComplete: true, taskData };
+                }
+            }
+
+            // 3. Save the new progress to the task file
+            await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+
+            // 4. Get the next spell and its details
+            const nextFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
+            const nextFileData = await fs.readFile(nextFilePath, 'utf8');
+            const nextItemList = JSON.parse(nextFileData);
+            const nextItem = nextItemList[taskData.progress.itemIndex];
+
+            let nextItemDetails = null;
+            if (nextItem.text && nextItem.text.includes('-')) {
+                const nextItemName = nextItem.text.split(' - ')[0].trim();
+                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', nextItemName);
+                const exactMatch = spellDetailsResults.find(result => result.name.toLowerCase() === nextItemName.toLowerCase());
+                nextItemDetails = exactMatch ? await fiveEToolsParser.getExact('spells', exactMatch.name, exactMatch.source) : null;
+            }
+
+            return {
+                success: true,
+                taskData,
+                spell: nextItem,
+                spellDetails: nextItemDetails,
+                spellCount: nextItemList.length,
+            };
+
+        } catch (error) {
+            logToRenderer(`Error in save-and-get-next-spell: ${error}`);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('scrap-and-get-next-item', async (event, { taskData, currentItem, taskFilePath }) => {
+        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+        try {
+            const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
+            let currentItemList = JSON.parse(await fs.readFile(currentItemFilePath, 'utf8'));
+
+            // Use the title field for a more robust lookup
+            const titleField = taskData.ui.titleField || 'name';
+            const itemIndexToRemove = currentItemList.findIndex(item => item[titleField] === currentItem[titleField]);
+
+            if (itemIndexToRemove === -1) {
+                // Fallback for safety, though it's a weak comparison
+                const fallbackIndex = currentItemList.findIndex(item => JSON.stringify(item) === JSON.stringify(currentItem));
+                if (fallbackIndex === -1) {
+                    throw new Error(`Could not find the item with ${titleField} "${currentItem[titleField]}" to scrap in the file.`);
+                }
+                itemIndexToRemove = fallbackIndex;
+            }
+
+            currentItemList.splice(itemIndexToRemove, 1);
+            await fs.writeFile(currentItemFilePath, JSON.stringify(currentItemList, null, 2));
+
+            // After removing, the item at the same index is the next one.
+            // We don't need to change the progress. The robust loadTaskData will handle
+            // cases where the index is now out of bounds (e.g., last item deleted)
+            // or the file has become empty.
+            return await loadTaskData(taskFilePath);
+
+        } catch (error) {
+            logToRenderer(`Error in scrap-and-get-next-item: ${error}`);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('undo-and-get-previous-spell', async (event, { taskData, previousSpellState, taskFilePath }) => {
+        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
+        try {
+            // 1. Determine the previous spell's position
+            let prevFileIndex = taskData.progress.fileIndex;
+            let prevItemIndex = taskData.progress.itemIndex - 1;
+
+            if (prevItemIndex < 0) {
+                prevFileIndex--;
+                if (prevFileIndex < 0) {
+                    return { success: false, error: "Already at the beginning." };
+                }
+                const prevFilePath = path.join(basePath, taskData.files[prevFileIndex]);
+                const prevFileData = await fs.readFile(prevFilePath, 'utf8');
+                const prevSpellList = JSON.parse(prevFileData);
+                prevItemIndex = prevSpellList.length - 1;
+            }
+
+            // 2. Save the *previous* state back to the file
+            const targetFilePath = path.join(basePath, taskData.files[prevFileIndex]);
+            const targetFileData = await fs.readFile(targetFilePath, 'utf8');
+            let targetSpellList = JSON.parse(targetFileData);
+            targetSpellList[prevItemIndex] = previousSpellState;
+            await fs.writeFile(targetFilePath, JSON.stringify(targetSpellList, null, 2));
+
+            // 3. Update progress to the previous spell's position
+            taskData.progress.fileIndex = prevFileIndex;
+            taskData.progress.itemIndex = prevItemIndex;
+
+            // 4. Save the new progress to the task file
+            await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
+
+            // 5. Get the details for the (now current) spell
+            const spellName = previousSpellState.text.split(' - ')[0];
+            const spellDetailsResults = await fiveEToolsParser.searchByName('spells', spellName);
+            const spellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spells', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
+            const spellCount = targetSpellList.length;
+
+            return {
+                success: true,
+                taskData,
+                spell: previousSpellState,
+                spellDetails,
+                spellCount,
+            };
+        } catch (error) {
+            logToRenderer(`Error in undo-and-get-previous-spell: ${error}`);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('open-file-dialog', async () => {
+        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Select Music File',
+            defaultPath: discordConfig.defaultMusicPath,
+            properties: ['openFile'],
+            filters: [
+                { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
+            ]
+        });
+
+        if (filePaths && filePaths.length > 0) {
+            // Here, you would typically do something with the selected file path,
+            // like sending it back to the renderer process or loading the music.
+            // For now, we'll just return it.
+            return filePaths[0];
+        }
+        return null;
+    });
+
+
+    ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
+        initiativeTracker.updateInitiative(creatureId, initiative);
+    });
+
+    ipcMain.on('push-initiative', async () => {
+        logToRenderer(`'push-initiative-to-chat' invoked.`);
+        const initiativeOrder = initiativeTracker.getInitiativeOrder();
+        const currentTurnIndex = initiativeTracker.currentTurnIndex;
+        if (initiativeOrder.length === 0) {
+            logToRenderer('[push-initiative] Cannot push, initiative is empty.');
+            return;
         }
 
-        ipcMain.handle('load-task-by-path', async (event, filePath) => {
-            // If the path is absolute (e.g., from a file dialog), use it directly.
-            // Otherwise, join it with the base directory (for internal calls).
-            const taskPath = path.isAbsolute(filePath) ? filePath : path.join(__dirname, '../../../', filePath);
-            return await loadTaskData(taskPath);
-        });
+        if (!discordConfig.textChannel) {
+            logToRenderer('[push-initiative] No text channel configured.');
+            return;
+        }
 
-        ipcMain.handle('get-task-data', async () => {
-            const defaultTaskPath = path.join(__dirname, '../../jsontool/deck-editing-task.json');
-            return await loadTaskData(defaultTaskPath);
-        });
+        const channel = client.channels.cache.get(discordConfig.textChannel);
+        if (!channel) {
+            logToRenderer(`[push-initiative] FAILED to find channel with ID: ${discordConfig.textChannel}`);
+            return;
+        }
+        logToRenderer(`[push-initiative] Found channel: ${channel.name}`);
 
-        ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell, taskFilePath }) => {
-            try {
-                // 1. Save the current spell changes
-                const currentItemFilePath = path.join(__dirname, '../../../', taskData.files[taskData.progress.fileIndex]);
-                const currentItemFileData = await fs.readFile(currentItemFilePath, 'utf8');
-                let currentItemList = JSON.parse(currentItemFileData);
-                currentItemList[taskData.progress.itemIndex] = currentSpell;
-                await fs.writeFile(currentItemFilePath, JSON.stringify(currentItemList, null, 2));
+        try {
+            const embed = new EmbedBuilder()
+                .setColor(0x0099FF)
+                .setTitle('Initiative Order')
+                .setTimestamp();
 
-                // 2. Update progress
-                taskData.progress.itemIndex++;
+            let description = '';
+            initiativeOrder.forEach((creature, index) => {
+                const hpBar = createEmojiHpBar(creature);
 
-                if (taskData.progress.itemIndex >= currentItemList.length) {
-                    taskData.progress.itemIndex = 0;
-                    taskData.progress.fileIndex++;
-                    if (taskData.progress.fileIndex >= taskData.files.length) {
-                        // Task complete!
-                        await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-                        return { success: true, taskComplete: true, taskData };
-                    }
+                let conditionEmojis = (creature.conditions || []).map(c => DND_CONDITIONS[c]?.emoji || '');
+                let conditionStr;
+                if (conditionEmojis.length > 3) {
+                    conditionStr = conditionEmojis.slice(0, 3).join('') + '♾️';
+                } else {
+                    conditionStr = conditionEmojis.join('');
                 }
 
-                // 3. Save the new progress to the task file
-                await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-
-                // 4. Get the next spell and its details
-                const nextFilePath = path.join(__dirname, '../../../', taskData.files[taskData.progress.fileIndex]);
-                const nextFileData = await fs.readFile(nextFilePath, 'utf8');
-                const nextItemList = JSON.parse(nextFileData);
-                const nextItem = nextItemList[taskData.progress.itemIndex];
-
-                let nextItemDetails = null;
-                if (nextItem.text && nextItem.text.includes('-')) {
-                    const nextItemName = nextItem.text.split(' - ')[0].trim();
-                    const spellDetailsResults = await fiveEToolsParser.searchByName('spells', nextItemName);
-                    const exactMatch = spellDetailsResults.find(result => result.name.toLowerCase() === nextItemName.toLowerCase());
-                    nextItemDetails = exactMatch ? await fiveEToolsParser.getExact('spells', exactMatch.name, exactMatch.source) : null;
+                const activeMarker = index === currentTurnIndex ? '`➤`' : '` `';
+                const initiativeStr = creature.initiative.toString();
+                let nameStr = creature.name || '';
+                if (creature.isMob) {
+                    const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
+                    nameStr = `Mob of ${currentCount} ${creature.name}`;
                 }
 
-                return {
-                    success: true,
-                    taskData,
-                    spell: nextItem,
-                    spellDetails: nextItemDetails,
-                    spellCount: nextItemList.length,
-                };
-
-            } catch (error) {
-                logToRenderer(`Error in save-and-get-next-spell: ${error}`);
-                return { success: false, error: error.message };
-            }
-        });
-
-        ipcMain.handle('scrap-and-get-next-item', async (event, { taskData, currentItem, taskFilePath }) => {
-            try {
-                const currentItemFilePath = path.join(__dirname, '../../../', taskData.files[taskData.progress.fileIndex]);
-                let currentItemList = JSON.parse(await fs.readFile(currentItemFilePath, 'utf8'));
-
-                // Use the title field for a more robust lookup
-                const titleField = taskData.ui.titleField || 'name';
-                const itemIndexToRemove = currentItemList.findIndex(item => item[titleField] === currentItem[titleField]);
-
-                if (itemIndexToRemove === -1) {
-                    // Fallback for safety, though it's a weak comparison
-                    const fallbackIndex = currentItemList.findIndex(item => JSON.stringify(item) === JSON.stringify(currentItem));
-                    if (fallbackIndex === -1) {
-                        throw new Error(`Could not find the item with ${titleField} "${currentItem[titleField]}" to scrap in the file.`);
-                    }
-                    itemIndexToRemove = fallbackIndex;
-                }
-
-                currentItemList.splice(itemIndexToRemove, 1);
-                await fs.writeFile(currentItemFilePath, JSON.stringify(currentItemList, null, 2));
-
-                // After removing, the item at the same index is the next one.
-                // We don't need to change the progress. The robust loadTaskData will handle
-                // cases where the index is now out of bounds (e.g., last item deleted)
-                // or the file has become empty.
-                return await loadTaskData(taskFilePath);
-
-            } catch (error) {
-                logToRenderer(`Error in scrap-and-get-next-item: ${error}`);
-                return { success: false, error: error.message };
-            }
-        });
-
-        ipcMain.handle('undo-and-get-previous-spell', async (event, { taskData, previousSpellState, taskFilePath }) => {
-            try {
-                // 1. Determine the previous spell's position
-                let prevFileIndex = taskData.progress.fileIndex;
-                let prevItemIndex = taskData.progress.itemIndex - 1;
-
-                if (prevItemIndex < 0) {
-                    prevFileIndex--;
-                    if (prevFileIndex < 0) {
-                        return { success: false, error: "Already at the beginning." };
-                    }
-                    const prevFilePath = path.join(__dirname, '../../../', taskData.files[prevFileIndex]);
-                    const prevFileData = await fs.readFile(prevFilePath, 'utf8');
-                    const prevSpellList = JSON.parse(prevFileData);
-                    prevItemIndex = prevSpellList.length - 1;
-                }
-
-                // 2. Save the *previous* state back to the file
-                const targetFilePath = path.join(__dirname, '../../../', taskData.files[prevFileIndex]);
-                const targetFileData = await fs.readFile(targetFilePath, 'utf8');
-                let targetSpellList = JSON.parse(targetFileData);
-                targetSpellList[prevItemIndex] = previousSpellState;
-                await fs.writeFile(targetFilePath, JSON.stringify(targetSpellList, null, 2));
-
-                // 3. Update progress to the previous spell's position
-                taskData.progress.fileIndex = prevFileIndex;
-                taskData.progress.itemIndex = prevItemIndex;
-
-                // 4. Save the new progress to the task file
-                await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-
-                // 5. Get the details for the (now current) spell
-                const spellName = previousSpellState.text.split(' - ')[0];
-                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', spellName);
-                const spellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spells', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
-                const spellCount = targetSpellList.length;
-
-                return {
-                    success: true,
-                    taskData,
-                    spell: previousSpellState,
-                    spellDetails,
-                    spellCount,
-                };
-            } catch (error) {
-                logToRenderer(`Error in undo-and-get-previous-spell: ${error}`);
-                return { success: false, error: error.message };
-            }
-        });
-
-        ipcMain.handle('open-file-dialog', async () => {
-            const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-                title: 'Select Music File',
-                defaultPath: DEFAULT_LOCAL_FOLDER,
-                properties: ['openFile'],
-                filters: [
-                    { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
-                ]
+                // New layout: Init | HP Bar | Name | Conditions
+                const line = `${activeMarker}${hpBar}${conditionStr} ${nameStr}`;
+                description += line + '\n';
             });
 
-            if (filePaths && filePaths.length > 0) {
-                // Here, you would typically do something with the selected file path,
-                // like sending it back to the renderer process or loading the music.
-                // For now, we'll just return it.
-                return filePaths[0];
-            }
-            return null;
-        });
+            embed.setDescription(description);
 
+            logToRenderer(`[push-initiative] Attempting to send embed...`);
+            await channel.send({ embeds: [embed] });
+            logToRenderer('[push-initiative] Successfully pushed initiative to chat.');
+        } catch (error) {
+            logToRenderer(`[push-initiative] FAILED to send embed: ${error}`);
+        }
+    });
 
-        ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
-            initiativeTracker.updateInitiative(creatureId, initiative);
-        });
+    ipcMain.on('next-turn', async () => {
+        const turnInfo = initiativeTracker.nextTurn();
+        if (turnInfo) {
+            await checkAndShowReminders(turnInfo.oldCreature, 'end');
+            await checkAndShowReminders(turnInfo.newCreature, 'start');
+        }
+    });
 
-        ipcMain.on('push-initiative', async () => {
-            logToRenderer(`'push-initiative-to-chat' invoked.`);
-            const initiativeOrder = initiativeTracker.getInitiativeOrder();
-            const currentTurnIndex = initiativeTracker.currentTurnIndex;
-            if (initiativeOrder.length === 0) {
-                logToRenderer('[push-initiative] Cannot push, initiative is empty.');
-                return;
-            }
+    ipcMain.on('copy-creature', (event, { creatureId }) => {
+        const creature = initiativeTracker.getCreature(creatureId);
+        if (creature) {
+            // When copying, we want to populate the "Add" form, not the "Edit" form.
+            // We give it a new ID to ensure it's a distinct creature.
+            const newCreature = { ...creature, id: Date.now() };
+            mainWindow.webContents.send('populate-add-form', newCreature);
+        }
+    });
 
-            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
-            if (!channel) {
-                logToRenderer(`[push-initiative] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
-                return;
-            }
-            logToRenderer(`[push-initiative] Found channel: ${channel.name}`);
-
-            try {
-                const embed = new EmbedBuilder()
-                    .setColor(0x0099FF)
-                    .setTitle('Initiative Order')
-                    .setTimestamp();
-
-                let description = '';
-                initiativeOrder.forEach((creature, index) => {
-                    const hpBar = createEmojiHpBar(creature);
-
-                    let conditionEmojis = (creature.conditions || []).map(c => DND_CONDITIONS[c]?.emoji || '');
-                    let conditionStr;
-                    if (conditionEmojis.length > 3) {
-                        conditionStr = conditionEmojis.slice(0, 3).join('') + '♾️';
-                    } else {
-                        conditionStr = conditionEmojis.join('');
-                    }
-
-                    const activeMarker = index === currentTurnIndex ? '`➤`' : '` `';
-                    const initiativeStr = creature.initiative.toString();
-                    const nameStr = (creature.name || '');
-
-                    // New layout: Init | HP Bar | Name | Conditions
-                    const line = `${activeMarker}${hpBar}${conditionStr} ${nameStr}`;
-                    description += line + '\n';
-                });
-
-                embed.setDescription(description);
-
-                logToRenderer(`[push-initiative] Attempting to send embed...`);
-                await channel.send({ embeds: [embed] });
-                logToRenderer('[push-initiative] Successfully pushed initiative to chat.');
-            } catch (error) {
-                logToRenderer(`[push-initiative] FAILED to send embed: ${error}`);
-            }
-        });
-
-        ipcMain.on('next-turn', async () => {
-            const turnInfo = initiativeTracker.nextTurn();
-            if (turnInfo) {
-                await checkAndShowReminders(turnInfo.oldCreature, 'end');
-                await checkAndShowReminders(turnInfo.newCreature, 'start');
-            }
-        });
-
-        ipcMain.on('copy-creature', (event, { creatureId }) => {
-            const creature = initiativeTracker.getCreature(creatureId);
-            if (creature) {
-                mainWindow.webContents.send('populate-edit-form', creature);
-            }
-        });
-
-        ipcMain.on('save-encounter', async () => {
-            try {
-                const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-                    title: 'Save Encounter',
-                    defaultPath: app.getPath('userData'),
-                    filters: [{ name: 'JSON Files', extensions: ['json'] }]
-                });
-
-                if (!canceled && filePath) {
-                    initiativeTracker.saveEncounterToFile(filePath);
-                }
-            } catch (error) {
-                logToRenderer(`Error saving encounter: ${error.message}`);
-            }
-        });
-
-        ipcMain.handle('load-encounter-dialog', async () => {
-            const confirmResult = await dialog.showMessageBox(mainWindow, {
-                type: 'warning',
-                title: 'Confirm Load',
-                message: 'Are you sure you want to load a new encounter?',
-                detail: 'This will overwrite the current encounter. You may want to save your current progress first.',
-                buttons: ['Load Encounter', 'Cancel'],
-                defaultId: 0,
-                cancelId: 1
-            });
-
-            if (confirmResult.response === 1) { // User clicked 'Cancel'
-                return;
-            }
-
-            const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
-                title: 'Load Encounter',
+    ipcMain.on('save-encounter', async () => {
+        try {
+            const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+                title: 'Save Encounter',
                 defaultPath: app.getPath('userData'),
-                properties: ['openFile'],
                 filters: [{ name: 'JSON Files', extensions: ['json'] }]
             });
 
-            if (!canceled && filePaths && filePaths.length > 0) {
-                const filePath = filePaths[0];
-                initiativeTracker.loadEncounterFromFile(filePath);
+            if (!canceled && filePath) {
+                initiativeTracker.saveEncounterToFile(filePath);
             }
+        } catch (error) {
+            logToRenderer(`Error saving encounter: ${error.message}`);
+        }
+    });
+
+    ipcMain.handle('load-encounter-dialog', async () => {
+        const confirmResult = await dialog.showMessageBox(mainWindow, {
+            type: 'warning',
+            title: 'Confirm Load',
+            message: 'Are you sure you want to load a new encounter?',
+            detail: 'This will overwrite the current encounter. You may want to save your current progress first.',
+            buttons: ['Load Encounter', 'Cancel'],
+            defaultId: 0,
+            cancelId: 1
         });
 
-        ipcMain.on('add-creature', (event, creature) => {
-            const rollLogMessage = initiativeTracker.addCreature(creature);
-            if (rollLogMessage) {
-                mainWindow.webContents.send('dice-log', rollLogMessage);
-            }
+        if (confirmResult.response === 1) { // User clicked 'Cancel'
+            return;
+        }
+
+        const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Load Encounter',
+            defaultPath: app.getPath('userData'),
+            properties: ['openFile'],
+            filters: [{ name: 'JSON Files', extensions: ['json'] }]
         });
 
-        ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
-            initiativeTracker.updateReminders(creatureId, reminders);
-        });
+        if (!canceled && filePaths && filePaths.length > 0) {
+            const filePath = filePaths[0];
+            initiativeTracker.loadEncounterFromFile(filePath);
+        }
+    });
 
-        ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
-            const message = initiativeTracker.rollStat(creatureId, rollType, stat, type);
-            if (message) {
-                mainWindow.webContents.send('dice-log', message);
-                const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+    ipcMain.on('add-creature', (event, creature) => {
+        const rollLogMessage = initiativeTracker.addCreature(creature);
+        if (rollLogMessage) {
+            mainWindow.webContents.send('dice-log', rollLogMessage);
+        }
+    });
+
+    ipcMain.on('update-creature', (event, creature) => {
+        initiativeTracker.updateCreature(creature);
+    });
+
+    ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
+        initiativeTracker.updateReminders(creatureId, reminders);
+    });
+
+    ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
+        const result = initiativeTracker.rollStat(creatureId, rollType, stat, type);
+        if (result) {
+            const { message, embed } = result;
+            mainWindow.webContents.send('dice-log', message);
+            if (discordConfig.textChannel) {
+                const channel = client.channels.cache.get(discordConfig.textChannel);
                 if (channel) {
-                    channel.send(message);
+                    channel.send({ embeds: [embed] });
                 }
             }
-        });
+        }
+    });
 
-        ipcMain.on('roll-attack', (event, { creatureId, rollType }) => {
-            const message = initiativeTracker.rollAttack(creatureId, rollType);
-            if (message) {
-                mainWindow.webContents.send('dice-log', message);
-                const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
+    ipcMain.on('roll-attack', (event, { creatureId, rollType }) => {
+        const result = initiativeTracker.rollAttack(creatureId, rollType);
+        if (result) {
+            const { message, embed } = result;
+            mainWindow.webContents.send('dice-log', message);
+            if (discordConfig.textChannel) {
+                const channel = client.channels.cache.get(discordConfig.textChannel);
                 if (channel) {
-                    channel.send(message);
+                    channel.send({ embeds: [embed] });
                 }
             }
+        }
+    });
+
+    ipcMain.on('reset-encounter', () => {
+        initiativeTracker.resetEncounter();
+    });
+
+    ipcMain.on('clear-encounter', async () => {
+        const result = await dialog.showMessageBox(mainWindow, {
+            type: 'warning',
+            title: 'Confirm Clear',
+            message: 'Are you sure you want to clear the entire encounter? This cannot be undone.',
+            detail: 'You may want to save the encounter first.',
+            buttons: ['Clear Encounter', 'Cancel'],
+            defaultId: 1,
+            cancelId: 1
         });
+        if (result.response === 0) { // 'Clear Encounter' button
+            initiativeTracker.clearEncounter();
+        }
+    });
 
-        ipcMain.on('reset-encounter', () => {
-            initiativeTracker.resetEncounter();
-        });
+    ipcMain.on('edit-creature', (event, { creatureId }) => {
+        const creature = initiativeTracker.editCreature(creatureId);
+        if (creature) {
+            mainWindow.webContents.send('populate-edit-form', creature);
+        }
+    });
 
-        ipcMain.on('clear-encounter', async () => {
-            const result = await dialog.showMessageBox(mainWindow, {
-                type: 'warning',
-                title: 'Confirm Clear',
-                message: 'Are you sure you want to clear the entire encounter? This cannot be undone.',
-                detail: 'You may want to save the encounter first.',
-                buttons: ['Clear Encounter', 'Cancel'],
-                defaultId: 1,
-                cancelId: 1
-            });
-            if (result.response === 0) { // 'Clear Encounter' button
-                initiativeTracker.clearEncounter();
-            }
-        });
+    ipcMain.on('remove-creature', (event, { creatureId }) => {
+        initiativeTracker.removeCreature(creatureId);
+    });
 
-        ipcMain.on('edit-creature', (event, { creatureId }) => {
-            const creature = initiativeTracker.editCreature(creatureId);
-            if (creature) {
-                mainWindow.webContents.send('populate-edit-form', creature);
-            }
-        });
+    ipcMain.on('previous-turn', async () => {
+        const turnInfo = initiativeTracker.previousTurn();
+        if (turnInfo) {
+            await checkAndShowReminders(turnInfo.oldCreature, 'end');
+            await checkAndShowReminders(turnInfo.newCreature, 'start');
+        }
+    });
 
-        ipcMain.on('remove-creature', (event, { creatureId }) => {
-            initiativeTracker.removeCreature(creatureId);
-        });
+    ipcMain.on('add-temp-hp', (event, { creatureId, amount }) => {
+        initiativeTracker.addTempHp(creatureId, amount);
+    });
 
-        ipcMain.on('previous-turn', async () => {
-            const turnInfo = initiativeTracker.previousTurn();
-            if (turnInfo) {
-                await checkAndShowReminders(turnInfo.oldCreature, 'end');
-                await checkAndShowReminders(turnInfo.newCreature, 'start');
-            }
-        });
+    ipcMain.on('update-hp', (event, { creatureId, amount }) => {
+        const result = initiativeTracker.updateHp(creatureId, amount);
+        if (result && result.concentrationCheckDC) {
+            dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${result.creature.name} must make a DC ${result.concentrationCheckDC} Constitution saving throw.`, buttons: ['OK']});
+        }
+    });
 
-        ipcMain.on('add-temp-hp', (event, { creatureId, amount }) => {
-            initiativeTracker.addTempHp(creatureId, amount);
-        });
+    ipcMain.on('add-condition', (event, { creatureId, condition }) => {
+        logToRenderer(`Adding condition ${condition} to creature ${creatureId}`);
+        initiativeTracker.addCondition(creatureId, condition);
+    });
 
-        ipcMain.on('update-hp', (event, { creatureId, amount }) => {
-            const result = initiativeTracker.updateHp(creatureId, amount);
-            if (result && result.concentrationCheckDC) {
-                dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${result.creature.name} must make a DC ${result.concentrationCheckDC} Constitution saving throw.`, buttons: ['OK']});
-            }
-        });
+    ipcMain.on('remove-condition', (event, { creatureId, condition }) => {
+        initiativeTracker.removeCondition(creatureId, condition);
+    });
 
-        ipcMain.on('add-condition', (event, { creatureId, condition }) => {
-            logToRenderer(`Adding condition ${condition} to creature ${creatureId}`);
-            initiativeTracker.addCondition(creatureId, condition);
-        });
+    ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
+        initiativeTracker.updateCreatureFlag(creatureId, flag, value);
+    });
 
-        ipcMain.on('remove-condition', (event, { creatureId, condition }) => {
-            initiativeTracker.removeCondition(creatureId, condition);
-        });
+    ipcMain.handle('search-monsters', async (event, query) => {
+        logToRenderer(`[IPC] Received "search-monsters" with query: "${query}"`);
+        if (!fiveEToolsParser) {
+            logToRenderer('[IPC] Parser not available.');
+            return [];
+        }
+        const results = await fiveEToolsParser.searchByName('bestiary', query);
+        logToRenderer(`[IPC] Found ${results.length} monsters, returning to renderer.`);
+        return results;
+    });
 
-        ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
-            initiativeTracker.updateCreatureFlag(creatureId, flag, value);
-        });
+    ipcMain.handle('get-monster-details', async (event, { name, source }) => {
+        logToRenderer(`[IPC] Received "get-monster-details" for: ${name} (${source})`);
+        if (!fiveEToolsParser) {
+             logToRenderer('[IPC] Parser not available.');
+            return null;
+        }
+        const monster = await fiveEToolsParser.getExact('bestiary', name, source);
+        logToRenderer(`[IPC] Found monster details, returning to renderer.`);
+        return monster;
+    });
 
-        ipcMain.handle('search-monsters', async (event, query) => {
-            logToRenderer(`[IPC] Received "search-monsters" with query: "${query}"`);
-            if (!fiveEToolsParser) {
-                logToRenderer('[IPC] Parser not available.');
-                return [];
-            }
-            const results = await fiveEToolsParser.searchByName('bestiary', query);
-            logToRenderer(`[IPC] Found ${results.length} monsters, returning to renderer.`);
-            return results;
-        });
+    ipcMain.on('push-dicelog-to-discord', async (event, logContent) => {
+        if (!discordConfig.textChannel) {
+            logToRenderer('[push-dicelog] No text channel configured.');
+            return;
+        }
+        const channel = client.channels.cache.get(discordConfig.textChannel);
+        if (!channel) {
+            logToRenderer(`[push-dicelog] FAILED to find channel with ID: ${discordConfig.textChannel}`);
+            return;
+        }
+        try {
+            const embed = new EmbedBuilder()
+                .setColor(0x0099FF)
+                .setTitle('Dice Rolls')
+                .setDescription(logContent)
+                .setTimestamp();
+            await channel.send({ embeds: [embed] });
+            logToRenderer('[push-dicelog] Successfully pushed dice log to chat.');
+        } catch (error) {
+            logToRenderer(`[push-dicelog] FAILED to send embed: ${error}`);
+        }
+    });
 
-        ipcMain.handle('get-monster-details', async (event, { name, source }) => {
-            logToRenderer(`[IPC] Received "get-monster-details" for: ${name} (${source})`);
-            if (!fiveEToolsParser) {
-                 logToRenderer('[IPC] Parser not available.');
-                return null;
-            }
-            const monster = await fiveEToolsParser.getExact('bestiary', name, source);
-            logToRenderer(`[IPC] Found monster details, returning to renderer.`);
-            return monster;
-        });
+    ipcMain.on('push-statblock-to-discord', async (event, rawDataString) => {
+        if (!discordConfig.textChannel) {
+            logToRenderer('[push-statblock] No text channel configured.');
+            return;
+        }
+        const channel = client.channels.cache.get(discordConfig.textChannel);
+        if (!channel) {
+            logToRenderer(`[push-statblock] FAILED to find channel with ID: ${discordConfig.textChannel}`);
+            return;
+        }
+        try {
+            const monster = JSON.parse(rawDataString);
+            const { mainEmbed, longFields } = formatStatBlockForDiscord(monster);
 
-        ipcMain.on('push-dicelog-to-discord', async (event, logContent) => {
-            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
-            if (!channel) {
-                logToRenderer(`[push-dicelog] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
-                return;
-            }
-            try {
-                const embed = new EmbedBuilder()
-                    .setColor(0x0099FF)
-                    .setTitle('Dice Rolls')
-                    .setDescription(logContent)
-                    .setTimestamp();
-                await channel.send({ embeds: [embed] });
-                logToRenderer('[push-dicelog] Successfully pushed dice log to chat.');
-            } catch (error) {
-                logToRenderer(`[push-dicelog] FAILED to send embed: ${error}`);
-            }
-        });
+            // Send the main embed
+            const mainMessage = await channel.send({ embeds: [mainEmbed] });
+            logToRenderer('[push-statblock] Successfully pushed main stat block embed.');
 
-        ipcMain.on('push-statblock-to-discord', async (event, rawDataString) => {
-            const channel = client.channels.cache.get(TEXT_CHANNEL_ID);
-            if (!channel) {
-                logToRenderer(`[push-statblock] FAILED to find channel with ID: ${TEXT_CHANNEL_ID}`);
-                return;
-            }
-            try {
-                const monster = JSON.parse(rawDataString);
-                const { mainEmbed, longFields } = formatStatBlockForDiscord(monster);
+            // If there are long fields, create a thread and post them
+            if (longFields.length > 0) {
+                const thread = await mainMessage.startThread({
+                    name: `${monster.name} - Details`,
+                    autoArchiveDuration: 60,
+                });
 
-                // Send the main embed
-                const mainMessage = await channel.send({ embeds: [mainEmbed] });
-                logToRenderer('[push-statblock] Successfully pushed main stat block embed.');
-
-                // If there are long fields, create a thread and post them
-                if (longFields.length > 0) {
-                    const thread = await mainMessage.startThread({
-                        name: `${monster.name} - Details`,
-                        autoArchiveDuration: 60,
-                    });
-
-                    for (const field of longFields) {
-                        const chunks = splitText(field.value, 1024);
-                        for (let i = 0; i < chunks.length; i++) {
-                            const chunkEmbed = new EmbedBuilder()
-                                .setColor(0x0099FF)
-                                .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
-                                .setDescription(chunks[i]);
-                            await thread.send({ embeds: [chunkEmbed] });
-                        }
+                for (const field of longFields) {
+                    const chunks = splitText(field.value, 1024);
+                    for (let i = 0; i < chunks.length; i++) {
+                        const chunkEmbed = new EmbedBuilder()
+                            .setColor(0x0099FF)
+                            .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
+                            .setDescription(chunks[i]);
+                        await thread.send({ embeds: [chunkEmbed] });
                     }
-                    logToRenderer(`[push-statblock] Sent ${longFields.length} detail section(s) to thread.`);
                 }
-            } catch (error) {
-                logToRenderer(`[push-statblock] FAILED to send embed: ${error}`);
+                logToRenderer(`[push-statblock] Sent ${longFields.length} detail section(s) to thread.`);
             }
-        });
-    }
-    else {
-        logToRenderer('ipcloader() waiting for window to load...');
-        await sleep(100);
-        ipcloader();
-    }  
+        } catch (error) {
+            logToRenderer(`[push-statblock] FAILED to send embed: ${error}`);
+        }
+    });
+
+    ipcMain.on('push-mob-rules-to-discord', async (event, { creatureName, absoluteImagePath }) => {
+        if (!creatureName || !absoluteImagePath) {
+            const errorMsg = `[push-mob-rules] Error: Missing creatureName or absoluteImagePath.`;
+            logToRenderer(errorMsg);
+            dialog.showErrorBox('Discord Error', `Could not push mob rules. Data from UI was incomplete.`);
+            return;
+        }
+
+        if (!discordConfig.textChannel) {
+            logToRenderer('[push-mob-rules] No text channel configured.');
+            return;
+        }
+        const channel = client.channels.cache.get(discordConfig.textChannel);
+        if (!channel) {
+            logToRenderer(`[push-mob-rules] FAILED to find channel with ID: ${discordConfig.textChannel}`);
+            return;
+        }
+
+        try {
+            logToRenderer(`[push-mob-rules] Reading image file into buffer from: ${absoluteImagePath}`);
+            const imageBuffer = await fs.readFile(absoluteImagePath);
+            logToRenderer(`[push-mob-rules] Successfully read image into buffer (${imageBuffer.length} bytes).`);
+
+            const { mainEmbed } = formatMobRulesForDiscord(creatureName);
+
+            await channel.send({
+                embeds: [mainEmbed],
+                files: [{
+                    attachment: imageBuffer, // Send the buffer directly
+                    name: path.basename(absoluteImagePath)
+                }]
+            });
+            logToRenderer('[push-mob-rules] Successfully pushed mob rules embed with image buffer.');
+        } catch (error) {
+            logToRenderer(`[push-mob-rules] FAILED to send embed: ${error.message}`);
+            logToRenderer(`[push-mob-rules] Error stack: ${error.stack}`);
+            dialog.showErrorBox('Discord Error', `Failed to read image file or send to Discord. Please check the file at: ${absoluteImagePath}\n\n${error.message}`);
+        }
+    });
 }
 
 // Function to send log messages to the renderer
@@ -930,18 +1253,24 @@ async function logToRenderer(message) {
         logToRenderer(message);
     }
 }
-musicPlayer = new BackendAudioPlayer(logToRenderer, shell);
-musicPlayer.on('status-change', (status) => {
-    if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('music-player-status', status);
-    }
-});
 
 /*
 client.on('error', error => {
     logToRenderer('An error occurred: ', error);
 });
 */
+
+function initializeDiscordBot() {
+    if (!discordConfig || !discordConfig.token) {
+        logToRenderer('Discord token not found. Bot not started.');
+        return;
+    }
+
+    client.login(discordConfig.token).catch(error => {
+        logToRenderer(`Discord login failed: ${error.message}`);
+        dialog.showErrorBox('Discord Login Failed', `Could not log in to Discord. Please check your token in the settings.\n\n${error.message}`);
+    });
+}
 
 client.once('clientReady', async () => {
     const shutdown = async () => {
@@ -977,7 +1306,7 @@ client.once('clientReady', async () => {
     logToRenderer('TavernTones is online!');
 
     //Connect to the voice channel
-    const voiceChannel = client.channels.cache.get(VOICE_CHANNEL_ID);
+    const voiceChannel = client.channels.cache.get(discordConfig.voiceChannel);
     if (voiceChannel && voiceChannel.isVoiceBased()) {
         try {
             connection = joinVoiceChannel({
@@ -1024,90 +1353,19 @@ client.once('clientReady', async () => {
         logToRenderer('Voice channel not found or is not a voice channel!');
     }
 
-    // Simplified IPC Handlers
-    ipcMain.on('play-music', (event, filePathFromRenderer) => {
-        logToRenderer(`IPC 'play-music' received for: ${filePathFromRenderer || 'current track'}`);
-        musicPlayer.playFile(filePathFromRenderer);
-    });
-
-    ipcMain.on('pause-music', () => {
-        logToRenderer(`IPC 'pause-music' received.`);
-        musicPlayer.pause();
-    });
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
-    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, { BOT_ROLE_ID, DEFAULT_LOCAL_FOLDER }, fiveEToolsParser);
+    const basePath = app.isPackaged
+        ? path.dirname(app.getPath('exe'))
+        : app.getAppPath();
+    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, discordConfig, fiveEToolsParser);
     client.commandHandler = commandHandler; // Attach commandHandler to the client object
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
     client.on('interactionCreate', async interaction => {
         if (interaction.isStringSelectMenu()) {
-            const { customId, values, message } = interaction;
-            const [customIdBase] = customId.split('|');
-
-            if (customIdBase.startsWith('trap-')) {
-                const selections = trapSelections.get(interaction.message.id) || {};
-                const selectionType = customIdBase.replace('trap-', '').replace('-select', '');
-                const selectedValue = values[0];
-
-                // Validate the incoming selection before updating the state
-                const isValid = await _isTrapSelectionValid(selectionType, selectedValue, selections);
-
-                if (!isValid) {
-                    // If not valid, just re-render with the old selections to prevent the invalid state.
-                    await _updateTrapDropdowns(interaction, selections);
-                    return;
-                }
-
-                if (selectedValue === 'random') {
-                    delete selections[selectionType];
-                } else {
-                    selections[selectionType] = selectedValue;
-                }
-
-                trapSelections.set(interaction.message.id, selections);
-                await _updateTrapDropdowns(interaction, selections);
-                return;
-            }
-
-            if (customIdBase.startsWith('npc-')) {
-                // This now handles dropdowns AND the back buttons
-                await _handleNpcDropdowns(interaction);
-                return;
-            }
-
-            if (customId === 'vehicle-tag-select') {
-                const selections = vehicleSelections.get(message.id) || {};
-                selections.tag = values[0];
-                vehicleSelections.set(message.id, selections);
-                await interaction.deferUpdate();
-                return;
-            }
-
-            if (customId === 'vehicle-style-select') {
-                const selections = vehicleSelections.get(message.id) || {};
-                selections.style = values[0];
-                vehicleSelections.set(message.id, selections);
-                await interaction.deferUpdate();
-                return;
-            }
-
-            if (customId === 'encounter-creature-select') {
-                const selections = encounterSelections.get(message.id) || {};
-                selections.creature = values[0];
-                encounterSelections.set(message.id, selections);
-                await interaction.deferUpdate();
-                return;
-            }
-
-            if (customId === 'encounter-difficulty-select') {
-                const selections = encounterSelections.get(message.id) || {};
-                selections.difficulty = values[0];
-                encounterSelections.set(message.id, selections);
-                await interaction.deferUpdate();
-                return;
-            }
+            const { customId, values } = interaction;
 
             if (customId === '5e-result-select') {
                 await interaction.deferUpdate();
@@ -1123,881 +1381,9 @@ client.once('clientReady', async () => {
                 }
                 return; // Stop further processing for this interaction
             }
-
-            const [prefix, selectType] = customId.split('-');
-
-            if (prefix === 'ma') {
-                // Update state
-                const selections = maSelections.get(message.id) || { mode: 'loot', size: 'Average' };
-                selections[selectType] = values[0];
-                maSelections.set(message.id, selections);
-                logToRenderer(`[MA Command] Selections updated: ${JSON.stringify(selections)}`);
-
-                // Get current full state
-                const currentMode = selections.mode;
-                const currentSize = selections.size;
-
-                // Rebuild mode select menu
-                const modeSelect = new StringSelectMenuBuilder()
-                    .setCustomId('ma-mode-select')
-                    .setPlaceholder('Select Mode')
-                    .addOptions([
-                        { label: 'Loot', value: 'loot', default: currentMode === 'loot' },
-                        { label: 'Shop', value: 'shop', default: currentMode === 'shop' }
-                    ]);
-
-                // Rebuild size select menu
-                const sizeSelect = new StringSelectMenuBuilder()
-                    .setCustomId('ma-size-select')
-                    .setPlaceholder('Select Size')
-                    .addOptions([
-                        { label: 'Huge', value: 'Huge', default: currentSize === 'Huge' },
-                        { label: 'Large', value: 'Large', default: currentSize === 'Large' },
-                        { label: 'Average', value: 'Average', default: currentSize === 'Average' },
-                        { label: 'Small', value: 'Small', default: currentSize === 'Small' },
-                        { label: 'Tiny', value: 'Tiny', default: currentSize === 'Tiny' }
-                    ]);
-
-                // Rebuild button row
-                const configureButton = new ButtonBuilder()
-                    .setCustomId('ma-configure-button')
-                    .setLabel('Configure & Generate')
-                    .setStyle(ButtonStyle.Primary);
-
-                const cancelButton = new ButtonBuilder()
-                    .setCustomId('ma-cancel-button')
-                    .setLabel('Cancel')
-                    .setStyle(ButtonStyle.Secondary);
-
-                // Package into ActionRows
-                const row1 = new ActionRowBuilder().addComponents(modeSelect);
-                const row2 = new ActionRowBuilder().addComponents(sizeSelect);
-                const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
-
-                // Update the message
-                await interaction.update({ components: [row1, row2, row3] });
-            }
-            return;
-        }
-
-        if (interaction.isButton()) {
-            if (interaction.customId === 'trap-proceed-button') {
-                await interaction.message.edit({ content: '⚙️ Finding a trap...', embeds: [], components: [] });
-                const selections = trapSelections.get(interaction.message.id) || {};
-                const trap = await fiveEToolsParser.generateTrap(selections);
-
-                if (!trap) {
-                    await interaction.message.edit({ content: '❌ Could not find a trap matching your criteria. Please try broadening your search.' });
-                    return;
-                }
-
-                const embed = new EmbedBuilder()
-                    .setColor(0xE74C3C) // Red for traps
-                    .setTitle(`Trap: ${trap.name}`)
-                    .setDescription(formatEntries(trap.entries));
-
-                await interaction.channel.send({ embeds: [embed] });
-                await interaction.message.edit({ content: '✅ Trap generated! View the details in the new public message.' });
-                trapSelections.delete(interaction.message.id);
-                await interaction.deferUpdate();
-                return;
-            }
-
-            if (interaction.customId === 'npc-generate-idea') {
-                await interaction.message.edit({ content: '⚙️ Generating character...', embeds: [], components: [] });
-                const selections = npcSelections.get(interaction.message.id) || {};
-                selections.mode = 'idea';
-                await _handleNpcGeneration(interaction, selections, true); // Pass true for a silent defer
-                npcSelections.delete(interaction.message.id);
-                return;
-            }
-
-            if (interaction.customId === 'npc-generate-npc') {
-                const modal = new ModalBuilder()
-                    .setCustomId(`npc-modal-${interaction.message.id}`)
-                    .setTitle('NPC Details');
-                const partyLevelInput = new TextInputBuilder()
-                    .setCustomId('partyLevel')
-                    .setLabel("Average Party Level (1-20)")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true);
-                const partySizeInput = new TextInputBuilder()
-                    .setCustomId('partySize')
-                    .setLabel("Number of Players")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true);
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(partyLevelInput),
-                    new ActionRowBuilder().addComponents(partySizeInput)
-                );
-                await interaction.showModal(modal);
-                return;
-            }
-
-            if (interaction.customId === 'vehicle-proceed-button') {
-                const selections = vehicleSelections.get(interaction.message.id) || {};
-
-                const modal = new ModalBuilder()
-                    .setCustomId(`vehicle-modal|${selections.tag || 'random'}|${selections.style || 'random'}`)
-                    .setTitle('Vehicle Encounter Details');
-
-                const totalHpInput = new TextInputBuilder()
-                    .setCustomId('totalHp')
-                    .setLabel("Total Vehicle HP Budget")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true);
-
-                const numVehiclesInput = new TextInputBuilder()
-                    .setCustomId('numVehicles')
-                    .setLabel("Ideal Number of Vehicles")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true);
-
-                modal.addComponents(new ActionRowBuilder().addComponents(totalHpInput));
-                modal.addComponents(new ActionRowBuilder().addComponents(numVehiclesInput));
-
-                await interaction.showModal(modal);
-                return;
-            }
-
-            if (interaction.customId.startsWith('encounter-proceed-button')) {
-                const parts = interaction.customId.split('|');
-                const selections = encounterSelections.get(interaction.message.id) || {};
-
-                let modalCustomId;
-                if (parts.length > 1 && parts[1] === 'type') {
-                    // Type-based encounter
-                    const type = parts[2];
-                    if (!selections.difficulty) {
-                        await interaction.reply({ content: 'Please select a difficulty before proceeding.', flags: [MessageFlags.Ephemeral] });
-                        return;
-                    }
-                    modalCustomId = `encounter-modal|type|${type}|${selections.difficulty}`;
-                } else {
-                    // Creature-based encounter
-                    if (!selections.creature || !selections.difficulty) {
-                        await interaction.reply({ content: 'Please select a creature and a difficulty before proceeding.', flags: [MessageFlags.Ephemeral] });
-                        return;
-                    }
-                    modalCustomId = `encounter-modal|creature|${selections.creature}|${selections.difficulty}`;
-                }
-
-                const modal = new ModalBuilder()
-                    .setCustomId(modalCustomId)
-                    .setTitle('Encounter Details');
-
-                const partyLevelInput = new TextInputBuilder()
-                    .setCustomId('partyLevel')
-                    .setLabel("Average Party Level (1-20)")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true);
-
-                const partySizeInput = new TextInputBuilder()
-                    .setCustomId('partySize')
-                    .setLabel("Number of Party Members")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true);
-
-                const multiplierInput = new TextInputBuilder()
-                    .setCustomId('multiplier')
-                    .setLabel("Difficulty Multiplier (optional, default 1.0)")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(false);
-
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(partyLevelInput),
-                    new ActionRowBuilder().addComponents(partySizeInput),
-                    new ActionRowBuilder().addComponents(multiplierInput)
-                );
-
-                await interaction.showModal(modal);
-                // Clean up the selections map after use
-                encounterSelections.delete(interaction.message.id);
-                return;
-            }
-
-            if (interaction.customId === 'ma-cancel-button') {
-                maSelections.delete(interaction.message.id);
-
-                const originalRows = interaction.message.components;
-                const row1 = new ActionRowBuilder().addComponents(originalRows[0].components);
-                const row2 = new ActionRowBuilder().addComponents(originalRows[1].components);
-
-                const configureButton = new ButtonBuilder()
-                    .setCustomId('ma-configure-button')
-                    .setLabel('Configure & Generate')
-                    .setStyle(ButtonStyle.Primary)
-                    .setDisabled(true);
-
-                const cancelButton = new ButtonBuilder()
-                    .setCustomId('ma-cancel-button')
-                    .setLabel('Cancelled')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(true);
-
-                const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
-
-                await interaction.update({ components: [row1, row2, row3] });
-                return;
-            }
-
-            if (interaction.customId === 'ma-configure-button') {
-                const modal = new ModalBuilder()
-                    .setCustomId(`ma-config-modal-${interaction.message.id}`)
-                    .setTitle('Configure Magic Item Generation');
-
-                const nicknameInput = new TextInputBuilder()
-                    .setCustomId('ma-nickname-input')
-                    .setLabel("Nickname (Optional)")
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(false);
-
-                const numRollsInput = new TextInputBuilder()
-                    .setCustomId('ma-numrolls-input')
-                    .setLabel("Number of Items (e.g., 5 or 1d4+1)")
-                    .setStyle(TextInputStyle.Short)
-                    .setValue('10')
-                    .setRequired(true);
-
-                const partyLevelInput = new TextInputBuilder()
-                    .setCustomId('ma-partylevel-input')
-                    .setLabel("Average Party Level")
-                    .setStyle(TextInputStyle.Short)
-                    .setValue('20')
-                    .setRequired(true);
-
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(nicknameInput),
-                    new ActionRowBuilder().addComponents(numRollsInput),
-                    new ActionRowBuilder().addComponents(partyLevelInput)
-                );
-
-                await interaction.showModal(modal);
-                return;
-            }
-        }
-
-async function _updateTrapDropdowns(interaction, selections) {
-    await interaction.deferUpdate();
-
-    const allTraps = await fiveEToolsParser._loadCategoryData('traps');
-    const environmentKeywords = {
-        'dungeon': /dungeon|tomb|crypt|lair|hallway/i,
-        'wilderness': /forest|jungle|swamp|mountain|wilderness|cave/i,
-        'urban': /city|sewer|building|room/i,
-        'planar': /planar|plane|feywild|shadowfell/i,
-        'aquatic': /water|aquatic|ship/i
-    };
-
-    // 1. Create a single, authoritative list of possible traps based on all active filters.
-    const tier = selections.tier && selections.tier !== 'random' ? parseInt(selections.tier, 10) : null;
-    const threat = selections.threat && selections.threat !== 'random' ? selections.threat.toLowerCase() : null;
-    const type = selections.type && selections.type !== 'random' ? selections.type : null;
-    const envRegex = selections.environment && selections.environment !== 'random' ? environmentKeywords[selections.environment] : null;
-
-    const possibleTraps = allTraps.filter(trap => {
-        const typeMatch = !type || trap.trapHazType === type;
-        const envMatch = !envRegex || (trap.entries && envRegex.test(JSON.stringify(trap.entries)));
-
-        if (!typeMatch || !envMatch) return false;
-
-        // If tier or threat is selected, the trap MUST have a matching rating
-        if (tier || threat) {
-            if (!trap.rating) return false;
-            return trap.rating.some(rating => {
-                const tierMatch = !tier || rating.tier === tier;
-                const threatMatch = !threat || (rating.threat && rating.threat.toLowerCase() === threat);
-                return tierMatch && threatMatch;
-            });
-        }
-
-        return true; // No tier/threat filters, so it's a match
-    });
-
-    // 2. From that filtered list, derive the complete set of all still-possible options.
-    const validTiers = new Set();
-    const validThreats = new Set();
-    const validTypes = new Set();
-    const validEnvironments = new Set();
-
-    for (const trap of possibleTraps) {
-        if (trap.trapHazType) validTypes.add(trap.trapHazType);
-
-        for (const [env, regex] of Object.entries(environmentKeywords)) {
-            if (trap.entries && regex.test(JSON.stringify(trap.entries))) {
-                validEnvironments.add(env);
-            }
-        }
-
-        if (trap.rating) {
-            for (const rating of trap.rating) {
-                validTiers.add(rating.tier.toString());
-                if (rating.threat) validThreats.add(rating.threat.toLowerCase());
-            }
-        }
-    }
-
-    // 3. Rebuild all dropdowns, disabling any option not in the valid sets.
-    const createDropdown = (id, placeholder, allOptions, selectedValue, validValues) => {
-        const availableOptions = allOptions.map(opt => {
-            const isRandom = opt.value === 'random';
-            const isSelected = opt.value === selectedValue;
-            const isDisabled = !isRandom && !validValues.has(opt.value);
-            return { ...opt, default: isSelected, disabled: isDisabled };
-        });
-        return new StringSelectMenuBuilder()
-            .setCustomId(id)
-            .setPlaceholder(placeholder)
-            .addOptions(availableOptions);
-    };
-
-    const tierOpts = [ { label: 'Any Tier', value: 'random' }, { label: 'Tier 1 (Levels 1-4)', value: '1' }, { label: 'Tier 2 (Levels 5-10)', value: '2' }, { label: 'Tier 3 (Levels 11-16)', value: '3' }, { label: 'Tier 4 (Levels 17-20)', value: '4' } ];
-    const threatOpts = [ { label: 'Any Threat', value: 'random' }, { label: 'Setback', value: 'setback' }, { label: 'Dangerous', value: 'dangerous' }, { label: 'Deadly', value: 'deadly' } ];
-    const typeOpts = [ { label: 'Any Type', value: 'random' }, { label: 'Mechanical', value: 'MECH' }, { label: 'Magical', value: 'MAG' }, { label: 'Simple', value: 'SMPL' } ];
-    const envOpts = [ { label: 'Any Environment', value: 'random' }, { label: 'Dungeon / Tomb', value: 'dungeon' }, { label: 'Wilderness / Cave', value: 'wilderness' }, { label: 'Urban / Building', value: 'urban' }, { label: 'Planar / Magical', value: 'planar' }, { label: 'Aquatic', value: 'aquatic' } ];
-
-    const tierSelect = createDropdown('trap-tier-select', selections.tier ? tierOpts.find(o => o.value === selections.tier).label : 'Select Party Tier (Optional)', tierOpts, selections.tier, validTiers);
-    const threatSelect = createDropdown('trap-threat-select', selections.threat ? threatOpts.find(o => o.value === selections.threat).label : 'Select Threat Level (Optional)', threatOpts, selections.threat, validThreats);
-    const typeSelect = createDropdown('trap-type-select', selections.type ? typeOpts.find(o => o.value === selections.type).label : 'Select Trap Type (Optional)', typeOpts, selections.type, validTypes);
-    const environmentSelect = createDropdown('trap-environment-select', selections.environment ? envOpts.find(o => o.value === selections.environment).label : 'Select Environment (Optional)', envOpts, selections.environment, validEnvironments);
-
-    const proceedButton = new ButtonBuilder().setCustomId('trap-proceed-button').setLabel('Generate').setStyle(ButtonStyle.Success);
-
-    await interaction.editReply({
-        components: [
-            new ActionRowBuilder().addComponents(tierSelect),
-            new ActionRowBuilder().addComponents(threatSelect),
-            new ActionRowBuilder().addComponents(typeSelect),
-            new ActionRowBuilder().addComponents(environmentSelect),
-            new ActionRowBuilder().addComponents(proceedButton),
-        ]
-    });
-}
-
-async function _isTrapSelectionValid(selectionType, selectedValue, currentSelections) {
-    if (selectedValue === 'random') return true; // "Any" is always a valid selection.
-
-    const allTraps = await fiveEToolsParser._loadCategoryData('traps');
-    const environmentKeywords = {
-        'dungeon': /dungeon|tomb|crypt|lair|hallway/i,
-        'wilderness': /forest|jungle|swamp|mountain|wilderness|cave/i,
-        'urban': /city|sewer|building|room/i,
-        'planar': /planar|plane|feywild|shadowfell/i,
-        'aquatic': /water|aquatic|ship/i
-    };
-
-    // Create a temporary selections object WITHOUT the key we are currently validating.
-    const tempSelections = { ...currentSelections };
-    delete tempSelections[selectionType];
-
-    const tier = tempSelections.tier && tempSelections.tier !== 'random' ? parseInt(tempSelections.tier, 10) : null;
-    const threat = tempSelections.threat && tempSelections.threat !== 'random' ? tempSelections.threat.toLowerCase() : null;
-    const type = tempSelections.type && tempSelections.type !== 'random' ? tempSelections.type : null;
-    const envRegex = tempSelections.environment && tempSelections.environment !== 'random' ? environmentKeywords[tempSelections.environment] : null;
-
-    const possibleTraps = allTraps.filter(trap => {
-        const typeMatch = !type || trap.trapHazType === type;
-        const envMatch = !envRegex || (trap.entries && envRegex.test(JSON.stringify(trap.entries)));
-        if (!typeMatch || !envMatch) return false;
-        if (tier || threat) {
-            if (!trap.rating) return false;
-            return trap.rating.some(rating => {
-                const tierMatch = !tier || rating.tier === tier;
-                const threatMatch = !threat || (rating.threat && rating.threat.toLowerCase() === threat);
-                return tierMatch && threatMatch;
-            });
-        }
-        return true;
-    });
-
-    const validValues = new Set();
-    for (const trap of possibleTraps) {
-        switch (selectionType) {
-            case 'tier':
-                if (trap.rating) trap.rating.forEach(r => validValues.add(r.tier.toString()));
-                break;
-            case 'threat':
-                if (trap.rating) trap.rating.forEach(r => { if (r.threat) validValues.add(r.threat.toLowerCase()) });
-                break;
-            case 'type':
-                if (trap.trapHazType) validValues.add(trap.trapHazType);
-                break;
-            case 'environment':
-                for (const [env, regex] of Object.entries(environmentKeywords)) {
-                    if (trap.entries && regex.test(JSON.stringify(trap.entries))) {
-                        validValues.add(env);
-                    }
-                }
-                break;
-        }
-    }
-
-    return validValues.has(selectedValue);
-}
-
-async function _handleNpcDropdowns(interaction) {
-    const { customId, values, message } = interaction;
-    await interaction.deferUpdate();
-
-    const selections = npcSelections.get(message.id) || {};
-    const handlers = client.npcDropdownHandlers.get(message.id);
-    if (!handlers) return;
-
-    const [customIdBase, pageStr] = customId.split('|');
-    const selectedValue = values ? values[0] : null;
-    const newComponents = [...message.components];
-
-    // Handle "Back" selections first
-    if (selectedValue === '!backToSpecies') {
-        delete selections.species;
-        delete selections.lineage;
-        const speciesRow = handlers.species.createActionRow(1);
-        const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith('npc-lineage-select'));
-        if (componentIndex !== -1) newComponents[componentIndex] = speciesRow;
-        npcSelections.set(message.id, selections);
-        await interaction.editReply({ components: newComponents });
-        return;
-    }
-    if (selectedValue === '!backToClass') {
-        delete selections.class;
-        delete selections.subclass;
-        const classRow = handlers.class.createActionRow(1);
-        const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith('npc-subclass-select'));
-        if (componentIndex !== -1) newComponents[componentIndex] = classRow;
-        npcSelections.set(message.id, selections);
-        await interaction.editReply({ components: newComponents });
-        return;
-    }
-
-    // Handle pagination
-    if (selectedValue.startsWith('!prevPage') || selectedValue.startsWith('!nextPage')) {
-        const handlerKey = customIdBase.split('-')[1];
-        const handler = handlers[handlerKey];
-        const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith(customIdBase));
-        const newPage = parseInt(selectedValue.split('|')[1], 10);
-        if (handler && componentIndex !== -1) {
-            newComponents[componentIndex] = handler.createActionRow(newPage);
-            await interaction.editReply({ components: newComponents });
-        }
-        return;
-    }
-
-    // Handle actual selections
-    const handlerKey = customIdBase.split('-')[1];
-    const handler = handlers[handlerKey];
-    const componentIndex = newComponents.findIndex(row => row.components[0].customId.startsWith(customIdBase));
-
-    if (selectedValue === 'random') {
-        delete selections[handlerKey];
-    } else {
-        selections[handlerKey] = selectedValue;
-    }
-
-    if (handler) {
-        handler.setDefault(selectedValue);
-        if(componentIndex !== -1) {
-            newComponents[componentIndex] = handler.createActionRow(parseInt(pageStr, 10) || 1);
-        }
-    }
-
-    // Handle transforming dropdowns
-    if (handlerKey === 'species') {
-        logToRenderer(`[NPC Dropdown] Species selection triggered. Value: ${selectedValue}`);
-        delete selections.lineage;
-        if (selectedValue !== 'random') {
-            const [, speciesName, speciesSource] = selectedValue.split('|');
-            logToRenderer(`[NPC Dropdown] Processing species: ${speciesName}, Source: ${speciesSource}`);
-            const lineages = await fiveEToolsParser.getLineages(speciesName, speciesSource);
-            logToRenderer(`[NPC Dropdown] Found ${lineages.length} lineages.`);
-            if (lineages.length > 0) {
-                const lineageOptions = lineages.map(l => ({ label: `${l.name} (${l.source})`, value: `lineage|${l.name}|${l.source}` }));
-                const lineageHandler = new DropdownHandler({
-                    customId: 'npc-lineage-select',
-                    options: lineageOptions,
-                    placeholder: 'Select a Lineage (Optional)',
-                    topPinned: [
-                        { label: 'Back to Species Select', value: '!backToSpecies' },
-                        { label: 'Any Lineage (Random)', value: 'random' }
-                    ]
-                });
-                handlers.lineage = lineageHandler;
-                if (componentIndex !== -1) newComponents[componentIndex] = lineageHandler.createActionRow(1);
-            }
-        }
-    }
-
-    if (handlerKey === 'class') {
-        logToRenderer(`[NPC Dropdown] Class selection triggered. Value: ${selectedValue}`);
-        delete selections.subclass;
-        if (selectedValue !== 'random') {
-            const [, className, classSource] = selectedValue.split('|');
-            logToRenderer(`[NPC Dropdown] Processing class: ${className}, Source: ${classSource}`);
-
-            const subclasses = await fiveEToolsParser.getSubclasses(className, classSource);
-            logToRenderer(`[NPC Dropdown] Found ${subclasses.length} subclasses.`);
-
-            if (subclasses.length > 0) {
-                const subclassOptions = subclasses.map(sc => ({ label: `${sc.name} (${sc.source})`, value: `subclass|${sc.name}|${sc.source}` }));
-                const subclassHandler = new DropdownHandler({
-                    customId: 'npc-subclass-select',
-                    options: subclassOptions,
-                    placeholder: 'Select a Subclass (Optional)',
-                    topPinned: [
-                        { label: 'Back to Class Select', value: '!backToClass' },
-                        { label: 'Any Subclass (Random)', value: 'random' }
-                    ]
-                });
-                handlers.subclass = subclassHandler;
-                logToRenderer(`[NPC Dropdown] Created new subclass dropdown component.`);
-
-                if (componentIndex !== -1) {
-                    newComponents[componentIndex] = subclassHandler.createActionRow(1);
-                    logToRenderer(`[NPC Dropdown] Replaced class dropdown with subclass dropdown in component list.`);
-                } else {
-                    logToRenderer(`[NPC Dropdown] WARNING: Could not find the original class dropdown component to replace.`);
-                }
-            }
-        }
-    }
-
-    npcSelections.set(message.id, selections);
-    client.npcDropdownHandlers.set(message.id, handlers);
-    await interaction.editReply({ components: newComponents });
-}
-
-
-async function _handleNpcGeneration(interaction, selections, silentDefer = false) {
-    // Translate the selections from the interaction into the format NpcGenerator expects
-    const generatorOptions = {
-        mode: selections.mode,
-        species: selections.species,
-        lineage: selections.lineage,
-        class: selections.class,
-        subclass: selections.subclass,
-        background: selections.background,
-        partyLevel: selections.partyLevel,
-        partySize: selections.partySize,
-    };
-
-    const result = await client.commandHandler.npcGenerator.generateCharacter(generatorOptions);
-    if (result.error) {
-        await interaction.message.edit({ content: `❌ Error: ${result.error}` });
-        if (!silentDefer) await interaction.deferUpdate();
-        return;
-    }
-
-    const embed = formatNpcResult(result);
-    await interaction.channel.send({ embeds: [embed] });
-    await interaction.message.edit({ content: '✅ Character generated! View the details in the new public message.' });
-    if (!silentDefer) await interaction.deferUpdate();
-}
-
-function formatNpcResult(result) {
-    // Defensively create display names to prevent crashes
-    const speciesName = result.species?.name || 'Unknown Species';
-    const lineageName = result.lineage?.name;
-    const backgroundName = result.background?.name || 'Unknown Background';
-
-    // Combine class and subclass name intelligently
-    const baseClassName = result.class?.name || 'Unknown Class';
-    const subclassName = result.subclass?.name;
-    const className = subclassName ? `${subclassName} ${baseClassName}` : baseClassName;
-
-
-    // Combine lineage and species name intelligently
-    let raceDisplay = speciesName;
-    if (lineageName && lineageName !== speciesName) {
-        // If the lineage name already contains the species name (e.g., "High Elf" contains "Elf"), just use the lineage name.
-        if (lineageName.toLowerCase().includes(speciesName.toLowerCase())) {
-            raceDisplay = lineageName;
-        } else {
-            // Otherwise, combine them (e.g., "Deep" and "Gnome" -> "Deep Gnome")
-            raceDisplay = `${lineageName} ${speciesName}`;
-        }
-    }
-
-    const embed = new EmbedBuilder()
-        .setColor(0x9B59B6) // Purple for NPCs
-        .setTitle(`Generated ${result.mode === 'npc' ? 'NPC' : 'Character Idea'}: ${result.name || ''}`)
-        .setDescription(`**${raceDisplay} ${className} ${backgroundName}**`);
-
-    const formatTraitList = (traitArray) => {
-        if (!traitArray || traitArray.length === 0) return '';
-        let list = `A. ${traitArray[0]}`;
-        if (traitArray.length > 1 && traitArray[1]) {
-            list += `\nB. ${traitArray[1]}`;
-        }
-        return list;
-    };
-
-    // Helper to check if a trait is valid and should be displayed
-    const isTraitValid = (traitArray) => {
-        return traitArray && traitArray.length > 0 && traitArray[0] && !traitArray[0].toLowerCase().includes('not found');
-    }
-
-    if (isTraitValid(result.trait)) {
-        embed.addFields({ name: 'Personality Traits', value: formatTraitList(result.trait) });
-    }
-    if (isTraitValid(result.ideal)) {
-        embed.addFields({ name: 'Ideal', value: formatTraitList(result.ideal) });
-    }
-    if (isTraitValid(result.bond)) {
-        embed.addFields({ name: 'Bond', value: formatTraitList(result.bond) });
-    }
-    if (isTraitValid(result.flaw)) {
-        embed.addFields({ name: 'Flaw', value: formatTraitList(result.flaw) });
-    }
-
-    if (result.mode === 'npc' && result.statblockSuggestions) {
-        const { easy, medium, hard } = result.statblockSuggestions;
-        const statblockValue = `**Easy:** ${easy.name} (CR ${easy.cr})\n` +
-                               `**Medium:** ${medium.name} (CR ${medium.cr})\n` +
-                               `**Hard:** ${hard.name} (CR ${hard.cr})`;
-        embed.addFields({ name: 'Suggested Stat Blocks', value: statblockValue });
-    }
-
-    return embed;
-}
-
-        if (interaction.isModalSubmit()) {
-            if (interaction.customId.startsWith('tda_ante_modal')) {
-                return client.commandHandler.tdaManager.handleAnteModalSubmit(interaction);
-            }
-
-            if (interaction.customId.startsWith('npc-modal-')) {
-                const messageId = interaction.customId.replace('npc-modal-', '');
-                const selections = npcSelections.get(messageId) || {};
-                selections.mode = 'npc'; // Set mode on modal submission
-                selections.partyLevel = parseInt(interaction.fields.getTextInputValue('partyLevel'), 10);
-                selections.partySize = parseInt(interaction.fields.getTextInputValue('partySize'), 10);
-
-                if (isNaN(selections.partyLevel) || isNaN(selections.partySize) || selections.partyLevel <= 0 || selections.partySize <= 0) {
-                    await interaction.reply({ content: 'Invalid party level or size. Please provide positive numbers.', flags: [MessageFlags.Ephemeral] });
-                    return;
-                }
-
-                await interaction.message.edit({ content: `⚙️ Generating NPC statblock for a level ${selections.partyLevel} party of ${selections.partySize}...`, embeds: [], components: [] });
-                await _handleNpcGeneration(interaction, selections, true);
-                npcSelections.delete(messageId);
-                return;
-            }
-
-            if (interaction.customId.startsWith('vehicle-modal|')) {
-                const parts = interaction.customId.split('|');
-                let style = parts[2];
-                if (style === 'random') style = ['flagship', 'balanced'][Math.floor(Math.random() * 2)];
-
-                await interaction.message.edit({ content: `⚙️ Building a ${style} vehicle encounter...`, embeds: [], components: [] });
-
-                const tag = parts[1];
-                const totalHp = parseInt(interaction.fields.getTextInputValue('totalHp'), 10);
-                const numVehicles = parseInt(interaction.fields.getTextInputValue('numVehicles'), 10);
-
-                if (isNaN(totalHp) || totalHp <= 0 || (style === 'balanced' && (isNaN(numVehicles) || numVehicles <= 0))) {
-                    await interaction.message.edit({ content: '❌ Invalid input. Please provide positive numbers for HP and vehicle count.', embeds: [], components: [] });
-                    await interaction.deferUpdate();
-                    return;
-                }
-
-                const result = await client.commandHandler.vehicleEncounterBuilder.generateEncounter({ tag, style, totalHp, numVehicles });
-
-                if (result.error) {
-                    await interaction.message.edit({ content: `❌ Error: ${result.error}`, embeds: [], components: [] });
-                    await interaction.deferUpdate();
-                    return;
-                }
-
-                const summaryEmbed = new EmbedBuilder().setColor(0x2ECC71).setTitle(`Vehicle Encounter Generated! (${style})`)
-                    .setDescription(`**Tag:** ${tag}\n**HP Budget:** ${result.totalValue.toLocaleString()} / ${result.budget.toLocaleString()}`)
-                    .addFields({ name: 'Vehicles', value: result.encounter.map(v => `• ${v.name} (HP: ${v.hp})`).join('\n') || 'None' });
-
-                const newPublicMessage = await interaction.channel.send({ embeds: [summaryEmbed] });
-                const thread = await newPublicMessage.startThread({ name: `Vehicle Encounter Details (${style})`, autoArchiveDuration: 60 });
-
-                const postedVehicles = new Set();
-                for (const vehicle of result.encounter) {
-                    if (postedVehicles.has(vehicle.name)) continue;
-                    const fullVehicleData = await fiveEToolsParser.getExact('vehicles', vehicle.name, vehicle.source);
-                    if (fullVehicleData) {
-                        const { mainEmbed, longFields } = formatVehicleStatBlockForDiscord(fullVehicleData);
-                        await thread.send({ embeds: [mainEmbed] });
-                        for (const field of longFields) {
-                            const chunks = splitText(field.value, 1024);
-                            for (let i = 0; i < chunks.length; i++) {
-                                const chunkEmbed = new EmbedBuilder().setColor(0x0099FF).setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name).setDescription(chunks[i]);
-                                await thread.send({ embeds: [chunkEmbed] });
-                            }
-                        }
-                    }
-                    postedVehicles.add(vehicle.name);
-                }
-
-                await interaction.message.edit({ content: `✅ Vehicle encounter generated! View it here: ${newPublicMessage.url}` });
-                await interaction.deferUpdate();
-                return;
-            }
-
-            if (interaction.customId.startsWith('encounter-modal|')) {
-                const parts = interaction.customId.split('|');
-                const encounterType = parts[1];
-                const difficulty = parts.pop();
-                const partyLevel = parseInt(interaction.fields.getTextInputValue('partyLevel'), 10);
-                const partySize = parseInt(interaction.fields.getTextInputValue('partySize'), 10);
-                const multiplier = parseFloat(interaction.fields.getTextInputValue('multiplier')) || 1.0;
-
-                await interaction.message.edit({ content: `⚙️ Building a ${difficulty} encounter for ${partySize} level ${partyLevel} players...`, embeds: [], components: [] });
-
-                if (isNaN(partyLevel) || isNaN(partySize) || partyLevel < 1 || partyLevel > 20 || partySize < 1) {
-                    await interaction.message.edit({ content: '❌ Invalid party level or size. Level must be 1-20, and size must be at least 1.', embeds: [], components: [] });
-                    await interaction.deferUpdate();
-                    return;
-                }
-
-                let encounterParams = { partyLevel, partySize, difficulty, multiplier };
-                let mainCreature;
-
-                if (encounterType === 'creature') {
-                    const creatureValue = parts.slice(2).join('|');
-                    const [category, source, name] = creatureValue.split('|');
-                    mainCreature = await fiveEToolsParser.getExact(category, name, source);
-                    if (!mainCreature) {
-                        await interaction.message.edit({ content: '❌ Sorry, I couldn\'t retrieve the details for the selected creature.', embeds: [], components: [] });
-                        await interaction.deferUpdate();
-                        return;
-                    }
-                    mainCreature.xp = client.commandHandler.encounterBuilder.crToXp[mainCreature.cr] || 0;
-                    mainCreature.type = typeof mainCreature.type === 'object' ? mainCreature.type.type : mainCreature.type;
-                    encounterParams.mainCreature = mainCreature;
-                } else { // type === 'type'
-                    const creatureType = parts[2];
-                    encounterParams.creatureType = creatureType;
-                }
-
-                const result = await client.commandHandler.encounterBuilder.generateEncounter(encounterParams);
-
-                if (result.error) {
-                    await interaction.message.edit({ content: `❌ Error generating encounter: ${result.error}`, embeds: [], components: [] });
-                    await interaction.deferUpdate();
-                    return;
-                }
-
-                const { encounter, totalXp, xpBudget } = result;
-                const summaryEmbed = new EmbedBuilder().setColor(0x2ECC71).setTitle('Encounter Generated!')
-                    .setDescription(`**XP Budget:** ${totalXp.toLocaleString()} / ${xpBudget.toLocaleString()}`)
-                    .addFields({ name: 'Creatures', value: encounter.map(m => (m.isMob ? `1x Mob of ${m.count} ${m.name}` : `${m.count}x ${m.name}`)).join('\n') || 'None' });
-
-                const newPublicMessage = await interaction.channel.send({ embeds: [summaryEmbed] });
-                const threadName = mainCreature ? `Encounter Details for ${mainCreature.name}` : `Encounter Details for ${encounterParams.creatureType}`;
-                const thread = await newPublicMessage.startThread({ name: threadName, autoArchiveDuration: 60 });
-
-                for (const monster of encounter) {
-                    const fullMonsterData = await fiveEToolsParser.getExact('bestiary', monster.name, monster.source);
-                    if (fullMonsterData) {
-                        const { mainEmbed, longFields } = formatStatBlockForDiscord(fullMonsterData);
-                        await thread.send({ embeds: [mainEmbed] });
-                        for (const field of longFields) {
-                            const chunks = splitText(field.value, 1024);
-                            for (let i = 0; i < chunks.length; i++) {
-                                const chunkEmbed = new EmbedBuilder().setColor(0x0099FF).setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name).setDescription(chunks[i]);
-                                await thread.send({ embeds: [chunkEmbed] });
-                            }
-                        }
-                    }
-                }
-
-                await interaction.message.edit({ content: `✅ Encounter generated! You can view it here: ${newPublicMessage.url}` });
-                await interaction.deferUpdate();
-                return;
-            }
-            const parts = interaction.customId.split('-');
-            const prefix = parts[0];
-            const context = parts[1];
-            const messageId = parts[3]; // ma-config-modal-messageId
-
-            if (prefix === 'ma' && context === 'config' && messageId) {
-                const selections = maSelections.get(messageId) || { mode: 'loot', size: 'Average' };
-                const nickname = interaction.fields.getTextInputValue('ma-nickname-input');
-                const numRolls = interaction.fields.getTextInputValue('ma-numrolls-input');
-                const partyLevel = parseInt(interaction.fields.getTextInputValue('ma-partylevel-input'), 10);
-
-                // Immediately edit the original message to show a "thinking" state
-                await interaction.message.edit({
-                    content: `⚙️ Generating ${numRolls} magic items for a level ${partyLevel} party...`,
-                    embeds: [],
-                    components: []
-                });
-
-                const generator = new MagicItemGenerator({ ...selections, numRolls, partyLevel, nickname });
-                const results = generator.generate();
-
-                const threadName = nickname || `Magic Items - ${new Date().toLocaleString()}`;
-                const thread = await interaction.channel.threads.create({
-                    name: threadName,
-                    autoArchiveDuration: 60,
-                    startMessage: interaction.message, // This will now point to the "Generating..." message
-                });
-
-                // Hit/Miss Grid
-                const { itemTypes } = require('../features/MagicItemData.js');
-                const gridLabelMap = {
-                    "Reusable Item (Gizmo)": "Giz", "Single-use Scroll/Tablet": "Scr", "Glyph/Ward/Trap": "GWT",
-                    "Enchanted Ammunition": "Amm", "Potion": "Pot", "Poison, Ingested": "Ing",
-                    "Poison, Inhaled": "Inh", "Poison, Contact": "Con", "Poison, Injury": "Inj"
-                };
-                let hitMissGrid = '## Hit/Miss Grid\n`Lvl:  0  1  2  3  4  5  6  7  8  9`\n';
-                const hitSet = new Set(results.hits.map(h => `${h.itemType}-${h.level}`));
-                itemTypes.forEach(type => {
-                    let line = `**\`${gridLabelMap[type] || type.substring(0, 3)}\`**:`;
-                    for (let i = 0; i < 10; i++) { line += hitSet.has(`${type}-${i}`) ? ' ✅' : ' ❌'; }
-                    hitMissGrid += line + '\n';
-                });
-                await thread.send(hitMissGrid);
-
-                // Generated Items
-                if (results.items.length > 0) {
-                    const groupedItems = results.items.reduce((acc, item) => {
-                        if (!acc[item.itemType]) { acc[item.itemType] = []; }
-                        acc[item.itemType].push(item);
-                        return acc;
-                    }, {});
-
-                    let itemsMessage = '## Generated Items\n';
-                    for (const itemType in groupedItems) {
-                        itemsMessage += `### ${itemType}\n`;
-                        for (const item of groupedItems[itemType]) {
-                            let line = `**Lvl ${item.level}**: ${item.spellName}`;
-                            if (item.price !== null) {
-                                line += ` - *${typeof item.price === 'number' ? `${item.price} gp` : item.price}*`;
-                            }
-                            if ((itemsMessage + line + '\n').length > 2000) {
-                                await thread.send(itemsMessage);
-                                itemsMessage = '';
-                            }
-                            itemsMessage += line + '\n';
-                        }
-                    }
-                    if (itemsMessage.length > '## Generated Items\n'.length) {
-                        await thread.send(itemsMessage);
-                    }
-                } else {
-                    await thread.send("No items were generated based on the rolls.");
-                }
-
-                // Edit the original message to the "done" state
-                await interaction.message.edit({
-                    content: `✅ Generation complete! View the ${numRolls} magic items in the new thread: <#${thread.id}>`,
-                });
-
-                maSelections.delete(messageId);
-                // We no longer need to reply to the interaction itself, as we've edited the original message.
-                // We just need to acknowledge the interaction so it doesn't time out.
-                await interaction.deferUpdate();
-            }
         }
     });
 });
-
-client.login(DISCORD_TOKEN);
 
 let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
 const startingMemUse = memoryUsage;
@@ -2005,103 +1391,6 @@ setInterval(() => {
     memoryUsage = process.memoryUsage().rss;
     logToRenderer(`Memory usage is ${((memoryUsage - startingMemUse) / 1024 / 1024).toFixed(2)} MB higher than at launch (${(memoryUsage / 1024 / 1024).toFixed(2)} MB total)`);
 }, 60000);
-
-function formatVehicleAc(vehicle) {
-    if (!vehicle) return 'N/A';
-
-    // Case 1: Simple numeric AC
-    if (typeof vehicle.ac === 'number') {
-        return vehicle.ac.toString();
-    }
-
-    // Case 2: Array of AC objects
-    if (Array.isArray(vehicle.ac) && vehicle.ac.length > 0) {
-        return vehicle.ac.map(a => {
-            let acStr = a.ac.toString();
-            if (a.from) {
-                acStr += ` (${a.from.join(', ')})`;
-            }
-            return acStr;
-        }).join(', ');
-    }
-
-    // Case 3: AC from hull object
-    if (vehicle.hull && typeof vehicle.hull.ac === 'number') {
-        let acStr = vehicle.hull.ac.toString();
-        if (vehicle.hull.acFrom) {
-            acStr += ` (${vehicle.hull.acFrom.join(', ')})`;
-        }
-        return acStr;
-    }
-
-    return 'N/A';
-}
-
-function formatVehicleStatBlockForDiscord(vehicle) {
-    const mainEmbed = new EmbedBuilder().setColor(0x3498DB).setTitle(vehicle.name);
-
-    let description = `*${vehicle.size} ${vehicle.vehicleType}*\n\n`;
-    description += `**Armor Class** ${formatVehicleAc(vehicle)}\n`;
-    if (vehicle.hp) {
-        description += `**Hit Points** ${vehicle.hp.hp || vehicle.hp} ${vehicle.hp.dt ? `(Damage Threshold ${vehicle.hp.dt})` : ''}\n`;
-    }
-     if (vehicle.speed) {
-        const speedString = Object.entries(vehicle.speed)
-            .map(([type, val]) => {
-                if (type === 'note') return null;
-                const speedVal = typeof val === 'object' ? (val.number || val) : val;
-                return `${type.charAt(0).toUpperCase() + type.slice(1)}: ${speedVal} ft.`;
-            })
-            .filter(Boolean)
-            .join(', ');
-        if (speedString) description += `**Speed** ${speedString}\n`;
-    }
-    description += '\n';
-
-    const formatMod = (score) => {
-        const mod = Math.floor(((score || 10) - 10) / 2);
-        return mod >= 0 ? `+${mod}` : `${mod}`;
-    };
-
-    if (vehicle.str) {
-        description += `**STR** ${vehicle.str} (${formatMod(vehicle.str)}) | **DEX** ${vehicle.dex} (${formatMod(vehicle.dex)}) | **CON** ${vehicle.con} (${formatMod(vehicle.con)})\n`;
-        description += `**INT** ${vehicle.int} (${formatMod(vehicle.int)}) | **WIS** ${vehicle.wis} (${formatMod(vehicle.wis)}) | **CHA** ${vehicle.cha} (${formatMod(vehicle.cha)})`;
-    }
-    mainEmbed.setDescription(description);
-
-    const longFields = [];
-    // This is a simplified version of the monster entry parser.
-    const processVehicleEntries = (entries) => {
-        if (!entries) return '';
-        return entries.map(e => {
-            if (typeof e === 'string') return e.replace(/{@(spell|item|condition|damage|dice|chance|filter|creature) ([^|}]+)\|?[^}]*}/g, '**$2**');
-            if (e.type === 'list') return e.items.map(item => `• ${processVehicleEntries([item]).trim()}`).join('\n');
-            if (e.type === 'table') {
-                 let tableStr = e.caption ? `**${e.caption}**\n` : '';
-                 tableStr += `| ${e.colLabels.join(' | ')} |\n`;
-                 tableStr += `|${e.colLabels.map(() => '---').join('|')}|\n`;
-                 tableStr += e.rows.map(row => `| ${row.map(cell => processVehicleEntries([cell]).replace(/\n/g, ' ')).join(' | ')} |`).join('\n');
-                 return tableStr;
-            }
-            if (e.name && e.entries) return `**_${e.name}._** ${processVehicleEntries(e.entries)}`;
-            if (e.name && e.entry) return `**_${e.name}._** ${processVehicleEntries([e.entry])}`;
-             if (e.action) return processVehicleEntries(e.action); // For nested actions in weapons
-            return JSON.stringify(e); // Fallback
-        }).join('\n\n');
-    };
-
-    if (vehicle.entries) longFields.push({ name: 'Description', value: processVehicleEntries(vehicle.entries) });
-    if (vehicle.trait) longFields.push({ name: 'Traits', value: processVehicleEntries(vehicle.trait) });
-    if (vehicle.action) longFields.push({ name: 'Actions', value: processVehicleEntries(vehicle.action) });
-    if (vehicle.actionStation) longFields.push({ name: 'Action Stations', value: processVehicleEntries(vehicle.actionStation) });
-    if (vehicle.reaction) longFields.push({ name: 'Reactions', value: processVehicleEntries(vehicle.reaction) });
-    if (vehicle.control) longFields.push({ name: 'Control', value: processVehicleEntries(vehicle.control) });
-    if (vehicle.movement) longFields.push({ name: 'Movement', value: processVehicleEntries(vehicle.movement) });
-    if (vehicle.weapon) longFields.push({ name: 'Weapons', value: processVehicleEntries(vehicle.weapon) });
-
-
-    return { mainEmbed, longFields };
-}
 
 
 function getHpColor(current, max) {

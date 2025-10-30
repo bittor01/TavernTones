@@ -4,11 +4,7 @@ const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { shell } = require('electron');
 const axios = require('axios');
-const EncounterBuilder = require('../backend/features/EncounterBuilder.js');
-const VehicleEncounterBuilder = require('../backend/features/VehicleEncounterBuilder.js');
-const NpcGenerator = require('../backend/features/NpcGenerator.js');
 const DropdownHandler = require('./DropdownHandler.js');
-const ThreeDragonAnteManager = require('../backend/features/ThreeDragonAnte.js');
 
 // These will be initialized in the constructor
 let logToRenderer;
@@ -24,13 +20,15 @@ class CommandHandler {
         logToRenderer = logToRendererInstance;
         musicPlayer = musicPlayerInstance;
         this.fiveEToolsParser = fiveEToolsParserInstance;
-        this.encounterBuilder = new EncounterBuilder(this.fiveEToolsParser);
-        this.vehicleEncounterBuilder = new VehicleEncounterBuilder(this.fiveEToolsParser);
-        this.npcGenerator = new NpcGenerator(this.fiveEToolsParser, askGPT4All);
-        this.tdaManager = new ThreeDragonAnteManager(this.client);
         this.lastResponse = null;
-        BOT_ROLE_ID = config.BOT_ROLE_ID;
-        DEFAULT_LOCAL_FOLDER = config.DEFAULT_LOCAL_FOLDER;
+
+        // Store the entire config object
+        this.config = config;
+
+        // Destructure for convenience where applicable, but prefer this.config for clarity
+        BOT_ROLE_ID = this.config.botRoleId;
+        DEFAULT_LOCAL_FOLDER = this.config.defaultMusicPath; // Use the new granular path
+        this.randomTablesPath = this.config.randomTablesPath;
     }
 
     async _sendHelpEmbed(message) {
@@ -40,19 +38,7 @@ class CommandHandler {
             .setDescription('To use any command, be sure to @me!')
             .addFields(
                 { name: '!ping', value: 'Test to see if the bot is working.' },
-                { name: '!3da or !tda', value: 'Starts a game of Three-Dragon Ante in the current channel.' },
-                { name: '!create en <creature>', value: 'Starts the interactive encounter builder.' },
-                { name: '!generate-character', value: 'Starts the interactive character/NPC generator.' },
-                { name: '!generate-trap', value: 'Starts the interactive trap/hazard generator.' },
-                { name: '!vehicle-encounter', value: 'Starts the interactive vehicle encounter generator.' },
-                { name: '!5e <query>', value: 'Search all 5etools data by name.' },
-                { name: '!spell <query>', value: 'Search for a spell by name.' },
-                { name: '!item <query>', value: 'Search for an item by name.' },
-                { name: '!monster <query>', value: 'Search for a monster by name.' },
-                { name: '!feat <query>', value: 'Search for a feat by name.' },
-                { name: '!race <query>', value: 'Search for a race by name.' },
-                { name: '!background <query>', value: 'Search for a background by name.' },
-                { name: '!deep <query>', value: 'Search all 5etools data by name and content.' },
+                { name: '!monster <query>', value: 'Search for a monster by name to add to the initiative tracker.' },
                 { name: '!su (!surge)', value: 'Roll on the Wild Magic Surge table.' },
                 { name: '!sh (!shield)', value: 'Roll on the Wild Magic Shield table.' },
                 { name: '!ro (!roll)', value: 'Roll on random tables. Provide the folder name, then the number of rolls you want to make, then an arbitrary number of weights and tables in pairs. Can be used for things like random weather, random loot, random spells, etc. Example usage: `!ro spells 3 8 lvl1 4 lvl2 2 lvl3 1 lvl4`' },
@@ -102,80 +88,6 @@ class CommandHandler {
         await message.reply({ embeds: [embed], components: [row] });
     }
 
-    async _handleEncounterCreatureSearch(message, results, query) {
-        if (!results || results.length === 0) {
-            await message.reply(`I couldn't find any creatures matching "${query}".`);
-            return;
-        }
-
-        if (results.length > 25) {
-            await message.reply(`I found over 25 results for "${query}". Please be more specific.`);
-            return;
-        }
-
-        const options = results.map(item => ({
-            label: item.name,
-            description: `CR: ${item.cr} | Source: ${item.source}`,
-            value: `${item.category}|${item.source}|${item.name}`.substring(0, 100)
-        }));
-
-        const creatureSelectMenu = new StringSelectMenuBuilder()
-            .setCustomId('encounter-creature-select')
-            .setPlaceholder('Select the main creature')
-            .addOptions(options);
-
-        const difficultySelectMenu = new StringSelectMenuBuilder()
-            .setCustomId('encounter-difficulty-select')
-            .setPlaceholder('Select encounter difficulty')
-            .addOptions([
-                { label: 'Low', value: 'low' },
-                { label: 'Moderate', value: 'moderate' },
-                { label: 'High', value: 'high' },
-            ]);
-
-        const proceedButton = new ButtonBuilder()
-            .setCustomId('encounter-proceed-button')
-            .setLabel('Proceed')
-            .setStyle(ButtonStyle.Success);
-
-        const row1 = new ActionRowBuilder().addComponents(creatureSelectMenu);
-        const row2 = new ActionRowBuilder().addComponents(difficultySelectMenu);
-        const row3 = new ActionRowBuilder().addComponents(proceedButton);
-
-        const embed = new EmbedBuilder()
-            .setColor(0x0099FF)
-            .setTitle(`Encounter Builder`)
-            .setDescription(`Found ${results.length} creatures matching "${query}".\nPlease select a creature and a difficulty, then click "Proceed".`);
-
-        await message.reply({ embeds: [embed], components: [row1, row2, row3] });
-    }
-
-    async _handleEncounterTypeSearch(message, type) {
-        const difficultySelectMenu = new StringSelectMenuBuilder()
-            .setCustomId('encounter-difficulty-select')
-            .setPlaceholder('Select encounter difficulty')
-            .addOptions([
-                { label: 'Low', value: 'low' },
-                { label: 'Moderate', value: 'moderate' },
-                { label: 'High', value: 'high' },
-            ]);
-
-        const proceedButton = new ButtonBuilder()
-            .setCustomId(`encounter-proceed-button|type|${type}`)
-            .setLabel('Proceed')
-            .setStyle(ButtonStyle.Success);
-
-        const row1 = new ActionRowBuilder().addComponents(difficultySelectMenu);
-        const row2 = new ActionRowBuilder().addComponents(proceedButton);
-
-        const embed = new EmbedBuilder()
-            .setColor(0x0099FF)
-            .setTitle(`Encounter Builder: ${type}`)
-            .setDescription(`Building an encounter with the theme "${type}".\nPlease select a difficulty, then click "Proceed".`);
-
-        await message.reply({ embeds: [embed], components: [row1, row2] });
-    }
-
     async handleMessage(message) {
         // Ignore messages from the bot itself
         if (message.author.bot) {
@@ -195,51 +107,11 @@ class CommandHandler {
             try {
                 let typingInterval;
                 switch (true) {
-                    case content.startsWith('!3da') || content.startsWith('!tda'):
-                        logToRenderer('Three-Dragon Ante command detected');
-                        this.tdaManager.handleCommand(message);
-                        break;
                     case content.startsWith('!ping'):
                         logToRenderer('Ping command detected'); // Log when ping command is detected
                         await message.reply('Pong!');
                         logToRenderer('Ping successfully ponged.');
                         break;
-
-                    case content.startsWith('!5e'): {
-                        logToRenderer('5e command detected');
-                        const query = content.substring('!5e'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !5e <search term>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchAllByName(query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!spell'): {
-                        logToRenderer('Spell command detected');
-                        const query = content.substring('!spell'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !spell <spell name>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByName('spells', query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!item'): {
-                        logToRenderer('Item command detected');
-                        const query = content.substring('!item'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !item <item name>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByName('items', query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
 
                     case content.startsWith('!monster'): {
                         logToRenderer('Monster command detected');
@@ -253,130 +125,9 @@ class CommandHandler {
                         break;
                     }
 
-                    case content.startsWith('!feat'): {
-                        logToRenderer('Feat command detected');
-                        const query = content.substring('!feat'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !feat <feat name>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByName('feats', query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!background'): {
-                        logToRenderer('Background command detected');
-                        const query = content.substring('!background'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !background <background name>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByName('backgrounds', query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!race'): {
-                        logToRenderer('Race command detected');
-                        const query = content.substring('!race'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !race <race name>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByName('races', query);
-                        // If we find exactly one race, check for lineages
-                        if (results.length === 1 && !results[0].raceName) {
-                            const race = results[0];
-                            const lineages = await this.fiveEToolsParser.getLineages(race.name, race.source);
-                            if (lineages.length > 0) {
-                                const embed = new EmbedBuilder()
-                                    .setColor(0x0099FF)
-                                    .setTitle(`Lineages for ${race.name} (${race.source})`)
-                                    .setDescription(lineages.map(l => `• ${l.name} (${l.source})`).join('\n'));
-                                await message.reply({ embeds: [embed] });
-                                break;
-                            }
-                        }
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!deep'): {
-                        logToRenderer('Deep search command detected');
-                        const query = content.substring('!deep'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !deep <search term>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByContent(query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
-
-                    case content.startsWith('!create en') || content.startsWith('!create enc') || content.startsWith('!create encounter'): {
-                        logToRenderer('Create Encounter command detected');
-                        const commandMatch = content.match(/!create\s+(?:en|enc|encounter)\s+(.+)/i);
-                        if (!commandMatch || !commandMatch[1]) {
-                            await message.reply('Usage: `@Bot !create en <creature name or type>`');
-                            break;
-                        }
-
-                        const query = commandMatch[1].trim().replace(/_/g, ' ');
-                        const creatureTypes = ["aberration", "beast", "celestial", "construct", "dragon", "elemental", "fey", "fiend", "giant", "humanoid", "monstrosity", "ooze", "plant", "undead"];
-
-                        if (creatureTypes.includes(query.toLowerCase())) {
-                            await this._handleEncounterTypeSearch(message, query);
-                        } else {
-                            const results = await this.fiveEToolsParser.searchByName('bestiary', query);
-                            await this._handleEncounterCreatureSearch(message, results, query);
-                        }
-                        break;
-                    }
-
-                    case content.startsWith('!en'): {
-                        logToRenderer('Encounter table command detected');
-                        const invalidCharsRegex = /[.,:;\/\\?*"<>|&]+/g;
-                        const commandBody = content.substring('!en'.length).trim();
-                        const args = commandBody.replace(invalidCharsRegex, "").trim().split(/\s+/);
-
-                        // Parse weights and table names
-                        const tableEntries = [];
-                        let validArgs = true;
-                        for (let i = 0; i < args.length; i += 2) {
-                            const weight = parseInt(args[i], 10);
-                            const tableName = args[i + 1];
-
-                            if (isNaN(weight) || weight <= 0 || !tableName) {
-                                await message.reply('Invalid format. Please ensure weights are positive integers and table names are valid.');
-                                validArgs = false;
-                                break;
-                            }
-                            tableEntries.push({ weight, tableName });
-                        }
-
-                        if (!validArgs) {
-                            break;
-                        }
-                        if (tableEntries.length === 0) {
-                             await message.reply('No table arguments provided. Please specify weights and table names.');
-                             break;
-                        }
-
-                        const result = await rollFromTable("encountertables", tableEntries, message.channel.id);
-
-                        if (result.success) {
-                            const finalMessage = `Effect: ||${result.text}||`;
-                            await message.reply(finalMessage);
-                        } else {
-                            await message.reply(result.message);
-                        }
-                        break;
-                    }
-
                     case content.startsWith('!su'):
                         logToRenderer('Surge command detected');
-                        const surgeFilePath = path.join(__dirname, '../../randomtables/surge.json');
+                        const surgeFilePath = path.join(this.randomTablesPath, 'surge.json');
                         const surgeData = JSON.parse(fs.readFileSync(surgeFilePath, 'utf8'));
                         const surgeEffect = getRandomEffect(surgeData, userId);
                         if (surgeEffect) {
@@ -400,7 +151,7 @@ class CommandHandler {
 
                     case content.includes('!sh'):
                         logToRenderer('Shield command detected');
-                        const shieldFilePath = path.join(__dirname, '../../randomtables/shield.json');
+                        const shieldFilePath = path.join(this.randomTablesPath, 'shield.json');
                         const shieldData = JSON.parse(fs.readFileSync(shieldFilePath, 'utf8'));
                         const shieldEffect = getRandomEffect(shieldData, userId);
                         if (shieldEffect) {
@@ -446,7 +197,7 @@ class CommandHandler {
                         const tableArgs = roArgs.slice(2);
 
                         // Validate folderName
-                        const validFolders = getValidTableFolders();
+                        const validFolders = this.getValidTableFolders();
                         if (!validFolders.includes(folderName)) {
                             await message.reply(`Folder '${folderName}' not found. Valid folders are: ${validFolders.join(', ')}.`);
                             break;
@@ -496,7 +247,7 @@ class CommandHandler {
                         });
 
                         for (let i = 0; i < iterationCount; i++) {
-                            const result = await rollFromTable(folderName, roTableEntries, message.channel.id);
+                            const result = await this.rollFromTable(folderName, roTableEntries, message.channel.id);
                             if (result.success) {
                                 await thread.send(`Roll ${i + 1}: ${result.text}`);
                             } else {
@@ -627,7 +378,7 @@ class CommandHandler {
                             parsedSong = commandArgs[1];
                         }
 
-                        let songFilePath = await findMusic(parsedFolder, parsedSong);
+                        let songFilePath = await this.findMusic(parsedFolder, parsedSong);
 
                         if (songFilePath) {
                             if (path.extname(songFilePath).toLowerCase() === '.lnk') {
@@ -657,49 +408,6 @@ class CommandHandler {
                         }
                         break;
 
-                    case content.includes('!ma'):
-                        logToRenderer('Magic Item command detected');
-                        const maEmbed = new EmbedBuilder()
-                            .setColor(0x0099FF)
-                            .setTitle('Magic Item Generator')
-                            .setDescription('Configure your magic item generation using the components below.');
-
-                        const modeSelect = new StringSelectMenuBuilder()
-                            .setCustomId('ma-mode-select')
-                            .setPlaceholder('Select Mode')
-                            .addOptions([
-                                { label: 'Loot', value: 'loot', default: true },
-                                { label: 'Shop', value: 'shop' }
-                            ]);
-
-                        const sizeSelect = new StringSelectMenuBuilder()
-                            .setCustomId('ma-size-select')
-                            .setPlaceholder('Select Size')
-                            .addOptions([
-                                { label: 'Huge', value: 'Huge' },
-                                { label: 'Large', value: 'Large' },
-                                { label: 'Average', value: 'Average', default: true },
-                                { label: 'Small', value: 'Small' },
-                                { label: 'Tiny', value: 'Tiny' }
-                            ]);
-
-                        const configureButton = new ButtonBuilder()
-                            .setCustomId('ma-configure-button')
-                            .setLabel('Configure & Generate')
-                            .setStyle(ButtonStyle.Primary);
-
-                        const cancelButton = new ButtonBuilder()
-                            .setCustomId('ma-cancel-button')
-                            .setLabel('Cancel')
-                            .setStyle(ButtonStyle.Secondary);
-
-                        const row1 = new ActionRowBuilder().addComponents(modeSelect);
-                        const row2 = new ActionRowBuilder().addComponents(sizeSelect);
-                        const row3 = new ActionRowBuilder().addComponents(configureButton, cancelButton);
-
-                        await message.reply({ embeds: [maEmbed], components: [row1, row2, row3] });
-                        break;
-
                     case content.includes('!pa'):
                         logToRenderer('Pause command detected');
                         if (musicPlayer.isPlaying) {
@@ -715,21 +423,6 @@ class CommandHandler {
                         await this._sendHelpEmbed(message);
                         break;
 
-                    case content.startsWith('!vehicle-encounter'):
-                        logToRenderer('Vehicle Encounter command detected');
-                        await this._handleVehicleEncounter(message);
-                        break;
-
-                    case content.startsWith('!generate-character'):
-                        logToRenderer('Generate Character command detected');
-                        await this._handleGenerateCharacter(message);
-                        break;
-
-                    case content.startsWith('!generate-trap'):
-                        logToRenderer('Generate Trap command detected');
-                        await this._handleGenerateTrap(message);
-                        break;
-
                     default:
                         logToRenderer('No recognized command found.');
                         await this._sendHelpEmbed(message);
@@ -741,303 +434,211 @@ class CommandHandler {
         }
     }
 
-    async _handleVehicleEncounter(message) {
-        const embed = new EmbedBuilder()
-            .setColor(0x0099FF)
-            .setTitle('Vehicle Encounter Generator')
-            .setDescription('Select your desired options below. Any unselected options will be randomized.');
-
-        const orderedTags = ['land', 'sea', 'air', 'space', 'SHIP', 'SPELLJAMMER', 'INFWAR', 'OBJECT'];
-
-        const tagOptions = [{ label: 'Any Type', value: 'random', default: true }];
-        orderedTags.forEach(tag => {
-            // A quick mapping for user-friendly labels
-            const labelMap = {
-                'land': 'Land',
-                'sea': 'Sea',
-                'air': 'Air',
-                'space': 'Space',
-                'SHIP': 'Ship',
-                'SPELLJAMMER': 'Spelljammer',
-                'INFWAR': 'Infernal War Machine',
-                'OBJECT': 'Object'
-            };
-            tagOptions.push({ label: labelMap[tag] || tag, value: tag });
-        });
-
-        const tagSelect = new StringSelectMenuBuilder()
-            .setCustomId('vehicle-tag-select')
-            .setPlaceholder('Select Vehicle Tag/Type (Optional)')
-            .addOptions(tagOptions);
-
-        const styleSelect = new StringSelectMenuBuilder()
-            .setCustomId('vehicle-style-select')
-            .setPlaceholder('Select Encounter Style')
-            .addOptions([
-                { label: 'Any Style (Random)', value: 'random', default: true },
-                { label: 'Flagship Fight', value: 'flagship' },
-                { label: 'Balanced Fight', value: 'balanced' },
-            ]);
-
-        const proceedButton = new ButtonBuilder()
-            .setCustomId('vehicle-proceed-button')
-            .setLabel('Proceed')
-            .setStyle(ButtonStyle.Success);
-
-        const row1 = new ActionRowBuilder().addComponents(tagSelect);
-        const row2 = new ActionRowBuilder().addComponents(styleSelect);
-        const row3 = new ActionRowBuilder().addComponents(proceedButton);
-
-        await message.reply({ embeds: [embed], components: [row1, row2, row3] });
-    }
-
-    async _handleGenerateCharacter(message) {
-        const embed = new EmbedBuilder()
-            .setColor(0x0099FF)
-            .setTitle('NPC & Character Idea Generator')
-            .setDescription('Select your desired options below. Any unselected options will be randomized. Lineage and Subclass will appear after selecting a Species and Class.');
-
-        // --- Species Dropdown ---
-        const speciesList = await this.fiveEToolsParser.getSpecies();
-        const speciesOptions = speciesList.map(s => ({
-            label: `${s.name} (${s.source})`,
-            value: `species|${s.name}|${s.source}`
-        })).sort((a, b) => a.label.localeCompare(b.label));
-
-        const speciesHandler = new DropdownHandler({
-            customId: 'npc-species-select',
-            options: speciesOptions,
-            placeholder: 'Select a Species (Optional)',
-            topPinned: [{ label: 'Any Species (Random)', value: 'random' }]
-        });
-        const speciesRow = speciesHandler.createActionRow(1);
-
-        // --- Class Dropdown ---
-        const classList = await this.fiveEToolsParser.getClasses();
-        const classOptions = classList.map(c => ({
-            label: `${c.name} (${c.source})`,
-            value: `class|${c.name}|${c.source}`
-        })).sort((a, b) => a.label.localeCompare(b.label));
-
-        const classHandler = new DropdownHandler({
-            customId: 'npc-class-select',
-            options: classOptions,
-            placeholder: 'Select a Class (Optional)',
-            topPinned: [{ label: 'Any Class (Random)', value: 'random' }]
-        });
-        const classRow = classHandler.createActionRow(1);
-
-        // --- Background Dropdown ---
-        const backgroundList = await this.fiveEToolsParser._loadCategoryData('backgrounds');
-        const backgroundOptions = backgroundList.map(b => ({
-            label: `${b.name} (${b.source})`,
-            value: `background|${b.name}|${b.source}`
-        })).sort((a, b) => a.label.localeCompare(b.label));
-
-        const backgroundHandler = new DropdownHandler({
-            customId: 'npc-background-select',
-            options: backgroundOptions,
-            placeholder: 'Select a Background (Optional)',
-            topPinned: [{ label: 'Any Background (Random)', value: 'random' }]
-        });
-        const backgroundRow = backgroundHandler.createActionRow(1);
-
-        // --- Generate Buttons ---
-        const ideaButton = new ButtonBuilder()
-            .setCustomId('npc-generate-idea')
-            .setLabel('Generate Character Idea')
-            .setStyle(ButtonStyle.Primary);
-
-        const npcButton = new ButtonBuilder()
-            .setCustomId('npc-generate-npc')
-            .setLabel('Generate NPC (Statblock)')
-            .setStyle(ButtonStyle.Success);
-
-        const buttonRow = new ActionRowBuilder().addComponents(ideaButton, npcButton);
-
-        const reply = await message.reply({ embeds: [embed], components: [speciesRow, classRow, backgroundRow, buttonRow] });
-
-        // Store the handlers for this message so we can access them in the interaction handler
-        this.client.npcDropdownHandlers.set(reply.id, {
-            species: speciesHandler,
-            class: classHandler,
-            background: backgroundHandler,
-        });
-    }
-
-    async _handleGenerateTrap(message) {
-        const embed = new EmbedBuilder()
-            .setColor(0x0099FF)
-            .setTitle('Trap & Hazard Generator')
-            .setDescription('Select your desired filters below. Dropdowns will update to show valid combinations. Any unselected options will be randomized.');
-
-        // For the initial display, we show all possible options.
-        // The interaction handler in main.js will be responsible for filtering these lists.
-
-        const tierOptions = [
-            { label: 'Any Tier', value: 'random' }, { label: 'Tier 1 (Levels 1-4)', value: '1' },
-            { label: 'Tier 2 (Levels 5-10)', value: '2' }, { label: 'Tier 3 (Levels 11-16)', value: '3' },
-            { label: 'Tier 4 (Levels 17-20)', value: '4' }
-        ];
-        const threatOptions = [
-            { label: 'Any Threat', value: 'random' }, { label: 'Setback', value: 'setback' },
-            { label: 'Dangerous', value: 'dangerous' }, { label: 'Deadly', value: 'deadly' }
-        ];
-        const typeOptions = [
-            { label: 'Any Type', value: 'random' }, { label: 'Mechanical', value: 'MECH' },
-            { label: 'Magical', value: 'MAG' }, { label: 'Simple', value: 'SMPL' }
-        ];
-        const environmentOptions = [
-            { label: 'Any Environment', value: 'random' }, { label: 'Dungeon / Tomb', value: 'dungeon' },
-            { label: 'Wilderness / Cave', value: 'wilderness' }, { label: 'Urban / Building', value: 'urban' },
-            { label: 'Planar / Magical', value: 'planar' }, { label: 'Aquatic', value: 'aquatic' }
-        ];
-
-        const tierSelect = new StringSelectMenuBuilder().setCustomId('trap-tier-select').setPlaceholder('Select Party Tier (Optional)').addOptions(tierOptions);
-        const threatSelect = new StringSelectMenuBuilder().setCustomId('trap-threat-select').setPlaceholder('Select Threat Level (Optional)').addOptions(threatOptions);
-        const typeSelect = new StringSelectMenuBuilder().setCustomId('trap-type-select').setPlaceholder('Select Trap Type (Optional)').addOptions(typeOptions);
-        const environmentSelect = new StringSelectMenuBuilder().setCustomId('trap-environment-select').setPlaceholder('Select Environment (Optional)').addOptions(environmentOptions);
-
-        const proceedButton = new ButtonBuilder()
-            .setCustomId('trap-proceed-button')
-            .setLabel('Generate')
-            .setStyle(ButtonStyle.Success);
-
-        const row1 = new ActionRowBuilder().addComponents(tierSelect);
-        const row2 = new ActionRowBuilder().addComponents(threatSelect);
-        const row3 = new ActionRowBuilder().addComponents(typeSelect);
-        const row4 = new ActionRowBuilder().addComponents(environmentSelect);
-        const row5 = new ActionRowBuilder().addComponents(proceedButton);
-
-        await message.reply({ embeds: [embed], components: [row1, row2, row3, row4, row5] });
-    }
-}
-
-function getValidTableFolders() {
-    const randomTablesPath = path.join(__dirname, '../../randomtables');
-    try {
-        const allEntries = fs.readdirSync(randomTablesPath, { withFileTypes: true });
-        const directories = allEntries
-            .filter(dirent => dirent.isDirectory())
-            .map(dirent => dirent.name);
-        return directories;
-    } catch (error) {
-        logToRenderer(`Error reading '${randomTablesPath}': ${error.message}`);
-        // If the directory doesn't exist or there's another error, return an empty array.
-        return [];
-    }
-}
-
-async function rollFromTable(folderName, tablesConfig, channelId) {
-    const encounterTablesFolder = path.join(__dirname, '../../randomtables', folderName);
-
-    // 1. Path Generation (done implicitly in step 2)
-    // 2. File Existence Check
-    const missingTables = [];
-    for (const entry of tablesConfig) {
-        const filePath = path.join(encounterTablesFolder, `${entry.tableName}.json`);
-        if (!fs.existsSync(filePath)) {
-            missingTables.push(entry.tableName);
-        }
-    }
-
-    if (missingTables.length > 0) {
-        return { success: false, message: `Missing tables: ${missingTables.join(', ')}` };
-    }
-
-    // 3. Table Loading
-    const tables = tablesConfig.map(entry => {
-        const filePath = path.join(encounterTablesFolder, `${entry.tableName}.json`);
-        // It's good practice to handle potential errors during file reading and JSON parsing
+    getValidTableFolders() {
+        const randomTablesPath = this.randomTablesPath;
         try {
-            const tableData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-            return { ...entry, data: tableData, filePath: filePath }; // Store filePath for later use
+            const allEntries = fs.readdirSync(randomTablesPath, { withFileTypes: true });
+            const directories = allEntries
+                .filter(dirent => dirent.isDirectory())
+                .map(dirent => dirent.name);
+            return directories;
         } catch (error) {
-            // Log the error and potentially return a specific error for this table
-            logToRenderer(`Error loading table ${entry.tableName}: ${error.message}`);
-            // Depending on desired strictness, you could either throw here or mark this table as invalid
-            return { ...entry, data: null, filePath: filePath, error: true };
-        }
-    });
-
-    // Filter out tables that failed to load, if any
-    const validTables = tables.filter(table => !table.error && table.data);
-    if (validTables.length !== tablesConfig.length) {
-        // This means some tables had read/parse errors
-        const erroredTableNames = tables.filter(t => t.error).map(t => t.tableName).join(', ');
-        return { success: false, message: `Error loading or parsing tables: ${erroredTableNames}` };
-    }
-
-
-    // 4. Weighted Selection (Table)
-    const totalWeight = validTables.reduce((sum, entry) => sum + entry.weight, 0);
-    if (totalWeight <= 0) {
-        return { success: false, message: "Total weight of tables must be positive." };
-    }
-
-    const roller = new DiceRoller(); // Assuming DiceRoller is available
-    const tableRoll = roller.roll(`1d${totalWeight}`).total;
-    let cumulativeWeight = 0;
-    let selectedTableEntry = null;
-
-    for (const entry of validTables) {
-        cumulativeWeight += entry.weight;
-        if (tableRoll <= cumulativeWeight) {
-            selectedTableEntry = entry;
-            break;
+            logToRenderer(`Error reading '${randomTablesPath}': ${error.message}`);
+            return [];
         }
     }
 
-    if (!selectedTableEntry) {
-        // This should ideally not happen if totalWeight > 0 and tables exist
-        logToRenderer(`Error selecting table. Roll: ${tableRoll}, TotalWeight: ${totalWeight}, Tables: ${JSON.stringify(validTables.map(t => ({ tn: t.tableName, w: t.weight })))}`);
-        return { success: false, message: "Error selecting table." };
-    }
-
-    // 5. Effect Selection (from Table)
-    // The selectedTableEntry.data should be the array of effects
-    if (!Array.isArray(selectedTableEntry.data)) {
-        logToRenderer(`Selected table ${selectedTableEntry.tableName} does not contain an array of effects.`);
-        return { success: false, message: `Data format error in table ${selectedTableEntry.tableName}.` };
-    }
-
-    const availableEffects = selectedTableEntry.data.filter(effect => {
-        return !effect.unique || !Array.isArray(effect.used) || !effect.used.includes(channelId);
-    });
-
-    if (availableEffects.length === 0) {
-        return { success: false, message: `No available effects in the selected table: ${selectedTableEntry.tableName}.` };
-    }
-
-    const effect = availableEffects[Math.floor(Math.random() * availableEffects.length)];
-
-    // 6. Handle Unique Effects
-    if (effect.unique) {
-        if (!Array.isArray(effect.used)) {
-            effect.used = [];
-        }
-        effect.used.push(channelId);
-
-        // Update the original table data array
-        const effectIndexInOriginalTable = selectedTableEntry.data.findIndex(e => e.text === effect.text); // Assuming text is a unique identifier within a table
-        if (effectIndexInOriginalTable !== -1) {
-            selectedTableEntry.data[effectIndexInOriginalTable] = effect; // Update the effect in the loaded table data
-            try {
-                fs.writeFileSync(selectedTableEntry.filePath, JSON.stringify(selectedTableEntry.data, null, 2), 'utf8');
-                logToRenderer(`Updated unique effect usage in ${selectedTableEntry.filePath}`);
-            } catch (error) {
-                logToRenderer(`Error writing updated table ${selectedTableEntry.filePath}: ${error.message}`);
-                // Decide if this is a critical failure. For now, proceed with returning the effect.
-                // Could return a partial success or a specific error:
-                // return { success: false, message: `Failed to save unique effect update for ${selectedTableEntry.tableName}. Effect was still rolled.` };
+    async rollFromTable(folderName, tablesConfig, channelId) {
+        const encounterTablesFolder = path.join(this.randomTablesPath, folderName);
+        const missingTables = [];
+        for (const entry of tablesConfig) {
+            const filePath = path.join(encounterTablesFolder, `${entry.tableName}.json`);
+            if (!fs.existsSync(filePath)) {
+                missingTables.push(entry.tableName);
             }
-        } else {
-            logToRenderer(`Could not find effect in original table data to update 'used' status. This is unexpected. Effect: ${effect.text}`);
         }
+
+        if (missingTables.length > 0) {
+            return { success: false, message: `Missing tables: ${missingTables.join(', ')}` };
+        }
+
+        const tables = tablesConfig.map(entry => {
+            const filePath = path.join(encounterTablesFolder, `${entry.tableName}.json`);
+            try {
+                const tableData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                return { ...entry, data: tableData, filePath: filePath };
+            } catch (error) {
+                logToRenderer(`Error loading table ${entry.tableName}: ${error.message}`);
+                return { ...entry, data: null, filePath: filePath, error: true };
+            }
+        });
+
+        const validTables = tables.filter(table => !table.error && table.data);
+        if (validTables.length !== tablesConfig.length) {
+            const erroredTableNames = tables.filter(t => t.error).map(t => t.tableName).join(', ');
+            return { success: false, message: `Error loading or parsing tables: ${erroredTableNames}` };
+        }
+
+        const totalWeight = validTables.reduce((sum, entry) => sum + entry.weight, 0);
+        if (totalWeight <= 0) {
+            return { success: false, message: "Total weight of tables must be positive." };
+        }
+
+        const roller = new DiceRoller();
+        const tableRoll = roller.roll(`1d${totalWeight}`).total;
+        let cumulativeWeight = 0;
+        let selectedTableEntry = null;
+
+        for (const entry of validTables) {
+            cumulativeWeight += entry.weight;
+            if (tableRoll <= cumulativeWeight) {
+                selectedTableEntry = entry;
+                break;
+            }
+        }
+
+        if (!selectedTableEntry) {
+            logToRenderer(`Error selecting table. Roll: ${tableRoll}, TotalWeight: ${totalWeight}, Tables: ${JSON.stringify(validTables.map(t => ({ tn: t.tableName, w: t.weight })))}`);
+            return { success: false, message: "Error selecting table." };
+        }
+
+        if (!Array.isArray(selectedTableEntry.data)) {
+            logToRenderer(`Selected table ${selectedTableEntry.tableName} does not contain an array of effects.`);
+            return { success: false, message: `Data format error in table ${selectedTableEntry.tableName}.` };
+        }
+
+        const availableEffects = selectedTableEntry.data.filter(effect => {
+            return !effect.unique || !Array.isArray(effect.used) || !effect.used.includes(channelId);
+        });
+
+        if (availableEffects.length === 0) {
+            return { success: false, message: `No available effects in the selected table: ${selectedTableEntry.tableName}.` };
+        }
+
+        const effect = availableEffects[Math.floor(Math.random() * availableEffects.length)];
+
+        if (effect.unique) {
+            if (!Array.isArray(effect.used)) {
+                effect.used = [];
+            }
+            effect.used.push(channelId);
+
+            const effectIndexInOriginalTable = selectedTableEntry.data.findIndex(e => e.text === effect.text);
+            if (effectIndexInOriginalTable !== -1) {
+                selectedTableEntry.data[effectIndexInOriginalTable] = effect;
+                try {
+                    fs.writeFileSync(selectedTableEntry.filePath, JSON.stringify(selectedTableEntry.data, null, 2), 'utf8');
+                    logToRenderer(`Updated unique effect usage in ${selectedTableEntry.filePath}`);
+                } catch (error) {
+                    logToRenderer(`Error writing updated table ${selectedTableEntry.filePath}: ${error.message}`);
+                }
+            } else {
+                logToRenderer(`Could not find effect in original table data to update 'used' status. This is unexpected. Effect: ${effect.text}`);
+            }
+        }
+
+        return { success: true, text: effect.text };
     }
 
-    // 7. Return Value
-    return { success: true, text: effect.text };
+    async findMusic(folderSearchTerm, songSearchTerm) {
+        logToRenderer(`findMusic: Initiating search with folderSearchTerm='${folderSearchTerm}', songSearchTerm='${songSearchTerm}'.`);
+
+        let targetFolderToSearch;
+        // Determine the folder name to search for. Default to "chill" if no folder term is provided.
+        if (!folderSearchTerm || folderSearchTerm.trim() === "") {
+            targetFolderToSearch = "chill";
+            logToRenderer(`findMusic: folderSearchTerm is empty or null. Using default 'chill' folder.`);
+        } else {
+            targetFolderToSearch = folderSearchTerm;
+        }
+
+        let actualFolderPath = null;
+        let foundFolderOriginalName = null;
+
+        // Phase 1: Find the folder
+        try {
+            const musicPath = this.config.defaultMusicPath;
+            if (!musicPath || !fs.existsSync(musicPath)) {
+                logToRenderer(`findMusic: Error - Default Music Path ('${musicPath}') is not defined or does not exist.`);
+                return null;
+            }
+
+            // Get all directory names from the configured music path
+            const allEntities = fs.readdirSync(musicPath, { withFileTypes: true });
+            const subDirectories = allEntities.filter(dirent => dirent.isDirectory()).map(dirent => dirent.name);
+
+            if (subDirectories.length === 0) {
+                logToRenderer(`findMusic: No sub-folders found within the configured music path ('${musicPath}').`);
+                return null;
+            }
+
+            // Attempt to match the targetFolderToSearch with a directory name (substring match, case-insensitive)
+            const targetFolderLower = targetFolderToSearch.toLowerCase();
+            for (const dirName of subDirectories) {
+                if (dirName.toLowerCase().includes(targetFolderLower)) {
+                    actualFolderPath = path.join(musicPath, dirName);
+                    foundFolderOriginalName = dirName; // Store the actual name of the matched folder
+                    logToRenderer(`findMusic: Successfully matched folder: name='${foundFolderOriginalName}', path='${actualFolderPath}'.`);
+                    break; // Use the first match
+                }
+            }
+
+            if (!actualFolderPath) {
+                logToRenderer(`findMusic: No folder found containing '${targetFolderToSearch}' within '${musicPath}'.`);
+                return null; // Folder not found
+            }
+
+        } catch (error) {
+            logToRenderer(`findMusic: Exception while accessing or reading the configured music path: ${error.message}`);
+            return null;
+        }
+
+        // Phase 2: Find the song within the identified folder
+        try {
+            const filesInFolder = fs.readdirSync(actualFolderPath);
+            // Filter for .mp3 and .wav files
+            const audioFiles = filesInFolder.filter(file => {
+                const ext = path.extname(file).toLowerCase();
+                return ext === '.wav' || ext === '.lnk';
+            });
+
+            if (audioFiles.length === 0) {
+                logToRenderer(`findMusic: No audio files (.wav, .lnk) found in the folder '${foundFolderOriginalName}'.`);
+                return null;
+            }
+
+            let songFilePath = null;
+
+            // If a songSearchTerm is provided, try to find a matching song
+            if (songSearchTerm && songSearchTerm.trim() !== "") {
+                const songSearchLower = songSearchTerm.toLowerCase();
+                for (const fileName of audioFiles) {
+                    const songNameWithoutExt = path.parse(fileName).name; // Get filename without extension
+                    if (songNameWithoutExt.toLowerCase().includes(songSearchLower)) {
+                        songFilePath = path.join(actualFolderPath, fileName);
+                        logToRenderer(`findMusic: Successfully matched song: '${fileName}' in folder '${foundFolderOriginalName}'. Full path: '${songFilePath}'.`);
+                        break; // Use the first match
+                    }
+                }
+                if (!songFilePath) {
+                    logToRenderer(`findMusic: No song found containing '${songSearchTerm}' in folder '${foundFolderOriginalName}'.`);
+                    return null; // Specific song not found
+                }
+            } else {
+                // No songSearchTerm provided, so pick a random song from the folder
+                const randomIndex = Math.floor(Math.random() * audioFiles.length);
+                const randomSongName = audioFiles[randomIndex];
+                songFilePath = path.join(actualFolderPath, randomSongName);
+                logToRenderer(`findMusic: No songSearchTerm provided. Selected random song: '${randomSongName}' from folder '${foundFolderOriginalName}'. Full path: '${songFilePath}'.`);
+            }
+
+            return songFilePath; // Return the full path to the song, or null if errors occurred
+
+        } catch (error) {
+            logToRenderer(`findMusic: Exception while reading files from folder '${foundFolderOriginalName}' (path: '${actualFolderPath}'): ${error.message}`);
+            return null;
+        }
+    }
 }
 
 // Function to get a random effect from a table, filtering out used unique effects for the user
@@ -1128,109 +729,4 @@ async function askGPT4All(prompt, model, addSuffix = true) {
         throw new Error(`An error occurred while running the query: ${error.message}`);
     }
 }
-
-// Add this function somewhere in main.js, for example, near other helper functions.
-// Ensure fs, path, DEFAULT_LOCAL_FOLDER, and logToRenderer are accessible.
-async function findMusic(folderSearchTerm, songSearchTerm) {
-    logToRenderer(`findMusic: Initiating search with folderSearchTerm='${folderSearchTerm}', songSearchTerm='${songSearchTerm}'.`);
-
-    let targetFolderToSearch;
-    // Determine the folder name to search for. Default to "chill" if no folder term is provided.
-    if (!folderSearchTerm || folderSearchTerm.trim() === "") {
-        targetFolderToSearch = "chill";
-        logToRenderer(`findMusic: folderSearchTerm is empty or null. Using default 'chill' folder.`);
-    } else {
-        targetFolderToSearch = folderSearchTerm;
-    }
-
-    let actualFolderPath = null;
-    let foundFolderOriginalName = null;
-
-    // Phase 1: Find the folder
-    try {
-        // Check if DEFAULT_LOCAL_FOLDER is accessible
-        // DEFAULT_LOCAL_FOLDER should be available from process.env
-        if (!DEFAULT_LOCAL_FOLDER || !fs.existsSync(DEFAULT_LOCAL_FOLDER)) {
-            logToRenderer(`findMusic: Error - DEFAULT_LOCAL_FOLDER ('${DEFAULT_LOCAL_FOLDER}') is not defined or does not exist.`);
-            return null;
-        }
-
-        // Get all directory names from DEFAULT_LOCAL_FOLDER
-        const allEntities = fs.readdirSync(DEFAULT_LOCAL_FOLDER, { withFileTypes: true });
-        const subDirectories = allEntities.filter(dirent => dirent.isDirectory()).map(dirent => dirent.name);
-
-        if (subDirectories.length === 0) {
-            logToRenderer(`findMusic: No sub-folders found within DEFAULT_LOCAL_FOLDER ('${DEFAULT_LOCAL_FOLDER}').`);
-            return null;
-        }
-
-        // Attempt to match the targetFolderToSearch with a directory name (substring match, case-insensitive)
-        const targetFolderLower = targetFolderToSearch.toLowerCase();
-        for (const dirName of subDirectories) {
-            if (dirName.toLowerCase().includes(targetFolderLower)) {
-                actualFolderPath = path.join(DEFAULT_LOCAL_FOLDER, dirName);
-                foundFolderOriginalName = dirName; // Store the actual name of the matched folder
-                logToRenderer(`findMusic: Successfully matched folder: name='${foundFolderOriginalName}', path='${actualFolderPath}'.`);
-                break; // Use the first match
-            }
-        }
-
-        if (!actualFolderPath) {
-            logToRenderer(`findMusic: No folder found containing '${targetFolderToSearch}' within '${DEFAULT_LOCAL_FOLDER}'.`);
-            return null; // Folder not found
-        }
-
-    } catch (error) {
-        logToRenderer(`findMusic: Exception while accessing or reading DEFAULT_LOCAL_FOLDER ('${DEFAULT_LOCAL_FOLDER}'): ${error.message}`);
-        return null;
-    }
-
-    // Phase 2: Find the song within the identified folder
-    try {
-        const filesInFolder = fs.readdirSync(actualFolderPath);
-        // Filter for .mp3 and .wav files
-        const audioFiles = filesInFolder.filter(file => {
-            const ext = path.extname(file).toLowerCase();
-            return ext === '.wav' || ext === '.lnk';
-        });
-
-        if (audioFiles.length === 0) {
-            logToRenderer(`findMusic: No audio files (.wav) found in the folder '${foundFolderOriginalName}'.`);
-            return null;
-        }
-
-        let songFilePath = null;
-
-        // If a songSearchTerm is provided, try to find a matching song
-        if (songSearchTerm && songSearchTerm.trim() !== "") {
-            const songSearchLower = songSearchTerm.toLowerCase();
-            for (const fileName of audioFiles) {
-                const songNameWithoutExt = path.parse(fileName).name; // Get filename without extension
-                if (songNameWithoutExt.toLowerCase().includes(songSearchLower)) {
-                    songFilePath = path.join(actualFolderPath, fileName);
-                    logToRenderer(`findMusic: Successfully matched song: '${fileName}' in folder '${foundFolderOriginalName}'. Full path: '${songFilePath}'.`);
-                    break; // Use the first match
-                }
-            }
-            if (!songFilePath) {
-                logToRenderer(`findMusic: No song found containing '${songSearchTerm}' in folder '${foundFolderOriginalName}'.`);
-                return null; // Specific song not found
-            }
-        } else {
-            // No songSearchTerm provided, so pick a random song from the folder
-            const randomIndex = Math.floor(Math.random() * audioFiles.length);
-            const randomSongName = audioFiles[randomIndex];
-            songFilePath = path.join(actualFolderPath, randomSongName);
-            logToRenderer(`findMusic: No songSearchTerm provided. Selected random song: '${randomSongName}' from folder '${foundFolderOriginalName}'. Full path: '${songFilePath}'.`);
-        }
-
-        return songFilePath; // Return the full path to the song, or null if errors occurred
-
-    } catch (error) {
-        logToRenderer(`findMusic: Exception while reading files from folder '${foundFolderOriginalName}' (path: '${actualFolderPath}'): ${error.message}`);
-        return null;
-    }
-}
-
-
 module.exports = CommandHandler;
