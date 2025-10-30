@@ -12,7 +12,7 @@ async function getStore() {
                 voiceChannel: { type: 'string' },
                 textChannel: { type: 'string' },
                 botRoleId: { type: 'string' },
-                defaultLocalFolder: { type: 'string' }
+                defaultMusicPath: { type: 'string' }
             },
             default: {}
         }
@@ -28,7 +28,20 @@ async function getStore() {
 
 async function getDiscordConfig() {
     const store = await getStore();
-    return store.get('discord');
+    const config = store.get('discord') || {};
+
+    // --- Ensure essential keys have default values ---
+    // This prevents the app from crashing or behaving unexpectedly if the config file
+    // is missing keys (e.g., on a fresh install).
+    const defaults = {
+        token: '',
+        voiceChannel: '',
+        textChannel: '',
+        botRoleId: '',
+        defaultMusicPath: ''
+    };
+
+    return { ...defaults, ...config };
 }
 
 async function setDiscordConfig(config) {

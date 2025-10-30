@@ -1,5 +1,5 @@
 console.log('Main.js script started');
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
 console.log('Electron loaded.');
 const path = require('path');
 console.log('Path loaded.');
@@ -17,7 +17,7 @@ const CommandHandler = require('../../discord/CommandHandler.js');
 const FiveEToolsParser = require('./5eParser.js');
 const { getDiscordConfig, setDiscordConfig } = require('./config.js');
 const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
-const { mobAttackResults, areaTargets } = require('../data/mobRules.js');
+const { mobRules } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
@@ -175,7 +175,19 @@ function createGamifyWindow() {
 
 async function apploader() {
     discordConfig = await getDiscordConfig();
+
     await app.whenReady().then(async () => {
+        protocol.registerFileProtocol('safe-media', (request, callback) => {
+            const url = request.url.substr(13); // 'safe-media://'.length
+            const decodedPath = decodeURI(url);
+            try {
+                return callback(decodedPath);
+            }
+            catch (error) {
+                console.error('Failed to register protocol', error);
+                return callback('404');
+            }
+        });
         console.log('App is ready.');
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
@@ -183,7 +195,6 @@ async function apploader() {
         // Don't show it yet if we might need to show the settings window first.
         await createWindow(false);
         isAppReady = true;
-        ipcloader(); // Load all IPC handlers so settings window can work.
 
         // Now, check for folder configuration.
         const { resourcesPath, randomTablesPath, tasksPath } = discordConfig;
@@ -207,7 +218,9 @@ async function apploader() {
             mainWindow.show();
         }
 
-        // Initialize data-dependent components.
+        // Initialize components
+        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
+        ipcloader(); // Load all IPC handlers
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
         // Handle Discord Bot setup.
@@ -244,8 +257,34 @@ ipcMain.handle('get-dnd-conditions', async () => {
 });
 
 ipcMain.handle('get-mob-rules-data', async () => {
-    return { mobAttackResults, areaTargets };
+    return mobRules;
 });
+
+ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
+    logToRenderer(`[IPC] Received 'get-image-as-data-url' request with relative path: ${relativePath}`);
+    const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
+    logToRenderer(`[IPC] Determined base path: ${basePath} (isPackaged: ${app.isPackaged})`);
+
+    const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativePath);
+    logToRenderer(`[IPC] Constructed absolute image path: ${absoluteImagePath}`);
+
+    try {
+        logToRenderer(`[IPC] Attempting to read file at: ${absoluteImagePath}`);
+        const data = await fs.readFile(absoluteImagePath);
+        const extension = path.extname(absoluteImagePath).substring(1);
+        const dataUrl = `data:image/${extension};base64,${data.toString('base64')}`;
+        logToRenderer(`[IPC] Successfully read and encoded image.`);
+        return { success: true, dataUrl: dataUrl, absolutePath: absoluteImagePath };
+    } catch (error) {
+        const errorMessage = `Failed to read image file. Error: ${error.message}`;
+        logToRenderer(`[IPC] Error: ${errorMessage}`);
+        return { success: false, error: errorMessage, absolutePath: absoluteImagePath };
+    }
+});
+
+// Disable hardware acceleration for headless environments (e.g., Playwright)
+// This prevents crashes related to GPU initialization.
+app.disableHardwareAcceleration();
 
 apploader();
 
@@ -331,42 +370,17 @@ function formatStatBlockForDiscord(monster) {
     return { mainEmbed, longFields };
 }
 
-function formatMobRulesForDiscord(creature) {
-    const attackMod = parseInt(creature.attackMod, 10) || 0;
-    const formatAttackMod = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
-
-    // Format the Mob Attack Results table
-    let attackTable = '```\nRoll Needed | Normal | Advantage | Disadvantage\n------------|--------|-----------|--------------\n';
-    mobAttackResults.forEach(row => {
-        const roll = row.roll.padEnd(11);
-        const normal = row.normal.toString().padEnd(6);
-        const adv = row.adv.toString().padEnd(9);
-        const dis = row.dis.toString();
-        attackTable += `${roll} | ${normal} | ${adv} | ${dis}\n`;
-    });
-    attackTable += '```';
+function formatMobRulesForDiscord(creatureName) {
+    const { discord: discordData, imagePath } = mobRules;
 
     const mainEmbed = new EmbedBuilder()
         .setColor(0xFFA500) // Orange for rules
-        .setTitle(`Mob Attack Rules for ${creature.name}`)
-        .setDescription(`This table shows the number of successful hits from a mob based on the d20 roll needed.\nThe mob's attack modifier is **${formatAttackMod(attackMod)}**.`)
-        .addFields({ name: 'Mob Attack Results', value: attackTable });
+        .setTitle(`${discordData.title}: ${creatureName}`)
+        .setDescription(discordData.description)
+        .addFields(...discordData.fields)
+        .setImage(`attachment://${path.basename(imagePath)}`); // Set the image to be an attachment
 
-    // Format the Area Targets table
-    let areaTableString = '';
-    areaTargets.forEach(row => {
-        let parts = [];
-        if (row.cone !== '—') parts.push(`**Cone:** ${row.cone}`);
-        if (row.cube !== '—') parts.push(`**Cube:** ${row.cube}`);
-        if (row.circular !== '—') parts.push(`**Circular:** ${row.circular}`);
-        if (row.line !== '—') parts.push(`**Line:** ${row.line}`);
-        areaTableString += `**${row.targets} targets:** ${parts.join(' | ')}\n`;
-    });
-    areaTableString += `\n*Use Circular for Cylinders, Emanations, and Spheres.`;
-
-    const longFields = [{ name: 'Targets in Area of Effect', value: areaTableString }];
-
-    return { mainEmbed, longFields };
+    return { mainEmbed, imagePath };
 }
 
 function splitText(text, maxLength = 1024) {
@@ -509,22 +523,73 @@ async function ipcloader() {
 
     ipcMain.on('set-discord-config', async (event, config) => {
         await setDiscordConfig(config);
+
+        // --- Update the live configuration ---
+        // The in-memory config needs to be updated to reflect the newly saved settings.
+        discordConfig = config;
+        // The music player instance also needs to be told about the new path.
+        if (musicPlayer) {
+            musicPlayer.musicFolder = config.defaultMusicPath;
+            logToRenderer(`[IPC] Updated music player's default folder to: ${musicPlayer.musicFolder}`);
+        }
+        // --- End of update ---
+
         await dialog.showMessageBox(null, {
             type: 'info',
             title: 'Settings Saved',
-            message: 'Your settings have been saved. The application will now restart to apply the changes.',
+            message: 'Your settings have been saved. Please close and reopen the application to apply all changes.',
             buttons: ['OK']
         });
-        app.relaunch();
-        app.quit();
+        // Close the settings window after saving
+        if (settingsWindow) {
+            settingsWindow.close();
+        }
     });
 
     ipcMain.on('open-settings-window', createSettingsWindow);
 
     logToRenderer('ipcloader() called.');
+    musicPlayer.on('status-change', (status) => {
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('music-player-status', status);
+        }
+    });
     initiativeTracker = new InitiativeTracker(logToRenderer, logDiceRollToRenderer, sendInitiativeUpdate, autosavePath);
     // --- All core IPC listeners should be registered after the app is ready ---
+    ipcMain.on('request-initial-load', () => {
+        if (initiativeTracker) {
+            initiativeTracker.sendFullState();
+        }
+    });
     ipcMain.on('open-gamify-tool', createGamifyWindow);
+
+    // Music Player IPC Handlers
+    ipcMain.on('load-music-file', (event, filePath) => {
+        logToRenderer(`IPC 'load-music-file' received for: ${filePath}`);
+        if (filePath) {
+            musicPlayer.loadFile(filePath);
+        }
+    });
+
+    ipcMain.on('play-music', () => {
+        logToRenderer(`IPC 'play-music' (command) received.`);
+        musicPlayer.play();
+    });
+
+    ipcMain.on('pause-music', () => {
+        logToRenderer(`IPC 'pause-music' received.`);
+        musicPlayer.pause();
+    });
+
+    ipcMain.handle('get-preview-audio-data', async () => {
+        const filePath = musicPlayer.getPreviewFilePath();
+        if (!filePath) {
+            return { success: false, error: 'No file available for preview.' };
+        }
+        // Encode the file path to handle special characters and create a URL
+        const safeUrl = `safe-media://${encodeURI(filePath.replace(/\\/g, '/'))}`;
+        return { success: true, url: safeUrl };
+    });
 
     ipcMain.handle('show-confirm-dialog', async (event, options) => {
         const focusedWindow = BrowserWindow.getFocusedWindow();
@@ -800,7 +865,7 @@ async function ipcloader() {
     ipcMain.handle('open-file-dialog', async () => {
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
             title: 'Select Music File',
-            defaultPath: discordConfig.defaultLocalFolder,
+            defaultPath: discordConfig.defaultMusicPath,
             properties: ['openFile'],
             filters: [
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
@@ -862,7 +927,11 @@ async function ipcloader() {
 
                 const activeMarker = index === currentTurnIndex ? '`➤`' : '` `';
                 const initiativeStr = creature.initiative.toString();
-                const nameStr = (creature.name || '');
+                let nameStr = creature.name || '';
+                if (creature.isMob) {
+                    const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
+                    nameStr = `Mob of ${currentCount} ${creature.name}`;
+                }
 
                 // New layout: Init | HP Bar | Name | Conditions
                 const line = `${activeMarker}${hpBar}${conditionStr} ${nameStr}`;
@@ -890,7 +959,10 @@ async function ipcloader() {
     ipcMain.on('copy-creature', (event, { creatureId }) => {
         const creature = initiativeTracker.getCreature(creatureId);
         if (creature) {
-            mainWindow.webContents.send('populate-edit-form', creature);
+            // When copying, we want to populate the "Add" form, not the "Edit" form.
+            // We give it a new ID to ensure it's a distinct creature.
+            const newCreature = { ...creature, id: Date.now() };
+            mainWindow.webContents.send('populate-add-form', newCreature);
         }
     });
 
@@ -954,26 +1026,28 @@ async function ipcloader() {
     });
 
     ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
-        const message = initiativeTracker.rollStat(creatureId, rollType, stat, type);
-        if (message) {
+        const result = initiativeTracker.rollStat(creatureId, rollType, stat, type);
+        if (result) {
+            const { message, embed } = result;
             mainWindow.webContents.send('dice-log', message);
             if (discordConfig.textChannel) {
                 const channel = client.channels.cache.get(discordConfig.textChannel);
                 if (channel) {
-                    channel.send(message);
+                    channel.send({ embeds: [embed] });
                 }
             }
         }
     });
 
     ipcMain.on('roll-attack', (event, { creatureId, rollType }) => {
-        const message = initiativeTracker.rollAttack(creatureId, rollType);
-        if (message) {
+        const result = initiativeTracker.rollAttack(creatureId, rollType);
+        if (result) {
+            const { message, embed } = result;
             mainWindow.webContents.send('dice-log', message);
             if (discordConfig.textChannel) {
                 const channel = client.channels.cache.get(discordConfig.textChannel);
                 if (channel) {
-                    channel.send(message);
+                    channel.send({ embeds: [embed] });
                 }
             }
         }
@@ -1063,20 +1137,6 @@ async function ipcloader() {
         return monster;
     });
 
-    ipcMain.handle('calculate-max-hp', (event, diceNotation) => {
-        try {
-            if (!diceNotation || typeof diceNotation !== 'string' || !diceNotation.match(/d/i)) {
-                return parseInt(diceNotation, 10) || 10;
-            }
-            const roller = new DiceRoller();
-            const roll = roller.roll(diceNotation);
-            return roll.maxTotal;
-        } catch (e) {
-            logToRenderer(`Error calculating max HP for "${diceNotation}": ${e.message}`);
-            return 10; // Fallback
-        }
-    });
-
     ipcMain.on('push-dicelog-to-discord', async (event, logContent) => {
         if (!discordConfig.textChannel) {
             logToRenderer('[push-dicelog] No text channel configured.');
@@ -1142,7 +1202,14 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.on('push-mob-rules-to-discord', async (event, creature) => {
+    ipcMain.on('push-mob-rules-to-discord', async (event, { creatureName, absoluteImagePath }) => {
+        if (!creatureName || !absoluteImagePath) {
+            const errorMsg = `[push-mob-rules] Error: Missing creatureName or absoluteImagePath.`;
+            logToRenderer(errorMsg);
+            dialog.showErrorBox('Discord Error', `Could not push mob rules. Data from UI was incomplete.`);
+            return;
+        }
+
         if (!discordConfig.textChannel) {
             logToRenderer('[push-mob-rules] No text channel configured.');
             return;
@@ -1152,31 +1219,26 @@ async function ipcloader() {
             logToRenderer(`[push-mob-rules] FAILED to find channel with ID: ${discordConfig.textChannel}`);
             return;
         }
+
         try {
-            const { mainEmbed, longFields } = formatMobRulesForDiscord(creature);
+            logToRenderer(`[push-mob-rules] Reading image file into buffer from: ${absoluteImagePath}`);
+            const imageBuffer = await fs.readFile(absoluteImagePath);
+            logToRenderer(`[push-mob-rules] Successfully read image into buffer (${imageBuffer.length} bytes).`);
 
-            const mainMessage = await channel.send({ embeds: [mainEmbed] });
-            logToRenderer('[push-mob-rules] Successfully pushed main mob rules embed.');
+            const { mainEmbed } = formatMobRulesForDiscord(creatureName);
 
-            if (longFields.length > 0) {
-                const thread = await mainMessage.startThread({
-                    name: `${creature.name} - Area Targets`,
-                    autoArchiveDuration: 60,
-                });
-
-                for (const field of longFields) {
-                    const chunks = splitText(field.value, 4096); // Embed description limit
-                    for (let i = 0; i < chunks.length; i++) {
-                        const chunkEmbed = new EmbedBuilder()
-                            .setColor(0xFFA500)
-                            .setDescription(chunks[i]);
-                        await thread.send({ embeds: [chunkEmbed] });
-                    }
-                }
-                logToRenderer(`[push-mob-rules] Sent area of effect details to thread.`);
-            }
+            await channel.send({
+                embeds: [mainEmbed],
+                files: [{
+                    attachment: imageBuffer, // Send the buffer directly
+                    name: path.basename(absoluteImagePath)
+                }]
+            });
+            logToRenderer('[push-mob-rules] Successfully pushed mob rules embed with image buffer.');
         } catch (error) {
-            logToRenderer(`[push-mob-rules] FAILED to send embed: ${error}`);
+            logToRenderer(`[push-mob-rules] FAILED to send embed: ${error.message}`);
+            logToRenderer(`[push-mob-rules] Error stack: ${error.stack}`);
+            dialog.showErrorBox('Discord Error', `Failed to read image file or send to Discord. Please check the file at: ${absoluteImagePath}\n\n${error.message}`);
         }
     });
 }
@@ -1191,12 +1253,6 @@ async function logToRenderer(message) {
         logToRenderer(message);
     }
 }
-musicPlayer = new BackendAudioPlayer(logToRenderer, shell);
-musicPlayer.on('status-change', (status) => {
-    if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('music-player-status', status);
-    }
-});
 
 /*
 client.on('error', error => {
@@ -1297,16 +1353,6 @@ client.once('clientReady', async () => {
         logToRenderer('Voice channel not found or is not a voice channel!');
     }
 
-    // Simplified IPC Handlers
-    ipcMain.on('play-music', (event, filePathFromRenderer) => {
-        logToRenderer(`IPC 'play-music' received for: ${filePathFromRenderer || 'current track'}`);
-        musicPlayer.playFile(filePathFromRenderer);
-    });
-
-    ipcMain.on('pause-music', () => {
-        logToRenderer(`IPC 'pause-music' received.`);
-        musicPlayer.pause();
-    });
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
@@ -1338,8 +1384,6 @@ client.once('clientReady', async () => {
         }
     });
 });
-
-initializeDiscordBot();
 
 let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
 const startingMemUse = memoryUsage;

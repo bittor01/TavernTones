@@ -1,39 +1,53 @@
-// Data sourced from the "Flee, Mortals!" SRD, which appears to match the user's intent for mob combat.
-const mobAttackResults = [
-    { rollNeeded: 2, hitsPer4: 1, hitsPer5: 1, hitsPer6: 1, hitsPer8: 2, hitsPer10: 2 },
-    { rollNeeded: 3, hitsPer4: 1, hitsPer5: 1, hitsPer6: 2, hitsPer8: 2, hitsPer10: 3 },
-    { rollNeeded: 4, hitsPer4: 1, hitsPer5: 2, hitsPer6: 2, hitsPer8: 3, hitsPer10: 3 },
-    { rollNeeded: 5, hitsPer4: 2, hitsPer5: 2, hitsPer6: 3, hitsPer8: 4, hitsPer10: 5 },
-    { rollNeeded: 6, hitsPer4: 2, hitsPer5: 3, hitsPer6: 3, hitsPer8: 5, hitsPer10: 6 },
-    { rollNeeded: 7, hitsPer4: 2, hitsPer5: 3, hitsPer6: 4, hitsPer8: 5, hitsPer10: 7 },
-    { rollNeeded: 8, hitsPer4: 3, hitsPer5: 4, hitsPer6: 4, hitsPer8: 6, hitsPer10: 8 },
-    { rollNeeded: 9, hitsPer4: 3, hitsPer5: 4, hitsPer6: 5, hitsPer8: 7, hitsPer10: 8 },
-    { rollNeeded: 10, hitsPer4: 3, hitsPer5: 4, hitsPer6: 5, hitsPer8: 7, hitsPer10: 9 },
-    { rollNeeded: 11, hitsPer4: 4, hitsPer5: 5, hitsPer6: 6, hitsPer8: 8, hitsPer10: 10 },
-    { rollNeeded: 12, hitsPer4: 4, hitsPer5: 5, hitsPer6: 6, hitsPer8: 8, hitsPer10: 10 },
-    { rollNeeded: 13, hitsPer4: 4, hitsPer5: 5, hitsPer6: 5, hitsPer8: 7, hitsPer10: 9 },
-    { rollNeeded: 14, hitsPer4: 3, hitsPer5: 4, hitsPer6: 5, hitsPer8: 6, hitsPer10: 8 },
-    { rollNeeded: 15, hitsPer4: 3, hitsPer5: 4, hitsPer6: 4, hitsPer8: 6, hitsPer10: 7 },
-    { rollNeeded: 16, hitsPer4: 2, hitsPer5: 3, hitsPer6: 3, hitsPer8: 5, hitsPer10: 6 },
-    { rollNeeded: 17, hitsPer4: 2, hitsPer5: 2, hitsPer6: 3, hitsPer8: 4, hitsPer10: 5 },
-    { rollNeeded: 18, hitsPer4: 1, hitsPer5: 2, hitsPer6: 2, hitsPer8: 3, hitsPer10: 3 },
-    { rollNeeded: 19, hitsPer4: 1, hitsPer5: 1, hitsPer6: 2, hitsPer8: 2, hitsPer10: 2 },
-    { rollNeeded: 20, hitsPer4: 1, hitsPer5: 1, hitsPer6: 1, hitsPer8: 1, hitsPer10: 1 }
-];
+const mobRules = {
+    imagePath: "resources/MobRules/MobRules.png",
+    ui: {
+        text: `
+    <p>
+        **Mobs**. This section helps you speed up play when resolving outcomes with large groups of monsters, also known as **mobs**.
+        **🎲 Tips for Smooth Mob Combat**: Use **average damage** from a stat block. If an attack reduces a monster to a handful of Hit Points, **assume the monster is killed**. **Divide a large number** of identical monsters into smaller mobs (5 to 8 creatures works well) and spread their turns out between character turns; **don't have more mobs than there are characters.**
+        **📊 Average Mob Results**: To determine successful D20 Tests without rolling, use the **Mob Results table** by following these steps:
+    </p>
 
-const areaTargets = [
-    { targets: 1,  cone: '10-foot',         cube: '5- to 10-foot',  circular: '5-foot-radius',  line: '—' },
-    { targets: 2,  cone: '15- to 20-foot',  cube: '15-foot',        circular: '—',                line: '30-foot-long, 5-foot-wide' },
-    { targets: 3,  cone: '25-foot',         cube: '—',              circular: '10-foot-radius', line: '30-foot-long, 10-foot-wide or 60-foot-long, 5-foot-wide' },
-    { targets: 4,  cone: '—',               cube: '20-foot',        circular: '—',                line: '90- or 100-foot-long, 5-foot-wide' },
-    { targets: 5,  cone: '30-foot',         cube: '—',              circular: '—',                line: '60-foot-long, 10-foot-wide or 120-foot-long, 5-foot-wide' },
-    { targets: 6,  cone: '35-foot',         cube: '25-foot',        circular: '15-foot-radius', line: '—' },
-    { targets: 8,  cone: '40-foot',         cube: '30-foot',        circular: '—',                line: '90- or 100-foot-long, 10-foot-wide' },
-    { targets: 9,  cone: '45-foot',         cube: '—',              circular: '—',                line: '—' },
-    { targets: 10, cone: '50-foot',         cube: '35-foot',        circular: '20-foot-radius', line: '120-foot-long, 10-foot-wide' },
-    { targets: 12, cone: '55-foot',         cube: '40-foot',        circular: '—',                line: '—' },
-    { targets: 16, cone: '60-foot',         cube: '45-foot',        circular: '25-foot-radius', line: '—' },
-    { targets: 20, cone: '—',               cube: '50-foot',        circular: '30-foot-radius', line: '—' }
-];
+    <ol>
+        <li>
+            **Determine the Roll Needed**: Calculate the minimum d20 roll for success:
+            $$Roll\ Needed = Target\ Number - Monster's\ Bonus$$
+        </li>
+        <li>
+            **Find the Column**: Locate the *Roll Needed* on the table. Use **With Advantage**, **With Disadvantage**, or **Normal** (otherwise) columns.
+        </li>
+        <li>
+            **Determine Successes**: Read across to find the **fractional number of successes**. That fraction of monsters succeeds on the D20 Test.
+        </li>
+    </ol>
+        `
+    },
+    discord: {
+        title: "Mob Rules",
+        description: "**Mobs**\nThis section can help you speed up play when resolving outcomes with large groups of monsters, also known as mobs.",
+        fields: [
+            {
+                name: "Tips",
+                value: "Follow these tips to smooth a combat encounter with a large number of monsters:\n\n- **Damage.** Use the average damage specified in a monster's stat block.\n- **Hit Points.** If a spell or attack reduces a monster to a handful of Hit Points, assume the monster is killed or otherwise taken out of the fight.\n- **Monster Mobs.** Divide a large number of identical monsters into smaller mobs and spread their turns out between the characters' turns. Mobs of five to eight identical creatures work well, but don't have more mobs than there are characters."
+            },
+            {
+                name: "Average Results",
+                value: "Whenever you would otherwise make a number of D20 Tests for identical monsters, the Mob Results table can help you determine the number of successful D20 Tests the monsters get without having to roll dice. Follow these steps:"
+            },
+            {
+                name: "Step 1: Determine Roll Needed",
+                value: "Determine the minimum d20 roll the monsters need to succeed on the D20 Test using the following formula:\n*Roll needed = target number − monster's bonus*"
+            },
+            {
+                name: "Step 2: Find Roll on Table",
+                value: "Find the roll needed on the Mob Results table. If all the monsters have Advantage on the roll (e.g., Pack Tactics, Magic Resistance), find the roll needed in the With Advantage column. If all the monsters have Disadvantage (e.g., attacking a creature protected by Blur), use the With Disadvantage column. Otherwise, use the Normal column."
+            },
+            {
+                name: "Step 3: Find Success Fraction",
+                value: "Read across the table to find a fractional number of successes you can easily apply to the group of monsters. That's the fraction of monsters that succeed on the D20 Test."
+            }
+        ]
+    }
+};
 
-module.exports = { mobAttackResults, areaTargets };
+module.exports = { mobRules };
