@@ -36,7 +36,7 @@ contextBridge.exposeInMainWorld('electron', {
           'get-task-data', 'save-and-get-next-spell', 'undo-and-get-previous-spell',
           'get-high-score', 'load-task-by-path', 'open-task-file-dialog',
           'scrap-and-get-next-item', 'show-confirm-dialog', 'get-mob-rules-data',
-          'get-image-as-data-url', 'get-preview-audio-data'
+          'get-image-as-data-url', 'get-preview-audio-data', 'soundboard-load'
         ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);

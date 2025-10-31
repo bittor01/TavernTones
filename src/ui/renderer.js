@@ -403,14 +403,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Soundboard Listeners ---
-    // The soundboard is now initialized after receiving a signal from the main process.
     window.electron.ipcRenderer.on('ipc-handlers-ready', () => {
+        console.log('[DIAG-RENDERER] ipc-handlers-ready signal received.');
         initializeSoundboard();
     });
 
     document.getElementById('soundboard-volume').addEventListener('input', (e) => {
-        // This will later send an IPC message, e.g., window.electron.ipcRenderer.send('set-soundboard-volume', e.target.value);
+        // This will later send an IPC message
     });
+
+    async function initializeSoundboard() {
+        console.log('[DIAG-RENDERER] initializeSoundboard started.');
+        try {
+            const loadedState = await window.electron.ipcRenderer.invoke('soundboard-load');
+            console.log('[DIAG-RENDERER] soundboard-load invoke returned.');
+            if (loadedState && loadedState.length > 0) {
+                soundboardState = loadedState;
+            } else {
+                for (let i = 0; i < 9; i++) {
+                    soundboardState.push({ id: i, file: null, emoji: '➕', loop: false, isPlaying: false });
+                }
+            }
+            renderSoundboard();
+        } catch (error) {
+            console.error('[DIAG-RENDERER] Error during soundboard initialization:', error);
+        }
+    }
 
     addCreatureForm.addEventListener('submit', (event) => {
         event.preventDefault();
@@ -772,6 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Render Functions ---
     function renderSoundboard() {
+        console.log('[DIAG-RENDERER] renderSoundboard started.');
         const grid = document.getElementById('soundboard-grid');
         grid.innerHTML = '';
         soundboardState.forEach(slot => {
@@ -787,6 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             grid.appendChild(controlSet);
         });
+        console.log('[DIAG-RENDERER] renderSoundboard finished.');
 
         // Add listeners after rendering
         document.querySelectorAll('.soundboard-play-btn').forEach(btn => {
