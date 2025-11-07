@@ -32,8 +32,7 @@ let fiveEToolsParser;
 
 
 // --- State Management ---
-let autosavePath;
-let soundboardAutosavePath;
+const autosavePath = path.join(app.getPath('userData'), 'autosave.json');
 
 const DND_CONDITIONS = {
     "Blinded": { emoji: "🙈", color: "#6c757d", text: "You can't see and automatically fail any ability check that requires sight. Attack rolls against you have Advantage, and your attack rolls have Disadvantage." },
@@ -178,11 +177,6 @@ async function apploader() {
     discordConfig = await getDiscordConfig();
 
     await app.whenReady().then(async () => {
-        // --- Initialize paths that depend on app.getPath() ---
-        autosavePath = path.join(app.getPath('userData'), 'autosave.json');
-        soundboardAutosavePath = path.join(app.getPath('userData'), 'soundboard.json');
-        // ---
-
         protocol.registerFileProtocol('safe-media', (request, callback) => {
             const url = request.url.substr(13); // 'safe-media://'.length
             const decodedPath = decodeURI(url);
@@ -227,8 +221,6 @@ async function apploader() {
         // Initialize components
         musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
         ipcloader(); // Load all IPC handlers
-        logToRenderer('[DIAG-MAIN] Sending ipc-handlers-ready signal.');
-        mainWindow.webContents.send('ipc-handlers-ready');
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
         // Handle Discord Bot setup.
@@ -458,7 +450,6 @@ async function checkAndShowReminders(creature, turnEvent) {
 const InitiativeTracker = require('../features/InitiativeTracker.js');
 
 async function ipcloader() {
-    logToRenderer('[DIAG-MAIN] ipcloader() invoked.');
     // Helper function to open a directory selection dialog
     const selectDirectory = async (title) => {
         const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
@@ -1248,24 +1239,6 @@ async function ipcloader() {
             logToRenderer(`[push-mob-rules] FAILED to send embed: ${error.message}`);
             logToRenderer(`[push-mob-rules] Error stack: ${error.stack}`);
             dialog.showErrorBox('Discord Error', `Failed to read image file or send to Discord. Please check the file at: ${absoluteImagePath}\n\n${error.message}`);
-        }
-    });
-
-    ipcMain.handle('soundboard-load', async () => {
-        logToRenderer('[DIAG-MAIN] soundboard-load IPC handler invoked.');
-        try {
-            const data = await fs.readFile(soundboardAutosavePath, 'utf8');
-            logToRenderer('[DIAG-MAIN] Successfully read soundboard.json.');
-            const parsedData = JSON.parse(data);
-            logToRenderer(`[DIAG-MAIN] Parsed soundboard data: ${JSON.stringify(parsedData)}`);
-            return parsedData;
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                logToRenderer('[DIAG-MAIN] No soundboard autosave file found. Returning null.');
-                return null; // File doesn't exist, return null
-            }
-            logToRenderer(`[DIAG-MAIN] Error loading soundboard state: ${error.message}`);
-            return null;
         }
     });
 }

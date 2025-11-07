@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Enter Emoji</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #2c2f33; color: #ffffff; }
+        label { margin-bottom: 10px; }
+        input { width: 80%; padding: 8px; margin-bottom: 15px; text-align: center; font-size: 24px; }
+        button { padding: 8px 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <label for="emoji-input">Enter an emoji for the button:</label>
+    <input type="text" id="emoji-input" maxlength="2">
+    <button id="submit-btn">OK</button>
+    <script>
+        const input = document.getElementById('emoji-input');
+        const submitBtn = document.getElementById('submit-btn');
+
+        submitBtn.addEventListener('click', () => {
+            window.emojiAPI.submit(input.value);
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                submitBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
