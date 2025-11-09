@@ -23,3 +23,12 @@ app.disableHardwareAcceleration();
 Place this line **before** the `app.whenReady()` block.
 
 **IMPORTANT:** This line should be commented out or removed before creating a final production build, as hardware acceleration is desirable for performance on a user's machine.
+
+# Future Enhancements
+
+## Soundboard
+
+*   **Enhanced Clear Functionality:** The current "clear" button (`🗑️`) for a sound stack removes all sounds at once. A planned improvement is to replace this with a pop-up dialog that offers more granular control:
+    *   Remove the last sound played.
+    *   Remove the last sound added to the stack.
+    *   Clear all sounds (the current behavior).

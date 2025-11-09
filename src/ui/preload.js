@@ -23,7 +23,8 @@ contextBridge.exposeInMainWorld('electron', {
         'set-loop', 'set-soundboard-volume', 'request-initial-load',
         'push-dicelog-to-discord', 'push-statblock-to-discord',
         'open-gamify-tool', 'save-high-score', 'open-settings-window',
-        'roll-attack', 'push-mob-rules-to-discord'
+        'roll-attack', 'push-mob-rules-to-discord',
+        'play-sound-effect'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);
@@ -36,14 +37,23 @@ contextBridge.exposeInMainWorld('electron', {
           'get-task-data', 'save-and-get-next-spell', 'undo-and-get-previous-spell',
           'get-high-score', 'load-task-by-path', 'open-task-file-dialog',
           'scrap-and-get-next-item', 'show-confirm-dialog', 'get-mob-rules-data',
-          'get-image-as-data-url', 'get-preview-audio-data', 'soundboard-load'
+          'get-image-as-data-url', 'get-preview-audio-data',
+          'get-soundboard-config', 'add-file-to-stack', 'set-stack-emoji',
+          'clear-sound-stack', 'toggle-stack-loop', 'toggle-stack-shuffle',
+          'save-soundboard-preset', 'load-soundboard-preset'
         ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);
       }
     },
     on: (channel, func) => {
-      const validChannels = ['log-message', 'music-player-status', 'dice-log', 'update-initiative-list', 'populate-edit-form', 'soundboard-state-change', 'populate-add-form', 'ipc-handlers-ready'];
+      const validChannels = [
+          'log-message', 'music-player-status', 'dice-log',
+          'update-initiative-list', 'populate-edit-form',
+          'soundboard-state-change', 'populate-add-form',
+          'sound-playback-started', 'sound-playback-finished',
+          'soundboard-config-changed'
+        ];
       if (validChannels.includes(channel)) {
         const subscription = (event, ...args) => func(event, ...args);
         ipcRenderer.on(channel, subscription);

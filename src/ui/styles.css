@@ -532,47 +532,54 @@ input[type="number"] {
 
 
 /* --- Soundboard Styles --- */
-#soundboard-container {
-    flex-shrink: 0; /* Prevent it from shrinking */
-    flex-grow: 0; /* Prevent it from growing */
-    min-height: 0; /* Allow it to shrink smaller than its content if needed */
-}
-#soundboard-grid {
+.soundboard-grid-container {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(2, 1fr); /* Define 2 rows */
+    grid-template-rows: repeat(2, auto);
     gap: 10px;
-    height: 140px; /* Give the grid a fixed height to contain the buttons */
+    padding-top: 10px;
 }
-.soundboard-slot {
+
+.sound-stack {
+    background-color: #333;
+    border-radius: 8px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    background-color: #3c3c3c;
-    border-radius: 6px;
-    padding: 8px;
+    justify-content: center;
+    border: 1px solid #444;
+    min-height: 100px; /* Ensure a consistent height */
 }
-.soundboard-play-btn {
-    font-size: 1.5em;
+
+.sound-stack-controls {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: auto;
+    gap: 5px;
     width: 100%;
-    height: 100%; /* Make the button fill the grid cell */
-    padding: 10px;
-    background-color: #4f5b66;
-    border: 1px solid #666;
-}
-.soundboard-slot-controls {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    width: 100%;
-    margin-top: 5px;
-    font-size: 0.8em;
 }
-.soundboard-unload-btn {
-    background: none;
-    border: none;
-    color: #ff4d4d;
-    font-size: 1.2em;
+
+.sound-stack-play-btn {
+    grid-column: 3 / 4; /* Center button */
+    font-size: 2em; /* Larger emoji */
+    height: 60px;
+    line-height: 1;
+    padding: 0;
+}
+
+.sound-stack-add-btn {
+    font-size: 2.5em;
+    width: 100%;
+    height: 100%;
+    background-color: transparent;
+    border: 2px dashed #555;
+    color: #888;
+}
+.sound-stack-add-btn:hover {
+    background-color: #3a3a3a;
+    color: #ccc;
 }
 
 .reminders-popup {

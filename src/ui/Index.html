@@ -79,14 +79,14 @@
       </div>
       <div id="soundboard-container" class="box">
         <div class="panel-header">
-            <h2>Soundboard</h2>
-            <div class="panel-header-controls">
-                <label for="soundboard-volume">Volume:</label>
-                <input type="range" id="soundboard-volume" min="0" max="1" step="0.05" value="0.5">
-            </div>
+          <h2>Soundboard</h2>
+          <div class="panel-header-controls">
+            <button id="load-preset-btn" class="small-btn" title="Load Preset">📂</button>
+            <button id="save-preset-btn" class="small-btn" title="Save Preset">💾</button>
+          </div>
         </div>
-        <div id="soundboard-grid">
-            <!-- 3x3 grid of soundboard controls will be rendered here -->
+        <div id="soundboard-grid" class="soundboard-grid-container">
+          <!-- 2x3 grid of sound stack controls will be rendered here by renderer.js -->
         </div>
       </div>
     </div>

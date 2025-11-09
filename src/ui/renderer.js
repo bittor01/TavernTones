@@ -758,69 +758,111 @@ document.addEventListener('DOMContentLoaded', async () => {
         addCreatureForm.dataset.monsterRawData = fullStatBlock;
     }
 
+    // --- Soundboard Rendering ---
+    async function renderSoundboard() {
+        const grid = document.getElementById('soundboard-grid');
+        if (!grid) return;
+
+        const stacks = await window.electron.ipcRenderer.invoke('get-soundboard-config');
+        grid.innerHTML = ''; // Clear the grid before rendering
+
+        stacks.forEach((stack, index) => {
+            const stackWrapper = document.createElement('div');
+            stackWrapper.className = 'sound-stack';
+            stackWrapper.dataset.id = index;
+
+            if (!stack.emoji) {
+                // Render the big "add" button
+                stackWrapper.innerHTML = `
+                    <button class="sound-stack-add-btn" data-id="${index}">➕</button>
+                `;
+            } else {
+                // Render the full control set
+                stackWrapper.innerHTML = `
+                    <div class="sound-stack-controls">
+                        <button class="small-btn clear-stack-btn" title="Clear Stack" data-id="${index}">🗑️</button>
+                        <button class="small-btn shuffle-stack-btn" title="Shuffle" data-id="${index}" style="opacity: ${stack.shuffle ? '1' : '0.5'}">🔀</button>
+                        <button class="sound-stack-play-btn" data-id="${index}">${stack.isPlaying ? '⏸️' : stack.emoji}</button>
+                        <button class="small-btn loop-stack-btn" title="Loop" data-id="${index}" style="opacity: ${stack.loop ? '1' : '0.5'}">🔁</button>
+                        <button class="small-btn add-to-stack-btn" title="Add Sound" data-id="${index}">➕</button>
+                    </div>
+                `;
+            }
+            grid.appendChild(stackWrapper);
+        });
+    }
+
+    // --- Initial Soundboard Load ---
     renderSoundboard();
 
-    // --- Soundboard State ---
-    let soundboardState = [];
-    const SOUNDBOARD_SIZE = 9;
+    // --- IPC Listeners for Soundboard Updates ---
+    window.electron.ipcRenderer.on('soundboard-config-changed', (event, newConfig) => {
+        renderSoundboard(); // Re-render with the new configuration
+    });
 
-    for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
-        soundboardState.push({ id: i, file: null, emoji: '➕', loop: false, isPlaying: false });
-    }
+    window.electron.ipcRenderer.on('sound-playback-started', (event, { stackIndex }) => {
+        // Just re-render. The backend state will be updated.
+        renderSoundboard();
+    });
 
-    // --- Render Functions ---
-    function renderSoundboard() {
-        const grid = document.getElementById('soundboard-grid');
-        grid.innerHTML = '';
-        soundboardState.forEach(slot => {
-            const controlSet = document.createElement('div');
-            controlSet.className = 'soundboard-slot';
-            controlSet.innerHTML = `
-                <button class="soundboard-play-btn" data-id="${slot.id}">${slot.isPlaying ? '⏹️' : slot.emoji}</button>
-                <div class="soundboard-slot-controls">
-                    <input type="checkbox" id="loop-${slot.id}" data-id="${slot.id}" class="soundboard-loop-cb" ${slot.loop ? 'checked' : ''}>
-                    <label for="loop-${slot.id}">Loop</label>
-                    <button class="soundboard-unload-btn" data-id="${slot.id}" ${!slot.file ? 'disabled' : ''}>🗑️</button>
-                </div>
-            `;
-            grid.appendChild(controlSet);
-        });
+    window.electron.ipcRenderer.on('sound-playback-finished', (event, { stackIndex }) => {
+        // Just re-render.
+        renderSoundboard();
+    });
 
-        // Add listeners after rendering
-        document.querySelectorAll('.soundboard-play-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const slotId = parseInt(e.target.dataset.id, 10);
-                const slot = soundboardState[slotId];
-                if (slot.isPlaying) {
-                    window.electron.ipcRenderer.send('stop-sound', { slotId });
-                } else if (slot.file) {
-                    window.electron.ipcRenderer.send('play-sound', { slotId });
-                } else {
-                    window.electron.ipcRenderer.invoke('load-sound', { slotId }).then(result => {
-                        if (result) {
-                            soundboardState[slotId].file = result.file;
-                            soundboardState[slotId].emoji = result.emoji;
-                            renderSoundboard();
-                        }
-                    });
-                }
-            });
-        });
-        document.querySelectorAll('.soundboard-loop-cb').forEach(cb => {
-            cb.addEventListener('change', (e) => {
-                const slotId = parseInt(e.target.dataset.id, 10);
-                const loop = e.target.checked;
-                soundboardState[slotId].loop = loop;
-                window.electron.ipcRenderer.send('set-loop', { slotId, loop });
-            });
-        });
-        document.querySelectorAll('.soundboard-unload-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const slotId = parseInt(e.target.dataset.id, 10);
-                window.electron.ipcRenderer.send('unload-sound', { slotId });
-            });
-        });
-    }
+    // --- Soundboard Interactivity ---
+    document.getElementById('save-preset-btn').addEventListener('click', () => {
+        window.electron.ipcRenderer.invoke('save-soundboard-preset');
+    });
+
+    document.getElementById('load-preset-btn').addEventListener('click', () => {
+        window.electron.ipcRenderer.invoke('load-soundboard-preset');
+    });
+
+    document.getElementById('soundboard-grid').addEventListener('click', async (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        const stackIndex = parseInt(target.dataset.id, 10);
+        if (isNaN(stackIndex)) return;
+
+        if (target.classList.contains('sound-stack-add-btn')) {
+            // 1. Select file
+            const filePath = await window.electron.ipcRenderer.invoke('open-file-dialog');
+            if (!filePath) return;
+
+            // 2. Prompt for emoji
+            // For simplicity, we'll use a simple prompt. A custom modal would be better for UX.
+            const emoji = prompt('Please enter an emoji for this sound stack:', '🔊');
+            if (!emoji) return; // User cancelled
+
+            // 3. Update backend
+            await window.electron.ipcRenderer.invoke('add-file-to-stack', { stackIndex, filePath });
+            await window.electron.ipcRenderer.invoke('set-stack-emoji', { stackIndex, emoji });
+
+            // 4. Re-render
+            renderSoundboard();
+        }
+        // ... more button handlers will be added here in the next step ...
+        else if (target.classList.contains('sound-stack-play-btn')) {
+            window.electron.ipcRenderer.send('play-sound-effect', { stackIndex });
+        } else if (target.classList.contains('clear-stack-btn')) {
+            await window.electron.ipcRenderer.invoke('clear-sound-stack', { stackIndex });
+            renderSoundboard();
+        } else if (target.classList.contains('shuffle-stack-btn')) {
+            await window.electron.ipcRenderer.invoke('toggle-stack-shuffle', { stackIndex });
+            renderSoundboard();
+        } else if (target.classList.contains('loop-stack-btn')) {
+            await window.electron.ipcRenderer.invoke('toggle-stack-loop', { stackIndex });
+            renderSoundboard();
+        } else if (target.classList.contains('add-to-stack-btn')) {
+            const filePath = await window.electron.ipcRenderer.invoke('open-file-dialog');
+            if (filePath) {
+                await window.electron.ipcRenderer.invoke('add-file-to-stack', { stackIndex, filePath });
+                renderSoundboard();
+            }
+        }
+    });
 
     function renderInitiativeList(initiativeOrder, currentTurnIndex) {
         initiativeListDiv.innerHTML = '';
