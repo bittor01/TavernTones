@@ -46,6 +46,14 @@
       {
         "from": "resources/MobRules",
         "to": "MobRules"
+      },
+      {
+        "from": "node_modules/ffmpeg-static",
+        "to": "ffmpeg-static"
+      },
+      {
+        "from": "node_modules/ffprobe-static",
+        "to": "ffprobe-static"
       }
     ],
     "directories": {
