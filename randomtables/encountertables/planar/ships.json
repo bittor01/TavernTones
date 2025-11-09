@@ -1,0 +1,98 @@
+[
+  {
+    "text": "Damselfly ship Voidwinder, captained by Krig Kalu (hadozee explorer*) and crewed by 1 drow† and 7 hadozee shipmates* - 2d6 + 3",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Flying fish ship Horizon, captained by Thaal Vod (renegade mind flayer arcanist†) and crewed by 9 plasmoid warriors* - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Hammerhead ship Jander Sunstar, captained by Veluna Valderak (vampirate captain*) and crewed by 13 vampirates* and 1 priest† - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Lamprey ship Astral Prize, crewed by 15 psurlon ringers,*† including Captain Uscath - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Living ship Eldervine, captained by Queth (aartuk elder*) and crewed by 2 aartuk starhorrors,*† 8 aartuk weedlings,* and Eldervine (treant) - 1d10",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Nautiloid Neurophage, crewed by 4 mind flayers† and 16 kuo-toa, with 1d6 grells and 1d6 intellect devourers as passengers - 1d6",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Nightspider Malevolence, captained by Yeshk (neogi void hunter*†) and crewed by 24 neogi pirates* and 5 umber hulks - 1d6",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Scorpion ship Claws of Huraj, captained by Huraj (hobgoblin captain) and crewed by 1 bugbear (first mate), 8 hobgoblins, and 2 hobgoblin priests† - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Shrike ship Fedifensor, captained by Yaj (githyanki xenomancer*†) and crewed by 10 githyanki buccaneers*† - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Space galleon Eleventh, captained by Xorpha Eleven-Eyes (beholder) and crewed by 1 spectator (first mate), 3 cult fanatics,† and 16 cultists - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Space galleon Great Kindori, captained by Mystan the Mighty (djinni†) and crewed by 1 invisible stalker (first mate), 1 couatl,† 17 aarakocra, and 1 rug of smothering - 2d6 + 2",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Squid ship Syken's Reach, captained by the pirate Arviglas Syken (human bandit captain) and crewed by 1 cambion† (Syken's daughter, Tenebra) and 11 thugs - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Star moth Apex, captained by Xaleen (astral elf commander*†) and crewed by 11 astral elf warriors* and 1 astral elf aristocrat*† - 1d12",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Turtle ship Snorkel, captained by Shelby Norkel (gnome mage†) and crewed by 15 autognomes* - 1d10 + 3",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  },
+  {
+    "text": "Tyrant ship Doomdreamer, crewed by 2d4 + 2 beholders - 1d8",
+    "unique": false,
+    "used": [],
+    "vibe": "bane"
+  },
+  {
+    "text": "Wasp ship Adventure, abandoned and adrift (25 percent chance that its spelljamming helm is still aboard)",
+    "unique": false,
+    "used": [],
+    "vibe": "neutral"
+  }
+]
