@@ -1,13 +1,15 @@
 const { spawn } = require('child_process');
 const { EventEmitter } = require('events');
 const { app } = require('electron');
-const path =require('path');
+const path = require('path');
 const fs = require('fs');
-const { getInfo } = require('ffprobe');
+const ffprobe = require('ffprobe');
 const ffprobeStatic = require('ffprobe-static');
 const { Readable } = require('stream');
+const util = require('util');
 
-getInfo.FFPROBE_PATH = ffprobeStatic.path;
+const ffprobePromise = util.promisify(ffprobe);
+ffprobe.FFPROBE_PATH = ffprobeStatic.path;
 
 const FFMPEG_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'ffmpeg', 'ffmpeg.exe')
@@ -83,7 +85,7 @@ class SoundboardAudioMixer extends EventEmitter {
         }
     }
 
-    playSound(filePath) {
+    async playSound(filePath) {
         if (this.activeSounds.size >= MAX_SFX_INPUTS) {
             this.log('Maximum number of sound effects already playing.');
             return null;
@@ -96,20 +98,35 @@ class SoundboardAudioMixer extends EventEmitter {
             return null;
         }
 
-        const fileStream = fs.createReadStream(filePath);
-        const targetPipe = this.ffmpegProcess.stdio[inputPipeIndex];
+        try {
+            const probeData = await ffprobePromise(filePath, ['-v', 'error', '-show_format']);
+            const duration = parseFloat(probeData.format.duration);
+            if (isNaN(duration)) {
+                throw new Error('Could not determine sound duration from ffprobe data.');
+            }
 
-        fileStream.pipe(targetPipe, { end: false }); // Don't end the pipe
+            const fileStream = fs.createReadStream(filePath);
+            const targetPipe = this.ffmpegProcess.stdio[inputPipeIndex];
 
-        fileStream.on('end', () => {
-            this.log(`Sound stream finished for: ${filePath}`);
-            this.stopSound(soundId);
-            this.emit('sound-finished', { filePath });
-        });
+            fileStream.pipe(targetPipe, { end: false });
 
-        this.activeSounds.set(soundId, { stream: fileStream, pipeIndex: inputPipeIndex });
-        this.log(`Playing sound ${soundId} on pipe ${inputPipeIndex}`);
-        return soundId;
+            fileStream.on('end', () => {
+                this.log(`Sound stream finished for: ${filePath}`);
+            });
+
+            setTimeout(() => {
+                this.log(`Sound duration reached for: ${filePath}. Stopping stream.`);
+                this.stopSound(soundId);
+                this.emit('sound-finished', { filePath });
+            }, duration * 1000);
+
+            this.activeSounds.set(soundId, { stream: fileStream, pipeIndex: inputPipeIndex });
+            this.log(`Playing sound ${soundId} on pipe ${inputPipeIndex} for ${duration}s`);
+            return soundId;
+        } catch (error) {
+            this.log(`Error processing sound file ${filePath}: ${error.message}`);
+            return null;
+        }
     }
 
     stopSound(soundId) {
