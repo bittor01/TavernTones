@@ -532,6 +532,9 @@ input[type="number"] {
 
 
 /* --- Soundboard Styles --- */
+#soundboard-container {
+    flex-shrink: 0; /* Prevent the container from shrinking vertically */
+}
 .soundboard-grid-container {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
