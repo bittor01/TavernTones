@@ -5,12 +5,13 @@ const { Readable } = require('stream');
 const { EventEmitter } = require('events');
 
 class BackendAudioPlayer extends EventEmitter {
-    constructor(logCallback, shell, musicFolder) {
+    constructor(logCallback, shell, musicFolder, audioMixer) {
         super();
         // Dependencies
         this.log = logCallback || console.log;
         this.shell = shell;
         this.musicFolder = musicFolder;
+        this.audioMixer = audioMixer;
 
         // State
         this.playerStatus = AudioPlayerStatus.Idle;
@@ -101,12 +102,6 @@ class BackendAudioPlayer extends EventEmitter {
 
     // --- Configuration ---
 
-    setConnection(connection) {
-        if (!connection) return;
-        this.connection = connection;
-        this.connection.subscribe(this.player);
-    }
-
     setVolume(volume) {
         if (volume >= 0 && volume <= 2) {
             this.playbackVolume = volume;
@@ -183,17 +178,20 @@ class BackendAudioPlayer extends EventEmitter {
             this.log("Play called but no active file to play.");
             return;
         }
-        if (!this.connection || this.connection.state.status === VoiceConnectionStatus.Destroyed) {
-            this.log("Cannot play, voice connection is not available.");
+        if (!this.audioMixer) {
+            this.log("Cannot play, audio mixer is not available.");
             return;
         }
 
         try {
             const stream = Readable.from(this.activeFile);
-            const resource = createAudioResource(stream, { inlineVolume: true });
-            resource.volume.setVolume(this.playbackVolume);
+            this.audioMixer.setMainTrack(stream); // Send the stream to the mixer
 
+            // The discord.js player is still used for timing and state (idle, playing events)
+            const resource = createAudioResource(Readable.from(this.activeFile), { inlineVolume: true });
+            resource.volume.setVolume(this.playbackVolume);
             this.player.play(resource);
+
             await entersState(this.player, AudioPlayerStatus.Playing, 5000);
             this.log(`Playback started for: ${this.activeFilePath}`);
         } catch (error) {

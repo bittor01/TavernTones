@@ -5,7 +5,7 @@ const path = require('path');
 console.log('Path loaded.');
 const { Client, GatewayIntentBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, StringSelectMenuBuilder } = require('discord.js');
 console.log('Discord.js Client loaded.');
-const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
+const { joinVoiceChannel, entersState, VoiceConnectionStatus, createAudioPlayer, createAudioResource } = require('@discordjs/voice');
 console.log('Discord.js Voice loaded.');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
 client.npcDropdownHandlers = new Map();
@@ -223,9 +223,9 @@ async function apploader() {
         }
 
         // Initialize components
-        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
         soundStackManager = new SoundStackManager(logToRenderer);
         audioMixer = new SoundboardAudioMixer(logToRenderer);
+        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, audioMixer);
         audioMixer.start(); // Start the ffmpeg process
         ipcloader(); // Load all IPC handlers
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
@@ -1415,8 +1415,12 @@ client.once('clientReady', async () => {
             // Listen for connection status changes
             connection.on(VoiceConnectionStatus.Ready, () => {
                 logToRenderer('The bot has connected to the channel!');
+                // The audioMixer is now the single source of truth for the voice connection
                 if (audioMixer && audioMixer.mixedStream) {
-                    connection.subscribe(audioMixer.mixedStream);
+                    const player = createAudioPlayer();
+                    const resource = createAudioResource(audioMixer.mixedStream);
+                    player.play(resource);
+                    connection.subscribe(player);
                     logToRenderer('Subscribed to the audio mixer stream.');
                 } else {
                     logToRenderer('Audio mixer or its stream is not available to subscribe to.');

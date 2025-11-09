@@ -3,7 +3,11 @@ const { EventEmitter } = require('events');
 const { app } = require('electron');
 const path =require('path');
 const fs = require('fs');
+const { getInfo } = require('ffprobe');
+const ffprobeStatic = require('ffprobe-static');
 const { Readable } = require('stream');
+
+getInfo.FFPROBE_PATH = ffprobeStatic.path;
 
 const FFMPEG_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'ffmpeg', 'ffmpeg.exe')
