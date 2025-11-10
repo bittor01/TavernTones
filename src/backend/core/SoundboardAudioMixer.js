@@ -11,13 +11,19 @@ const util = require('util');
 
 const ffprobePromise = util.promisify(ffprobe);
 
-const FFMPEG_PATH = app.isPackaged
-    ? path.join(process.resourcesPath, 'ffmpeg-static', path.basename(ffmpeg.path))
-    : ffmpeg.path;
+// Correctly determine the path to the binaries, whether in development or packaged.
+const getBinaryPath = (packageName, binaryName) => {
+    if (app.isPackaged) {
+        const exeName = process.platform === 'win32' ? `${binaryName}.exe` : binaryName;
+        return path.join(process.resourcesPath, packageName, exeName);
+    }
+    // In development, require the package and access its path.
+    const pkg = require(packageName);
+    return pkg.path;
+};
 
-ffprobe.FFPROBE_PATH = app.isPackaged
-    ? path.join(process.resourcesPath, 'ffprobe-static', path.basename(ffprobeStatic.path))
-    : ffprobeStatic.path;
+const FFMPEG_PATH = getBinaryPath('ffmpeg-static', 'ffmpeg');
+ffprobe.FFPROBE_PATH = getBinaryPath('ffprobe-static', 'ffprobe');
 
 const MAX_SFX_INPUTS = 5; // Allow up to 5 simultaneous sound effects
 
