@@ -19,12 +19,11 @@ contextBridge.exposeInMainWorld('electron', {
         'reset-encounter', 'clear-encounter', 'update-initiative',
         'copy-creature', 'window-ready',
         'load-music-file', // Added for music player
-        'load-sound', 'play-sound', 'stop-sound', 'unload-sound',
-        'set-loop', 'set-soundboard-volume', 'request-initial-load',
+        'request-initial-load',
         'push-dicelog-to-discord', 'push-statblock-to-discord',
         'open-gamify-tool', 'save-high-score', 'open-settings-window',
         'roll-attack', 'push-mob-rules-to-discord',
-        'play-sound-effect', 'show-window'
+        'play-sound-effect'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);
