@@ -161,6 +161,16 @@ class SoundStackManager {
                     return { filePath, stackIndex, isLastSound: true };
                 }
             }
+        } else {
+            // If shuffle is on, we still advance the index
+            stack.currentIndex++;
+             if (stack.currentIndex >= stack.files.length) {
+                if (stack.loop) {
+                    stack.currentIndex = 0;
+                    // Re-shuffle the playlist for the next loop
+                    stack.files.sort(() => Math.random() - 0.5);
+                }
+             }
         }
 
         // No need to save config here as we are only changing the current index in memory
@@ -168,8 +178,27 @@ class SoundStackManager {
         return { filePath, stackIndex };
     }
 
+    setStackAsPlaying(stackIndex, soundId) {
+        const stack = this.stacks[stackIndex];
+        if (stack) {
+            stack.isPlaying = true;
+            stack.activeSoundId = soundId;
+            // No need to save this to disk, it's a transient state
+        }
+    }
+
+    setStackAsStopped(stackIndex) {
+        const stack = this.stacks[stackIndex];
+        if (stack) {
+            stack.isPlaying = false;
+            stack.activeSoundId = null;
+        }
+    }
+
     findStackByFilePath(filePath) {
-        return this.stacks.findIndex(stack => stack.files.includes(filePath));
+        // This needs to be more robust, as multiple stacks could have the same file.
+        // For now, we'll find the first one that is currently marked as playing.
+        return this.stacks.findIndex(stack => stack.isPlaying && stack.files.includes(filePath));
     }
 
     async savePreset(filePath) {

@@ -97,6 +97,9 @@ button:disabled {
 }
 
 /* --- Middle Column --- */
+.column-middle {
+  flex-shrink: 0;
+}
 #turn-controls-container .controls {
     display: flex;
     justify-content: space-between;

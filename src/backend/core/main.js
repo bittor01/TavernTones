@@ -227,6 +227,16 @@ async function apploader() {
         audioMixer = new SoundboardAudioMixer(logToRenderer);
         musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, audioMixer);
         audioMixer.start(); // Start the ffmpeg process
+
+        // When a sound finishes naturally, update the UI
+        audioMixer.on('sound-finished', ({ filePath }) => {
+            const stackIndex = soundStackManager.findStackByFilePath(filePath);
+            if (stackIndex !== -1) {
+                soundStackManager.setStackAsStopped(stackIndex);
+                mainWindow.webContents.send('sound-playback-finished', { stackIndex, filePath });
+            }
+        });
+
         ipcloader(); // Load all IPC handlers
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
@@ -1199,7 +1209,7 @@ async function ipcloader() {
                             .setColor(0x0099FF)
                             .setTitle(chunks.length > 1 ? `${field.name} (${i + 1}/${chunks.length})` : field.name)
                             .setDescription(chunks[i]);
-                        await thread.send({ embeds: [chunkEmbed] });
+                        await thread.send({ embeds: [embed] });
                     }
                 }
                 logToRenderer(`[push-statblock] Sent ${longFields.length} detail section(s) to thread.`);
@@ -1279,8 +1289,7 @@ async function ipcloader() {
         const stack = soundStackManager.getConfiguration()[stackIndex];
         if (stack.isPlaying && stack.activeSoundId) {
             audioMixer.stopSound(stack.activeSoundId);
-            stack.isPlaying = false;
-            stack.activeSoundId = null;
+            soundStackManager.setStackAsStopped(stackIndex);
             mainWindow.webContents.send('sound-playback-finished', { stackIndex });
             return;
         }
@@ -1289,25 +1298,11 @@ async function ipcloader() {
         if (sound && sound.filePath) {
             const soundId = audioMixer.playSound(sound.filePath);
             if (soundId) {
-                stack.isPlaying = true;
-                stack.activeSoundId = soundId;
+                soundStackManager.setStackAsPlaying(stackIndex, soundId);
                 mainWindow.webContents.send('sound-playback-started', { stackIndex, filePath: sound.filePath });
             }
         }
     });
-
-    // The 'sound-finished' event from the mixer now also needs to update the state
-    if (audioMixer) {
-        audioMixer.on('sound-finished', ({ filePath }) => {
-            const stackIndex = soundStackManager.findStackByFilePath(filePath);
-            if (stackIndex !== -1) {
-                const stack = soundStackManager.getConfiguration()[stackIndex];
-                stack.isPlaying = false;
-                stack.activeSoundId = null;
-                mainWindow.webContents.send('sound-playback-finished', { stackIndex, filePath });
-            }
-        });
-    }
 
     ipcMain.handle('save-soundboard-preset', async () => {
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {

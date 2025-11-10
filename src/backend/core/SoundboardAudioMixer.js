@@ -12,11 +12,11 @@ const util = require('util');
 const ffprobePromise = util.promisify(ffprobe);
 
 const FFMPEG_PATH = app.isPackaged
-    ? path.join(process.resourcesPath, 'ffmpeg-static', ffmpeg.path.split('ffmpeg-static')[1])
+    ? path.join(process.resourcesPath, 'ffmpeg-static', path.basename(ffmpeg.path))
     : ffmpeg.path;
 
 ffprobe.FFPROBE_PATH = app.isPackaged
-    ? path.join(process.resourcesPath, 'ffprobe-static', ffprobeStatic.path.split('ffprobe-static')[1])
+    ? path.join(process.resourcesPath, 'ffprobe-static', path.basename(ffprobeStatic.path))
     : ffprobeStatic.path;
 
 const MAX_SFX_INPUTS = 5; // Allow up to 5 simultaneous sound effects

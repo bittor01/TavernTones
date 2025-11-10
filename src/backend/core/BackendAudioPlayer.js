@@ -26,11 +26,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.activeFile = null; // Buffer for the active track
         this.pendingFile = null; // Buffer for the pending track
 
-        // Discord.js Voice components
-        this.player = createAudioPlayer();
-        this.connection = null;
-
-        this.setupPlayerEvents();
+        // No internal player. This class is now a state manager for the main track.
         this._emitStatusUpdate(); // Emit initial state
     }
 
@@ -51,63 +47,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.emit('status-change', status);
     }
 
-    setupPlayerEvents() {
-        this.player.on(AudioPlayerStatus.Idle, async () => {
-            this.log(`Player entered Idle state. Was playing: ${this.activeFilePath}`);
-            this.isPlaying = false;
-            this.playerStatus = AudioPlayerStatus.Idle;
-
-            const finishedFile = this.activeFile;
-            const finishedFilePath = this.activeFilePath;
-
-            this.activeFile = null;
-            this.activeFilePath = null;
-
-            if (this.pendingFile) {
-                this.log('Idle: Pending file found, promoting it to active and playing.');
-                this._movePendingToActive();
-                this._play(); // Start playback for the newly promoted track.
-            } else if (this.loopToggle && finishedFile) {
-                this.log(`Idle: Looping active file: ${finishedFilePath}`);
-                this.activeFile = finishedFile;
-                this.activeFilePath = finishedFilePath;
-                this._play(); // Autoplay for looping is expected behaviour
-            } else {
-                this.log('Idle: No pending file and looping is off. Player remains idle.');
-            }
-            this._emitStatusUpdate();
-        });
-
-        this.player.on('error', error => {
-            this.log(`Error in audio player for ${this.activeFilePath}: ${error.message}`);
-            this.isPlaying = false;
-            this.activeFile = null;
-            this.activeFilePath = null;
-            this.playerStatus = AudioPlayerStatus.Idle;
-            this._emitStatusUpdate();
-        });
-
-        this.player.on(AudioPlayerStatus.Playing, () => {
-            this.playerStatus = AudioPlayerStatus.Playing;
-            this.isPlaying = true;
-            this._emitStatusUpdate();
-        });
-
-        this.player.on(AudioPlayerStatus.Paused, () => {
-            this.playerStatus = AudioPlayerStatus.Paused;
-            this.isPlaying = false;
-            this._emitStatusUpdate();
-        });
-    }
-
     // --- Configuration ---
-
-    setVolume(volume) {
-        if (volume >= 0 && volume <= 2) {
-            this.playbackVolume = volume;
-            this.log(`Playback volume set to ${volume * 100}%`);
-        }
-    }
 
     toggleLoop() {
         this.loopToggle = !this.loopToggle;
@@ -173,7 +113,7 @@ class BackendAudioPlayer extends EventEmitter {
 
     // --- Internal Playback ---
 
-    async _play() {
+    _play() {
         if (!this.activeFile) {
             this.log("Play called but no active file to play.");
             return;
@@ -185,21 +125,14 @@ class BackendAudioPlayer extends EventEmitter {
 
         try {
             const stream = Readable.from(this.activeFile);
-            this.audioMixer.setMainTrack(stream); // Send the stream to the mixer
-
-            // The discord.js player is still used for timing and state (idle, playing events)
-            const resource = createAudioResource(Readable.from(this.activeFile), { inlineVolume: true });
-            resource.volume.setVolume(this.playbackVolume);
-            this.player.play(resource);
-
-            await entersState(this.player, AudioPlayerStatus.Playing, 5000);
+            this.audioMixer.setMainTrack(stream);
+            this.isPlaying = true;
             this.log(`Playback started for: ${this.activeFilePath}`);
         } catch (error) {
             this.log(`Error starting playback for ${this.activeFilePath}: ${error.message}`);
-            this.playerStatus = AudioPlayerStatus.Idle;
             this.isPlaying = false;
-            this._emitStatusUpdate();
         }
+        this._emitStatusUpdate();
     }
 
     // --- Public API ---
@@ -210,55 +143,28 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     play() {
-        // Scenario 1: A new track is pending and the current one is paused.
-        // The desired behavior is to replace the paused track and play the new one.
-        if (this.playerStatus === AudioPlayerStatus.Paused && this.pendingFile) {
-            this.log('Play command received while paused with a pending track. Swapping and playing.');
-            this.player.stop(); // This triggers the 'idle' state.
-                               // The 'idle' handler will automatically promote the pending file and play it.
-            // We return here because the idle handler will take over.
-            return;
+        // If there's a pending file, it always takes precedence.
+        if (this.pendingFile) {
+            this._movePendingToActive();
         }
 
-        // Scenario 2: The player is paused, but there's no new track.
-        // The desired behavior is to simply resume playback.
-        if (this.playerStatus === AudioPlayerStatus.Paused) {
-            this.player.unpause();
-            this.log('Playback resumed.');
-            return;
+        if (this.activeFile) {
+            this._play();
+        } else {
+            this.log('Play command received, but no active or pending file to play.');
         }
-
-        // Scenario 3: The player is idle.
-        if (this.playerStatus === AudioPlayerStatus.Idle) {
-            // If there's a pending file, it should become the active one.
-            if (this.pendingFile) {
-                this.log('No active file, promoting pending file.');
-                this._movePendingToActive();
-            }
-            // If there's now an active file, play it.
-            if (this.activeFile) {
-                this.log('Playback starting from idle state.');
-                this._play();
-            } else {
-                this.log('Play command received, but no active or pending file to play.');
-            }
-            return;
-        }
-
-        // Fallback for any other state (e.g., already playing)
-        this.log('Play command received, but already playing or in a non-idle state.');
     }
 
     pause() {
-        if (this.playerStatus === AudioPlayerStatus.Playing) {
+        if (this.isPlaying) {
+            // To "pause", we send a silent stream to the mixer's main track input.
+            // This keeps the ffmpeg process running but effectively silences the music.
+            const silentStream = new Readable();
+            silentStream.push(null); // End the stream immediately
+            this.audioMixer.setMainTrack(silentStream);
+            this.isPlaying = false;
             this.log(`Playback paused for: ${this.activeFilePath}`);
-            this.player.pause(true); // This is synchronous and will emit 'paused' event.
-
-            if (this.pendingFile) {
-                this.log('Pending file exists, swapping to active on pause.');
-                this.player.stop(); // Stop current resource, which will trigger 'idle' event.
-                                   // The idle handler will then promote the pending file.
-            }
+            this._emitStatusUpdate();
         } else {
             this.log('Pause command received, but not currently playing.');
         }
