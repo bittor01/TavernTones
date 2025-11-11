@@ -796,17 +796,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- IPC Listeners for Soundboard Updates ---
     window.electron.ipcRenderer.on('soundboard-config-changed', (event, newConfig) => {
-        renderSoundboard(); // Re-render with the new configuration
+        renderSoundboard(newConfig); // Re-render with the new configuration
     });
 
-    window.electron.ipcRenderer.on('sound-playback-started', (event, { stackIndex }) => {
-        // Just re-render. The backend state will be updated.
-        renderSoundboard();
+    window.electron.ipcRenderer.on('sound-playback-started', async (event, { stackIndex }) => {
+        // Re-fetch the state and re-render.
+        const stacks = await window.electron.ipcRenderer.invoke('get-soundboard-config');
+        renderSoundboard(stacks);
     });
 
-    window.electron.ipcRenderer.on('sound-playback-finished', (event, { stackIndex }) => {
-        // Just re-render.
-        renderSoundboard();
+    window.electron.ipcRenderer.on('sound-playback-finished', async (event, { stackIndex }) => {
+        // Re-fetch the state and re-render.
+        const stacks = await window.electron.ipcRenderer.invoke('get-soundboard-config');
+        renderSoundboard(stacks);
     });
 
     // --- Soundboard Interactivity ---
@@ -837,28 +839,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 3. Update backend
             await window.electron.ipcRenderer.invoke('add-file-to-stack', { stackIndex, filePath });
-            await window.electron.ipcRenderer.invoke('set-stack-emoji', { stackIndex, emoji });
+            const updatedConfig = await window.electron.ipcRenderer.invoke('set-stack-emoji', { stackIndex, emoji });
 
             // 4. Re-render
-            renderSoundboard();
+            renderSoundboard(updatedConfig);
         }
         // ... more button handlers will be added here in the next step ...
         else if (target.classList.contains('sound-stack-play-btn')) {
             window.electron.ipcRenderer.send('play-sound-effect', { stackIndex });
+            // The UI will be updated via 'sound-playback-started' and 'sound-playback-finished' events
         } else if (target.classList.contains('clear-stack-btn')) {
-            await window.electron.ipcRenderer.invoke('clear-sound-stack', { stackIndex });
-            renderSoundboard();
+            const updatedConfig = await window.electron.ipcRenderer.invoke('clear-sound-stack', { stackIndex });
+            renderSoundboard(updatedConfig);
         } else if (target.classList.contains('shuffle-stack-btn')) {
-            await window.electron.ipcRenderer.invoke('toggle-stack-shuffle', { stackIndex });
-            renderSoundboard();
+            const updatedConfig = await window.electron.ipcRenderer.invoke('toggle-stack-shuffle', { stackIndex });
+            renderSoundboard(updatedConfig);
         } else if (target.classList.contains('loop-stack-btn')) {
-            await window.electron.ipcRenderer.invoke('toggle-stack-loop', { stackIndex });
-            renderSoundboard();
+            const updatedConfig = await window.electron.ipcRenderer.invoke('toggle-stack-loop', { stackIndex });
+            renderSoundboard(updatedConfig);
         } else if (target.classList.contains('add-to-stack-btn')) {
             const filePath = await window.electron.ipcRenderer.invoke('open-file-dialog');
             if (filePath) {
-                await window.electron.ipcRenderer.invoke('add-file-to-stack', { stackIndex, filePath });
-                renderSoundboard();
+                const updatedConfig = await window.electron.ipcRenderer.invoke('add-file-to-stack', { stackIndex, filePath });
+                renderSoundboard(updatedConfig);
             }
         }
     });
