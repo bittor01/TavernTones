@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
     let isPlaying = false;
     let initiativeOrder = [];
@@ -759,11 +759,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Soundboard Rendering ---
-    async function renderSoundboard() {
+    function renderSoundboard(stacks) {
         const grid = document.getElementById('soundboard-grid');
         if (!grid) return;
 
-        const stacks = await window.electron.ipcRenderer.invoke('get-soundboard-config');
         grid.innerHTML = ''; // Clear the grid before rendering
 
         stacks.forEach((stack, index) => {
@@ -772,12 +771,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             stackWrapper.dataset.id = index;
 
             if (!stack.emoji) {
-                // Render the big "add" button
-                stackWrapper.innerHTML = `
-                    <button class="sound-stack-add-btn" data-id="${index}">➕</button>
-                `;
+                stackWrapper.innerHTML = `<button class="sound-stack-add-btn" data-id="${index}">➕</button>`;
             } else {
-                // Render the full control set
                 stackWrapper.innerHTML = `
                     <div class="sound-stack-controls">
                         <button class="small-btn clear-stack-btn" title="Clear Stack" data-id="${index}">🗑️</button>
@@ -792,8 +787,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- Initial Soundboard Load ---
-    renderSoundboard();
+    // --- Initial Soundboard Load (Non-Blocking) ---
+    window.electron.ipcRenderer.invoke('get-soundboard-config').then(stacks => {
+        if (stacks) {
+            renderSoundboard(stacks);
+        }
+    });
 
     // --- IPC Listeners for Soundboard Updates ---
     window.electron.ipcRenderer.on('soundboard-config-changed', (event, newConfig) => {
