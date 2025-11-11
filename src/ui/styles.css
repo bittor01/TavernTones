@@ -536,7 +536,7 @@ input[type="number"] {
 
 /* --- Soundboard Styles --- */
 #soundboard-container {
-    flex-shrink: 0; /* Prevent the container from shrinking vertically */
+    flex-shrink: 0; /* This is the key: prevent this container from shrinking */
 }
 .soundboard-grid-container {
     display: grid;
