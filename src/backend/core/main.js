@@ -104,7 +104,7 @@ async function createWindow(showWindow = true) {
             preload: path.join(__dirname, '../../ui/preload.js'),
             contextIsolation: true,
             enableRemoteModule: false,
-            nodeIntegration: true
+            nodeIntegration: false
         }
     });
 
@@ -236,7 +236,7 @@ async function apploader() {
             }
         });
 
-        ipcloader(); // Load all IPC handlers
+        await ipcloader(); // Load all IPC handlers
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
         // Handle Discord Bot setup.
@@ -571,6 +571,7 @@ async function ipcloader() {
         }
     });
     initiativeTracker = new InitiativeTracker(logToRenderer, logDiceRollToRenderer, sendInitiativeUpdate, autosavePath);
+    initiativeTracker.loadState();
     // --- All core IPC listeners should be registered after the app is ready ---
     ipcMain.on('window-ready', () => {
         logToRenderer('[IPC] Window is ready.');
@@ -1264,6 +1265,7 @@ async function ipcloader() {
 
     // --- Soundboard IPC Handlers ---
     soundStackManager = new SoundStackManager(logToRenderer);
+    await soundStackManager.initialize();
 
     ipcMain.handle('get-soundboard-config', () => {
         logToRenderer('[IPC] Handling get-soundboard-config');

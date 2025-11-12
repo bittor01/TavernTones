@@ -7,7 +7,6 @@ class SoundStackManager {
         this.log = logCallback || console.log;
         this.configPath = path.join(app.getPath('userData'), 'soundboard.json');
         this.stacks = [];
-        this.initialize();
     }
 
     /**

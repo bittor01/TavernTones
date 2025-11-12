@@ -35,7 +35,6 @@ class InitiativeTracker {
         this.autosavePath = autosavePath;
         this.initiativeOrder = [];
         this.currentTurnIndex = 0;
-        this.loadState();
     }
 
     _saveState() {
