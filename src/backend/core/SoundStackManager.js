@@ -18,9 +18,10 @@ class SoundStackManager {
             const exists = await fs.pathExists(this.configPath);
             if (exists) {
                 this.stacks = await fs.readJson(this.configPath);
-                this.log('Soundboard configuration loaded successfully.');
+                this.log('[SoundStackManager] Soundboard configuration loaded successfully.');
             } else {
                 // Create a default structure with 6 empty slots
+                this.log('[SoundStackManager] No soundboard configuration found, creating a default one.');
                 this.stacks = Array(6).fill(null).map(() => ({
                     emoji: null,
                     files: [],

@@ -223,7 +223,6 @@ async function apploader() {
         }
 
         // Initialize components
-        soundStackManager = new SoundStackManager(logToRenderer);
         audioMixer = new SoundboardAudioMixer(logToRenderer);
         musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, audioMixer);
         audioMixer.start(); // Start the ffmpeg process
@@ -573,6 +572,10 @@ async function ipcloader() {
     });
     initiativeTracker = new InitiativeTracker(logToRenderer, logDiceRollToRenderer, sendInitiativeUpdate, autosavePath);
     // --- All core IPC listeners should be registered after the app is ready ---
+    ipcMain.on('window-ready', () => {
+        logToRenderer('[IPC] Window is ready.');
+    });
+
     ipcMain.on('request-initial-load', () => {
         if (initiativeTracker) {
             initiativeTracker.sendFullState();
@@ -1257,6 +1260,96 @@ async function ipcloader() {
             logToRenderer(`[push-mob-rules] Error stack: ${error.stack}`);
             dialog.showErrorBox('Discord Error', `Failed to read image file or send to Discord. Please check the file at: ${absoluteImagePath}\n\n${error.message}`);
         }
+    });
+
+    // --- Soundboard IPC Handlers ---
+    soundStackManager = new SoundStackManager(logToRenderer);
+
+    ipcMain.handle('get-soundboard-config', () => {
+        logToRenderer('[IPC] Handling get-soundboard-config');
+        return soundStackManager.getConfiguration();
+    });
+
+    ipcMain.handle('add-file-to-stack', async (event, { stackIndex, filePath }) => {
+        await soundStackManager.addFileToStack(stackIndex, filePath);
+        return soundStackManager.getConfiguration(); // Return the whole config for re-rendering
+    });
+
+    ipcMain.handle('set-stack-emoji', async (event, { stackIndex, emoji }) => {
+        await soundStackManager.setStackEmoji(stackIndex, emoji);
+        return soundStackManager.getConfiguration();
+    });
+
+    ipcMain.handle('clear-sound-stack', async (event, { stackIndex }) => {
+        await soundStackManager.clearStack(stackIndex);
+        return soundStackManager.getConfiguration();
+    });
+
+    ipcMain.handle('toggle-stack-shuffle', async (event, { stackIndex }) => {
+        await soundStackManager.toggleShuffle(stackIndex);
+        return soundStackManager.getConfiguration();
+    });
+
+    ipcMain.handle('toggle-stack-loop', async (event, { stackIndex }) => {
+        await soundStackManager.toggleLoop(stackIndex);
+        return soundStackManager.getConfiguration();
+    });
+
+    ipcMain.on('play-sound-effect', (event, { stackIndex }) => {
+        const stack = soundStackManager.getConfiguration()[stackIndex];
+        if (!stack) return;
+
+        // If a sound from this stack is already playing, stop it.
+        if (stack.isPlaying && stack.activeSoundId) {
+            audioMixer.stopSound(stack.activeSoundId);
+            soundStackManager.setStackAsStopped(stackIndex);
+            mainWindow.webContents.send('sound-playback-finished', { stackIndex });
+            return; // Stop here. The button acts as a toggle.
+        }
+
+        const sound = soundStackManager.getNextSound(stackIndex);
+        if (sound && sound.filePath) {
+            const soundId = `stack_${stackIndex}_${Date.now()}`;
+            audioMixer.playSound(sound.filePath, soundId);
+            soundStackManager.setStackAsPlaying(stackIndex, soundId);
+            // Notify the UI that playback has started for this stack
+            mainWindow.webContents.send('sound-playback-started', { stackIndex });
+        } else {
+            logToRenderer(`No more sounds in stack ${stackIndex} or stack is empty.`);
+            // Ensure the stack is marked as stopped if we reached the end
+            soundStackManager.setStackAsStopped(stackIndex);
+            mainWindow.webContents.send('sound-playback-finished', { stackIndex });
+        }
+    });
+
+    ipcMain.handle('save-soundboard-preset', async () => {
+        const { filePath } = await dialog.showSaveDialog(mainWindow, {
+            title: 'Save Soundboard Preset',
+            defaultPath: path.join(app.getPath('userData'), 'soundboard_preset.json'),
+            filters: [{ name: 'JSON Files', extensions: ['json'] }]
+        });
+        if (filePath) {
+            return await soundStackManager.savePreset(filePath);
+        }
+        return { success: false, error: 'Save cancelled.' };
+    });
+
+    ipcMain.handle('load-soundboard-preset', async () => {
+        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Load Soundboard Preset',
+            defaultPath: app.getPath('userData'),
+            properties: ['openFile'],
+            filters: [{ name: 'JSON Files', extensions: ['json'] }]
+        });
+        if (filePaths && filePaths.length > 0) {
+            const result = await soundStackManager.loadPreset(filePaths[0]);
+            if (result.success) {
+                // Trigger a full re-render on the frontend
+                mainWindow.webContents.send('soundboard-config-changed', soundStackManager.getConfiguration());
+            }
+            return result;
+        }
+        return { success: false, error: 'Load cancelled.' };
     });
 }
 

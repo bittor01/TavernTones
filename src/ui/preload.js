@@ -31,7 +31,7 @@ contextBridge.exposeInMainWorld('electron', {
     },
     invoke: (channel, data) => {
       const validChannels = [
-          'open-file-dialog', 'get-default-local-folder', 'get-dnd-conditions',
+          'open-file-dialog', 'get-dnd-conditions',
           'load-encounter-dialog', 'search-monsters', 'get-monster-details',
           'get-task-data', 'save-and-get-next-spell', 'undo-and-get-previous-spell',
           'get-high-score', 'load-task-by-path', 'open-task-file-dialog',
