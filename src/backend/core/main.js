@@ -1335,7 +1335,16 @@ client.once('clientReady', async () => {
             // Listen for connection status changes
             connection.on(VoiceConnectionStatus.Ready, () => {
                 logToRenderer('The bot has connected to the channel!');
-                musicPlayer.setConnection(connection); // Pass connection to the player
+                // The audioMixer is now the single source of truth for the voice connection
+                if (audioMixer && audioMixer.mixedStream) {
+                    const player = createAudioPlayer();
+                    const resource = createAudioResource(audioMixer.mixedStream);
+                    player.play(resource);
+                    connection.subscribe(player);
+                    logToRenderer('Subscribed to the audio mixer stream.');
+                } else {
+                    logToRenderer('Audio mixer or its stream is not available to subscribe to.');
+                }
             });
 
             connection.on(VoiceConnectionStatus.Disconnected, () => {
