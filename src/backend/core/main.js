@@ -21,6 +21,9 @@ const { mobRules } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs').promises;
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
+const SoundStackManager = require('../features/SoundStackManager.js');
+const { createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+
 
 let discordConfig;
 
@@ -29,6 +32,7 @@ let musicPlayer;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
+let soundStackManager;
 
 
 // --- State Management ---
@@ -220,6 +224,7 @@ async function apploader() {
 
         // Initialize components
         musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
+        soundStackManager = new SoundStackManager(logToRenderer);
         ipcloader(); // Load all IPC handlers
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
@@ -553,6 +558,16 @@ async function ipcloader() {
         if (mainWindow && mainWindow.webContents) {
             mainWindow.webContents.send('music-player-status', status);
         }
+    });
+
+    musicPlayer.on('sound-effect-started', (stackId) => {
+        soundStackManager.updateStack(stackId, { isPlaying: true });
+        mainWindow.webContents.send('sound-stack-update', soundStackManager.getState());
+    });
+
+    musicPlayer.on('sound-effect-finished', (stackId) => {
+        soundStackManager.updateStack(stackId, { isPlaying: false });
+        mainWindow.webContents.send('sound-stack-update', soundStackManager.getState());
     });
     initiativeTracker = new InitiativeTracker(logToRenderer, logDiceRollToRenderer, sendInitiativeUpdate, autosavePath);
     // --- All core IPC listeners should be registered after the app is ready ---
@@ -1241,6 +1256,75 @@ async function ipcloader() {
             dialog.showErrorBox('Discord Error', `Failed to read image file or send to Discord. Please check the file at: ${absoluteImagePath}\n\n${error.message}`);
         }
     });
+
+    // --- Soundboard IPC Handlers ---
+
+    ipcMain.handle('get-sound-stacks', () => {
+        return soundStackManager.getState();
+    });
+
+    ipcMain.on('play-sound-effect', async (event, stackId) => {
+        logToRenderer(`[IPC] Received play request for stack: ${stackId}`);
+        const soundPath = soundStackManager.getNextSound(stackId);
+
+        if (soundPath) {
+            musicPlayer.playSoundEffect(soundPath, stackId);
+        } else {
+            logToRenderer(`[IPC] No sound found for stack ${stackId}.`);
+        }
+    });
+
+    ipcMain.handle('add-sound-to-stack', async (event, stackId) => {
+        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Select Sound Effect',
+            properties: ['openFile', 'multiSelections'],
+            filters: [{ name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }]
+        });
+
+        if (filePaths && filePaths.length > 0) {
+            for (const filePath of filePaths) {
+                soundStackManager.addSoundToStack(stackId, filePath);
+            }
+            return soundStackManager.getState();
+        }
+        return null;
+    });
+
+    ipcMain.handle('update-sound-stack', (event, { stackId, properties }) => {
+        soundStackManager.updateStack(stackId, properties);
+        return soundStackManager.getState();
+    });
+
+    ipcMain.handle('clear-sound-stack', (event, stackId) => {
+        soundStackManager.clearStack(stackId);
+        return soundStackManager.getState();
+    });
+
+    ipcMain.handle('load-sound-preset', async () => {
+        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Load Soundboard Preset',
+            properties: ['openFile'],
+            filters: [{ name: 'JSON Files', extensions: ['json'] }]
+        });
+        if (filePaths && filePaths.length > 0) {
+            const state = await soundStackManager.loadPreset(filePaths[0]);
+            return state;
+        }
+        return null;
+    });
+
+    ipcMain.handle('save-sound-preset', async () => {
+        const { filePath } = await dialog.showSaveDialog(mainWindow, {
+            title: 'Save Soundboard Preset',
+            filters: [{ name: 'JSON Files', extensions: ['json'] }]
+        });
+        if (filePath) {
+            const success = await soundStackManager.savePreset(filePath);
+            return success;
+        }
+        return false;
+    });
+
 }
 
 // Function to send log messages to the renderer

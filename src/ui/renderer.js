@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
     let DND_CONDITIONS = {};
     let MOB_RULES_DATA = {};
+    let soundboardState = {};
 
     // --- Form State ---
     let isMobMode = false;
@@ -42,6 +43,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     window.electron.ipcRenderer.invoke('get-mob-rules-data').then(rules => {
         MOB_RULES_DATA = rules;
+    });
+    window.electron.ipcRenderer.invoke('get-sound-stacks').then(stacks => {
+        soundboardState = stacks;
+        renderSoundboard();
     });
 
     // Send a signal to the main process that the window is ready for data.
@@ -408,6 +413,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         // This will later send an IPC message, e.g., window.electron.ipcRenderer.send('set-soundboard-volume', e.target.value);
     });
 
+    document.getElementById('load-preset-button').addEventListener('click', async () => {
+        const stacks = await window.electron.ipcRenderer.invoke('load-sound-preset');
+        if (stacks) {
+            soundboardState = stacks;
+            renderSoundboard();
+        }
+    });
+
+    document.getElementById('save-preset-button').addEventListener('click', async () => {
+        await window.electron.ipcRenderer.invoke('save-sound-preset');
+    });
+
     addCreatureForm.addEventListener('submit', (event) => {
         event.preventDefault();
         const getVal = (id) => document.getElementById(id).value;
@@ -493,6 +510,58 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('convert-to-mob-btn').textContent = 'Convert to Mob';
         document.getElementById('creature-name').focus();
     });
+
+    // --- Soundboard Grid Event Delegation ---
+    const soundboardGrid = document.getElementById('soundboard-grid');
+    soundboardGrid.addEventListener('click', async (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+
+        const stackId = button.dataset.id;
+        if (!stackId) return;
+
+        const stack = soundboardState[stackId];
+
+        if (button.classList.contains('play-button')) {
+            if (stack.isPlaying) {
+                // The backend will handle stopping the sound, but we can send a stop command if needed.
+                // For now, playing another sound will stop the current one.
+            } else {
+                window.electron.ipcRenderer.send('play-sound-effect', stackId);
+            }
+        } else if (button.classList.contains('add-sound-btn')) {
+            const updatedStacks = await window.electron.ipcRenderer.invoke('add-sound-to-stack', stackId);
+            if (updatedStacks) {
+                const wasEmpty = !stack.playlist || stack.playlist.length === 0;
+                // If it was empty and now has sounds, ask for emoji
+                if (wasEmpty && updatedStacks[stackId].playlist.length > 0) {
+                    const emoji = prompt("Please enter an emoji for this sound stack:", "🎵");
+                    if (emoji) {
+                        const finalStacks = await window.electron.ipcRenderer.invoke('update-sound-stack', { stackId, properties: { emoji } });
+                        soundboardState = finalStacks;
+                    } else {
+                        soundboardState = updatedStacks;
+                    }
+                } else {
+                    soundboardState = updatedStacks;
+                }
+                renderSoundboard();
+            }
+        } else if (button.classList.contains('clear-stack-btn')) {
+            const updatedStacks = await window.electron.ipcRenderer.invoke('clear-sound-stack', stackId);
+            soundboardState = updatedStacks;
+            renderSoundboard();
+        } else if (button.classList.contains('loop-btn')) {
+            const updatedStacks = await window.electron.ipcRenderer.invoke('update-sound-stack', { stackId, properties: { loop: !stack.loop } });
+            soundboardState = updatedStacks;
+            renderSoundboard();
+        } else if (button.classList.contains('shuffle-btn')) {
+            const updatedStacks = await window.electron.ipcRenderer.invoke('update-sound-stack', { stackId, properties: { shuffle: !stack.shuffle } });
+            soundboardState = updatedStacks;
+            renderSoundboard();
+        }
+    });
+
 
     // --- IPC Listeners ---
     window.electron.ipcRenderer.on('log-message', (event, message) => logMessage(message));
@@ -611,6 +680,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             delete addCreatureForm.dataset.monsterRawData;
             document.getElementById('imported-monster-info-btn').style.display = 'none';
         }
+    });
+
+    window.electron.ipcRenderer.on('sound-stack-update', (event, stacks) => {
+        soundboardState = stacks;
+        renderSoundboard();
     });
 
     window.electron.ipcRenderer.on('populate-add-form', (event, creature) => {
@@ -758,68 +832,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         addCreatureForm.dataset.monsterRawData = fullStatBlock;
     }
 
-    renderSoundboard();
-
-    // --- Soundboard State ---
-    let soundboardState = [];
-    const SOUNDBOARD_SIZE = 9;
-
-    for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
-        soundboardState.push({ id: i, file: null, emoji: '➕', loop: false, isPlaying: false });
-    }
-
     // --- Render Functions ---
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
-        grid.innerHTML = '';
-        soundboardState.forEach(slot => {
-            const controlSet = document.createElement('div');
-            controlSet.className = 'soundboard-slot';
-            controlSet.innerHTML = `
-                <button class="soundboard-play-btn" data-id="${slot.id}">${slot.isPlaying ? '⏹️' : slot.emoji}</button>
-                <div class="soundboard-slot-controls">
-                    <input type="checkbox" id="loop-${slot.id}" data-id="${slot.id}" class="soundboard-loop-cb" ${slot.loop ? 'checked' : ''}>
-                    <label for="loop-${slot.id}">Loop</label>
-                    <button class="soundboard-unload-btn" data-id="${slot.id}" ${!slot.file ? 'disabled' : ''}>🗑️</button>
-                </div>
-            `;
-            grid.appendChild(controlSet);
-        });
+        grid.innerHTML = ''; // Clear existing content
 
-        // Add listeners after rendering
-        document.querySelectorAll('.soundboard-play-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const slotId = parseInt(e.target.dataset.id, 10);
-                const slot = soundboardState[slotId];
-                if (slot.isPlaying) {
-                    window.electron.ipcRenderer.send('stop-sound', { slotId });
-                } else if (slot.file) {
-                    window.electron.ipcRenderer.send('play-sound', { slotId });
-                } else {
-                    window.electron.ipcRenderer.invoke('load-sound', { slotId }).then(result => {
-                        if (result) {
-                            soundboardState[slotId].file = result.file;
-                            soundboardState[slotId].emoji = result.emoji;
-                            renderSoundboard();
-                        }
-                    });
-                }
-            });
-        });
-        document.querySelectorAll('.soundboard-loop-cb').forEach(cb => {
-            cb.addEventListener('change', (e) => {
-                const slotId = parseInt(e.target.dataset.id, 10);
-                const loop = e.target.checked;
-                soundboardState[slotId].loop = loop;
-                window.electron.ipcRenderer.send('set-loop', { slotId, loop });
-            });
-        });
-        document.querySelectorAll('.soundboard-unload-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const slotId = parseInt(e.target.dataset.id, 10);
-                window.electron.ipcRenderer.send('unload-sound', { slotId });
-            });
-        });
+        if (!soundboardState || Object.keys(soundboardState).length === 0) {
+            grid.innerHTML = '<p>Loading soundboard...</p>';
+            return;
+        }
+
+        for (const stackId in soundboardState) {
+            const stack = soundboardState[stackId];
+            const stackDiv = document.createElement('div');
+            stackDiv.className = 'sound-stack';
+            stackDiv.dataset.id = stackId;
+
+            const hasSounds = stack.playlist && stack.playlist.length > 0;
+
+            if (!hasSounds) {
+                stackDiv.innerHTML = `<button class="sound-stack-controls add-sound-btn" data-id="${stackId}" style="font-size: 2.5em;">➕</button>`;
+            } else {
+                stackDiv.innerHTML = `
+                    <div class="sound-stack-controls">
+                        <button class="control-button clear-stack-btn" data-id="${stackId}" title="Clear Playlist">🗑️</button>
+                        <button class="control-button shuffle-btn ${stack.shuffle ? 'active' : ''}" data-id="${stackId}" title="Shuffle">🔀</button>
+                        <button class="play-button ${stack.isPlaying ? 'playing' : ''}" data-id="${stackId}">${stack.isPlaying ? '⏸️' : stack.emoji}</button>
+                        <button class="control-button loop-btn ${stack.loop ? 'active' : ''}" data-id="${stackId}" title="Loop">🔁</button>
+                        <button class="control-button add-sound-btn" data-id="${stackId}" title="Add Sound(s)">➕</button>
+                    </div>
+                `;
+            }
+            grid.appendChild(stackDiv);
+        }
     }
 
     function renderInitiativeList(initiativeOrder, currentTurnIndex) {

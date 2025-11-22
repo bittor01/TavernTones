@@ -78,15 +78,13 @@
         </div>
       </div>
       <div id="soundboard-container" class="box">
-        <div class="panel-header">
-            <h2>Soundboard</h2>
-            <div class="panel-header-controls">
-                <label for="soundboard-volume">Volume:</label>
-                <input type="range" id="soundboard-volume" min="0" max="1" step="0.05" value="0.5">
-            </div>
+        <div id="soundboard-header">
+          <button id="load-preset-button" title="Load a soundboard preset from a file">Load Preset</button>
+          <h3>Soundboard</h3>
+          <button id="save-preset-button" title="Save the current soundboard layout to a file">Save Preset</button>
         </div>
         <div id="soundboard-grid">
-            <!-- 3x3 grid of soundboard controls will be rendered here -->
+            <!-- Sound stacks will be injected by JavaScript -->
         </div>
       </div>
     </div>

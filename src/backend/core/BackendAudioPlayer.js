@@ -24,6 +24,7 @@ class BackendAudioPlayer extends EventEmitter {
         // Internal file management
         this.activeFile = null; // Buffer for the active track
         this.pendingFile = null; // Buffer for the pending track
+        this.activeSoundEffect = null; // { stackId, path }
 
         // Discord.js Voice components
         this.player = createAudioPlayer();
@@ -62,15 +63,32 @@ class BackendAudioPlayer extends EventEmitter {
             this.activeFile = null;
             this.activeFilePath = null;
 
-            if (this.pendingFile) {
-                this.log('Idle: Pending file found, promoting it to active and playing.');
+            // --- Sound Effect Finished ---
+            // If we were playing a sound effect, it has now finished.
+            if (this.activeSoundEffect) {
+                this.log(`Idle: Sound effect finished: ${this.activeSoundEffect.path}`);
+                const finishedEffect = this.activeSoundEffect;
+                this.activeSoundEffect = null;
+                this.emit('sound-effect-finished', finishedEffect.stackId);
+
+                // Now, check if we should resume the main track that was paused.
+                if (this.pendingFile) {
+                    this.log('Idle: Resuming paused main track.');
+                    this._movePendingToActive(); // The paused track was in pendingFile
+                    this._play();
+                } else {
+                    this.log('Idle: No main track to resume. Player is idle.');
+                }
+            // --- Normal Music Track Finished ---
+            } else if (this.pendingFile) {
+                this.log('Idle: Pending music file found, promoting it to active and playing.');
                 this._movePendingToActive();
-                this._play(); // Start playback for the newly promoted track.
+                this._play();
             } else if (this.loopToggle && finishedFile) {
                 this.log(`Idle: Looping active file: ${finishedFilePath}`);
                 this.activeFile = finishedFile;
                 this.activeFilePath = finishedFilePath;
-                this._play(); // Autoplay for looping is expected behaviour
+                this._play();
             } else {
                 this.log('Idle: No pending file and looping is off. Player remains idle.');
             }
@@ -212,7 +230,16 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     play() {
-        // Scenario 1: A new track is pending and the current one is paused.
+        // Scenario 1: Player is already playing and a new track is pending.
+        // The desired behavior is to stop the current track, which will trigger the
+        // 'idle' event handler to promote the pending track to active and play it.
+        if (this.playerStatus === AudioPlayerStatus.Playing && this.pendingFile) {
+            this.log('Play command received while playing with a pending track. Swapping to new track.');
+            this.player.stop();
+            return; // The idle handler will take over from here.
+        }
+
+        // Scenario 2: A new track is pending and the current one is paused.
         // The desired behavior is to replace the paused track and play the new one.
         if (this.playerStatus === AudioPlayerStatus.Paused && this.pendingFile) {
             this.log('Play command received while paused with a pending track. Swapping and playing.');
@@ -222,7 +249,7 @@ class BackendAudioPlayer extends EventEmitter {
             return;
         }
 
-        // Scenario 2: The player is paused, but there's no new track.
+        // Scenario 3: The player is paused, but there's no new track.
         // The desired behavior is to simply resume playback.
         if (this.playerStatus === AudioPlayerStatus.Paused) {
             this.player.unpause();
@@ -230,7 +257,7 @@ class BackendAudioPlayer extends EventEmitter {
             return;
         }
 
-        // Scenario 3: The player is idle.
+        // Scenario 4: The player is idle.
         if (this.playerStatus === AudioPlayerStatus.Idle) {
             // If there's a pending file, it should become the active one.
             if (this.pendingFile) {
@@ -268,6 +295,48 @@ class BackendAudioPlayer extends EventEmitter {
 
     getPreviewFilePath() {
         return this.pendingFilePath || this.activeFilePath;
+    }
+
+    async playSoundEffect(filePath, stackId) {
+        this.log(`Received request to play sound effect: ${filePath}`);
+
+        // If a main track is playing, pause it and move it to the pending slot.
+        if (this.isPlaying && this.activeFile) {
+            this.log('Pausing main track to play sound effect.');
+            this.pendingFile = this.activeFile;
+            this.pendingFilePath = this.activeFilePath;
+            this.activeFile = null;
+            this.activeFilePath = null;
+            // Don't call this.player.pause(), as we need to stop the resource to play the new one.
+        } else if (this.playerStatus === AudioPlayerStatus.Paused && this.activeFile) {
+            // If already paused, move the paused track to pending
+            this.log('Main track is already paused. Setting it as pending.');
+            this.pendingFile = this.activeFile;
+            this.pendingFilePath = this.activeFilePath;
+            this.activeFile = null;
+            this.activeFilePath = null;
+        }
+
+        this.activeSoundEffect = { stackId, path: filePath };
+        this.emit('sound-effect-started', stackId);
+
+        try {
+            const buffer = fs.readFileSync(filePath);
+            const stream = Readable.from(buffer);
+            const resource = createAudioResource(stream);
+
+            // This will stop any currently playing resource (the main track) and play the new one.
+            this.player.play(resource);
+            this.playerStatus = AudioPlayerStatus.Playing;
+            this.isPlaying = true;
+
+            this.log(`Playback started for sound effect: ${filePath}`);
+        } catch (error) {
+            this.log(`Error playing sound effect ${filePath}: ${error.message}`);
+            this.activeSoundEffect = null; // Clear the effect state on error
+            this.emit('sound-effect-finished', stackId); // Notify UI of failure
+        }
+        this._emitStatusUpdate();
     }
 }
 
