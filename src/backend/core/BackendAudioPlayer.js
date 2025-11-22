@@ -252,17 +252,17 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     pause() {
-        if (this.playerStatus === AudioPlayerStatus.Playing) {
-            this.log(`Playback paused for: ${this.activeFilePath}`);
-            this.player.pause(true); // This is synchronous and will emit 'paused' event.
-
-            if (this.pendingFile) {
-                this.log('Pending file exists, swapping to active on pause.');
-                this.player.stop(); // Stop current resource, which will trigger 'idle' event.
-                                   // The idle handler will then promote the pending file.
-            }
-        } else {
+        if (this.playerStatus !== AudioPlayerStatus.Playing) {
             this.log('Pause command received, but not currently playing.');
+            return;
+        }
+
+        if (this.pendingFile) {
+            this.log('Pending file exists, stopping current track to play next.');
+            this.player.stop(); // This will trigger the 'idle' event, which promotes and plays the pending file.
+        } else {
+            this.log(`Playback paused for: ${this.activeFilePath}`);
+            this.player.pause(true);
         }
     }
 
