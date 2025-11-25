@@ -70,14 +70,21 @@ class BackendAudioPlayer extends EventEmitter {
                 if (this.promoteAndPause) {
                     this.log('Idle: Promote and pause flag is set. Loading track to pause.');
                     this.promoteAndPause = false; // Reset the flag
-
-                    // Load the new resource and immediately pause it to be ready for playback.
-                    const stream = Readable.from(this.activeFile);
-                    const resource = createAudioResource(stream, { inlineVolume: true });
-                    resource.volume.setVolume(this.playbackVolume);
-                    this.player.play(resource);
-                    this.player.pause(true);
-                    this.log(`Idle: Promoted track is now loaded and paused: ${this.activeFilePath}`);
+                    try {
+                        // Load the new resource, wait for it to start playing, then immediately pause it.
+                        const stream = Readable.from(this.activeFile);
+                        const resource = createAudioResource(stream, { inlineVolume: true });
+                        resource.volume.setVolume(this.playbackVolume);
+                        this.player.play(resource);
+                        await entersState(this.player, AudioPlayerStatus.Playing, 5000); // Wait for playing state
+                        this.player.pause(true); // Then pause
+                        this.log(`Idle: Promoted track is now loaded and paused: ${this.activeFilePath}`);
+                    } catch (error) {
+                        this.log(`Error during promote and pause for ${this.activeFilePath}: ${error.message}`);
+                        this.playerStatus = AudioPlayerStatus.Idle;
+                        this.isPlaying = false;
+                        this._emitStatusUpdate();
+                    }
                 } else {
                     this._play(); // Autoplay as normal
                 }
