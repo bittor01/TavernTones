@@ -1,5 +1,6 @@
 const { createAudioPlayer, AudioPlayerStatus, entersState, VoiceConnectionStatus, createAudioResource } = require('@discordjs/voice');
 const fs = require('fs');
+const fsp = require('fs').promises;
 const path = require('path');
 const { Readable } = require('stream');
 const { EventEmitter } = require('events');
@@ -18,6 +19,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.isCaching = false;
         this.activeFilePath = null;
         this.pendingFilePath = null; // New state for the pending file path
+        this.promoteAndPause = false; // Flag to promote a track without playing it
         this.loopToggle = true;
         this.playbackVolume = 1.0;
 
@@ -63,9 +65,29 @@ class BackendAudioPlayer extends EventEmitter {
             this.activeFilePath = null;
 
             if (this.pendingFile) {
-                this.log('Idle: Pending file found, promoting it to active and playing.');
+                this.log('Idle: Pending file found, promoting it to active.');
                 this._movePendingToActive();
-                this._play(); // Start playback for the newly promoted track.
+                if (this.promoteAndPause) {
+                    this.log('Idle: Promote and pause flag is set. Loading track to pause.');
+                    this.promoteAndPause = false; // Reset the flag
+                    try {
+                        // Load the new resource, wait for it to start playing, then immediately pause it.
+                        const stream = Readable.from(this.activeFile);
+                        const resource = createAudioResource(stream, { inlineVolume: true });
+                        resource.volume.setVolume(this.playbackVolume);
+                        this.player.play(resource);
+                        await entersState(this.player, AudioPlayerStatus.Playing, 5000); // Wait for playing state
+                        this.player.pause(true); // Then pause
+                        this.log(`Idle: Promoted track is now loaded and paused: ${this.activeFilePath}`);
+                    } catch (error) {
+                        this.log(`Error during promote and pause for ${this.activeFilePath}: ${error.message}`);
+                        this.playerStatus = AudioPlayerStatus.Idle;
+                        this.isPlaying = false;
+                        this._emitStatusUpdate();
+                    }
+                } else {
+                    this._play(); // Autoplay as normal
+                }
             } else if (this.loopToggle && finishedFile) {
                 this.log(`Idle: Looping active file: ${finishedFilePath}`);
                 this.activeFile = finishedFile;
@@ -160,7 +182,7 @@ class BackendAudioPlayer extends EventEmitter {
                 }
             }
 
-            const buffer = fs.readFileSync(resolvedPath);
+            const buffer = await fsp.readFile(resolvedPath);
             this.pendingFile = buffer;
             this.pendingFilePath = resolvedPath;
             this.log(`Successfully cached file: ${filePath}`);
@@ -252,17 +274,18 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     pause() {
-        if (this.playerStatus === AudioPlayerStatus.Playing) {
-            this.log(`Playback paused for: ${this.activeFilePath}`);
-            this.player.pause(true); // This is synchronous and will emit 'paused' event.
-
-            if (this.pendingFile) {
-                this.log('Pending file exists, swapping to active on pause.');
-                this.player.stop(); // Stop current resource, which will trigger 'idle' event.
-                                   // The idle handler will then promote the pending file.
-            }
-        } else {
+        if (this.playerStatus !== AudioPlayerStatus.Playing) {
             this.log('Pause command received, but not currently playing.');
+            return;
+        }
+
+        if (this.pendingFile) {
+            this.log('Pending file exists, setting flag to promote and pause.');
+            this.promoteAndPause = true;
+            this.player.stop(); // This will trigger the 'idle' event.
+        } else {
+            this.log(`Playback paused for: ${this.activeFilePath}`);
+            this.player.pause(true);
         }
     }
 
