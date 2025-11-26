@@ -12,7 +12,6 @@ client.npcDropdownHandlers = new Map();
 console.log('Discord client instantiated.');
 const axios = require('axios');
 console.log('Axios loaded.');
-const BackendAudioPlayer = require('./BackendAudioPlayer.js');
 const CommandHandler = require('../../discord/CommandHandler.js');
 const FiveEToolsParser = require('./5eParser.js');
 const { getDiscordConfig, setDiscordConfig } = require('./config.js');
@@ -219,8 +218,10 @@ async function apploader() {
         }
 
         // Initialize components
-        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
-        ipcloader(); // Load all IPC handlers
+        const BackendAudioPlayer = require('./BackendAudioPlayer.js');
+        musicPlayer = new BackendAudioPlayer(logToRenderer, logToRenderer, shell, discordConfig.defaultMusicPath);
+        ipcloader(); // Load all IPC handlers now, before Discord
+        musicPlayer.sendInitialStatus(); // Send initial status after listeners are attached
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
         // Handle Discord Bot setup.
@@ -579,6 +580,13 @@ async function ipcloader() {
     ipcMain.on('pause-music', () => {
         logToRenderer(`IPC 'pause-music' received.`);
         musicPlayer.pause();
+    });
+
+    ipcMain.on('play-sound-effect', (event, filePath) => {
+        logToRenderer(`IPC 'play-sound-effect' received for: ${filePath}`);
+        if (filePath) {
+            musicPlayer.playSound(filePath);
+        }
     });
 
     ipcMain.handle('get-preview-audio-data', async () => {
@@ -1243,14 +1251,24 @@ async function ipcloader() {
     });
 }
 
-// Function to send log messages to the renderer
+// Function to send log messages to the renderer and a file
 async function logToRenderer(message) {
     if (isAppReady) {
-        mainWindow.webContents.send('log-message', message);
+        try {
+            const logFilePath = path.join(app.getPath('userData'), 'TavernTones.log');
+            const timestamp = new Date().toISOString();
+            fs.appendFile(logFilePath, `[${timestamp}] ${message}\n`);
+        } catch (e) {
+            console.error("Failed to write to TavernTones.log", e);
+        }
     }
-    else {
-        await sleep(100);
-        logToRenderer(message);
+
+    if (isAppReady && mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('log-message', message);
+    } else {
+        // Don't await here, just fire and forget if app is not ready
+        // This prevents blocking the startup process.
+        console.log(`[PRE-LOG] ${message}`);
     }
 }
 

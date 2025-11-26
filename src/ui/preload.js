@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('electron', {
         'reset-encounter', 'clear-encounter', 'update-initiative',
         'copy-creature', 'window-ready',
         'load-music-file', // Added for music player
+        'play-sound-effect',
         'load-sound', 'play-sound', 'stop-sound', 'unload-sound',
         'set-loop', 'set-soundboard-volume', 'request-initial-load',
         'push-dicelog-to-discord', 'push-statblock-to-discord',
