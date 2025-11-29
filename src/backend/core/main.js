@@ -12,6 +12,7 @@ client.npcDropdownHandlers = new Map();
 console.log('Discord client instantiated.');
 const axios = require('axios');
 console.log('Axios loaded.');
+const AudioMixer = require('./AudioMixer.js');
 const BackendAudioPlayer = require('./BackendAudioPlayer.js');
 const CommandHandler = require('../../discord/CommandHandler.js');
 const FiveEToolsParser = require('./5eParser.js');
@@ -26,6 +27,7 @@ let discordConfig;
 
 let connection;
 let musicPlayer;
+let audioMixer;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
@@ -192,34 +194,45 @@ async function apploader() {
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
         // Create the main window first, so we can show dialogs.
-        // Don't show it yet if we might need to show the settings window first.
         await createWindow(false);
         isAppReady = true;
 
-        // Now, check for folder configuration.
-        const { resourcesPath, randomTablesPath, tasksPath } = discordConfig;
-        const pathsConfigured = resourcesPath && randomTablesPath && tasksPath;
+        // --- Testing Environment Bypass ---
+        // Check if running in a test environment (e.g., launched with Playwright)
+        const isTestEnv = process.argv.some(arg => arg.startsWith('--remote-debugging-port'));
 
-        if (!pathsConfigured) {
-            logToRenderer("Essential data folders are not configured.");
-            await dialog.showMessageBox(mainWindow, {
-                type: 'warning',
-                title: 'Configuration Required',
-                message: 'One or more essential data folders have not been set up. Please configure them in the settings.',
-                buttons: ['Go to Settings']
-            });
-            createSettingsWindow();
-            return; // Halt further initialization.
-        }
-
-        // If we've reached here, paths are configured, so we can show the main window.
-        if (!isGamifyLaunch) {
+        if (isTestEnv) {
+            logToRenderer('[TEST_ENV] Bypassing config check and showing main window immediately.');
             mainWindow.maximize();
             mainWindow.show();
+        } else {
+            // --- Standard Startup Logic ---
+            // Now, check for folder configuration.
+            const { resourcesPath, randomTablesPath, tasksPath } = discordConfig;
+            const pathsConfigured = resourcesPath && randomTablesPath && tasksPath;
+
+            if (!pathsConfigured) {
+                logToRenderer("Essential data folders are not configured.");
+                await dialog.showMessageBox(mainWindow, {
+                    type: 'warning',
+                    title: 'Configuration Required',
+                    message: 'One or more essential data folders have not been set up. Please configure them in the settings.',
+                    buttons: ['Go to Settings']
+                });
+                createSettingsWindow();
+                return; // Halt further initialization.
+            }
+
+            // If we've reached here, paths are configured, so we can show the main window.
+            if (!isGamifyLaunch) {
+                mainWindow.maximize();
+                mainWindow.show();
+            }
         }
 
         // Initialize components
-        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
+        audioMixer = new AudioMixer(logToRenderer);
+        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, audioMixer);
         ipcloader(); // Load all IPC handlers
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
@@ -579,6 +592,12 @@ async function ipcloader() {
     ipcMain.on('pause-music', () => {
         logToRenderer(`IPC 'pause-music' received.`);
         musicPlayer.pause();
+    });
+
+    ipcMain.on('play-sound-effect', (event, soundId) => {
+        const soundPath = path.join(__dirname, '../../assets/notification.wav');
+        const soundStream = require('fs').createReadStream(soundPath);
+        audioMixer.playSound(soundId, soundStream);
     });
 
     ipcMain.handle('get-preview-audio-data', async () => {
