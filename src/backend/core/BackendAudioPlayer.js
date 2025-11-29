@@ -6,12 +6,13 @@ const { Readable } = require('stream');
 const { EventEmitter } = require('events');
 
 class BackendAudioPlayer extends EventEmitter {
-    constructor(logCallback, shell, musicFolder) {
+    constructor(logCallback, shell, musicFolder, audioMixer) {
         super();
         // Dependencies
         this.log = logCallback || console.log;
         this.shell = shell;
         this.musicFolder = musicFolder;
+        this.audioMixer = audioMixer;
 
         // State
         this.playerStatus = AudioPlayerStatus.Idle;
@@ -126,6 +127,9 @@ class BackendAudioPlayer extends EventEmitter {
     setConnection(connection) {
         if (!connection) return;
         this.connection = connection;
+        const mixedStream = this.audioMixer.getOutputStream();
+        const resource = createAudioResource(mixedStream, { inputType: 'arbitrary' });
+        this.player.play(resource);
         this.connection.subscribe(this.player);
     }
 
@@ -212,11 +216,10 @@ class BackendAudioPlayer extends EventEmitter {
 
         try {
             const stream = Readable.from(this.activeFile);
-            const resource = createAudioResource(stream, { inlineVolume: true });
-            resource.volume.setVolume(this.playbackVolume);
-
-            this.player.play(resource);
-            await entersState(this.player, AudioPlayerStatus.Playing, 5000);
+            this.audioMixer.setMainAudio(stream);
+            this.playerStatus = AudioPlayerStatus.Playing;
+            this.isPlaying = true;
+            this._emitStatusUpdate();
             this.log(`Playback started for: ${this.activeFilePath}`);
         } catch (error) {
             this.log(`Error starting playback for ${this.activeFilePath}: ${error.message}`);
