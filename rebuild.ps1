@@ -7,11 +7,20 @@
   starts the specified executable. Includes retry logic for critical steps.
 #>
 
+param(
+    [int]$MaxRetries = 9,
+    [switch]$SkipMain
+)
+
 # --- Configuration ---
-$MaxRetries = 9
+# Allow `-MaxRetries` to be provided when invoking the script, otherwise default to 9.
+$global:MaxRetries = $MaxRetries
 $ExecutablePath = "build/TavernTones.exe"
 $DataDirToKeep = "build/Data"
 # ---------------------
+
+# Ensure script base directory is available early for functions that restore location
+$ScriptBaseDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 # Function to execute a command and handle retries
 function Invoke-WithRetry {
@@ -31,7 +40,18 @@ function Invoke-WithRetry {
     $LogArguments = $Arguments -join ' '
     # No need for $FullArguments = @($Arguments) if $Arguments is already a string array
     
-    $CurrentMaxRetries = $global:MaxRetries
+    # Coerce/validate the global MaxRetries into a numeric value we can compare reliably.
+    $CurrentMaxRetries = 9
+    if ($null -ne $global:MaxRetries) {
+        $tmp = 0
+        if ([int]::TryParse([string]$global:MaxRetries, [ref]$tmp)) {
+            $CurrentMaxRetries = $tmp
+        } else {
+            Write-Host "WARNING: MaxRetries value '$global:MaxRetries' is not an integer; using default $CurrentMaxRetries" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "WARNING: MaxRetries is not defined; using default $CurrentMaxRetries" -ForegroundColor Yellow
+    }
     
     $ContinueLoop = $true
     while ($ContinueLoop) {
@@ -116,13 +136,14 @@ function Get-LatestRemoteBranch {
 }
 
 # --- Main Script Execution ---
+if (-not $SkipMain) {
 
-# Global variable to hold the script's original location (make sure this is still defined)
-$ScriptBaseDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+    # Global variable to hold the script's original location (make sure this is still defined)
+    $ScriptBaseDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
-Write-Host "=============================================" -ForegroundColor Cyan
-Write-Host "     Starting Automated Build and Run" -ForegroundColor Cyan
-Write-Host "=============================================" -ForegroundColor Cyan
+    Write-Host "=============================================" -ForegroundColor Cyan
+    Write-Host "     Starting Automated Build and Run" -ForegroundColor Cyan
+    Write-Host "=============================================" -ForegroundColor Cyan
 
 
 # 1. GIT PULL/CHECKOUT
@@ -190,3 +211,4 @@ if (Test-Path $ExecutablePath) {
 Write-Host "`n=============================================" -ForegroundColor Cyan
 Write-Host "     Script Finished Successfully" -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
+}
