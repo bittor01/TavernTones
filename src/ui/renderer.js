@@ -758,8 +758,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         addCreatureForm.dataset.monsterRawData = fullStatBlock;
     }
 
-    renderSoundboard();
-
     // --- Soundboard State ---
     let soundboardState = [];
     const SOUNDBOARD_SIZE = 9;
@@ -767,6 +765,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
         soundboardState.push({ id: i, file: null, emoji: '➕', loop: false, isPlaying: false });
     }
+    // For now, let's designate the first slot as our test sound effect button
+    soundboardState[0].emoji = '🔊';
+    soundboardState[0].file = 'test-jingle'; // Mark it as having a "file" so the button is enabled
+
+    renderSoundboard();
 
     // --- Render Functions ---
     function renderSoundboard() {
@@ -791,6 +794,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
                 const slot = soundboardState[slotId];
+
+                // Special case for our test button
+                if (slotId === 0) {
+                    logMessage('Playing test sound effect...');
+                    window.electron.ipcRenderer.send('play-sound-effect', 'test-jingle-1');
+                    return;
+                }
+
                 if (slot.isPlaying) {
                     window.electron.ipcRenderer.send('stop-sound', { slotId });
                 } else if (slot.file) {
