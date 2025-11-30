@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld('electron', {
         'load-music-file', // Added for music player
         'load-sound', 'play-sound', 'stop-sound', 'unload-sound',
         'set-loop', 'set-soundboard-volume', 'request-initial-load',
-        'push-dicelog-to-discord', 'push-statblock-to-discord',
+        'play-sound-effect', 'push-dicelog-to-discord', 'push-statblock-to-discord',
         'open-gamify-tool', 'save-high-score', 'open-settings-window',
         'roll-attack', 'push-mob-rules-to-discord'
       ];
