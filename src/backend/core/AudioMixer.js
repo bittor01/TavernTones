@@ -1,0 +1,130 @@
+
+const { PassThrough } = require('stream');
+const ffmpeg = require('fluent-ffmpeg');
+const path = require('path');
+
+class AudioMixer {
+    constructor(logCallback) {
+        this.log = logCallback || console.log;
+        this.mainAudioStream = null;
+        this.soundEffectStreams = new Map();
+        this.outputStream = new PassThrough();
+        this.ffmpegCommand = null;
+        this.mainAudioEnded = false;
+        this.isStoppedIntentionally = false;
+    }
+
+    setMainAudio(audioStream) {
+        this.log('Setting main audio stream.');
+        // If there's an existing command, stop it completely before starting a new one.
+        if (this.ffmpegCommand) {
+            this.stop();
+        }
+        this.mainAudioStream = audioStream;
+        this.mainAudioEnded = false;
+        this.mainAudioStream.on('end', () => {
+            this.log('Main audio stream ended.');
+            this.mainAudioEnded = true;
+            if (this.soundEffectStreams.size === 0) {
+                this.stop();
+            }
+        });
+        this.start();
+    }
+
+    playSound(soundId, soundStream) {
+        this.log(`Adding sound effect with ID: ${soundId}`);
+        this.soundEffectStreams.set(soundId, soundStream);
+        soundStream.on('end', () => {
+            this.log(`Sound effect ${soundId} finished.`);
+            this.soundEffectStreams.delete(soundId);
+            if (this.mainAudioEnded && this.soundEffectStreams.size === 0) {
+                this.stop();
+            } else {
+                this.start();
+            }
+        });
+        this.start();
+    }
+
+    start() {
+        if (this.ffmpegCommand) {
+            this.log('Restarting ffmpeg process for new mix.');
+            this.isStoppedIntentionally = true; // Set flag before killing
+            this.ffmpegCommand.kill('SIGKILL');
+            this.ffmpegCommand = null;
+        }
+        this.isStoppedIntentionally = false; // Reset flag for new command
+
+        if (!this.mainAudioStream && this.soundEffectStreams.size === 0) {
+            this.log('No audio sources, not starting ffmpeg.');
+            return;
+        }
+
+        this.log('Starting ffmpeg mixing process...');
+        this.ffmpegCommand = ffmpeg();
+
+        let complexFilter = [];
+        let inputCount = 0;
+
+        if (this.mainAudioStream && !this.mainAudioEnded) {
+            this.ffmpegCommand.input(this.mainAudioStream).inputFormat('s16le').audioCodec('pcm_s16le').audioChannels(2).audioFrequency(48000);
+            complexFilter.push(`[${inputCount}:a]volume=1.0[a${inputCount}]`);
+            inputCount++;
+        }
+
+        this.soundEffectStreams.forEach((stream, id) => {
+            this.ffmpegCommand.input(stream).inputFormat('s16le').audioCodec('pcm_s16le').audioChannels(2).audioFrequency(48000);
+            complexFilter.push(`[${inputCount}:a]volume=0.8[a${inputCount}]`);
+            inputCount++;
+        });
+
+        if (inputCount > 0) {
+            let filterString = '';
+            for (let i = 0; i < inputCount; i++) {
+                filterString += `[a${i}]`;
+            }
+            filterString += `amix=inputs=${inputCount}:duration=longest[aout]`;
+            complexFilter.push(filterString);
+
+            this.ffmpegCommand
+                .complexFilter(complexFilter, 'aout')
+                .toFormat('s16le')
+                .audioCodec('pcm_s16le')
+                .audioChannels(2)
+                .audioFrequency(48000)
+                .on('start', (commandLine) => {
+                    this.log('ffmpeg process started: ' + commandLine);
+                })
+                .on('error', (err) => {
+                    if (this.isStoppedIntentionally) {
+                        this.log('ffmpeg process was intentionally killed.');
+                    } else {
+                        this.log('An error occurred with ffmpeg: ' + err.message);
+                    }
+                })
+                .on('end', () => {
+                    this.log('ffmpeg process finished.');
+                })
+                .pipe(this.outputStream, { end: false });
+        }
+    }
+
+    stop() {
+        this.log('Stopping ffmpeg process.');
+        if (this.ffmpegCommand) {
+            this.isStoppedIntentionally = true;
+            this.ffmpegCommand.kill('SIGKILL');
+            this.ffmpegCommand = null;
+        }
+        this.mainAudioStream = null;
+        this.soundEffectStreams.clear();
+        this.mainAudioEnded = false;
+    }
+
+    getOutputStream() {
+        return this.outputStream;
+    }
+}
+
+module.exports = AudioMixer;

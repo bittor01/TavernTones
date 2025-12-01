@@ -110,12 +110,12 @@ button:disabled {
 }
 
 #initiative-list-container {
-    flex-grow: 1;
     display: flex; /* Add flex to make list itself grow */
     flex-direction: column;
+    flex-grow: 1; /* Allow this to take up the bulk of the space */
+    min-height: 0; /* CRITICAL: Allows the container to shrink below its content size */
 }
 #initiative-list {
-    flex-grow: 1;
     overflow-y: auto;
 }
 .initiative-entry {

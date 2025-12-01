@@ -6,12 +6,13 @@ const { Readable } = require('stream');
 const { EventEmitter } = require('events');
 
 class BackendAudioPlayer extends EventEmitter {
-    constructor(logCallback, shell, musicFolder) {
+    constructor(logCallback, shell, musicFolder, audioMixer) {
         super();
         // Dependencies
         this.log = logCallback || console.log;
         this.shell = shell;
         this.musicFolder = musicFolder;
+        this.audioMixer = audioMixer;
 
         // State
         this.playerStatus = AudioPlayerStatus.Idle;
@@ -126,6 +127,10 @@ class BackendAudioPlayer extends EventEmitter {
     setConnection(connection) {
         if (!connection) return;
         this.connection = connection;
+        const mixedStream = this.audioMixer.getOutputStream();
+        // The mixer outputs a raw PCM stream. We must specify this to the AudioResource.
+        const resource = createAudioResource(mixedStream, { inputType: 'raw' });
+        this.player.play(resource);
         this.connection.subscribe(this.player);
     }
 
@@ -211,12 +216,26 @@ class BackendAudioPlayer extends EventEmitter {
         }
 
         try {
-            const stream = Readable.from(this.activeFile);
-            const resource = createAudioResource(stream, { inlineVolume: true });
-            resource.volume.setVolume(this.playbackVolume);
+            const ffmpeg = require('fluent-ffmpeg');
+            const sourceStream = Readable.from(this.activeFile);
 
-            this.player.play(resource);
-            await entersState(this.player, AudioPlayerStatus.Playing, 5000);
+            // Transcode the source file to a raw PCM stream for the mixer
+            const pcmStream = ffmpeg(sourceStream)
+                .toFormat('s16le')
+                .audioCodec('pcm_s16le')
+                .audioChannels(2)
+                .audioFrequency(48000)
+                .on('error', (err) => {
+                    this.log(`Error during transcoding for ${this.activeFilePath}: ${err.message}`);
+                    // Ensure we clean up if transcoding fails
+                    this.player.stop();
+                })
+                .pipe(); // pipe() returns a PassThrough stream
+
+            this.audioMixer.setMainAudio(pcmStream);
+            this.playerStatus = AudioPlayerStatus.Playing;
+            this.isPlaying = true;
+            this._emitStatusUpdate();
             this.log(`Playback started for: ${this.activeFilePath}`);
         } catch (error) {
             this.log(`Error starting playback for ${this.activeFilePath}: ${error.message}`);
