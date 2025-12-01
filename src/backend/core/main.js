@@ -12,6 +12,7 @@ client.npcDropdownHandlers = new Map();
 console.log('Discord client instantiated.');
 const axios = require('axios');
 console.log('Axios loaded.');
+const AudioMixer = require('./AudioMixer.js');
 const BackendAudioPlayer = require('./BackendAudioPlayer.js');
 const CommandHandler = require('../../discord/CommandHandler.js');
 const FiveEToolsParser = require('./5eParser.js');
@@ -26,6 +27,7 @@ let discordConfig;
 
 let connection;
 let musicPlayer;
+let audioMixer;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
@@ -192,7 +194,6 @@ async function apploader() {
         const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
         // Create the main window first, so we can show dialogs.
-        // Don't show it yet if we might need to show the settings window first.
         await createWindow(false);
         isAppReady = true;
 
@@ -219,7 +220,8 @@ async function apploader() {
         }
 
         // Initialize components
-        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
+        audioMixer = new AudioMixer(logToRenderer);
+        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, audioMixer);
         ipcloader(); // Load all IPC handlers
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
@@ -579,6 +581,11 @@ async function ipcloader() {
     ipcMain.on('pause-music', () => {
         logToRenderer(`IPC 'pause-music' received.`);
         musicPlayer.pause();
+    });
+
+    ipcMain.on('play-sound-effect', (event, soundId) => {
+        const soundPath = path.join(__dirname, '../../assets/notification.wav');
+        audioMixer.playSound(soundId, soundPath);
     });
 
     ipcMain.handle('get-preview-audio-data', async () => {

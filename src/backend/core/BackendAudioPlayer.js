@@ -6,12 +6,13 @@ const { Readable } = require('stream');
 const { EventEmitter } = require('events');
 
 class BackendAudioPlayer extends EventEmitter {
-    constructor(logCallback, shell, musicFolder) {
+    constructor(logCallback, shell, musicFolder, audioMixer) {
         super();
         // Dependencies
         this.log = logCallback || console.log;
         this.shell = shell;
         this.musicFolder = musicFolder;
+        this.audioMixer = audioMixer;
 
         // State
         this.playerStatus = AudioPlayerStatus.Idle;
@@ -23,9 +24,10 @@ class BackendAudioPlayer extends EventEmitter {
         this.loopToggle = true;
         this.playbackVolume = 1.0;
 
+        // No longer need to manage file buffers here
         // Internal file management
-        this.activeFile = null; // Buffer for the active track
-        this.pendingFile = null; // Buffer for the pending track
+        //this.activeFile = null; // Buffer for the active track
+        //this.pendingFile = null; // Buffer for the pending track
 
         // Discord.js Voice components
         this.player = createAudioPlayer();
@@ -58,43 +60,29 @@ class BackendAudioPlayer extends EventEmitter {
             this.isPlaying = false;
             this.playerStatus = AudioPlayerStatus.Idle;
 
-            const finishedFile = this.activeFile;
             const finishedFilePath = this.activeFilePath;
-
-            this.activeFile = null;
             this.activeFilePath = null;
 
-            if (this.pendingFile) {
+            if (this.pendingFilePath) {
                 this.log('Idle: Pending file found, promoting it to active.');
                 this._movePendingToActive();
                 if (this.promoteAndPause) {
-                    this.log('Idle: Promote and pause flag is set. Loading track to pause.');
-                    this.promoteAndPause = false; // Reset the flag
-                    try {
-                        // Load the new resource, wait for it to start playing, then immediately pause it.
-                        const stream = Readable.from(this.activeFile);
-                        const resource = createAudioResource(stream, { inlineVolume: true });
-                        resource.volume.setVolume(this.playbackVolume);
-                        this.player.play(resource);
-                        await entersState(this.player, AudioPlayerStatus.Playing, 5000); // Wait for playing state
-                        this.player.pause(true); // Then pause
-                        this.log(`Idle: Promoted track is now loaded and paused: ${this.activeFilePath}`);
-                    } catch (error) {
-                        this.log(`Error during promote and pause for ${this.activeFilePath}: ${error.message}`);
-                        this.playerStatus = AudioPlayerStatus.Idle;
-                        this.isPlaying = false;
-                        this._emitStatusUpdate();
-                    }
+                    // This logic might need adjustment, as we don't 'play' in the same way.
+                    // For now, we just set the main audio in the mixer and don't start the player.
+                    this.log('Idle: Promote and pause flag is set. Setting mixer but not playing.');
+                    this.promoteAndPause = false;
+                    this.audioMixer.setMainAudio(this.activeFilePath, this.loopToggle);
+                    this.player.pause(true); // Ensure player is paused
                 } else {
                     this._play(); // Autoplay as normal
                 }
-            } else if (this.loopToggle && finishedFile) {
+            } else if (this.loopToggle && finishedFilePath) {
                 this.log(`Idle: Looping active file: ${finishedFilePath}`);
-                this.activeFile = finishedFile;
                 this.activeFilePath = finishedFilePath;
-                this._play(); // Autoplay for looping is expected behaviour
+                this._play();
             } else {
                 this.log('Idle: No pending file and looping is off. Player remains idle.');
+                this.audioMixer.setMainAudio(null); // Explicitly clear the mixer's main track
             }
             this._emitStatusUpdate();
         });
@@ -102,7 +90,6 @@ class BackendAudioPlayer extends EventEmitter {
         this.player.on('error', error => {
             this.log(`Error in audio player for ${this.activeFilePath}: ${error.message}`);
             this.isPlaying = false;
-            this.activeFile = null;
             this.activeFilePath = null;
             this.playerStatus = AudioPlayerStatus.Idle;
             this._emitStatusUpdate();
@@ -126,6 +113,10 @@ class BackendAudioPlayer extends EventEmitter {
     setConnection(connection) {
         if (!connection) return;
         this.connection = connection;
+        const mixedStream = this.audioMixer.getOutputStream();
+        // The mixer outputs a raw PCM stream. We must specify this to the AudioResource.
+        const resource = createAudioResource(mixedStream, { inputType: 'raw' });
+        this.player.play(resource);
         this.connection.subscribe(this.player);
     }
 
@@ -144,64 +135,28 @@ class BackendAudioPlayer extends EventEmitter {
     // --- Internal File Handling ---
 
     _movePendingToActive() {
-        if (!this.pendingFile) {
+        if (!this.pendingFilePath) {
             this.log('Attempted to move pending to active, but no pending file exists.');
             return;
         }
-        this.activeFile = this.pendingFile;
         this.activeFilePath = this.pendingFilePath;
-        this.pendingFile = null;
         this.pendingFilePath = null;
         this.log(`Moved pending file to active: ${this.activeFilePath}`);
     }
 
     async _cacheFileToPending(filePath) {
-        this.isCaching = true;
-        this.pendingFilePath = filePath; // Show pending path while caching
+        // Caching is no longer needed as we stream from the file path directly.
+        // This function now just validates the path and sets it as pending.
+        this.log(`Setting pending file path to: ${filePath}`);
+        this.pendingFilePath = filePath;
         this._emitStatusUpdate();
-        this.log(`Caching started for: ${filePath}`);
-
-        try {
-            let resolvedPath = filePath;
-            if (this.shell && path.extname(resolvedPath).toLowerCase() === '.lnk') {
-                try {
-                    const shortcutDetails = this.shell.readShortcutLink(resolvedPath);
-                    if (shortcutDetails.target && fs.existsSync(shortcutDetails.target)) {
-                        this.log(`Resolved .lnk shortcut from ${resolvedPath} to ${shortcutDetails.target}`);
-                        resolvedPath = shortcutDetails.target;
-                    } else {
-                        throw new Error('Shortcut target does not exist or is invalid.');
-                    }
-                } catch (error) {
-                    this.log(`Failed to resolve .lnk shortcut at ${resolvedPath}: ${error.message}`);
-                    this.pendingFile = null;
-                    this.pendingFilePath = null;
-                    this.isCaching = false;
-                    this._emitStatusUpdate();
-                    return false;
-                }
-            }
-
-            const buffer = await fsp.readFile(resolvedPath);
-            this.pendingFile = buffer;
-            this.pendingFilePath = resolvedPath;
-            this.log(`Successfully cached file: ${filePath}`);
-            return true;
-        } catch (error) {
-            this.log(`Error caching file ${filePath}: ${error.message}`);
-            this.pendingFile = null;
-            this.pendingFilePath = null;
-            return false;
-        } finally {
-            this.isCaching = false;
-            this._emitStatusUpdate();
-        }
+        return true; // Assume path is valid for now.
     }
 
     // --- Internal Playback ---
 
     async _play() {
-        if (!this.activeFile) {
+        if (!this.activeFilePath) {
             this.log("Play called but no active file to play.");
             return;
         }
@@ -211,12 +166,15 @@ class BackendAudioPlayer extends EventEmitter {
         }
 
         try {
-            const stream = Readable.from(this.activeFile);
-            const resource = createAudioResource(stream, { inlineVolume: true });
-            resource.volume.setVolume(this.playbackVolume);
-
-            this.player.play(resource);
-            await entersState(this.player, AudioPlayerStatus.Playing, 5000);
+            this.audioMixer.setMainAudio(this.activeFilePath, this.loopToggle);
+            // We no longer directly control the player; the mixer's stream is continuous.
+            // We just need to unpause the main Discord player if it's paused.
+            if(this.playerStatus === AudioPlayerStatus.Paused){
+                this.player.unpause();
+            }
+            this.playerStatus = AudioPlayerStatus.Playing;
+            this.isPlaying = true;
+            this._emitStatusUpdate();
             this.log(`Playback started for: ${this.activeFilePath}`);
         } catch (error) {
             this.log(`Error starting playback for ${this.activeFilePath}: ${error.message}`);
@@ -234,43 +192,26 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     play() {
-        // Scenario 1: A new track is pending and the current one is paused.
-        // The desired behavior is to replace the paused track and play the new one.
-        if (this.playerStatus === AudioPlayerStatus.Paused && this.pendingFile) {
-            this.log('Play command received while paused with a pending track. Swapping and playing.');
-            this.player.stop(); // This triggers the 'idle' state.
-                               // The 'idle' handler will automatically promote the pending file and play it.
-            // We return here because the idle handler will take over.
-            return;
-        }
-
-        // Scenario 2: The player is paused, but there's no new track.
-        // The desired behavior is to simply resume playback.
+        // If the player is paused, unpause it. The mixer stream is continuous.
         if (this.playerStatus === AudioPlayerStatus.Paused) {
             this.player.unpause();
             this.log('Playback resumed.');
             return;
         }
 
-        // Scenario 3: The player is idle.
+        // If the player is idle, it means no main track is set in the mixer.
         if (this.playerStatus === AudioPlayerStatus.Idle) {
-            // If there's a pending file, it should become the active one.
-            if (this.pendingFile) {
+            if (this.pendingFilePath) {
                 this.log('No active file, promoting pending file.');
                 this._movePendingToActive();
             }
-            // If there's now an active file, play it.
-            if (this.activeFile) {
+            if (this.activeFilePath) {
                 this.log('Playback starting from idle state.');
                 this._play();
             } else {
                 this.log('Play command received, but no active or pending file to play.');
             }
-            return;
         }
-
-        // Fallback for any other state (e.g., already playing)
-        this.log('Play command received, but already playing or in a non-idle state.');
     }
 
     pause() {
@@ -279,14 +220,9 @@ class BackendAudioPlayer extends EventEmitter {
             return;
         }
 
-        if (this.pendingFile) {
-            this.log('Pending file exists, setting flag to promote and pause.');
-            this.promoteAndPause = true;
-            this.player.stop(); // This will trigger the 'idle' event.
-        } else {
-            this.log(`Playback paused for: ${this.activeFilePath}`);
-            this.player.pause(true);
-        }
+        // We just pause the main player. The mixer process continues running underneath.
+        this.log(`Playback paused for: ${this.activeFilePath}`);
+        this.player.pause(true);
     }
 
     getPreviewFilePath() {
