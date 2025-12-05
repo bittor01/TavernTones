@@ -20,6 +20,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.activeFilePath = null;
         this.pendingFilePath = null; // New state for the pending file path
         this.promoteAndPause = false; // Flag to promote a track without playing it
+        this.isStoppingIntentionally = false; // Flag to help the Idle handler know why it was called
         this.loopToggle = true;
         this.playbackVolume = 1.0;
 
@@ -54,47 +55,62 @@ class BackendAudioPlayer extends EventEmitter {
 
     setupPlayerEvents() {
         this.player.on(AudioPlayerStatus.Idle, async () => {
-            this.log(`Player entered Idle state. Was playing: ${this.activeFilePath}`);
+            this.log(`Player entered Idle state. Was playing: ${this.activeFilePath}. Intentional stop: ${this.isStoppingIntentionally}`);
             this.isPlaying = false;
             this.playerStatus = AudioPlayerStatus.Idle;
 
             const finishedFile = this.activeFile;
             const finishedFilePath = this.activeFilePath;
 
+            // --- Reset active file info ---
             this.activeFile = null;
             this.activeFilePath = null;
 
-            if (this.pendingFile) {
-                this.log('Idle: Pending file found, promoting it to active.');
-                this._movePendingToActive();
-                if (this.promoteAndPause) {
-                    this.log('Idle: Promote and pause flag is set. Loading track to pause.');
-                    this.promoteAndPause = false; // Reset the flag
-                    try {
-                        // Load the new resource, wait for it to start playing, then immediately pause it.
-                        const stream = Readable.from(this.activeFile);
-                        const resource = createAudioResource(stream, { inlineVolume: true });
-                        resource.volume.setVolume(this.playbackVolume);
-                        this.player.play(resource);
-                        await entersState(this.player, AudioPlayerStatus.Playing, 5000); // Wait for playing state
-                        this.player.pause(true); // Then pause
-                        this.log(`Idle: Promoted track is now loaded and paused: ${this.activeFilePath}`);
-                    } catch (error) {
-                        this.log(`Error during promote and pause for ${this.activeFilePath}: ${error.message}`);
-                        this.playerStatus = AudioPlayerStatus.Idle;
-                        this.isPlaying = false;
-                        this._emitStatusUpdate();
+            // --- Main Logic ---
+            // Case 1: The player was stopped intentionally to swap tracks.
+            if (this.isStoppingIntentionally) {
+                this.isStoppingIntentionally = false; // Reset the flag immediately
+
+                if (this.pendingFile) {
+                    this.log('Idle (Intentional): Pending file found, promoting it.');
+                    this._movePendingToActive();
+
+                    if (this.promoteAndPause) {
+                        this.log('Idle (Intentional): Promote and pause flag is set. Loading track to pause.');
+                        this.promoteAndPause = false; // Reset the flag
+                        try {
+                            const stream = Readable.from(this.activeFile);
+                            const resource = createAudioResource(stream, { inlineVolume: true });
+                            resource.volume.setVolume(this.playbackVolume);
+                            this.player.play(resource);
+                            await entersState(this.player, AudioPlayerStatus.Playing, 5000);
+                            this.player.pause(true);
+                            this.log(`Idle (Intentional): Promoted track is now loaded and paused: ${this.activeFilePath}`);
+                        } catch (error) {
+                            this.log(`Error during promote and pause for ${this.activeFilePath}: ${error.message}`);
+                            this.playerStatus = AudioPlayerStatus.Idle;
+                            this.isPlaying = false;
+                        }
+                    } else {
+                        this.log('Idle (Intentional): Autoplaying promoted track.');
+                        this._play(); // Autoplay as normal
                     }
                 } else {
-                    this._play(); // Autoplay as normal
+                    this.log('Idle (Intentional): Player stopped but no pending file. Remaining idle.');
                 }
-            } else if (this.loopToggle && finishedFile) {
-                this.log(`Idle: Looping active file: ${finishedFilePath}`);
-                this.activeFile = finishedFile;
-                this.activeFilePath = finishedFilePath;
-                this._play(); // Autoplay for looping is expected behaviour
-            } else {
-                this.log('Idle: No pending file and looping is off. Player remains idle.');
+            }
+            // Case 2: The track finished playing naturally.
+            else {
+                if (this.loopToggle && finishedFile) {
+                    this.log(`Idle (Natural): Looping active file: ${finishedFilePath}`);
+                    this.activeFile = finishedFile;
+                    this.activeFilePath = finishedFilePath;
+                    this._play();
+                } else {
+                    this.log('Idle (Natural): No loop. Player remains idle.');
+                    // If there's a pending file here, we explicitly DO NOT play it,
+                    // because the user expects the current song to loop or stop.
+                }
             }
             this._emitStatusUpdate();
         });
@@ -230,6 +246,15 @@ class BackendAudioPlayer extends EventEmitter {
 
     async loadFile(filePath) {
         await this._cacheFileToPending(filePath);
+
+        // If a file is loaded while paused, we want to promote it immediately but not play it.
+        if (this.playerStatus === AudioPlayerStatus.Paused && this.pendingFile) {
+            this.log('File loaded while paused. Promoting to active and remaining paused.');
+            this.promoteAndPause = true;
+            this.isStoppingIntentionally = true;
+            this.player.stop(); // Trigger idle handler to perform the swap.
+        }
+
         this._emitStatusUpdate(); // Ensure UI is updated with new pending file
     }
 
@@ -238,6 +263,7 @@ class BackendAudioPlayer extends EventEmitter {
         // The desired behavior is to replace the paused track and play the new one.
         if (this.playerStatus === AudioPlayerStatus.Paused && this.pendingFile) {
             this.log('Play command received while paused with a pending track. Swapping and playing.');
+            this.isStoppingIntentionally = true;
             this.player.stop(); // This triggers the 'idle' state.
                                // The 'idle' handler will automatically promote the pending file and play it.
             // We return here because the idle handler will take over.
@@ -282,6 +308,7 @@ class BackendAudioPlayer extends EventEmitter {
         if (this.pendingFile) {
             this.log('Pending file exists, setting flag to promote and pause.');
             this.promoteAndPause = true;
+            this.isStoppingIntentionally = true;
             this.player.stop(); // This will trigger the 'idle' event.
         } else {
             this.log(`Playback paused for: ${this.activeFilePath}`);
