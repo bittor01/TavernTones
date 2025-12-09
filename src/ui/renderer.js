@@ -899,9 +899,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button class="stack-btn stack-add-btn" data-id="${slot.id}" title="Add Sound">➕</button>
                     <button class="stack-btn stack-clear-btn" data-id="${slot.id}" title="Clear Stack">🗑️</button>
                 </div>
-                <div class="stack-track-display" title="${trackName}">
-                    ${trackName}
-                </div>
             `;
             grid.appendChild(slotDiv);
         });
