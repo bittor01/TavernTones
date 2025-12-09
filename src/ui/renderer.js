@@ -827,8 +827,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                     soundboardState = migrateSoundboardState(result.state);
                     saveSoundboardState();
                     renderSoundboard();
+                    // After loading a preset, immediately update the backend's volume setting
+                    window.electron.ipcRenderer.send('set-soundboard-volume', { volume: soundboardState.volume });
                 }
             });
+        });
+    }
+
+    // --- Volume Slider Persistence ---
+    const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+    if (soundboardVolumeSlider) {
+        soundboardVolumeSlider.addEventListener('input', (e) => {
+            const newVolume = parseFloat(e.target.value);
+            if (!isNaN(newVolume)) {
+                soundboardState.volume = newVolume;
+                window.electron.ipcRenderer.send('set-soundboard-volume', { volume: newVolume });
+                saveSoundboardState(); // This persists the change for the next session
+            }
         });
     }
 
@@ -954,12 +969,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const slotId = parseInt(e.target.dataset.id, 10);
                 window.electron.ipcRenderer.invoke('open-soundboard-file-dialog').then(filePaths => {
                     if (filePaths && filePaths.length > 0) {
-                        filePaths.forEach(filePath => {
-                            const name = filePath.replace(/^.*[\\\/]/, '');
-                            soundboardState[slotId].tracks.push({ path: filePath, name: name });
-                        });
-                        saveSoundboardState();
-                        renderSoundboard();
+                        const slot = soundboardState[slotId];
+                        if (slot) {
+                            filePaths.forEach(filePath => {
+                                const name = filePath.replace(/^.*[\\\/]/, '');
+                                slot.tracks.push({ path: filePath, name: name });
+                            });
+                            saveSoundboardState();
+                            renderSoundboard();
+                        }
                     }
                 });
             });
