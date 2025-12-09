@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TavernTones</title>
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
   <div class="main-grid">
     <!-- -------------------- LEFT COLUMN -------------------- -->
@@ -17,11 +19,11 @@
       </div>
       <div id="log-wrapper" class="box">
         <div class="panel-header">
-            <h2 id="log-title">Log</h2>
-            <div class="panel-header-controls">
-                <button id="push-panel-btn" class="small-btn" title="Push to Chat" style="display: none;">🖨️</button>
-                <button id="log-toggle-btn" class="small-btn" title="Toggle Panel">🔃</button>
-            </div>
+          <h2 id="log-title">Log</h2>
+          <div class="panel-header-controls">
+            <button id="push-panel-btn" class="small-btn" title="Push to Chat" style="display: none;">🖨️</button>
+            <button id="log-toggle-btn" class="small-btn" title="Toggle Panel">🔃</button>
+          </div>
         </div>
         <div class="log-area" id="logArea"></div>
         <div class="log-area" id="diceLog" style="display: none;"></div>
@@ -48,30 +50,29 @@
     <!-- -------------------- MIDDLE COLUMN -------------------- -->
     <div class="column column-middle">
       <div id="turn-controls-container" class="box">
-          <div class="panel-header">
-            <h2>Controls</h2>
-            <div class="panel-header-controls">
-                <button id="settings-button" class="small-btn" title="Settings">⚙️</button>
-                <button id="gamify-tool-button" class="small-btn" title="Open JSON Tool">👾</button>
-                <button id="reset-encounter-mid" class="small-btn" title="Reset Encounter">⏪</button>
-                <button id="clear-encounter-mid" class="small-btn" title="Clear Encounter">🗑️</button>
-            </div>
+        <div class="panel-header">
+          <h2>Controls</h2>
+          <div class="panel-header-controls">
+            <button id="settings-button" class="small-btn" title="Settings">⚙️</button>
+            <button id="reset-encounter-mid" class="small-btn" title="Reset Encounter">⏪</button>
+            <button id="clear-encounter-mid" class="small-btn" title="Clear Encounter">🗑️</button>
           </div>
-          <div class="controls">
-            <button id="previous-turn-button">Prev Turn</button>
-            <button id="next-turn-button">Next Turn</button>
-          </div>
-          <div class="controls">
-            <button id="save-button">Save Encounter</button>
-            <button id="load-button">Load Encounter</button>
-          </div>
+        </div>
+        <div class="controls">
+          <button id="previous-turn-button">Prev Turn</button>
+          <button id="next-turn-button">Next Turn</button>
+        </div>
+        <div class="controls">
+          <button id="save-button">Save Encounter</button>
+          <button id="load-button">Load Encounter</button>
+        </div>
       </div>
       <div id="initiative-list-container" class="box">
         <div class="panel-header">
-            <h2>Initiative Order</h2>
-            <div class="panel-header-controls">
-                <button id="push-initiative-btn" class="small-btn" title="Push to Chat">💬</button>
-            </div>
+          <h2>Initiative Order</h2>
+          <div class="panel-header-controls">
+            <button id="push-initiative-btn" class="small-btn" title="Push to Chat">💬</button>
+          </div>
         </div>
         <div id="initiative-list">
           <!-- Simple initiative list will be rendered here -->
@@ -79,14 +80,16 @@
       </div>
       <div id="soundboard-container" class="box">
         <div class="panel-header">
-            <h2>Soundboard</h2>
-            <div class="panel-header-controls">
-                <label for="soundboard-volume">Volume:</label>
-                <input type="range" id="soundboard-volume" min="0" max="1" step="0.05" value="0.5">
-            </div>
+          <h2>Soundboard</h2>
+          <div class="panel-header-controls">
+            <button id="save-preset-btn" class="small-btn" title="Save Preset">💾</button>
+            <button id="load-preset-btn" class="small-btn" title="Load Preset">📂</button>
+            <label for="soundboard-volume">Vol:</label>
+            <input type="range" id="soundboard-volume" min="0" max="1" step="0.05" value="0.5">
+          </div>
         </div>
         <div id="soundboard-grid">
-            <!-- 3x3 grid of soundboard controls will be rendered here -->
+          <!-- 3x3 grid of soundboard controls will be rendered here -->
         </div>
       </div>
     </div>
@@ -96,8 +99,8 @@
       <div class="panel-header">
         <h2>Combatants</h2>
         <div class="panel-header-controls">
-            <button id="reset-encounter-right" class="small-btn" title="Reset Encounter">⏪</button>
-            <button id="clear-encounter-right" class="small-btn" title="Clear Encounter">🗑️</button>
+          <button id="reset-encounter-right" class="small-btn" title="Reset Encounter">⏪</button>
+          <button id="clear-encounter-right" class="small-btn" title="Clear Encounter">🗑️</button>
         </div>
       </div>
       <div id="combatant-details-list">
@@ -106,6 +109,20 @@
     </div>
   </div>
   <audio id="preview-audio-player" style="display: none;"></audio>
+
+  <dialog id="emoji-picker-dialog">
+    <form method="dialog">
+      <h3>Select Emoji</h3>
+      <input type="text" id="emoji-input" maxlength="2" placeholder="📢"
+        style="font-size: 2em; width: 50px; text-align: center;">
+      <div class="dialog-controls">
+        <button value="cancel">Cancel</button>
+        <button id="confirm-emoji-btn" value="default">Confirm</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="renderer.js"></script>
 </body>
+
 </html>
