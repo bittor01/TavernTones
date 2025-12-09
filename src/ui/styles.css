@@ -1,24 +1,25 @@
 /* --- Global Styles --- */
-html, body {
-  height: 100%;
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: #1a1a1a;
-  color: #d4d4d4;
-  overflow: hidden;
+html,
+body {
+    height: 100%;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #1a1a1a;
+    color: #d4d4d4;
+    overflow: hidden;
 }
 
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 h2 {
-  margin-top: 0;
-  border-bottom: 1px solid #444;
-  padding-bottom: 8px;
-  margin-bottom: 12px;
-  font-size: 1.1em;
-  color: #cccccc;
+    margin-top: 0;
+    border-bottom: 1px solid #444;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    color: #cccccc;
 }
 
 button {
@@ -43,57 +44,60 @@ button:disabled {
 
 /* --- Main Layout --- */
 .main-grid {
-  display: grid;
-  grid-template-columns: 25% 25% 50%;
-  height: 100vh;
-  gap: 10px;
-  padding: 10px;
+    display: grid;
+    grid-template-columns: 25% 25% 50%;
+    height: 100vh;
+    gap: 10px;
+    padding: 10px;
 }
 
 .column {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    /* overflow-y: auto;  <-- REMOVED to allow inner containers to handle scrolling and keeping footer visible */
+    overflow: hidden;
+    /* Force content to fit or scroll internally */
 }
 
 .box {
-  background-color: #252526;
-  border-radius: 8px;
-  padding: 15px;
-  border: 1px solid #333;
+    background-color: #252526;
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid #333;
 }
 
 /* --- Left Column --- */
 .column-left {
-  justify-content: space-between;
+    justify-content: space-between;
 }
 
 #creature-entry-container {
-  flex-shrink: 0;
+    flex-shrink: 0;
 }
 
 #log-wrapper {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 100px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100px;
 }
 
 .log-area {
-  flex-grow: 1;
-  overflow-y: auto;
-  background-color: #1e1e1e;
-  padding: 8px;
-  border-radius: 4px;
-  font-size: 0.9em;
-  line-height: 1.4;
-  white-space: pre-wrap; /* Ensures text wraps */
-  word-wrap: break-word;
+    flex-grow: 1;
+    overflow-y: auto;
+    background-color: #1e1e1e;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    /* Ensures text wraps */
+    word-wrap: break-word;
 }
 
 #music-controls-container {
-  flex-shrink: 0;
+    flex-shrink: 0;
 }
 
 /* --- Middle Column --- */
@@ -102,30 +106,40 @@ button:disabled {
     justify-content: space-between;
     gap: 10px;
 }
+
 #turn-controls-container .controls:not(:last-child) {
     margin-bottom: 10px;
 }
+
 #turn-controls-container button {
     flex-grow: 1;
 }
 
 #initiative-list-container {
     flex-grow: 1;
-    display: flex; /* Add flex to make list itself grow */
+    display: flex;
+    /* Add flex to make list itself grow */
     flex-direction: column;
+    min-height: 0;
+    /* IMPORTANT: Allows the container to shrink below its content size, enabling scrolling */
 }
+
 #initiative-list {
     flex-grow: 1;
     overflow-y: auto;
 }
+
+
 .initiative-entry {
     display: flex;
     align-items: center;
     padding: 8px;
     border-radius: 4px;
     cursor: pointer;
-    gap: 10px; /* Add gap for spacing */
+    gap: 10px;
+    /* Add gap for spacing */
 }
+
 .initiative-entry.active-turn {
     background-color: #4f5b66;
     font-weight: bold;
@@ -136,6 +150,7 @@ button:disabled {
     color: #a0c8ff;
     order: 1;
 }
+
 .initiative-score {
     font-weight: bold;
     color: #ccc;
@@ -144,28 +159,37 @@ button:disabled {
     flex-shrink: 0;
     text-align: right;
 }
+
 .initiative-hp-bar-container {
-    width: 120px; /* Fixed width for alignment */
+    width: 120px;
+    /* Fixed width for alignment */
     height: 12px;
     background-color: #1e1e1e;
     border-radius: 4px;
     position: relative;
     overflow: hidden;
-    flex-shrink: 0; /* Prevent from shrinking */
+    flex-shrink: 0;
+    /* Prevent from shrinking */
     order: 3;
 }
+
 .initiative-entry .creature-name {
-    flex-grow: 1; /* Name takes up available space */
+    flex-grow: 1;
+    /* Name takes up available space */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     order: 4;
 }
+
 .initiative-conditions {
-    flex-shrink: 0; /* Prevent emojis from shrinking */
+    flex-shrink: 0;
+    /* Prevent emojis from shrinking */
     font-size: 0.9em;
-    width: 80px; /* Fixed width for alignment */
-    text-align: left; /* Align left now that it's at the end */
+    width: 80px;
+    /* Fixed width for alignment */
+    text-align: left;
+    /* Align left now that it's at the end */
     order: 5;
 }
 
@@ -177,15 +201,18 @@ button:disabled {
     padding-bottom: 8px;
     margin-bottom: 12px;
 }
+
 .panel-header h2 {
     margin: 0;
     border: none;
     padding: 0;
 }
+
 .panel-header-controls {
     display: flex;
     gap: 5px;
 }
+
 .small-btn {
     background: none;
     border: none;
@@ -200,47 +227,60 @@ button:disabled {
     flex-direction: column;
     gap: 8px;
 }
+
 .form-row {
     display: flex;
     justify-content: space-between;
     gap: 10px;
 }
+
 .form-group {
     display: flex;
     align-items: center;
     gap: 5px;
-    flex: 1 1 0; /* Allow groups to grow and shrink */
+    flex: 1 1 0;
+    /* Allow groups to grow and shrink */
 }
+
 .form-group label {
     white-space: nowrap;
     font-size: 0.9em;
 }
+
 .form-group input {
-    width: 100%; /* Make input fill the group */
+    width: 100%;
+    /* Make input fill the group */
 }
+
 .name-group {
-    flex-grow: 1; /* Allow name to take full width */
+    flex-grow: 1;
+    /* Allow name to take full width */
 }
+
 .stats-grid {
     display: grid;
     grid-template-columns: 50px repeat(6, 1fr);
     gap: 5px;
     align-items: center;
 }
+
 .stats-grid .grid-header {
     font-size: 0.8em;
     text-align: center;
     color: #aaa;
     margin-bottom: 4px;
 }
+
 .stats-grid .grid-label {
     font-size: 0.9em;
     text-align: right;
     padding-right: 5px;
 }
+
 .stats-grid input {
     text-align: center;
 }
+
 input[type="text"],
 input[type="password"],
 input[type="number"] {
@@ -251,10 +291,12 @@ input[type="number"] {
     color: #d4d4d4;
     border-radius: 4px;
 }
+
 .add-creature-button {
     width: 100%;
     padding: 10px;
 }
+
 #add-creature-form hr {
     border-color: #444;
     margin: 5px 0;
@@ -289,6 +331,7 @@ input[type="number"] {
     margin-bottom: 8px;
     gap: 10px;
 }
+
 .combatant-header h4 {
     margin: 0;
     font-size: 1.2em;
@@ -298,12 +341,14 @@ input[type="number"] {
     text-overflow: ellipsis;
     cursor: help;
 }
+
 .header-right-group {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
 }
+
 .header-right-group .header-stat {
     font-size: 0.9em;
     background-color: #5a5a5a;
@@ -311,6 +356,7 @@ input[type="number"] {
     border-radius: 4px;
     white-space: nowrap;
 }
+
 .header-right-group button {
     background: none;
     border: none;
@@ -325,6 +371,7 @@ input[type="number"] {
     gap: 10px;
     margin-bottom: 8px;
 }
+
 .main-controls .attack-roll-btn {
     flex-grow: 1;
 }
@@ -340,18 +387,21 @@ input[type="number"] {
     flex-wrap: wrap;
     margin-bottom: 8px;
 }
+
 .condition-tags {
     display: flex;
     gap: 5px;
     flex-wrap: wrap;
 }
+
 .condition-tag {
     color: white;
     padding: 3px 8px;
     border-radius: 12px;
     font-size: 0.9em;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
 }
+
 .remove-condition-btn {
     background: #793d22;
     color: white;
@@ -390,7 +440,7 @@ input[type="number"] {
     font-size: 11px;
     white-space: pre-wrap;
     border: 1px solid #555;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 .has-tooltip:hover .tooltip-text {
@@ -411,14 +461,18 @@ input[type="number"] {
     font-size: 0.85em;
     color: #bbb;
 }
-.saves-grid, .scores-grid {
+
+.saves-grid,
+.scores-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 5px;
 }
+
 .scores-grid {
     margin-bottom: 10px;
 }
+
 .stat-roll-btn {
     background-color: #3c3c3c;
     border: 1px solid #555;
@@ -439,20 +493,26 @@ input[type="number"] {
     align-items: center;
     overflow: hidden;
 }
-.hp-bar-current, .hp-bar-temp {
+
+.hp-bar-current,
+.hp-bar-temp {
     height: 100%;
     position: absolute;
     left: 0;
     top: 0;
     transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out;
 }
+
 .hp-bar-temp {
-    background-color: rgba(108, 117, 125, 0.7); /* A semi-transparent grey for temp hp */
+    background-color: rgba(108, 117, 125, 0.7);
+    /* A semi-transparent grey for temp hp */
     z-index: 2;
 }
+
 .hp-bar-current {
     z-index: 1;
 }
+
 .hp-bar-text {
     position: relative;
     z-index: 3;
@@ -474,21 +534,26 @@ input[type="number"] {
     gap: 8px;
     flex-direction: column;
 }
-.popup-dialog input, .popup-dialog select {
+
+.popup-dialog input,
+.popup-dialog select {
     background-color: #2a2a2a;
     color: #fff;
     border: 1px solid #666;
 }
+
 .popup-results-list {
     display: flex;
     flex-direction: column;
     max-height: 200px;
     overflow-y: auto;
 }
+
 .popup-result-item {
     padding: 8px;
     cursor: pointer;
 }
+
 .popup-result-item:hover {
     background-color: #5a5a5a;
 }
@@ -497,49 +562,61 @@ input[type="number"] {
 .mob-rules-popup {
     padding: 10px;
     max-width: 500px;
-    position: relative; /* For positioning the push button */
+    position: relative;
+    /* For positioning the push button */
 }
+
 .mob-rules-popup h4 {
     margin-top: 0;
     margin-bottom: 5px;
     color: #ddd;
 }
+
 .mob-rules-table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 10px;
     font-size: 0.9em;
 }
-.mob-rules-table th, .mob-rules-table td {
+
+.mob-rules-table th,
+.mob-rules-table td {
     border: 1px solid #444;
     padding: 4px 6px;
     text-align: center;
 }
+
 .mob-rules-table th {
     background-color: #3a3f44;
 }
+
 .mob-rules-popup .footnote {
     font-size: 0.8em;
     color: #aaa;
     margin-top: 5px;
     text-align: center;
 }
+
 #push-mob-rules-btn {
     position: absolute;
     top: 5px;
     right: 5px;
 }
 
-
 /* --- Soundboard Styles --- */
 #soundboard-container {
-    flex-shrink: 0; /* Prevent it from shrinking */
+    flex-shrink: 0;
+    /* Prevent it from shrinking */
+    min-height: 140px;
+    /* Ensure sufficient space for buttons and text */
 }
+
 #soundboard-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
 }
+
 .soundboard-slot {
     display: flex;
     flex-direction: column;
@@ -547,7 +624,10 @@ input[type="number"] {
     background-color: #3c3c3c;
     border-radius: 6px;
     padding: 8px;
+    overflow: hidden;
+    /* Contain text */
 }
+
 .soundboard-play-btn {
     font-size: 1.5em;
     width: 100%;
@@ -555,20 +635,46 @@ input[type="number"] {
     padding: 10px;
     background-color: #4f5b66;
     border: 1px solid #666;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
+
+.soundboard-track-name {
+    font-size: 0.8em;
+    margin-top: 5px;
+    color: #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    text-align: center;
+    height: 1.2em;
+    /* fixed height to avoid layout shift */
+}
+
 .soundboard-slot-controls {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
+    /* Align delete button to right */
     align-items: center;
     width: 100%;
     margin-top: 5px;
     font-size: 0.8em;
 }
+
 .soundboard-unload-btn {
     background: none;
     border: none;
     color: #ff4d4d;
     font-size: 1.2em;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.soundboard-unload-btn:disabled {
+    color: #555;
+    cursor: default;
 }
 
 .reminders-popup {
@@ -576,6 +682,7 @@ input[type="number"] {
     flex-direction: column;
     gap: 8px;
 }
+
 .reminders-popup textarea {
     width: 250px;
     height: 60px;
@@ -617,7 +724,8 @@ input:disabled {
     align-items: center;
     gap: 8px;
     flex-grow: 1;
-    min-width: 0; /* Ensures text-overflow works correctly in a flex container */
+    min-width: 0;
+    /* Ensures text-overflow works correctly in a flex container */
 }
 
 .combatant-name-group h4 {
@@ -628,22 +736,23 @@ input:disabled {
 }
 
 /* Override for existing h4 to remove flex-grow */
-.combatant-header .combatant-name-group + .header-right-group {
-    /* This empty rule is just to show structure, no change needed here */
-}
+/* .combatant-header .combatant-name-group+.header-right-group {} - Removed empty rule */
 
 .combatant-header h4 {
-    flex-grow: 0; /* Remove grow from h4 itself */
+    flex-grow: 0;
+    /* Remove grow from h4 itself */
 }
 
 .interactive-stat {
-    background-color: #007bff; /* A distinct blue color */
+    background-color: #007bff;
+    /* A distinct blue color */
     cursor: pointer;
     transition: background-color 0.2s;
 }
 
 .interactive-stat:hover {
-    background-color: #0056b3; /* A darker blue on hover */
+    background-color: #0056b3;
+    /* A darker blue on hover */
 }
 
 /* --- Stat Block Table --- */
@@ -653,10 +762,100 @@ input:disabled {
     border-collapse: collapse;
     margin: 10px 0;
 }
-.stat-block-table th, .stat-block-table td {
+
+.stat-block-table th,
+.stat-block-table td {
     border: 1px solid #444;
     padding: 5px;
 }
+
 .stat-block-table th {
     background-color: #333;
+}
+
+/* --- Soundboard Stack Styles --- */
+
+.soundboard-stack-slot {
+    background-color: #2b3035;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.stack-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.stack-emoji-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+}
+
+.stack-emoji-btn:hover {
+    transform: scale(1.1);
+}
+
+.stack-info {
+    font-size: 0.8rem;
+    color: #aaa;
+}
+
+.stack-controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 2px;
+}
+
+.stack-btn {
+    background-color: #3a3f44;
+    border: 1px solid #555;
+    color: #ddd;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    flex: 1;
+    /* Distribute space evenly */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.stack-btn:hover:not(:disabled) {
+    background-color: #4e555b;
+}
+
+.stack-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.stack-btn.active {
+    background-color: #28a745;
+    /* Green for active toggle */
+    border-color: #28a745;
+    color: white;
+}
+
+.stack-track-display {
+    background-color: #1a1d20;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 0.85rem;
+    color: #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    margin-top: 4px;
 }

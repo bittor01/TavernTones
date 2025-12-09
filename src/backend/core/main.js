@@ -1,12 +1,8 @@
-console.log('Main.js script started');
 const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
-console.log('Electron loaded.');
 const path = require('path');
-console.log('Path loaded.');
-const { Client, GatewayIntentBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, StringSelectMenuBuilder } = require('discord.js');
-console.log('Discord.js Client loaded.');
+const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
 const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
-console.log('Discord.js Voice loaded.');
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
 client.npcDropdownHandlers = new Map();
 console.log('Discord client instantiated.');
@@ -19,7 +15,7 @@ const { getDiscordConfig, setDiscordConfig } = require('./config.js');
 const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
 const { mobRules } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
-const fs = require('fs').promises;
+const fs = require('fs');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 
 let discordConfig;
@@ -190,6 +186,11 @@ async function apploader() {
         });
         console.log('App is ready.');
 
+        // Initialize components
+        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
+        ipcloader(); // Load all IPC handlers BEFORE creating window
+        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
+
         // Create the main window first, so we can show dialogs.
         // Don't show it yet if we might need to show the settings window first.
         await createWindow(false);
@@ -214,11 +215,6 @@ async function apploader() {
         // If we've reached here, paths are configured, so we can show the main window.
         mainWindow.maximize();
         mainWindow.show();
-
-        // Initialize components
-        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
-        ipcloader(); // Load all IPC handlers
-        fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
         // Handle Discord Bot setup.
         if (!discordConfig || !discordConfig.token) {
@@ -336,8 +332,8 @@ function formatStatBlockForDiscord(monster) {
         return entries.map(e => {
             if (typeof e === 'string') return e;
             if (e.name && e.entries) {
-                 const entryText = e.entries.join(' ').replace(/{@(dice|damage|hit) ([^}]+)}/g, '($2)');
-                 return `**_${e.name}._** ${entryText}`;
+                const entryText = e.entries.join(' ').replace(/{@(dice|damage|hit) ([^}]+)}/g, '($2)');
+                return `**_${e.name}._** ${entryText}`;
             }
             return '';
         }).join('\n\n');
@@ -549,6 +545,11 @@ async function ipcloader() {
             mainWindow.webContents.send('music-player-status', status);
         }
     });
+    musicPlayer.on('sound-finished', (slotId) => {
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('sound-finished', slotId);
+        }
+    });
     initiativeTracker = new InitiativeTracker(logToRenderer, logDiceRollToRenderer, sendInitiativeUpdate, autosavePath);
     // --- All core IPC listeners should be registered after the app is ready ---
     ipcMain.on('request-initial-load', () => {
@@ -602,13 +603,133 @@ async function ipcloader() {
         });
 
         if (filePaths && filePaths.length > 0) {
-            // Here, you would typically do something with the selected file path,
-            // like sending it back to the renderer process or loading the music.
-            // For now, we'll just return it.
             return filePaths[0];
         }
         return null;
     });
+
+    // --- Soundboard IPC ---
+    ipcMain.handle('load-sound', async (event, { slotId }) => {
+        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: `Select Sound for Slot ${slotId + 1}`,
+            defaultPath: discordConfig.defaultMusicPath,
+            properties: ['openFile'],
+            filters: [
+                { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
+            ]
+        });
+
+        if (filePaths && filePaths.length > 0) {
+            return { path: filePaths[0], name: path.basename(filePaths[0]) };
+        }
+        return null;
+    });
+
+    ipcMain.on('play-sound', (event, { slotId }) => {
+        // We need the renderer to tell us WHAT file to play, or we store it in backend.
+        // The renderer state seems to hold the file path, so it should send it, 
+        // OR the renderer sends "play slot X" and the backend looks up what slot X is.
+        // But currently main.js doesn't store soundboard state. 
+        // The renderer calls 'play-sound' with { slotId }... wait.
+        // My implementation plan said: "Trigger BackendAudioPlayer.playSound(file)".
+        // BUT the renderer's `play-sound` event in the *existing code (renderer.js)* 
+        // implies it might send just ID? 
+        // Let's check renderer.js again.
+        // Actually I haven't written the renderer code yet, but the *existing* placeholder code in renderer.js:
+        // window.electron.ipcRenderer.send('play-sound', { slotId });
+        // It doesn't send the file path. Ideally the backend should know, OR the renderer should send it.
+        // To keep backend stateless regarding UI config if possible, I'll update renderer to send the path always.
+        // Updating `main.js` to expect `filePath` in the payload.
+    });
+
+    // Redoing the above block properly:
+    ipcMain.on('play-sound', (event, { slotId, filePath }) => {
+        logToRenderer(`IPC 'play-sound' slot ${slotId}, file: ${filePath}`);
+        if (filePath && musicPlayer) {
+            musicPlayer.playSound(filePath, slotId);
+            // Notify renderer of state change? 
+            // The renderer usually updates its own UI state, but if we want valid feedback:
+            mainWindow.webContents.send('soundboard-state-change', { slotId, isPlaying: true });
+        }
+    });
+
+    ipcMain.on('stop-sound', (event, { slotId }) => {
+        logToRenderer(`IPC 'stop-sound' slot ${slotId}`);
+        if (musicPlayer) {
+            musicPlayer.stopSound(slotId);
+            mainWindow.webContents.send('soundboard-state-change', { slotId, isPlaying: false });
+        }
+    });
+
+    ipcMain.on('set-soundboard-volume', (event, { volume }) => {
+        if (musicPlayer) {
+            musicPlayer.setSoundboardVolume(volume);
+        }
+    });
+
+    // --- Soundboard Persistence ---
+    const soundboardConfigPath = path.join(app.getPath('userData'), 'soundboard.json');
+
+    ipcMain.handle('get-soundboard-state', async () => {
+        try {
+            if (fs.existsSync(soundboardConfigPath)) {
+                // Using promises for reading
+                const data = await fs.promises.readFile(soundboardConfigPath, 'utf-8');
+                return JSON.parse(data);
+            }
+        } catch (error) {
+            console.error('Error loading soundboard config:', error);
+        }
+        return null;
+    });
+
+    ipcMain.on('save-soundboard-state', (event, state) => {
+        try {
+            fs.promises.writeFile(soundboardConfigPath, JSON.stringify(state, null, 2))
+                .catch(err => console.error("Error saving soundboard:", err));
+        } catch (error) {
+            console.error('Error initiating save soundboard:', error);
+        }
+    });
+
+    ipcMain.handle('save-soundboard-preset', async (event, state) => {
+        const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+            title: 'Save Soundboard Preset',
+            defaultPath: 'soundboard-preset.json',
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+
+        if (!canceled && filePath) {
+            try {
+                await fs.promises.writeFile(filePath, JSON.stringify(state, null, 2));
+                return { success: true, filePath };
+            } catch (error) {
+                console.error('Error saving preset:', error);
+                return { success: false, error: error.message };
+            }
+        }
+        return { canceled: true };
+    });
+
+    ipcMain.handle('load-soundboard-preset', async () => {
+        const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Load Soundboard Preset',
+            filters: [{ name: 'JSON', extensions: ['json'] }],
+            properties: ['openFile']
+        });
+
+        if (!canceled && filePaths.length > 0) {
+            try {
+                const data = await fs.promises.readFile(filePaths[0], 'utf-8');
+                return { success: true, state: JSON.parse(data) };
+            } catch (error) {
+                console.error('Error loading preset:', error);
+                return { success: false, error: error.message };
+            }
+        }
+        return { canceled: true };
+    });
+
 
 
     ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
@@ -827,7 +948,7 @@ async function ipcloader() {
     ipcMain.on('update-hp', (event, { creatureId, amount }) => {
         const result = initiativeTracker.updateHp(creatureId, amount);
         if (result && result.concentrationCheckDC) {
-            dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${result.creature.name} must make a DC ${result.concentrationCheckDC} Constitution saving throw.`, buttons: ['OK']});
+            dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${result.creature.name} must make a DC ${result.concentrationCheckDC} Constitution saving throw.`, buttons: ['OK'] });
         }
     });
 
@@ -858,7 +979,7 @@ async function ipcloader() {
     ipcMain.handle('get-monster-details', async (event, { name, source }) => {
         logToRenderer(`[IPC] Received "get-monster-details" for: ${name} (${source})`);
         if (!fiveEToolsParser) {
-             logToRenderer('[IPC] Parser not available.');
+            logToRenderer('[IPC] Parser not available.');
             return null;
         }
         const monster = await fiveEToolsParser.getExact('bestiary', name, source);
@@ -977,7 +1098,13 @@ async function ipcloader() {
  * It waits until the app is ready before sending the message.
  * @param {string} message - The message to log.
  */
-async function logToRenderer(message) {
+async function logToRenderer(...args) {
+    const message = args.map(arg => {
+        if (arg instanceof Error) return arg.stack || arg.message;
+        if (typeof arg === 'object') return JSON.stringify(arg);
+        return arg;
+    }).join(' ');
+
     if (isAppReady) {
         mainWindow.webContents.send('log-message', message);
     }

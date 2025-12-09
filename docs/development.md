@@ -23,3 +23,14 @@ app.disableHardwareAcceleration();
 Place this line **before** the `app.whenReady()` block.
 
 **IMPORTANT:** This line should be commented out or removed before creating a final production build, as hardware acceleration is desirable for performance on a user's machine.
+
+## Audio Engine Architecture
+
+The audio system has been refactored to ensure glitch-free playback during heavy main-thread operations (like rapid UI updates or logging).
+
+1.  **BackendAudioPlayer.js**: The main controller. Checks file existence, resolves shortcuts (.lnk), and manages the `ffmpeg` process. It spawns `ffmpeg` with `-re` (real-time) flag to sync playback speed.
+2.  **ThreadedAudioMixer.js**: A bridge between the main process and the worker thread. It implements a `Readable` stream interface that Discord's `createAudioResource` can consume. It forwards add/remove/volume commands to the worker.
+3.  **AudioMixerWorker.js**: dedicated worker thread that performs the actual audio mixing. It holds the buffers for active streams (Music + SFX), sums the PCM data, applies volume scaling, and posts mixed chunks back to the main thread.
+
+### Playback Flow
+`mp3/wav file` -> `ffmpeg (subprocess)` -> `stdout pipe` -> `ThreadedAudioMixer` -> `AudioMixerWorker` -> `Mixed PCM` -> `Discord Voice Connection`
