@@ -55,9 +55,7 @@ button:disabled {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    /* overflow-y: auto;  <-- REMOVED to allow inner containers to handle scrolling and keeping footer visible */
     overflow: hidden;
-    /* Force content to fit or scroll internally */
 }
 
 .box {
@@ -92,7 +90,6 @@ button:disabled {
     font-size: 0.9em;
     line-height: 1.4;
     white-space: pre-wrap;
-    /* Ensures text wraps */
     word-wrap: break-word;
 }
 
@@ -101,6 +98,15 @@ button:disabled {
 }
 
 /* --- Middle Column --- */
+.column-middle {
+    min-height: 0;
+}
+
+
+#turn-controls-container {
+    flex-shrink: 0;
+}
+
 #turn-controls-container .controls {
     display: flex;
     justify-content: space-between;
@@ -118,10 +124,8 @@ button:disabled {
 #initiative-list-container {
     flex-grow: 1;
     display: flex;
-    /* Add flex to make list itself grow */
     flex-direction: column;
     min-height: 0;
-    /* IMPORTANT: Allows the container to shrink below its content size, enabling scrolling */
 }
 
 #initiative-list {
@@ -137,7 +141,6 @@ button:disabled {
     border-radius: 4px;
     cursor: pointer;
     gap: 10px;
-    /* Add gap for spacing */
 }
 
 .initiative-entry.active-turn {
@@ -145,16 +148,13 @@ button:disabled {
     font-weight: bold;
 }
 
-/* Reorder elements visually using flexbox 'order' property */
 .active-chevron {
     color: #a0c8ff;
-    order: 1;
 }
 
 .initiative-score {
     font-weight: bold;
     color: #ccc;
-    order: 2;
     width: 30px;
     flex-shrink: 0;
     text-align: right;
@@ -162,35 +162,26 @@ button:disabled {
 
 .initiative-hp-bar-container {
     width: 120px;
-    /* Fixed width for alignment */
     height: 12px;
     background-color: #1e1e1e;
     border-radius: 4px;
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
-    /* Prevent from shrinking */
-    order: 3;
 }
 
 .initiative-entry .creature-name {
     flex-grow: 1;
-    /* Name takes up available space */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    order: 4;
 }
 
 .initiative-conditions {
     flex-shrink: 0;
-    /* Prevent emojis from shrinking */
     font-size: 0.9em;
     width: 80px;
-    /* Fixed width for alignment */
     text-align: left;
-    /* Align left now that it's at the end */
-    order: 5;
 }
 
 .panel-header {
@@ -211,6 +202,7 @@ button:disabled {
 .panel-header-controls {
     display: flex;
     gap: 5px;
+    align-items: center;
 }
 
 .small-btn {
@@ -239,7 +231,6 @@ button:disabled {
     align-items: center;
     gap: 5px;
     flex: 1 1 0;
-    /* Allow groups to grow and shrink */
 }
 
 .form-group label {
@@ -249,12 +240,10 @@ button:disabled {
 
 .form-group input {
     width: 100%;
-    /* Make input fill the group */
 }
 
 .name-group {
     flex-grow: 1;
-    /* Allow name to take full width */
 }
 
 .stats-grid {
@@ -505,7 +494,6 @@ input[type="number"] {
 
 .hp-bar-temp {
     background-color: rgba(108, 117, 125, 0.7);
-    /* A semi-transparent grey for temp hp */
     z-index: 2;
 }
 
@@ -558,12 +546,10 @@ input[type="number"] {
     background-color: #5a5a5a;
 }
 
-/* Mob Rules Popup */
 .mob-rules-popup {
     padding: 10px;
     max-width: 500px;
     position: relative;
-    /* For positioning the push button */
 }
 
 .mob-rules-popup h4 {
@@ -603,177 +589,16 @@ input[type="number"] {
     right: 5px;
 }
 
-/* --- Soundboard Styles --- */
+/* --- Soundboard Stack Styles --- */
 #soundboard-container {
     flex-shrink: 0;
-    /* Prevent it from shrinking */
-    min-height: 140px;
-    /* Ensure sufficient space for buttons and text */
 }
 
 #soundboard-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 5px;
 }
-
-.soundboard-slot {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background-color: #3c3c3c;
-    border-radius: 6px;
-    padding: 8px;
-    overflow: hidden;
-    /* Contain text */
-}
-
-.soundboard-play-btn {
-    font-size: 1.5em;
-    width: 100%;
-    height: 50px;
-    padding: 10px;
-    background-color: #4f5b66;
-    border: 1px solid #666;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.soundboard-track-name {
-    font-size: 0.8em;
-    margin-top: 5px;
-    color: #ccc;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-    text-align: center;
-    height: 1.2em;
-    /* fixed height to avoid layout shift */
-}
-
-.soundboard-slot-controls {
-    display: flex;
-    justify-content: flex-end;
-    /* Align delete button to right */
-    align-items: center;
-    width: 100%;
-    margin-top: 5px;
-    font-size: 0.8em;
-}
-
-.soundboard-unload-btn {
-    background: none;
-    border: none;
-    color: #ff4d4d;
-    font-size: 1.2em;
-    cursor: pointer;
-    padding: 2px;
-}
-
-.soundboard-unload-btn:disabled {
-    color: #555;
-    cursor: default;
-}
-
-.reminders-popup {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.reminders-popup textarea {
-    width: 250px;
-    height: 60px;
-    background-color: #2a2a2a;
-    color: #fff;
-    border: 1px solid #666;
-}
-
-.form-actions {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 10px;
-    gap: 10px;
-}
-
-/* --- Info Button --- */
-.info-btn {
-    cursor: pointer;
-    font-size: 1.2em;
-    color: #a0c8ff;
-    display: inline-block;
-    margin-left: 5px;
-}
-
-.info-btn:hover {
-    color: #d0e8ff;
-}
-
-/* --- Disabled Input State --- */
-input:disabled {
-    background-color: #2a2a2a;
-    color: #666;
-    cursor: not-allowed;
-}
-
-/* --- Combatant Header Name Group --- */
-.combatant-name-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-grow: 1;
-    min-width: 0;
-    /* Ensures text-overflow works correctly in a flex container */
-}
-
-.combatant-name-group h4 {
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Override for existing h4 to remove flex-grow */
-/* .combatant-header .combatant-name-group+.header-right-group {} - Removed empty rule */
-
-.combatant-header h4 {
-    flex-grow: 0;
-    /* Remove grow from h4 itself */
-}
-
-.interactive-stat {
-    background-color: #007bff;
-    /* A distinct blue color */
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.interactive-stat:hover {
-    background-color: #0056b3;
-    /* A darker blue on hover */
-}
-
-/* --- Stat Block Table --- */
-.stat-block-table {
-    width: 100%;
-    text-align: center;
-    border-collapse: collapse;
-    margin: 10px 0;
-}
-
-.stat-block-table th,
-.stat-block-table td {
-    border: 1px solid #444;
-    padding: 5px;
-}
-
-.stat-block-table th {
-    background-color: #333;
-}
-
-/* --- Soundboard Stack Styles --- */
 
 .soundboard-stack-slot {
     background-color: #2b3035;
@@ -806,11 +631,6 @@ input:disabled {
     transform: scale(1.1);
 }
 
-.stack-info {
-    font-size: 0.8rem;
-    color: #aaa;
-}
-
 .stack-controls {
     display: flex;
     justify-content: space-between;
@@ -826,7 +646,6 @@ input:disabled {
     font-size: 1rem;
     cursor: pointer;
     flex: 1;
-    /* Distribute space evenly */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -843,21 +662,91 @@ input:disabled {
 
 .stack-btn.active {
     background-color: #28a745;
-    /* Green for active toggle */
     border-color: #28a745;
     color: white;
 }
 
-.stack-track-display {
-    background-color: #1a1d20;
-    border: 1px solid #333;
-    border-radius: 4px;
-    padding: 4px 6px;
-    font-size: 0.85rem;
-    color: #eee;
+.reminders-popup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.reminders-popup textarea {
+    width: 250px;
+    height: 60px;
+    background-color: #2a2a2a;
+    color: #fff;
+    border: 1px solid #666;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 10px;
+    gap: 10px;
+}
+
+.info-btn {
+    cursor: pointer;
+    font-size: 1.2em;
+    color: #a0c8ff;
+    display: inline-block;
+    margin-left: 5px;
+}
+
+.info-btn:hover {
+    color: #d0e8ff;
+}
+
+input:disabled {
+    background-color: #2a2a2a;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.combatant-name-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.combatant-name-group h4 {
+    margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.combatant-header h4 {
+    flex-grow: 0;
+}
+
+.interactive-stat {
+    background-color: #007bff;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.interactive-stat:hover {
+    background-color: #0056b3;
+}
+
+.stat-block-table {
+    width: 100%;
     text-align: center;
-    margin-top: 4px;
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+
+.stat-block-table th,
+.stat-block-table td {
+    border: 1px solid #444;
+    padding: 5px;
+}
+
+.stat-block-table th {
+    background-color: #333;
 }

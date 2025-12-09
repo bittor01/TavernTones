@@ -609,20 +609,20 @@ async function ipcloader() {
     });
 
     // --- Soundboard IPC ---
-    ipcMain.handle('load-sound', async (event, { slotId }) => {
+    ipcMain.handle('open-soundboard-file-dialog', async () => {
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: `Select Sound for Slot ${slotId + 1}`,
+            title: 'Select Sound(s)',
             defaultPath: discordConfig.defaultMusicPath,
-            properties: ['openFile'],
+            properties: ['openFile', 'multiSelections'],
             filters: [
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
             ]
         });
 
         if (filePaths && filePaths.length > 0) {
-            return { path: filePaths[0], name: path.basename(filePaths[0]) };
+            return filePaths;
         }
-        return null;
+        return [];
     });
 
     ipcMain.on('play-sound', (event, { slotId }) => {
