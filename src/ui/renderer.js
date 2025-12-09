@@ -543,7 +543,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     window.electron.ipcRenderer.on('soundboard-state-change', (event, { slotId, isPlaying, file, emoji }) => {
-        const slot = soundboardState[slotId];
+        const slot = soundboardState.slots[slotId];
         if (slot) {
             slot.isPlaying = isPlaying;
             if (file !== undefined) slot.file = file;
@@ -760,48 +760,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Soundboard State ---
 
-    function migrateSoundboardState(savedState) {
-        if (!savedState || !Array.isArray(savedState)) return [];
-        return savedState.map((slot, index) => {
-            if (!slot.tracks) {
-                // Old format detected
-                const tracks = slot.file ? [{ path: slot.file, name: slot.name }] : [];
-                return {
+    function migrateAndInitializeState(savedState) {
+        const SOUNDBOARD_SIZE = 3;
+        let initialState = {
+            volume: 0.5,
+            slots: []
+        };
+
+        if (savedState) {
+            if (Array.isArray(savedState)) {
+                // Old format (array of slots)
+                initialState.slots = savedState.map((slot, index) => ({
+                    ...slot,
                     id: index,
-                    tracks: tracks,
-                    currentTrackIndex: 0,
-                    emoji: slot.emoji || '🎨',
-                    loop: 'none',
-                    playMode: 'sequential',
                     isPlaying: false
-                };
+                }));
+            } else if (typeof savedState === 'object' && savedState.slots) {
+                // New format (object with slots and volume)
+                initialState.volume = savedState.volume ?? 0.5;
+                initialState.slots = savedState.slots.map(slot => ({ ...slot, isPlaying: false }));
             }
-            // Reset transient flags
-            return { ...slot, isPlaying: false };
-        });
+        }
+
+        // Ensure there are always the correct number of slots
+        while (initialState.slots.length < SOUNDBOARD_SIZE) {
+            initialState.slots.push({
+                id: initialState.slots.length,
+                tracks: [],
+                currentTrackIndex: 0,
+                emoji: '🎨',
+                loop: 'none',
+                playMode: 'sequential',
+                isPlaying: false
+            });
+        }
+
+        return initialState;
     }
 
-    let soundboardState = [];
-    const SOUNDBOARD_SIZE = 3;
+    let soundboardState = migrateAndInitializeState(null); // Initialize with defaults
 
     // Load state from backend
     window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
-        if (savedState && Array.isArray(savedState) && savedState.length === SOUNDBOARD_SIZE) {
-            soundboardState = migrateSoundboardState(savedState);
-        } else {
-            // Initialize defaults
-            soundboardState = [];
-            for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
-                soundboardState.push({
-                    id: i,
-                    tracks: [],
-                    currentTrackIndex: 0,
-                    emoji: '🎨',
-                    loop: 'none',
-                    playMode: 'sequential',
-                    isPlaying: false
-                });
-            }
+        soundboardState = migrateAndInitializeState(savedState);
+        const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+        if (soundboardVolumeSlider) {
+            soundboardVolumeSlider.value = soundboardState.volume;
+            // Also update the backend mixer with the loaded volume
+            window.electron.ipcRenderer.send('set-soundboard-volume', { volume: soundboardState.volume });
         }
         renderSoundboard();
     });
@@ -824,7 +830,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadPresetBtn.addEventListener('click', () => {
             window.electron.ipcRenderer.invoke('load-soundboard-preset').then(result => {
                 if (result.success && result.state) {
-                    soundboardState = migrateSoundboardState(result.state);
+                    soundboardState = migrateAndInitializeState(result.state);
                     saveSoundboardState();
                     renderSoundboard();
                 }
@@ -841,8 +847,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         emojiDialog.addEventListener('close', () => {
             if (emojiDialog.returnValue === 'default') {
                 const newEmoji = emojiInput.value;
-                if (currentEditingSlotId !== null && soundboardState[currentEditingSlotId]) {
-                    soundboardState[currentEditingSlotId].emoji = newEmoji || '🎨';
+                if (currentEditingSlotId !== null && soundboardState.slots[currentEditingSlotId]) {
+                    soundboardState.slots[currentEditingSlotId].emoji = newEmoji || '🎨';
                     saveSoundboardState();
                     renderSoundboard();
                 }
@@ -852,9 +858,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function openEmojiPicker(slotId) {
-        if (emojiDialog && soundboardState[slotId]) {
+        if (emojiDialog && soundboardState.slots[slotId]) {
             currentEditingSlotId = slotId;
-            emojiInput.value = soundboardState[slotId].emoji;
+            emojiInput.value = soundboardState.slots[slotId].emoji;
             emojiDialog.showModal();
         }
     }
@@ -868,7 +874,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const grid = document.getElementById('soundboard-grid');
         grid.innerHTML = '';
 
-        soundboardState.forEach(slot => {
+        soundboardState.slots.forEach(slot => {
             const slotDiv = document.createElement('div');
             slotDiv.className = 'soundboard-stack-slot';
 
@@ -879,7 +885,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const loopClass = slot.loop === 'stack' ? 'active' : '';
             const shuffleIcon = '🔀';
             const shuffleClass = slot.playMode === 'shuffle' ? 'active' : '';
-            const playIcon = slot.isPlaying ? '⏹️' : '⏯️';
+            const playIcon = slot.isPlaying ? '⏹️' : '▶️';
 
             let addOrCountIcon;
             if (trackCount === 0) {
@@ -930,7 +936,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.stack-loop-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
-                const slot = soundboardState[slotId];
+                const slot = soundboardState.slots[slotId];
                 slot.loop = slot.loop === 'none' ? 'stack' : 'none';
                 saveSoundboardState();
                 renderSoundboard();
@@ -941,7 +947,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.stack-shuffle-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
-                const slot = soundboardState[slotId];
+                const slot = soundboardState.slots[slotId];
                 slot.playMode = slot.playMode === 'sequential' ? 'shuffle' : 'sequential';
                 saveSoundboardState();
                 renderSoundboard();
@@ -952,16 +958,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.stack-add-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
-                window.electron.ipcRenderer.invoke('open-file-dialog').then(filePath => {
-                    if (filePath) {
-                        // We need the name. We can guess from path or ask backend. 
-                        // open-file-dialog returns path. Path manipulation in renderer is possible if nodeIntegration true.
-                        // Or we can invoke 'load-sound' logic which returns object?
-                        // Let's use a helper invocation to get name or just parse str string split.
-                        // Since nodeIntegration is true (per warnings earlier), we might have path module?
-                        // Usually safer to just split string.
-                        const name = filePath.replace(/^.*[\\\/]/, '');
-                        soundboardState[slotId].tracks.push({ path: filePath, name: name });
+                window.electron.ipcRenderer.invoke('open-soundboard-file-dialog').then(filePaths => {
+                    if (filePaths && filePaths.length > 0) {
+                        const newTracks = filePaths.map(filePath => ({
+                            path: filePath,
+                            name: filePath.replace(/^.*[\\\/]/, '')
+                        }));
+                        soundboardState.slots[slotId].tracks.push(...newTracks);
                         saveSoundboardState();
                         renderSoundboard();
                     }
@@ -974,9 +977,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
                 window.electron.ipcRenderer.send('stop-sound', { slotId });
-                soundboardState[slotId].tracks = [];
-                soundboardState[slotId].currentTrackIndex = 0;
-                soundboardState[slotId].isPlaying = false;
+                soundboardState.slots[slotId].tracks = [];
+                soundboardState.slots[slotId].currentTrackIndex = 0;
+                soundboardState.slots[slotId].isPlaying = false;
                 saveSoundboardState();
                 renderSoundboard();
             });
@@ -984,7 +987,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function togglePlay(slotId) {
-        const slot = soundboardState[slotId];
+        const slot = soundboardState.slots[slotId];
         if (slot.tracks.length === 0) return;
 
         if (slot.isPlaying) {
@@ -1003,35 +1006,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Handle Sound Finished (Auto-Advance)
     window.electron.ipcRenderer.on('sound-finished', (event, finishedSlotId) => {
-        // Warning: slotId from backend might be string or number? Main usually sends what play-sound got.
-        // It was passed as integer in play-sound logic usually. 
         const slotId = parseInt(finishedSlotId, 10);
-        const slot = soundboardState[slotId];
+        const slot = soundboardState.slots[slotId];
         if (!slot) return;
 
-        // Logic:
-        // 1. Mark current not playing
         slot.isPlaying = false;
 
-        // 2. Advance Index
         if (slot.playMode === 'shuffle') {
             slot.currentTrackIndex = Math.floor(Math.random() * slot.tracks.length);
         } else {
             slot.currentTrackIndex = (slot.currentTrackIndex + 1) % slot.tracks.length;
         }
 
-        // 3. Check Loop Mode
         if (slot.loop === 'stack') {
-            // Auto-play next
             const nextTrack = slot.tracks[slot.currentTrackIndex];
             window.electron.ipcRenderer.send('play-sound', { slotId, filePath: nextTrack.path });
             slot.isPlaying = true;
-        } else {
-            // Stop (but we already advanced the index for next manual press)
-            // Just update UI
         }
         renderSoundboard();
     });
+
+    // --- Volume Control ---
+    const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+    if (soundboardVolumeSlider) {
+        soundboardVolumeSlider.addEventListener('input', (e) => {
+            const volume = parseFloat(e.target.value);
+            soundboardState.volume = volume;
+            window.electron.ipcRenderer.send('set-soundboard-volume', { volume });
+            saveSoundboardState(); // Autosave on volume change
+        });
+    }
 
     function renderInitiativeList(initiativeOrder, currentTurnIndex) {
         initiativeListDiv.innerHTML = '';
