@@ -789,7 +789,7 @@ input:disabled {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 4px;
+    gap: 2px;
 }
 
 .stack-emoji-btn {
@@ -798,6 +798,8 @@ input:disabled {
     font-size: 1.5rem;
     cursor: pointer;
     padding: 0;
+    flex-grow: 1;
+    text-align: left;
 }
 
 .stack-emoji-btn:hover {

@@ -873,31 +873,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             slotDiv.className = 'soundboard-stack-slot';
 
             const trackCount = slot.tracks.length;
-            const currentTrack = trackCount > 0 ? slot.tracks[slot.currentTrackIndex] : null;
-            const trackName = currentTrack ? currentTrack.name : 'Empty Stack';
 
-            // Loop Icon state
+            // --- Icon Logic ---
             const loopIcon = '🔁';
             const loopClass = slot.loop === 'stack' ? 'active' : '';
-
-            // Shuffle Icon state
             const shuffleIcon = '🔀';
             const shuffleClass = slot.playMode === 'shuffle' ? 'active' : '';
-
-            // Play Icon state
             const playIcon = slot.isPlaying ? '⏹️' : '⏯️';
+
+            let addOrCountIcon;
+            if (trackCount === 0) {
+                addOrCountIcon = '➕';
+            } else if (trackCount > 9) {
+                addOrCountIcon = '♾️';
+            } else {
+                addOrCountIcon = trackCount.toString();
+            }
+
 
             slotDiv.innerHTML = `
                 <div class="stack-header">
                     <button class="stack-emoji-btn" data-id="${slot.id}" title="Edit Emoji">${slot.emoji}</button>
-                    <span class="stack-info">${trackCount} tracks</span>
+                    <button class="stack-btn stack-add-btn" data-id="${slot.id}" title="Add Sound">${addOrCountIcon}</button>
+                    <button class="stack-btn stack-clear-btn" data-id="${slot.id}" title="Clear Stack">🗑️</button>
                 </div>
                 <div class="stack-controls">
                     <button class="stack-btn stack-play-btn" data-id="${slot.id}" title="Play/Pause" ${trackCount === 0 ? 'disabled' : ''}>${playIcon}</button>
                     <button class="stack-btn stack-loop-btn ${loopClass}" data-id="${slot.id}" title="Toggle Loop (Stack)">${loopIcon}</button>
                     <button class="stack-btn stack-shuffle-btn ${shuffleClass}" data-id="${slot.id}" title="Toggle Shuffle">${shuffleIcon}</button>
-                    <button class="stack-btn stack-add-btn" data-id="${slot.id}" title="Add Sound">➕</button>
-                    <button class="stack-btn stack-clear-btn" data-id="${slot.id}" title="Clear Stack">🗑️</button>
                 </div>
             `;
             grid.appendChild(slotDiv);
