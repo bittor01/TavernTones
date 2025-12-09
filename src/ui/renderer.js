@@ -952,16 +952,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.stack-add-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
-                window.electron.ipcRenderer.invoke('open-file-dialog').then(filePath => {
-                    if (filePath) {
-                        // We need the name. We can guess from path or ask backend. 
-                        // open-file-dialog returns path. Path manipulation in renderer is possible if nodeIntegration true.
-                        // Or we can invoke 'load-sound' logic which returns object?
-                        // Let's use a helper invocation to get name or just parse str string split.
-                        // Since nodeIntegration is true (per warnings earlier), we might have path module?
-                        // Usually safer to just split string.
-                        const name = filePath.replace(/^.*[\\\/]/, '');
-                        soundboardState[slotId].tracks.push({ path: filePath, name: name });
+                window.electron.ipcRenderer.invoke('open-soundboard-file-dialog').then(filePaths => {
+                    if (filePaths && filePaths.length > 0) {
+                        filePaths.forEach(filePath => {
+                            const name = filePath.replace(/^.*[\\\/]/, '');
+                            soundboardState[slotId].tracks.push({ path: filePath, name: name });
+                        });
                         saveSoundboardState();
                         renderSoundboard();
                     }
