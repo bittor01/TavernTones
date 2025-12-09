@@ -40,12 +40,8 @@ Contains the core backend logic and feature modules.
 - **`NpcGenerator.js`**: A class for procedurally generating character and NPC concepts.
 - **`VehicleEncounterBuilder.js`**: A class for generating vehicle-based encounters.
 
-#### Other Scripts
-- **`deprep.js`**: A simple script used for debugging. It generates and prints a dependency report for the `@discordjs/voice` library to help diagnose audio-related issues.
-- **`extract_background_data.js`**: A utility script to extract character origin data (traits, ideals, etc.) from `backgrounds.json` and save them into separate files in `randomtables/origin`.
-
-### `src/jsontool`
-Contains all files for the standalone JSON Gamify Tool.
+### `tools/json-gamify`
+Contains all files for the standalone JSON Gamify Tool. This tool is not part of the main application but is kept in the repository as a utility.
 - **`json-gamify.html`**: The HTML structure for the tool.
 - **`json-gamify.js`**: The frontend logic for the tool.
 - **`json-gamify.css`**: The stylesheet for the tool.
@@ -57,11 +53,9 @@ Contains all files for the standalone JSON Gamify Tool.
 ### Root Directory
 - **`package.json`**: The standard Node.js project file, defining dependencies and scripts.
 - **`TavernTones.code-workspace`**: The VS Code workspace configuration file.
-- **`gamify-settings.json`**, **`deck-editing-task.json`**, **`spell-item-types-task.json`**: Configuration and task files for the JSON Gamify tool.
 
 ### `resources/`
-- **`5etoolsdata/`**: Contains a vast collection of JSON files from the `5etools` project. This is the primary data source for most search and generation commands.
-- **`threedragonanteimages/`**: Contains the card images for the Three-Dragon Ante game.
+- **`5etoolsdata/`**: Contains a vast collection of JSON files from the `5etools` project. This is the primary data source for the Initiative Tracker's monster search functionality.
 
 ### `randomtables/`
-This directory contains custom JSON files that are used as weighted tables for various random generation features like `!ro`, `!su`, `!sh`, and the `MagicItemGenerator`.
+This directory contains custom JSON files that are used as weighted tables for the `!ro`, `!su`, and `!sh` random table commands.

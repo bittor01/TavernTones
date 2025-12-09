@@ -13,8 +13,19 @@ let lastResponse;
 let BOT_ROLE_ID;
 let DEFAULT_LOCAL_FOLDER;
 
-
+/**
+ * Handles incoming messages from Discord, parsing them for commands and executing
+ * the appropriate actions.
+ */
 class CommandHandler {
+    /**
+     * Creates an instance of CommandHandler.
+     * @param {Client} client - The Discord client instance.
+     * @param {function(string):void} logToRendererInstance - Function to log messages to the renderer.
+     * @param {BackendAudioPlayer} musicPlayerInstance - The music player instance.
+     * @param {object} config - The application configuration object.
+     * @param {FiveEToolsParser} fiveEToolsParserInstance - The 5eTools data parser instance.
+     */
     constructor(client, logToRendererInstance, musicPlayerInstance, config, fiveEToolsParserInstance) {
         this.client = client;
         logToRenderer = logToRendererInstance;
@@ -31,6 +42,11 @@ class CommandHandler {
         this.randomTablesPath = this.config.randomTablesPath;
     }
 
+    /**
+     * Sends a formatted help message to the Discord channel, listing available commands.
+     * @param {Message} message - The Discord message object that triggered the command.
+     * @private
+     */
     async _sendHelpEmbed(message) {
         const helpEmbed = new EmbedBuilder()
             .setColor(0x0099FF)
@@ -38,7 +54,6 @@ class CommandHandler {
             .setDescription('To use any command, be sure to @me!')
             .addFields(
                 { name: '!ping', value: 'Test to see if the bot is working.' },
-                { name: '!monster <query>', value: 'Search for a monster by name to add to the initiative tracker.' },
                 { name: '!su (!surge)', value: 'Roll on the Wild Magic Surge table.' },
                 { name: '!sh (!shield)', value: 'Roll on the Wild Magic Shield table.' },
                 { name: '!ro (!roll)', value: 'Roll on random tables. Provide the folder name, then the number of rolls you want to make, then an arbitrary number of weights and tables in pairs. Can be used for things like random weather, random loot, random spells, etc. Example usage: `!ro spells 3 8 lvl1 4 lvl2 2 lvl3 1 lvl4`' },
@@ -56,38 +71,10 @@ class CommandHandler {
         await message.reply({ embeds: [helpEmbed] });
     }
 
-    async _handle5eSearch(message, results, query) {
-        if (!results || results.length === 0) {
-            await message.reply(`I couldn't find anything matching "${query}".`);
-            return;
-        }
-
-        if (results.length > 25) {
-            await message.reply(`I found over 25 results for "${query}". Please be more specific.`);
-            return;
-        }
-
-        const options = results.map(item => ({
-            label: item.name,
-            description: `Category: ${item.category.charAt(0).toUpperCase() + item.category.slice(1)} | Source: ${item.source}`,
-            value: `${item.category}__${item.source}__${item.name}`.substring(0, 100)
-        }));
-
-        const selectMenu = new StringSelectMenuBuilder()
-            .setCustomId('5e-result-select')
-            .setPlaceholder('Select an item to view details')
-            .addOptions(options);
-
-        const row = new ActionRowBuilder().addComponents(selectMenu);
-
-        const embed = new EmbedBuilder()
-            .setColor(0x0099FF)
-            .setTitle(`Search Results for "${query}"`)
-            .setDescription(`I found ${results.length} results. Please select one from the dropdown below.`);
-
-        await message.reply({ embeds: [embed], components: [row] });
-    }
-
+    /**
+     * Processes an incoming Discord message, checking for mentions and command triggers.
+     * @param {Message} message - The Discord message object to process.
+     */
     async handleMessage(message) {
         // Ignore messages from the bot itself
         if (message.author.bot) {
@@ -112,18 +99,6 @@ class CommandHandler {
                         await message.reply('Pong!');
                         logToRenderer('Ping successfully ponged.');
                         break;
-
-                    case content.startsWith('!monster'): {
-                        logToRenderer('Monster command detected');
-                        const query = content.substring('!monster'.length).trim();
-                        if (!query) {
-                            await message.reply('Please provide a search term. Usage: `@Bot !monster <monster name>`');
-                            break;
-                        }
-                        const results = await this.fiveEToolsParser.searchByName('bestiary', query);
-                        await this._handle5eSearch(message, results, query);
-                        break;
-                    }
 
                     case content.startsWith('!su'):
                         logToRenderer('Surge command detected');
@@ -434,6 +409,10 @@ class CommandHandler {
         }
     }
 
+    /**
+     * Gets a list of valid subdirectories within the randomtables folder.
+     * @returns {string[]} An array of folder names.
+     */
     getValidTableFolders() {
         const randomTablesPath = this.randomTablesPath;
         try {
@@ -448,6 +427,13 @@ class CommandHandler {
         }
     }
 
+    /**
+     * Rolls on a weighted selection of random tables from a specified folder.
+     * @param {string} folderName - The subfolder within randomtables to use.
+     * @param {Array<{weight: number, tableName: string}>} tablesConfig - The configuration of tables to roll on.
+     * @param {string} channelId - The ID of the channel where the roll was initiated.
+     * @returns {Promise<{success: boolean, text?: string, message?: string}>} The result of the roll.
+     */
     async rollFromTable(folderName, tablesConfig, channelId) {
         const encounterTablesFolder = path.join(this.randomTablesPath, folderName);
         const missingTables = [];
@@ -540,6 +526,12 @@ class CommandHandler {
         return { success: true, text: effect.text };
     }
 
+    /**
+     * Finds a music file based on a folder and optional song name.
+     * @param {string | null} folderSearchTerm - The term to search for in folder names. Defaults to 'chill'.
+     * @param {string | null} songSearchTerm - The term to search for in song names. If null, a random song is chosen.
+     * @returns {Promise<string | null>} The full path to the music file, or null if not found.
+     */
     async findMusic(folderSearchTerm, songSearchTerm) {
         logToRenderer(`findMusic: Initiating search with folderSearchTerm='${folderSearchTerm}', songSearchTerm='${songSearchTerm}'.`);
 

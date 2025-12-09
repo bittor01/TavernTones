@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             mobControls.style.display = 'flex';
             convertToMobBtn.textContent = 'Convert to Single';
             if (!mobSizeInput.value) mobSizeInput.value = 5;
-             // We don't change the HP input value anymore. It stays as the formula.
+            // We don't change the HP input value anymore. It stays as the formula.
         } else {
             // When converting FROM a mob, restore the single creature HP formula.
             mobControls.style.display = 'none';
@@ -758,69 +758,280 @@ document.addEventListener('DOMContentLoaded', async () => {
         addCreatureForm.dataset.monsterRawData = fullStatBlock;
     }
 
-    renderSoundboard();
-
     // --- Soundboard State ---
-    let soundboardState = [];
-    const SOUNDBOARD_SIZE = 9;
 
-    for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
-        soundboardState.push({ id: i, file: null, emoji: '➕', loop: false, isPlaying: false });
+    function migrateSoundboardState(savedState) {
+        if (!savedState || !Array.isArray(savedState)) return [];
+        return savedState.map((slot, index) => {
+            if (!slot.tracks) {
+                // Old format detected
+                const tracks = slot.file ? [{ path: slot.file, name: slot.name }] : [];
+                return {
+                    id: index,
+                    tracks: tracks,
+                    currentTrackIndex: 0,
+                    emoji: slot.emoji || '🎨',
+                    loop: 'none',
+                    playMode: 'sequential',
+                    isPlaying: false
+                };
+            }
+            // Reset transient flags
+            return { ...slot, isPlaying: false };
+        });
+    }
+
+    let soundboardState = [];
+    const SOUNDBOARD_SIZE = 3;
+
+    // Load state from backend
+    window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
+        if (savedState && Array.isArray(savedState) && savedState.length === SOUNDBOARD_SIZE) {
+            soundboardState = migrateSoundboardState(savedState);
+        } else {
+            // Initialize defaults
+            soundboardState = [];
+            for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
+                soundboardState.push({
+                    id: i,
+                    tracks: [],
+                    currentTrackIndex: 0,
+                    emoji: '🎨',
+                    loop: 'none',
+                    playMode: 'sequential',
+                    isPlaying: false
+                });
+            }
+        }
+        renderSoundboard();
+    });
+
+    // --- Preset Buttons ---
+    const savePresetBtn = document.getElementById('save-preset-btn');
+    const loadPresetBtn = document.getElementById('load-preset-btn');
+
+    if (savePresetBtn) {
+        savePresetBtn.addEventListener('click', () => {
+            window.electron.ipcRenderer.invoke('save-soundboard-preset', soundboardState).then(result => {
+                if (result.success) {
+                    console.log('Saved preset to', result.filePath);
+                }
+            });
+        });
+    }
+
+    if (loadPresetBtn) {
+        loadPresetBtn.addEventListener('click', () => {
+            window.electron.ipcRenderer.invoke('load-soundboard-preset').then(result => {
+                if (result.success && result.state) {
+                    soundboardState = migrateSoundboardState(result.state);
+                    saveSoundboardState();
+                    renderSoundboard();
+                }
+            });
+        });
+    }
+
+    // --- Emoji Picker Logic ---
+    const emojiDialog = document.getElementById('emoji-picker-dialog');
+    const emojiInput = document.getElementById('emoji-input');
+    let currentEditingSlotId = null;
+
+    if (emojiDialog) {
+        emojiDialog.addEventListener('close', () => {
+            if (emojiDialog.returnValue === 'default') {
+                const newEmoji = emojiInput.value;
+                if (currentEditingSlotId !== null && soundboardState[currentEditingSlotId]) {
+                    soundboardState[currentEditingSlotId].emoji = newEmoji || '🎨';
+                    saveSoundboardState();
+                    renderSoundboard();
+                }
+            }
+            currentEditingSlotId = null;
+        });
+    }
+
+    function openEmojiPicker(slotId) {
+        if (emojiDialog && soundboardState[slotId]) {
+            currentEditingSlotId = slotId;
+            emojiInput.value = soundboardState[slotId].emoji;
+            emojiDialog.showModal();
+        }
+    }
+
+    function saveSoundboardState() {
+        window.electron.ipcRenderer.send('save-soundboard-state', soundboardState);
     }
 
     // --- Render Functions ---
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
         grid.innerHTML = '';
+
         soundboardState.forEach(slot => {
-            const controlSet = document.createElement('div');
-            controlSet.className = 'soundboard-slot';
-            controlSet.innerHTML = `
-                <button class="soundboard-play-btn" data-id="${slot.id}">${slot.isPlaying ? '⏹️' : slot.emoji}</button>
-                <div class="soundboard-slot-controls">
-                    <input type="checkbox" id="loop-${slot.id}" data-id="${slot.id}" class="soundboard-loop-cb" ${slot.loop ? 'checked' : ''}>
-                    <label for="loop-${slot.id}">Loop</label>
-                    <button class="soundboard-unload-btn" data-id="${slot.id}" ${!slot.file ? 'disabled' : ''}>🗑️</button>
+            const slotDiv = document.createElement('div');
+            slotDiv.className = 'soundboard-stack-slot';
+
+            const trackCount = slot.tracks.length;
+
+            // --- Icon Logic ---
+            const loopIcon = '🔁';
+            const loopClass = slot.loop === 'stack' ? 'active' : '';
+            const shuffleIcon = '🔀';
+            const shuffleClass = slot.playMode === 'shuffle' ? 'active' : '';
+            const playIcon = slot.isPlaying ? '⏹️' : '⏯️';
+
+            let addOrCountIcon;
+            if (trackCount === 0) {
+                addOrCountIcon = '➕';
+            } else if (trackCount > 9) {
+                addOrCountIcon = '♾️';
+            } else {
+                addOrCountIcon = trackCount.toString();
+            }
+
+
+            slotDiv.innerHTML = `
+                <div class="stack-header">
+                    <button class="stack-emoji-btn" data-id="${slot.id}" title="Edit Emoji">${slot.emoji}</button>
+                    <button class="stack-btn stack-add-btn" data-id="${slot.id}" title="Add Sound">${addOrCountIcon}</button>
+                    <button class="stack-btn stack-clear-btn" data-id="${slot.id}" title="Clear Stack">🗑️</button>
+                </div>
+                <div class="stack-controls">
+                    <button class="stack-btn stack-play-btn" data-id="${slot.id}" title="Play/Pause" ${trackCount === 0 ? 'disabled' : ''}>${playIcon}</button>
+                    <button class="stack-btn stack-loop-btn ${loopClass}" data-id="${slot.id}" title="Toggle Loop (Stack)">${loopIcon}</button>
+                    <button class="stack-btn stack-shuffle-btn ${shuffleClass}" data-id="${slot.id}" title="Toggle Shuffle">${shuffleIcon}</button>
                 </div>
             `;
-            grid.appendChild(controlSet);
+            grid.appendChild(slotDiv);
         });
 
-        // Add listeners after rendering
-        document.querySelectorAll('.soundboard-play-btn').forEach(btn => {
+        attachSoundboardListeners();
+    }
+
+    function attachSoundboardListeners() {
+        // Emoji
+        document.querySelectorAll('.stack-emoji-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const slotId = parseInt(e.target.dataset.id, 10);
+                openEmojiPicker(slotId);
+            });
+        });
+
+        // Play/Pause
+        document.querySelectorAll('.stack-play-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const slotId = parseInt(e.target.dataset.id, 10);
+                togglePlay(slotId);
+            });
+        });
+
+        // Loop Toggle
+        document.querySelectorAll('.stack-loop-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
                 const slot = soundboardState[slotId];
-                if (slot.isPlaying) {
-                    window.electron.ipcRenderer.send('stop-sound', { slotId });
-                } else if (slot.file) {
-                    window.electron.ipcRenderer.send('play-sound', { slotId });
-                } else {
-                    window.electron.ipcRenderer.invoke('load-sound', { slotId }).then(result => {
-                        if (result) {
-                            soundboardState[slotId].file = result.file;
-                            soundboardState[slotId].emoji = result.emoji;
-                            renderSoundboard();
-                        }
-                    });
-                }
+                slot.loop = slot.loop === 'none' ? 'stack' : 'none';
+                saveSoundboardState();
+                renderSoundboard();
             });
         });
-        document.querySelectorAll('.soundboard-loop-cb').forEach(cb => {
-            cb.addEventListener('change', (e) => {
-                const slotId = parseInt(e.target.dataset.id, 10);
-                const loop = e.target.checked;
-                soundboardState[slotId].loop = loop;
-                window.electron.ipcRenderer.send('set-loop', { slotId, loop });
-            });
-        });
-        document.querySelectorAll('.soundboard-unload-btn').forEach(btn => {
+
+        // Shuffle Toggle
+        document.querySelectorAll('.stack-shuffle-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
-                window.electron.ipcRenderer.send('unload-sound', { slotId });
+                const slot = soundboardState[slotId];
+                slot.playMode = slot.playMode === 'sequential' ? 'shuffle' : 'sequential';
+                saveSoundboardState();
+                renderSoundboard();
+            });
+        });
+
+        // Add Sound
+        document.querySelectorAll('.stack-add-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const slotId = parseInt(e.target.dataset.id, 10);
+                window.electron.ipcRenderer.invoke('open-file-dialog').then(filePath => {
+                    if (filePath) {
+                        // We need the name. We can guess from path or ask backend. 
+                        // open-file-dialog returns path. Path manipulation in renderer is possible if nodeIntegration true.
+                        // Or we can invoke 'load-sound' logic which returns object?
+                        // Let's use a helper invocation to get name or just parse str string split.
+                        // Since nodeIntegration is true (per warnings earlier), we might have path module?
+                        // Usually safer to just split string.
+                        const name = filePath.replace(/^.*[\\\/]/, '');
+                        soundboardState[slotId].tracks.push({ path: filePath, name: name });
+                        saveSoundboardState();
+                        renderSoundboard();
+                    }
+                });
+            });
+        });
+
+        // Clear Stack
+        document.querySelectorAll('.stack-clear-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const slotId = parseInt(e.target.dataset.id, 10);
+                window.electron.ipcRenderer.send('stop-sound', { slotId });
+                soundboardState[slotId].tracks = [];
+                soundboardState[slotId].currentTrackIndex = 0;
+                soundboardState[slotId].isPlaying = false;
+                saveSoundboardState();
+                renderSoundboard();
             });
         });
     }
+
+    function togglePlay(slotId) {
+        const slot = soundboardState[slotId];
+        if (slot.tracks.length === 0) return;
+
+        if (slot.isPlaying) {
+            // Stop
+            window.electron.ipcRenderer.send('stop-sound', { slotId });
+            slot.isPlaying = false;
+            // Manual stop does NOT advance track (usually).
+        } else {
+            // Play
+            const track = slot.tracks[slot.currentTrackIndex];
+            window.electron.ipcRenderer.send('play-sound', { slotId, filePath: track.path });
+            slot.isPlaying = true;
+        }
+        renderSoundboard();
+    }
+
+    // Handle Sound Finished (Auto-Advance)
+    window.electron.ipcRenderer.on('sound-finished', (event, finishedSlotId) => {
+        // Warning: slotId from backend might be string or number? Main usually sends what play-sound got.
+        // It was passed as integer in play-sound logic usually. 
+        const slotId = parseInt(finishedSlotId, 10);
+        const slot = soundboardState[slotId];
+        if (!slot) return;
+
+        // Logic:
+        // 1. Mark current not playing
+        slot.isPlaying = false;
+
+        // 2. Advance Index
+        if (slot.playMode === 'shuffle') {
+            slot.currentTrackIndex = Math.floor(Math.random() * slot.tracks.length);
+        } else {
+            slot.currentTrackIndex = (slot.currentTrackIndex + 1) % slot.tracks.length;
+        }
+
+        // 3. Check Loop Mode
+        if (slot.loop === 'stack') {
+            // Auto-play next
+            const nextTrack = slot.tracks[slot.currentTrackIndex];
+            window.electron.ipcRenderer.send('play-sound', { slotId, filePath: nextTrack.path });
+            slot.isPlaying = true;
+        } else {
+            // Stop (but we already advanced the index for next manual press)
+            // Just update UI
+        }
+        renderSoundboard();
+    });
 
     function renderInitiativeList(initiativeOrder, currentTurnIndex) {
         initiativeListDiv.innerHTML = '';
@@ -981,14 +1192,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <label><input type="checkbox" class="concentration-cb" data-id="${creature.id}" ${creature.isConcentrating ? 'checked' : ''}> Conc.</label>
                         <label><input type="checkbox" class="friendly-cb" data-id="${creature.id}" ${creature.isFriendly ? 'checked' : ''}> Legendary reminder</label>
                         <div class="condition-tags">${(creature.conditions || []).map(conditionName => {
-                            const condition = DND_CONDITIONS[conditionName];
-                            if (!condition) return '';
-                            return `
+                const condition = DND_CONDITIONS[conditionName];
+                if (!condition) return '';
+                return `
                                 <span class="condition-tag" style="background-color: ${condition.color};" title="${condition.text}">
                                     ${condition.emoji} ${conditionName}
                                     <button class="remove-condition-btn" data-id="${creature.id}" data-condition="${conditionName}">x</button>
                                 </span>`;
-                        }).join('')}</div>
+            }).join('')}</div>
                     </div>
                     <div class="stats-footer">
                         ${scoresHTML}
@@ -1337,7 +1548,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         return `<ul>${listItems}</ul>`;
                     }
                     if (typeof entry === 'object' && entry.name && entry.entries) {
-                         return `<div class="trait-block"><strong><em>${entry.name}.</em></strong> ${renderEntries(entry.entries)}</div>`;
+                        return `<div class="trait-block"><strong><em>${entry.name}.</em></strong> ${renderEntries(entry.entries)}</div>`;
                     }
                     return ''; // Fallback for unknown entry types
                 }).join(' ');
@@ -1387,5 +1598,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error("Failed to parse or render stat block:", e);
             return "Error: Could not display stat block. Data might be malformed.";
         }
+    }
+
+    // --- Volume Control ---
+    const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+    if (soundboardVolumeSlider) {
+        soundboardVolumeSlider.addEventListener('input', (e) => {
+            const volume = parseFloat(e.target.value);
+            window.electron.ipcRenderer.send('set-soundboard-volume', { volume });
+        });
     }
 });
