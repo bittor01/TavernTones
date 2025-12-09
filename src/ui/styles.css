@@ -779,10 +779,10 @@ input:disabled {
     background-color: #2b3035;
     border: 1px solid #444;
     border-radius: 8px;
-    padding: 8px;
+    padding: 4px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 3px;
 }
 
 .stack-header {
@@ -812,7 +812,7 @@ input:disabled {
 .stack-controls {
     display: flex;
     justify-content: space-between;
-    gap: 2px;
+    gap: 1px;
 }
 
 .stack-btn {
@@ -820,7 +820,7 @@ input:disabled {
     border: 1px solid #555;
     color: #ddd;
     border-radius: 4px;
-    padding: 4px 6px;
+    padding: 4px 2px;
     font-size: 1rem;
     cursor: pointer;
     flex: 1;
