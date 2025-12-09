@@ -31,9 +31,31 @@ let initiativeTracker;
 let fiveEToolsParser;
 
 
+// --- JSDoc Comments ---
+
+/**
+ * @file This is the main entry point for the TavernTones Electron application.
+ * It handles window creation, application lifecycle events, IPC communication between
+ * the main and renderer processes, and the initialization of all backend services
+ * such as the Discord bot, music player, and initiative tracker.
+ */
+
+// --- Global State ---
+
+/** @type {BrowserWindow | null} The main application window. */
+let mainWindow;
+/** @type {BrowserWindow | null} The settings window. */
+let settingsWindow;
+/** @type {boolean} Flag to indicate if the main window has loaded its content. */
+let windowloaded = false;
+
 // --- State Management ---
 const autosavePath = path.join(app.getPath('userData'), 'autosave.json');
 
+/**
+ * A map of D&D 5e conditions to their emoji, color, and description.
+ * @type {Object.<string, {emoji: string, color: string, text: string}>}
+ */
 const DND_CONDITIONS = {
     "Blinded": { emoji: "🙈", color: "#6c757d", text: "You can't see and automatically fail any ability check that requires sight. Attack rolls against you have Advantage, and your attack rolls have Disadvantage." },
     "Burning": { emoji: "🔥", color: "#e74c3c", text: "A burning creature takes 1d4 Fire damage at the start of each of its turns. A creature can end this damage by using its action to make a DC 10 Dexterity check to extinguish the flames." },
@@ -89,9 +111,11 @@ function sleep(ms) {
 
 //Begin UI
 // Electron Setup
-let mainWindow;
-let settingsWindow;
-let windowloaded = false;
+/**
+ * Creates and loads the main application window.
+ * @param {boolean} [showWindow=true] - Whether to show the window immediately after creation.
+ * @returns {Promise<void>}
+ */
 async function createWindow(showWindow = true) {
     console.log('createWindow() called.');
     mainWindow = new BrowserWindow({
@@ -117,6 +141,9 @@ async function createWindow(showWindow = true) {
     windowloaded = true;
 }
 
+/**
+ * Creates and shows the settings window. If the window already exists, it focuses it.
+ */
 function createSettingsWindow() {
     if (settingsWindow) {
         settingsWindow.focus();
@@ -141,38 +168,11 @@ function createSettingsWindow() {
     });
 }
 
-let gamifyWindow; // Keep a reference to the window object
-
-function createGamifyWindow() {
-    // If the window already exists, focus it
-    if (gamifyWindow) {
-        gamifyWindow.focus();
-        return;
-    }
-
-    gamifyWindow = new BrowserWindow({
-        width: 1200,
-        height: 900,
-        webPreferences: {
-            preload: path.join(__dirname, '../../ui/preload.js'),
-            contextIsolation: true,
-            enableRemoteModule: false,
-            nodeIntegration: true // Keep consistent with mainWindow
-        }
-    });
-
-    gamifyWindow.maximize();
-    gamifyWindow.loadFile(path.join(__dirname, '../../jsontool/json-gamify.html'));
-
-    // Optional: Open DevTools for debugging
-    // gamifyWindow.webContents.openDevTools();
-
-    gamifyWindow.on('closed', () => {
-        // Dereference the window object
-        gamifyWindow = null;
-    });
-}
-
+/**
+ * The main application loader. This function is responsible for initializing the application,
+ * creating the main window, checking for necessary configurations, and setting up all
+ * backend services and IPC handlers. It runs once the Electron app is ready.
+ */
 async function apploader() {
     discordConfig = await getDiscordConfig();
 
@@ -189,7 +189,6 @@ async function apploader() {
             }
         });
         console.log('App is ready.');
-        const isGamifyLaunch = process.argv.includes('--tool=gamify');
 
         // Create the main window first, so we can show dialogs.
         // Don't show it yet if we might need to show the settings window first.
@@ -213,10 +212,8 @@ async function apploader() {
         }
 
         // If we've reached here, paths are configured, so we can show the main window.
-        if (!isGamifyLaunch) {
-            mainWindow.maximize();
-            mainWindow.show();
-        }
+        mainWindow.maximize();
+        mainWindow.show();
 
         // Initialize components
         musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
@@ -231,19 +228,11 @@ async function apploader() {
             initializeDiscordBot();
         }
 
-        // If it's a gamify launch, also create the gamify window.
-        if (isGamifyLaunch) {
-            createGamifyWindow();
-        }
-
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length === 0) {
                 // Re-check config on activate, in case it was the only window.
                 if (pathsConfigured) {
-                    createWindow(!isGamifyLaunch);
-                    if (isGamifyLaunch) {
-                        createGamifyWindow();
-                    }
+                    createWindow(true);
                 } else {
                     createSettingsWindow();
                 }
@@ -449,6 +438,12 @@ async function checkAndShowReminders(creature, turnEvent) {
 
 const InitiativeTracker = require('../features/InitiativeTracker.js');
 
+/**
+ * Registers all IPC (Inter-Process Communication) handlers for the application.
+ * This function sets up listeners for events from the renderer process, allowing
+ * the frontend to interact with the backend services like the file system,
+ * music player, initiative tracker, and more.
+ */
 async function ipcloader() {
     // Helper function to open a directory selection dialog
     const selectDirectory = async (title) => {
@@ -561,7 +556,6 @@ async function ipcloader() {
             initiativeTracker.sendFullState();
         }
     });
-    ipcMain.on('open-gamify-tool', createGamifyWindow);
 
     // Music Player IPC Handlers
     ipcMain.on('load-music-file', (event, filePath) => {
@@ -595,271 +589,6 @@ async function ipcloader() {
         const focusedWindow = BrowserWindow.getFocusedWindow();
         if (!focusedWindow) return { response: options.cancelId || 1 }; // Default to cancel if no window
         return await dialog.showMessageBox(focusedWindow, options);
-    });
-
-    ipcMain.handle('open-task-file-dialog', async () => {
-        const { filePaths } = await dialog.showOpenDialog(gamifyWindow, { // gamifyWindow should be the parent
-            title: 'Select Task File',
-            properties: ['openFile'],
-            filters: [{ name: 'JSON Files', extensions: ['json'] }]
-        });
-
-        if (filePaths && filePaths.length > 0) {
-            return filePaths[0];
-        }
-        return null;
-    });
-
-    ipcMain.handle('get-high-score', async () => {
-        const settingsPath = path.join(app.getPath('userData'), 'gamify-settings.json');
-        try {
-            const data = await fs.readFile(settingsPath, 'utf8');
-            const settings = JSON.parse(data);
-            return settings.highScore || 0;
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                await fs.writeFile(settingsPath, JSON.stringify({ highScore: 0 }, null, 2));
-                return 0;
-            }
-            logToRenderer(`Error reading high score: ${error}`);
-            return 0;
-        }
-    });
-
-    ipcMain.on('save-high-score', async (event, score) => {
-        const settingsPath = path.join(app.getPath('userData'), 'gamify-settings.json');
-        try {
-            let settings = {};
-            try {
-                const data = await fs.readFile(settingsPath, 'utf8');
-                settings = JSON.parse(data);
-            } catch (readError) {
-                // File might not exist, that's fine.
-            }
-            settings.highScore = score;
-            await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
-        } catch (error) {
-            logToRenderer(`Error saving high score: ${error}`);
-        }
-    });
-
-    async function loadTaskData(taskFilePath) {
-        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-        try {
-            const data = await fs.readFile(taskFilePath, 'utf8');
-            let taskData = JSON.parse(data); // Make mutable
-
-            let { fileIndex, itemIndex } = taskData.progress;
-
-            if (fileIndex >= taskData.files.length) {
-                return { success: true, taskComplete: true, taskData };
-            }
-
-            let itemFilePath = path.join(basePath, taskData.files[fileIndex]);
-            let itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
-
-            // Loop to find the next valid item, skipping empty files
-            while (itemIndex >= itemList.length) {
-                fileIndex++;
-                itemIndex = 0;
-
-                if (fileIndex >= taskData.files.length) {
-                    taskData.progress.fileIndex = fileIndex;
-                    await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-                    return { success: true, taskComplete: true, taskData };
-                }
-
-                itemFilePath = path.join(basePath, taskData.files[fileIndex]);
-                itemList = JSON.parse(await fs.readFile(itemFilePath, 'utf8'));
-            }
-
-            // Update progress in the task file *before* returning
-            taskData.progress.fileIndex = fileIndex;
-            taskData.progress.itemIndex = itemIndex;
-            await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-
-            const item = itemList[itemIndex];
-            if (!item) {
-                 // This can happen if a file is empty from the start.
-                 // The loop above should handle this, but as a safeguard:
-                return { success: false, error: "Encountered an empty or invalid file." };
-            }
-
-            // Try to get details if it's a spell, but don't fail if it's not
-            let itemDetails = null;
-            if (item.text && item.text.includes('-')) {
-                const itemName = item.text.split(' - ')[0].trim();
-                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', itemName);
-
-                // Find the exact match from the search results
-                const exactMatch = spellDetailsResults.find(result => result.name.toLowerCase() === itemName.toLowerCase());
-
-                itemDetails = exactMatch ? await fiveEToolsParser.getExact('spells', exactMatch.name, exactMatch.source) : null;
-            }
-
-            return {
-                success: true,
-                taskData,
-                taskFilePath: taskFilePath, // Return the path of the loaded task
-                spell: item, // Keep 'spell' key for frontend compatibility for now
-                spellDetails: itemDetails,
-                spellCount: itemList.length,
-            };
-        } catch (error) {
-            logToRenderer(`Error in loadTaskData for ${taskFilePath}: ${error}`);
-            return { success: false, error: error.message };
-        }
-    }
-
-    ipcMain.handle('load-task-by-path', async (event, filePath) => {
-        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-        const taskPath = path.isAbsolute(filePath) ? filePath : path.join(basePath, filePath);
-        return await loadTaskData(taskPath);
-    });
-
-    ipcMain.handle('get-task-data', async () => {
-        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-        const defaultTaskPath = path.join(basePath, 'src/jsontool/deck-editing-task.json');
-        return await loadTaskData(defaultTaskPath);
-    });
-
-    ipcMain.handle('save-and-get-next-spell', async (event, { taskData, currentSpell, taskFilePath }) => {
-        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-        try {
-            // 1. Save the current spell changes
-            const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
-            const currentItemFileData = await fs.readFile(currentItemFilePath, 'utf8');
-            let currentItemList = JSON.parse(currentItemFileData);
-            currentItemList[taskData.progress.itemIndex] = currentSpell;
-            await fs.writeFile(currentItemFilePath, JSON.stringify(currentItemList, null, 2));
-
-            // 2. Update progress
-            taskData.progress.itemIndex++;
-
-            if (taskData.progress.itemIndex >= currentItemList.length) {
-                taskData.progress.itemIndex = 0;
-                taskData.progress.fileIndex++;
-                if (taskData.progress.fileIndex >= taskData.files.length) {
-                    // Task complete!
-                    await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-                    return { success: true, taskComplete: true, taskData };
-                }
-            }
-
-            // 3. Save the new progress to the task file
-            await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-
-            // 4. Get the next spell and its details
-            const nextFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
-            const nextFileData = await fs.readFile(nextFilePath, 'utf8');
-            const nextItemList = JSON.parse(nextFileData);
-            const nextItem = nextItemList[taskData.progress.itemIndex];
-
-            let nextItemDetails = null;
-            if (nextItem.text && nextItem.text.includes('-')) {
-                const nextItemName = nextItem.text.split(' - ')[0].trim();
-                const spellDetailsResults = await fiveEToolsParser.searchByName('spells', nextItemName);
-                const exactMatch = spellDetailsResults.find(result => result.name.toLowerCase() === nextItemName.toLowerCase());
-                nextItemDetails = exactMatch ? await fiveEToolsParser.getExact('spells', exactMatch.name, exactMatch.source) : null;
-            }
-
-            return {
-                success: true,
-                taskData,
-                spell: nextItem,
-                spellDetails: nextItemDetails,
-                spellCount: nextItemList.length,
-            };
-
-        } catch (error) {
-            logToRenderer(`Error in save-and-get-next-spell: ${error}`);
-            return { success: false, error: error.message };
-        }
-    });
-
-    ipcMain.handle('scrap-and-get-next-item', async (event, { taskData, currentItem, taskFilePath }) => {
-        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-        try {
-            const currentItemFilePath = path.join(basePath, taskData.files[taskData.progress.fileIndex]);
-            let currentItemList = JSON.parse(await fs.readFile(currentItemFilePath, 'utf8'));
-
-            // Use the title field for a more robust lookup
-            const titleField = taskData.ui.titleField || 'name';
-            const itemIndexToRemove = currentItemList.findIndex(item => item[titleField] === currentItem[titleField]);
-
-            if (itemIndexToRemove === -1) {
-                // Fallback for safety, though it's a weak comparison
-                const fallbackIndex = currentItemList.findIndex(item => JSON.stringify(item) === JSON.stringify(currentItem));
-                if (fallbackIndex === -1) {
-                    throw new Error(`Could not find the item with ${titleField} "${currentItem[titleField]}" to scrap in the file.`);
-                }
-                itemIndexToRemove = fallbackIndex;
-            }
-
-            currentItemList.splice(itemIndexToRemove, 1);
-            await fs.writeFile(currentItemFilePath, JSON.stringify(currentItemList, null, 2));
-
-            // After removing, the item at the same index is the next one.
-            // We don't need to change the progress. The robust loadTaskData will handle
-            // cases where the index is now out of bounds (e.g., last item deleted)
-            // or the file has become empty.
-            return await loadTaskData(taskFilePath);
-
-        } catch (error) {
-            logToRenderer(`Error in scrap-and-get-next-item: ${error}`);
-            return { success: false, error: error.message };
-        }
-    });
-
-    ipcMain.handle('undo-and-get-previous-spell', async (event, { taskData, previousSpellState, taskFilePath }) => {
-        const basePath = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
-        try {
-            // 1. Determine the previous spell's position
-            let prevFileIndex = taskData.progress.fileIndex;
-            let prevItemIndex = taskData.progress.itemIndex - 1;
-
-            if (prevItemIndex < 0) {
-                prevFileIndex--;
-                if (prevFileIndex < 0) {
-                    return { success: false, error: "Already at the beginning." };
-                }
-                const prevFilePath = path.join(basePath, taskData.files[prevFileIndex]);
-                const prevFileData = await fs.readFile(prevFilePath, 'utf8');
-                const prevSpellList = JSON.parse(prevFileData);
-                prevItemIndex = prevSpellList.length - 1;
-            }
-
-            // 2. Save the *previous* state back to the file
-            const targetFilePath = path.join(basePath, taskData.files[prevFileIndex]);
-            const targetFileData = await fs.readFile(targetFilePath, 'utf8');
-            let targetSpellList = JSON.parse(targetFileData);
-            targetSpellList[prevItemIndex] = previousSpellState;
-            await fs.writeFile(targetFilePath, JSON.stringify(targetSpellList, null, 2));
-
-            // 3. Update progress to the previous spell's position
-            taskData.progress.fileIndex = prevFileIndex;
-            taskData.progress.itemIndex = prevItemIndex;
-
-            // 4. Save the new progress to the task file
-            await fs.writeFile(taskFilePath, JSON.stringify(taskData, null, 2));
-
-            // 5. Get the details for the (now current) spell
-            const spellName = previousSpellState.text.split(' - ')[0];
-            const spellDetailsResults = await fiveEToolsParser.searchByName('spells', spellName);
-            const spellDetails = spellDetailsResults.length > 0 ? await fiveEToolsParser.getExact('spells', spellDetailsResults[0].name, spellDetailsResults[0].source) : null;
-            const spellCount = targetSpellList.length;
-
-            return {
-                success: true,
-                taskData,
-                spell: previousSpellState,
-                spellDetails,
-                spellCount,
-            };
-        } catch (error) {
-            logToRenderer(`Error in undo-and-get-previous-spell: ${error}`);
-            return { success: false, error: error.message };
-        }
     });
 
     ipcMain.handle('open-file-dialog', async () => {
@@ -1243,7 +972,11 @@ async function ipcloader() {
     });
 }
 
-// Function to send log messages to the renderer
+/**
+ * Sends a log message to the renderer process to be displayed in the UI.
+ * It waits until the app is ready before sending the message.
+ * @param {string} message - The message to log.
+ */
 async function logToRenderer(message) {
     if (isAppReady) {
         mainWindow.webContents.send('log-message', message);
@@ -1260,6 +993,10 @@ client.on('error', error => {
 });
 */
 
+/**
+ * Initializes and logs in the Discord bot using the token from the configuration.
+ * Handles login errors and notifies the user.
+ */
 function initializeDiscordBot() {
     if (!discordConfig || !discordConfig.token) {
         logToRenderer('Discord token not found. Bot not started.');

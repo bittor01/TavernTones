@@ -27,7 +27,7 @@ A simple, integrated music and soundboard player.
 
 A flexible tool for rolling on custom random tables.
 
-- **`!ro` Command**: A powerful, generic command that can roll on any table from any subfolder within the `randomtables` directory. It supports weighted tables and multiple rolls.
+- **`!ro` Command**: A powerful, generic command that can roll on any table from any subfolder within the `randomtables` directory. It supports weighted tables and multiple rolls. (Future Enhancement: This command will be updated to use a more user-friendly dropdown interface).
 - **`!su` and `!sh` Commands**: Simple commands for rolling on the `surge.json` and `shield.json` tables, respectively, with support for unique, per-user results.
 
 ## Technical Overview

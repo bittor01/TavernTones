@@ -30,7 +30,7 @@ These two pillars communicate via Electron's Inter-Process Communication (IPC) m
 
 - **`preload.js`**: The secure bridge between the backend and frontend. It uses Electron's `contextBridge` to expose a specific, limited set of `ipcRenderer` functions to `renderer.js`. **Any new communication channel between the UI and the backend must be explicitly defined in this file.**
 
-- **`CommandHandler.js`**: The primary command processor for the Discord bot. It parses messages that mention the bot and routes commands (`!ping`, `!5e`, `!play`, etc.) to the correct logic and modules.
+- **`CommandHandler.js`**: The primary command processor for the Discord bot. It parses messages that mention the bot and routes commands (`!ping`, `!ro`, `!play`, etc.) to the correct logic and modules.
 
 ### IPC Communication
 
