@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
 const path = require('path');
-const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder } = require('discord.js');
 const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
@@ -15,7 +15,7 @@ const { getDiscordConfig, setDiscordConfig } = require('./config.js');
 const { format5eResult } = require('../../discord/5eEmbedFormatter.js');
 const { mobRules } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
-const fs = require('fs');
+const fs = require('fs').promises; // Use promises version
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 
 let discordConfig;
@@ -610,7 +610,7 @@ async function ipcloader() {
 
     ipcMain.handle('open-soundboard-file-dialog', async () => {
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: 'Select Soundboard Files',
+            title: 'Select Sound Files',
             defaultPath: discordConfig.defaultMusicPath,
             properties: ['openFile', 'multiSelections'],
             filters: [
@@ -639,23 +639,6 @@ async function ipcloader() {
             return { path: filePaths[0], name: path.basename(filePaths[0]) };
         }
         return null;
-    });
-
-    ipcMain.on('play-sound', (event, { slotId }) => {
-        // We need the renderer to tell us WHAT file to play, or we store it in backend.
-        // The renderer state seems to hold the file path, so it should send it, 
-        // OR the renderer sends "play slot X" and the backend looks up what slot X is.
-        // But currently main.js doesn't store soundboard state. 
-        // The renderer calls 'play-sound' with { slotId }... wait.
-        // My implementation plan said: "Trigger BackendAudioPlayer.playSound(file)".
-        // BUT the renderer's `play-sound` event in the *existing code (renderer.js)* 
-        // implies it might send just ID? 
-        // Let's check renderer.js again.
-        // Actually I haven't written the renderer code yet, but the *existing* placeholder code in renderer.js:
-        // window.electron.ipcRenderer.send('play-sound', { slotId });
-        // It doesn't send the file path. Ideally the backend should know, OR the renderer should send it.
-        // To keep backend stateless regarding UI config if possible, I'll update renderer to send the path always.
-        // Updating `main.js` to expect `filePath` in the payload.
     });
 
     // Redoing the above block properly:
@@ -688,20 +671,21 @@ async function ipcloader() {
 
     ipcMain.handle('get-soundboard-state', async () => {
         try {
-            if (fs.existsSync(soundboardConfigPath)) {
-                // Using promises for reading
-                const data = await fs.promises.readFile(soundboardConfigPath, 'utf-8');
-                return JSON.parse(data);
-            }
+            const data = await fs.readFile(soundboardConfigPath, 'utf-8');
+            return JSON.parse(data);
         } catch (error) {
-            console.error('Error loading soundboard config:', error);
+            // If the file doesn't exist or is invalid, return null.
+            // A new one will be created on the renderer side.
+            if (error.code !== 'ENOENT') {
+                console.error('Error loading soundboard config:', error);
+            }
         }
         return null;
     });
 
     ipcMain.on('save-soundboard-state', (event, state) => {
         try {
-            fs.promises.writeFile(soundboardConfigPath, JSON.stringify(state, null, 2))
+            fs.writeFile(soundboardConfigPath, JSON.stringify(state, null, 2))
                 .catch(err => console.error("Error saving soundboard:", err));
         } catch (error) {
             console.error('Error initiating save soundboard:', error);
@@ -717,7 +701,7 @@ async function ipcloader() {
 
         if (!canceled && filePath) {
             try {
-                await fs.promises.writeFile(filePath, JSON.stringify(state, null, 2));
+                await fs.writeFile(filePath, JSON.stringify(state, null, 2));
                 return { success: true, filePath };
             } catch (error) {
                 console.error('Error saving preset:', error);
@@ -736,7 +720,7 @@ async function ipcloader() {
 
         if (!canceled && filePaths.length > 0) {
             try {
-                const data = await fs.promises.readFile(filePaths[0], 'utf-8');
+                const data = await fs.readFile(filePaths[0], 'utf-8');
                 return { success: true, state: JSON.parse(data) };
             } catch (error) {
                 console.error('Error loading preset:', error);
@@ -1257,7 +1241,7 @@ client.once('clientReady', async () => {
                     const embed = format5eResult(item);
                     await interaction.editReply({ embeds: [embed], components: [] }); // Remove the dropdown
                 } else {
-                    await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details for that item.', components: [] });
+                    await interaction.editReply({ content: "Sorry, I couldn't retrieve the details for that item.", components: [] });
                 }
                 return; // Stop further processing for this interaction
             }

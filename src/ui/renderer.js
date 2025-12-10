@@ -827,23 +827,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     soundboardState = migrateSoundboardState(result.state);
                     saveSoundboardState();
                     renderSoundboard();
-                    // After loading a preset, immediately update the backend's volume setting
-                    window.electron.ipcRenderer.send('set-soundboard-volume', { volume: soundboardState.volume });
                 }
             });
-        });
-    }
-
-    // --- Volume Slider Persistence ---
-    const soundboardVolumeSlider = document.getElementById('soundboard-volume');
-    if (soundboardVolumeSlider) {
-        soundboardVolumeSlider.addEventListener('input', (e) => {
-            const newVolume = parseFloat(e.target.value);
-            if (!isNaN(newVolume)) {
-                soundboardState.volume = newVolume;
-                window.electron.ipcRenderer.send('set-soundboard-volume', { volume: newVolume });
-                saveSoundboardState(); // This persists the change for the next session
-            }
         });
     }
 
@@ -970,14 +955,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.invoke('open-soundboard-file-dialog').then(filePaths => {
                     if (filePaths && filePaths.length > 0) {
                         const slot = soundboardState[slotId];
-                        if (slot) {
-                            filePaths.forEach(filePath => {
-                                const name = filePath.replace(/^.*[\\\/]/, '');
-                                slot.tracks.push({ path: filePath, name: name });
-                            });
-                            saveSoundboardState();
-                            renderSoundboard();
-                        }
+                        filePaths.forEach(filePath => {
+                            const name = filePath.replace(/^.*[\\\/]/, '');
+                            slot.tracks.push({ path: filePath, name: name });
+                        });
+                        saveSoundboardState();
+                        renderSoundboard();
                     }
                 });
             });

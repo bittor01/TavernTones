@@ -34,11 +34,10 @@ contextBridge.exposeInMainWorld('electron', {
         'open-file-dialog', 'get-default-local-folder', 'get-dnd-conditions',
         'load-encounter-dialog', 'search-monsters', 'get-monster-details',
         'get-task-data', 'save-and-get-next-spell', 'undo-and-get-previous-spell',
-        'open-soundboard-file-dialog',
         'get-high-score', 'load-task-by-path', 'open-task-file-dialog',
         'scrap-and-get-next-item', 'show-confirm-dialog', 'get-mob-rules-data',
         'get-image-as-data-url', 'get-preview-audio-data', 'load-sound',
-        'get-soundboard-state', 'save-soundboard-preset', 'load-soundboard-preset'
+        'get-soundboard-state', 'save-soundboard-preset', 'load-soundboard-preset', 'open-soundboard-file-dialog'
       ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);
