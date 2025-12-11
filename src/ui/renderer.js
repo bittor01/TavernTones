@@ -760,51 +760,58 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Soundboard State ---
 
+    function createDefaultSlot(id) {
+        return {
+            id: id,
+            tracks: [],
+            currentTrackIndex: 0,
+            emoji: '🎨',
+            loop: 'none',
+            playMode: 'sequential',
+            isPlaying: false
+        };
+    }
+
+    function initializeSoundboard() {
+        const state = [];
+        for (let i = 0; i < 9; i++) { // Assuming a 3x3 grid
+            state.push(createDefaultSlot(i));
+        }
+        return state;
+    }
+
     function migrateSoundboardState(savedState) {
-        if (!savedState || !Array.isArray(savedState)) return [];
+        if (!savedState || !Array.isArray(savedState)) return initializeSoundboard();
         return savedState.map((slot, index) => {
-            if (!slot.tracks) {
-                // Old format detected
-                const tracks = slot.file ? [{ path: slot.file, name: slot.name }] : [];
-                return {
-                    id: index,
-                    tracks: tracks,
-                    currentTrackIndex: 0,
-                    emoji: slot.emoji || '🎨',
-                    loop: 'none',
-                    playMode: 'sequential',
-                    isPlaying: false
-                };
-            }
-            // Reset transient flags
-            return { ...slot, isPlaying: false };
+            if (!slot || typeof slot !== 'object') return createDefaultSlot(index);
+            return {
+                id: slot.id ?? index,
+                tracks: slot.tracks ?? [],
+                currentTrackIndex: slot.currentTrackIndex ?? 0,
+                emoji: slot.emoji ?? '🎨',
+                loop: slot.loop ?? 'none',
+                playMode: slot.playMode ?? 'sequential',
+                isPlaying: false // Always reset on load
+            };
         });
     }
 
-    let soundboardState = [];
-    const SOUNDBOARD_SIZE = 3;
+    let soundboardState = initializeSoundboard();
 
-    // Load state from backend
-    window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
-        if (savedState && Array.isArray(savedState) && savedState.length === SOUNDBOARD_SIZE) {
+    async function loadSoundboardState() {
+        try {
+            const savedState = await window.electron.ipcRenderer.invoke('get-soundboard-state');
             soundboardState = migrateSoundboardState(savedState);
-        } else {
-            // Initialize defaults
-            soundboardState = [];
-            for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
-                soundboardState.push({
-                    id: i,
-                    tracks: [],
-                    currentTrackIndex: 0,
-                    emoji: '🎨',
-                    loop: 'none',
-                    playMode: 'sequential',
-                    isPlaying: false
-                });
-            }
+            renderSoundboard();
+        } catch (error) {
+            console.error("Failed to load soundboard state:", error);
+            // Keep the default state
+            renderSoundboard();
         }
-        renderSoundboard();
-    });
+    }
+
+    // Initial load
+    loadSoundboardState();
 
     // --- Preset Buttons ---
     const savePresetBtn = document.getElementById('save-preset-btn');
@@ -952,13 +959,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.stack-add-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
-                window.electron.ipcRenderer.invoke('open-soundboard-file-dialog').then(filePaths => {
-                    if (filePaths && filePaths.length > 0) {
+                window.electron.ipcRenderer.invoke('open-soundboard-file-dialog').then(filePath => {
+                    if (filePath) { // Now a single path, not an array
                         const slot = soundboardState[slotId];
-                        filePaths.forEach(filePath => {
-                            const name = filePath.replace(/^.*[\\\/]/, '');
-                            slot.tracks.push({ path: filePath, name: name });
-                        });
+                        const name = filePath.replace(/^.*[\\\/]/, '');
+                        slot.tracks.push({ path: filePath, name: name });
                         saveSoundboardState();
                         renderSoundboard();
                     }

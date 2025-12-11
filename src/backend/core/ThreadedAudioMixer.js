@@ -3,19 +3,27 @@ const { Readable } = require('stream');
 const path = require('path');
 
 class ThreadedAudioMixer extends Readable {
-    constructor() {
+    constructor(logCallback) {
         super();
+        this.log = logCallback || console.log;
         this.worker = new Worker(path.join(__dirname, 'AudioMixerWorker.js'));
         this.bufferQueue = [];
         this.isReady = false;
 
         this.worker.on('message', (msg) => {
+            if (msg.type === 'log') {
+                this.log(`[Worker] ${msg.message}`);
+                return;
+            }
             if (msg.type === 'mixed-chunk') {
+                this.log('[TAM] Received mixed chunk from worker.');
                 const buffer = Buffer.from(msg.data);
                 if (this.isReading) {
+                    this.log('[TAM] Pushing mixed chunk to consumer.');
                     this.push(buffer);
                     this.isReading = false;
                 } else {
+                    this.log('[TAM] Queuing mixed chunk.');
                     this.bufferQueue.push(buffer);
                 }
             }
@@ -47,9 +55,11 @@ class ThreadedAudioMixer extends Readable {
     }
 
     addInput(stream, id, volume = 1.0) {
+        this.log(`[TAM] Adding input ${id}`);
         this.worker.postMessage({ type: 'add-input', id, volume });
 
         stream.on('data', (chunk) => {
+            this.log(`[TAM] Received data chunk for ${id}, sending to worker.`);
             this.worker.postMessage({ type: 'input-chunk', id, data: chunk });
         });
 

@@ -610,16 +610,18 @@ async function ipcloader() {
 
     ipcMain.handle('open-soundboard-file-dialog', async () => {
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: 'Select Sound Files',
+            title: 'Select Sound File', // Changed title for clarity
             defaultPath: discordConfig.defaultMusicPath,
-            properties: ['openFile', 'multiSelections'],
+            properties: ['openFile'], // Removed 'multiSelections'
             filters: [
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
             ]
         });
 
+        // The dialog now returns a single path or null, wrap in array for consistency
+        // with old logic downstream, or handle as single item. Let's handle as single.
         if (filePaths && filePaths.length > 0) {
-            return filePaths;
+            return filePaths[0];
         }
         return null;
     });
@@ -642,11 +644,12 @@ async function ipcloader() {
     });
 
     // Redoing the above block properly:
-    ipcMain.on('play-sound', (event, { slotId, filePath }) => {
+    ipcMain.on('play-sound', async (event, { slotId, filePath }) => {
         logToRenderer(`IPC 'play-sound' slot ${slotId}, file: ${filePath}`);
         if (filePath && musicPlayer) {
-            musicPlayer.playSound(filePath, slotId);
-            // Notify renderer of state change? 
+            // No longer synchronous
+            await musicPlayer.playSound(filePath, slotId);
+            // Notify renderer of state change?
             // The renderer usually updates its own UI state, but if we want valid feedback:
             mainWindow.webContents.send('soundboard-state-change', { slotId, isPlaying: true });
         }
@@ -683,12 +686,11 @@ async function ipcloader() {
         return null;
     });
 
-    ipcMain.on('save-soundboard-state', (event, state) => {
+    ipcMain.on('save-soundboard-state', async (event, state) => {
         try {
-            fs.writeFile(soundboardConfigPath, JSON.stringify(state, null, 2))
-                .catch(err => console.error("Error saving soundboard:", err));
+            await fs.writeFile(soundboardConfigPath, JSON.stringify(state, null, 2));
         } catch (error) {
-            console.error('Error initiating save soundboard:', error);
+            console.error('Error saving soundboard state:', error);
         }
     });
 

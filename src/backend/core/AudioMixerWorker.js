@@ -6,36 +6,45 @@ const inputs = new Map();
 // Constants
 const CHUNK_SIZE = 3840; // 20ms of stereo 48kHz audio
 
+function log(message) {
+    parentPort.postMessage({ type: 'log', message });
+}
+
 parentPort.on('message', (msg) => {
     switch (msg.type) {
         case 'add-input':
+            log(`Adding input: ${msg.id}`);
             if (!inputs.has(msg.id)) {
                 inputs.set(msg.id, {
                     queue: [],
                     volume: msg.volume !== undefined ? msg.volume : 1.0,
-                    paused: false // Initialize as not paused
+                    paused: false
                 });
             }
             break;
 
         case 'remove-input':
+            log(`Removing input: ${msg.id}`);
             inputs.delete(msg.id);
             break;
 
         case 'set-input-volume':
             if (inputs.has(msg.id)) {
+                log(`Setting volume for ${msg.id} to ${msg.volume}`);
                 inputs.get(msg.id).volume = msg.volume;
             }
             break;
 
         case 'pause-input':
             if (inputs.has(msg.id)) {
+                log(`Pausing input: ${msg.id}`);
                 inputs.get(msg.id).paused = true;
             }
             break;
 
         case 'resume-input':
             if (inputs.has(msg.id)) {
+                log(`Resuming input: ${msg.id}`);
                 inputs.get(msg.id).paused = false;
             }
             break;
@@ -54,13 +63,12 @@ parentPort.on('message', (msg) => {
 
 function mixAndSend() {
     const outputBuffer = Buffer.alloc(CHUNK_SIZE);
-    const mixedSamples = new Int32Array(CHUNK_SIZE / 2); // Accumulate in 32-bit to prevent clipping
+    const mixedSamples = new Int32Array(CHUNK_SIZE / 2);
     let somethingWasMixed = false;
 
-    inputs.forEach((state) => {
+    inputs.forEach((state, id) => {
         const { queue, volume, paused } = state;
 
-        // Skip this input if it's paused or has no data
         if (paused || queue.length === 0) {
             return;
         }
@@ -92,7 +100,7 @@ function mixAndSend() {
     });
 
     if (somethingWasMixed) {
-        // Clip and write to output buffer only if we mixed something
+        log('Mixed audio data.');
         for (let i = 0; i < mixedSamples.length; i++) {
             let sample = mixedSamples[i];
             if (sample > 32767) sample = 32767;
@@ -101,6 +109,5 @@ function mixAndSend() {
         }
     }
 
-    // Always send a buffer (either mixed audio or silence)
     parentPort.postMessage({ type: 'mixed-chunk', data: outputBuffer });
 }
