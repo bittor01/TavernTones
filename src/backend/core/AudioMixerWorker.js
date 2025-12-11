@@ -1,17 +1,20 @@
 const { parentPort } = require('worker_threads');
 
-// State: Map of input ID -> { queue: Buffer[], volume: number }
+// State: Map of input ID -> { queue: Buffer[], volume: number, paused: boolean }
 const inputs = new Map();
 
 // Constants
-const CHUNK_SIZE = 3840; // 20ms of stereo 48kHz audio (1920 samples * 2 channels * 2 bytes)
+const CHUNK_SIZE = 3840; // 20ms of stereo 48kHz audio
 
 parentPort.on('message', (msg) => {
     switch (msg.type) {
         case 'add-input':
             if (!inputs.has(msg.id)) {
-                // msg.volume is optional, default 1.0
-                inputs.set(msg.id, { queue: [], volume: msg.volume !== undefined ? msg.volume : 1.0 });
+                inputs.set(msg.id, {
+                    queue: [],
+                    volume: msg.volume !== undefined ? msg.volume : 1.0,
+                    paused: false // Initialize as not paused
+                });
             }
             break;
 
@@ -25,10 +28,21 @@ parentPort.on('message', (msg) => {
             }
             break;
 
+        case 'pause-input':
+            if (inputs.has(msg.id)) {
+                inputs.get(msg.id).paused = true;
+            }
+            break;
+
+        case 'resume-input':
+            if (inputs.has(msg.id)) {
+                inputs.get(msg.id).paused = false;
+            }
+            break;
+
         case 'input-chunk':
             if (inputs.has(msg.id)) {
-                const inputState = inputs.get(msg.id);
-                inputState.queue.push(Buffer.from(msg.data));
+                inputs.get(msg.id).queue.push(Buffer.from(msg.data));
             }
             break;
 
@@ -39,63 +53,54 @@ parentPort.on('message', (msg) => {
 });
 
 function mixAndSend() {
-    // We need to produce ONE CHUNK_SIZE buffer.
     const outputBuffer = Buffer.alloc(CHUNK_SIZE);
-    let activeInputs = 0;
+    const mixedSamples = new Int32Array(CHUNK_SIZE / 2); // Accumulate in 32-bit to prevent clipping
+    let somethingWasMixed = false;
 
-    // Use Int32Array for accumulation to avoid overflow before clipping
-    const mixedSamples = new Int32Array(CHUNK_SIZE / 2); // 1920 samples (stereo interleaved)
+    inputs.forEach((state) => {
+        const { queue, volume, paused } = state;
 
-    inputs.forEach((state, id) => {
-        const queue = state.queue;
-        const volume = state.volume;
+        // Skip this input if it's paused or has no data
+        if (paused || queue.length === 0) {
+            return;
+        }
 
-        if (queue.length === 0) return;
-        activeInputs++;
+        somethingWasMixed = true;
+        let bytesNeeded = CHUNK_SIZE;
+        let outputSampleIndex = 0;
 
-        let sampleIndex = 0;
-        let samplesNeeded = CHUNK_SIZE / 2; // 1920
+        while (bytesNeeded > 0 && queue.length > 0) {
+            const head = queue[0];
+            const bytesToTake = Math.min(bytesNeeded, head.length);
 
-        // Consume buffers from the queue until we fill the mixing requirement or run out
-        while (samplesNeeded > 0 && queue.length > 0) {
-            const currentHead = queue[0];
-            const currentHeadSamples = new Int16Array(currentHead.buffer, currentHead.byteOffset, currentHead.length / 2);
-
-            const samplesToTake = Math.min(samplesNeeded, currentHeadSamples.length);
-
-            // Add to mix with VOLUME scaling
-            for (let i = 0; i < samplesToTake; i++) {
-                mixedSamples[sampleIndex + i] += currentHeadSamples[i] * volume;
+            for (let i = 0; i < bytesToTake; i += 2) {
+                if (outputSampleIndex < mixedSamples.length) {
+                    const sample = head.readInt16LE(i);
+                    mixedSamples[outputSampleIndex] += Math.floor(sample * volume);
+                    outputSampleIndex++;
+                }
             }
 
-            sampleIndex += samplesToTake;
-            samplesNeeded -= samplesToTake;
+            bytesNeeded -= bytesToTake;
 
-            // Handle buffer consumption
-            if (samplesToTake === currentHeadSamples.length) {
-                // Fully consumed head
+            if (bytesToTake === head.length) {
                 queue.shift();
             } else {
-                // Partially consumed head - slice and replace
-                const remaining = currentHead.subarray(samplesToTake * 2);
-                queue[0] = remaining; // Update head
+                queue[0] = head.subarray(bytesToTake);
             }
         }
     });
 
-    if (activeInputs === 0) {
-        // Silence
-        parentPort.postMessage({ type: 'mixed-chunk', data: outputBuffer });
-        return;
+    if (somethingWasMixed) {
+        // Clip and write to output buffer only if we mixed something
+        for (let i = 0; i < mixedSamples.length; i++) {
+            let sample = mixedSamples[i];
+            if (sample > 32767) sample = 32767;
+            if (sample < -32768) sample = -32768;
+            outputBuffer.writeInt16LE(sample, i * 2);
+        }
     }
 
-    // Clipping and writing to output
-    for (let i = 0; i < mixedSamples.length; i++) {
-        let val = mixedSamples[i];
-        if (val > 32767) val = 32767;
-        if (val < -32768) val = -32768;
-        outputBuffer.writeInt16LE(val, i * 2);
-    }
-
+    // Always send a buffer (either mixed audio or silence)
     parentPort.postMessage({ type: 'mixed-chunk', data: outputBuffer });
 }

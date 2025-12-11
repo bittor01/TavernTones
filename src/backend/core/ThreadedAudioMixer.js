@@ -37,12 +37,10 @@ class ThreadedAudioMixer extends Readable {
     }
 
     _read(size) {
-        // The consumer (Discord) wants data.
         if (this.bufferQueue.length > 0) {
             const chunk = this.bufferQueue.shift();
             this.push(chunk);
         } else {
-            // We need data. Ask worker for a mix.
             this.isReading = true;
             this.worker.postMessage({ type: 'request-mix' });
         }
@@ -51,19 +49,8 @@ class ThreadedAudioMixer extends Readable {
     addInput(stream, id, volume = 1.0) {
         this.worker.postMessage({ type: 'add-input', id, volume });
 
-        // Pipe stream data to worker
         stream.on('data', (chunk) => {
-            // We must copy or ensure the buffer is safe to pass? 
-            // postMessage clones significantly unless transferred.
-            // But we can just send it.
             this.worker.postMessage({ type: 'input-chunk', id, data: chunk });
-        });
-
-        stream.on('end', () => {
-            // Do not automatically remove input? Or should we?
-            // Usually BackendAudioPlayer manages stopped streams.
-            // But for safety:
-            // this.removeInput(id); // Let the player do explicit removal
         });
 
         stream.on('error', (err) => {
@@ -74,6 +61,14 @@ class ThreadedAudioMixer extends Readable {
 
     setInputVolume(id, volume) {
         this.worker.postMessage({ type: 'set-input-volume', id, volume });
+    }
+
+    pauseInput(id) {
+        this.worker.postMessage({ type: 'pause-input', id });
+    }
+
+    resumeInput(id) {
+        this.worker.postMessage({ type: 'resume-input', id });
     }
 
     removeInput(id) {
