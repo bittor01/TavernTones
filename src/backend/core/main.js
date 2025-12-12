@@ -610,18 +610,16 @@ async function ipcloader() {
 
     ipcMain.handle('open-soundboard-file-dialog', async () => {
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: 'Select Sound File', // Changed title for clarity
+            title: 'Select Sound Files',
             defaultPath: discordConfig.defaultMusicPath,
-            properties: ['openFile'], // Removed 'multiSelections'
+            properties: ['openFile', 'multiSelections'],
             filters: [
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
             ]
         });
 
-        // The dialog now returns a single path or null, wrap in array for consistency
-        // with old logic downstream, or handle as single item. Let's handle as single.
         if (filePaths && filePaths.length > 0) {
-            return filePaths[0];
+            return filePaths;
         }
         return null;
     });

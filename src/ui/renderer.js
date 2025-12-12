@@ -959,11 +959,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.stack-add-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
-                window.electron.ipcRenderer.invoke('open-soundboard-file-dialog').then(filePath => {
-                    if (filePath) { // Now a single path, not an array
+                window.electron.ipcRenderer.invoke('open-soundboard-file-dialog').then(filePaths => {
+                    if (filePaths && filePaths.length > 0) {
                         const slot = soundboardState[slotId];
-                        const name = filePath.replace(/^.*[\\\/]/, '');
-                        slot.tracks.push({ path: filePath, name: name });
+                        filePaths.forEach(filePath => {
+                            const name = filePath.replace(/^.*[\\\/]/, '');
+                            slot.tracks.push({ path: filePath, name: name });
+                        });
                         saveSoundboardState();
                         renderSoundboard();
                     }
