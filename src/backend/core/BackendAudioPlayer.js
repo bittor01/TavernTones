@@ -110,14 +110,13 @@ class BackendAudioPlayer extends EventEmitter {
 
             this.pendingFilePath = resolvedPath;
 
-            if (this.playerStatus === AudioPlayerStatus.Idle || this.playerStatus === AudioPlayerStatus.Paused) {
+            // This is the section that was causing the autoplay bug.
+            // Now, we only move the pending track to active if the player is idle.
+            // We NO LONGER call _play() here. The user must explicitly press play.
+            if (this.playerStatus === AudioPlayerStatus.Idle) {
                 this._movePendingToActive();
-                this._stopMusicStream();
-                this._play();
-                if (this.playerStatus === AudioPlayerStatus.Paused) {
-                    this.pause();
-                }
             }
+            // If paused, the pending track will be picked up on the next 'play' command.
         } finally {
             this.isCaching = false;
             this._emitStatusUpdate();
@@ -137,12 +136,35 @@ class BackendAudioPlayer extends EventEmitter {
             return;
         }
         this.log(`[BAP] Starting _play for: ${this.activeFilePath}`);
-        this.lastPlayStartTime = Date.now(); // Track start time
-        this._stopMusicStream(); // Ensure no old stream is running
+        this.lastPlayStartTime = Date.now();
+        this._stopMusicStream();
+
         const ffmpegProcess = this._createFfmpegStream(this.activeFilePath);
         const stream = ffmpegProcess.stdout;
-        stream.on('data', () => this.log('[BAP] Music stream sent data chunk.'));
-        stream.once('close', () => this._handleMusicFinish());
+
+        ffmpegProcess.on('error', (err) => {
+            this.log(`[FFMPEG PROC ERROR] Failed to start ffmpeg process: ${err.message}`);
+            this._stopMusicStream();
+            this.isPlaying = false;
+            this.playerStatus = AudioPlayerStatus.Idle;
+            this._emitStatusUpdate();
+        });
+
+        ffmpegProcess.on('exit', (code, signal) => {
+            this.log(`[FFMPEG PROC EXIT] Process exited with code ${code} and signal ${signal}`);
+            // If the process exits with a non-zero code, it's an error.
+            if (code !== 0) {
+                this.log(`[FFMPEG PROC EXIT] FFMPEG process exited with an error code.`);
+                this._stopMusicStream();
+                this.isPlaying = false;
+                this.playerStatus = AudioPlayerStatus.Idle;
+                this._emitStatusUpdate();
+            } else {
+                // Only if the exit code is 0 do we consider the track finished successfully.
+                this._handleMusicFinish();
+            }
+        });
+
         this.log('[BAP] Adding music stream to mixer.');
         this.mixer.addInput(stream, 'music', this.playbackVolume);
         this.activeStreams.set('music', { process: ffmpegProcess, stream });
@@ -161,16 +183,8 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     _handleMusicFinish() {
-        const duration = Date.now() - (this.lastPlayStartTime || 0);
-
+        // This function is now only called when an ffmpeg process exits successfully.
         if (this.loopToggle && this.activeFilePath) {
-            if (duration < 2000) { // 2-second threshold
-                this.log(`ERR: File ${this.activeFilePath} finished too quickly (${duration}ms). Disabling loop to prevent thrashing.`);
-                this.isPlaying = false;
-                this.playerStatus = AudioPlayerStatus.Idle;
-                this._emitStatusUpdate();
-                return;
-            }
             this.log(`Looping active file: ${this.activeFilePath}`);
             setTimeout(() => this._play(), 100);
         } else {
@@ -185,20 +199,25 @@ class BackendAudioPlayer extends EventEmitter {
         const resolvedPath = await this._resolvePath(filePath);
         if (!resolvedPath) {
             this.log(`[BAP] Could not resolve path for slot ${slotId}, aborting playback.`);
-            this.emit('sound-finished', slotId); // Emit finished to un-set the playing state in UI
+            this.emit('sound-finished', slotId);
             return;
         }
 
         const id = `sfx_${slotId}`;
-        this.stopSound(slotId); // Stop any existing sound in the same slot
+        this.stopSound(slotId);
 
         const ffmpegProcess = this._createFfmpegStream(resolvedPath);
         const stream = ffmpegProcess.stdout;
 
-        stream.on('data', () => this.log(`[BAP] SFX stream ${id} sent data chunk.`));
-        stream.once('close', () => {
+        ffmpegProcess.on('error', (err) => {
+            this.log(`[FFMPEG SFX ERROR] Failed to start process for slot ${slotId}: ${err.message}`);
+            this.stopSound(slotId);
+            this.emit('sound-finished', slotId);
+        });
+
+        ffmpegProcess.on('exit', (code, signal) => {
+            this.log(`[FFMPEG SFX EXIT] Process for slot ${slotId} exited with code ${code}, signal ${signal}`);
             if (this.activeStreams.has(id)) {
-                this.log(`[BAP] SFX stream ${id} closed naturally.`);
                 this.activeStreams.delete(id);
                 this.emit('sound-finished', slotId);
             }
