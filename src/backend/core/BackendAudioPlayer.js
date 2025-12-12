@@ -249,7 +249,11 @@ class BackendAudioPlayer extends EventEmitter {
 
     play() {
         if (this.playerStatus === AudioPlayerStatus.Paused) {
-            this.mixer.resumeInput('music');
+            if (this.activeStreams.has('music')) {
+                const { process } = this.activeStreams.get('music');
+                process.kill('SIGCONT'); // Send continue signal
+                this.log('[BAP] Sent SIGCONT to ffmpeg process.');
+            }
             this.isPlaying = true;
             this.playerStatus = AudioPlayerStatus.Playing;
         } else if (this.playerStatus === AudioPlayerStatus.Idle) {
@@ -265,7 +269,11 @@ class BackendAudioPlayer extends EventEmitter {
 
     pause() {
         if (this.playerStatus !== AudioPlayerStatus.Playing) return;
-        this.mixer.pauseInput('music');
+        if (this.activeStreams.has('music')) {
+            const { process } = this.activeStreams.get('music');
+            process.kill('SIGSTOP'); // Send stop signal
+            this.log('[BAP] Sent SIGSTOP to ffmpeg process.');
+        }
         this.isPlaying = false;
         this.playerStatus = AudioPlayerStatus.Paused;
         this._emitStatusUpdate();
