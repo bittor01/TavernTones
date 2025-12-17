@@ -22,10 +22,12 @@ class BackendAudioPlayer extends EventEmitter {
         this.activeFilePath = null;
         this.pendingFilePath = null; // New state for the pending file path
         this.promoteAndPause = false; // Flag to promote a track without playing it
-        this.isStoppingIntentionally = false; // Flag to help the Idle handler know why it was called
         this.loopToggle = true;
         this.playbackVolume = 1.0;
+        this.playbackVolume = 1.0;
         this.soundboardVolume = 0.5;
+        this.duckingVolume = 0.3; // Volume multiplier for music when SFX is playing
+        this.activeSfxCount = 0; // Number of SFX currently playing
 
         // Audio Pipelines
         this.mixer = new ThreadedAudioMixer();
@@ -101,7 +103,11 @@ class BackendAudioPlayer extends EventEmitter {
             // Set volume on the mixer line for music? Or global?
             // For now, let's say this volume only affects the music track, not SFX?
             // Or we can implement volume scaling in the mixer.
-            // TODO: Pass volume to mixer input. 
+            // Apply volume immediately, respecting ducking state
+            if (this.activeStreams.has('music')) {
+                const currentVolume = this.activeSfxCount > 0 ? this.playbackVolume * this.duckingVolume : this.playbackVolume;
+                this.mixer.setInputVolume('music', currentVolume);
+            }
         }
     }
 
@@ -201,8 +207,17 @@ class BackendAudioPlayer extends EventEmitter {
 
             // Handle stream events
             stream.once('close', () => {
-                this.log(`Music stream for ${this.activeFilePath} closed.`);
-                this._handleMusicFinish();
+                // Identity Check: Only handle finish if this stream is still the active 'music' stream
+                const currentMusic = this.activeStreams.get('music');
+                if (currentMusic && currentMusic.stream === stream) {
+                    this.log(`Music stream for ${this.activeFilePath} closed naturally.`);
+                    // We must remove it from activeStreams so we don't try to kill it later
+                    this.activeStreams.delete('music');
+                    this.mixer.removeInput('music'); // Ensure mixer clean up
+                    this._handleMusicFinish();
+                } else {
+                    this.log(`Music stream for ${this.activeFilePath} closed (Cleanup/Replaced). Ignoring.`);
+                }
             });
 
             // Add to mixer with ID 'music'
@@ -231,13 +246,6 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     _handleMusicFinish() {
-        // Logic similar to the old Idle event
-        if (this.isStoppingIntentionally) {
-            this.isStoppingIntentionally = false;
-            // Handled in the stop/play methods usually
-            return;
-        }
-
         const duration = Date.now() - (this.lastPlayStartTime || 0);
 
         if (this.loopToggle && this.activeFilePath) {
@@ -273,6 +281,13 @@ class BackendAudioPlayer extends EventEmitter {
             const ffmpegProcess = this._createFfmpegStream(filePath);
             const stream = ffmpegProcess.stdout;
 
+            // Handle Ducking Start
+            if (this.activeSfxCount === 0 && this.activeStreams.has('music')) {
+                this.log('Soundboard: Ducking music volume.');
+                this.mixer.setInputVolume('music', this.playbackVolume * this.duckingVolume);
+            }
+            this.activeSfxCount++;
+
             stream.once('close', () => {
                 // If the stream is still in activeStreams, it finished naturally (not stopped manually)
                 if (this.activeStreams.has(id)) {
@@ -280,6 +295,13 @@ class BackendAudioPlayer extends EventEmitter {
                     this.activeStreams.delete(id);
                     this.mixer.removeInput(id);
                     this.emit('sound-finished', slotId);
+
+                    // Handle Ducking End
+                    this.activeSfxCount = Math.max(0, this.activeSfxCount - 1);
+                    if (this.activeSfxCount === 0 && this.activeStreams.has('music')) {
+                        this.log('Soundboard: Restoring music volume.');
+                        this.mixer.setInputVolume('music', this.playbackVolume);
+                    }
                 }
             });
 
@@ -299,6 +321,13 @@ class BackendAudioPlayer extends EventEmitter {
             process.kill();
             this.activeStreams.delete(id);
             this.log(`Soundboard: Stopped slot ${slotId}`);
+
+            // Handle Ducking End (Manual Stop)
+            this.activeSfxCount = Math.max(0, this.activeSfxCount - 1);
+            if (this.activeSfxCount === 0 && this.activeStreams.has('music')) {
+                this.log('Soundboard: Restoring music volume (Manual Stop).');
+                this.mixer.setInputVolume('music', this.playbackVolume);
+            }
         }
     }
 
@@ -322,7 +351,6 @@ class BackendAudioPlayer extends EventEmitter {
         if (this.playerStatus === AudioPlayerStatus.Paused && this.pendingFilePath) {
             this.log('File loaded while paused. Promoting to active and remaining paused.');
             this.promoteAndPause = true;
-            this.isStoppingIntentionally = true;
             this._stopMusicStream();
             // We need to manually trigger the "idle" logic? 
             // Or just do the swap manually here since we are controlling the stream directly now.
@@ -337,7 +365,6 @@ class BackendAudioPlayer extends EventEmitter {
         // Scenario 1: Paused with pending track -> swap and play
         if (this.playerStatus === AudioPlayerStatus.Paused && this.pendingFilePath) {
             this.log('Play command received while paused with a pending track. Swapping and playing.');
-            this.isStoppingIntentionally = true;
             this._stopMusicStream();
             this._movePendingToActive();
             this._play();
@@ -390,7 +417,6 @@ class BackendAudioPlayer extends EventEmitter {
 
     pause() {
         this.log("Pause requested. Stopping music stream (Resume not fully implemented, restarts track).");
-        this.isStoppingIntentionally = true;
         this._stopMusicStream();
         this.isPlaying = false;
         this.playerStatus = AudioPlayerStatus.Paused;

@@ -403,9 +403,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // --- Soundboard Listeners (placeholders for now) ---
-    document.getElementById('soundboard-volume').addEventListener('input', (e) => {
-        console.log("Soundboard volume changed to:", e.target.value);
-        // This will later send an IPC message, e.g., window.electron.ipcRenderer.send('set-soundboard-volume', e.target.value);
+    // --- Soundboard Listeners ---
+    const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+
+    soundboardVolumeSlider.addEventListener('input', (e) => {
+        const sliderValue = parseFloat(e.target.value);
+        // Scale: 0-1 slider maps to 0-1.5 actual volume (150%)
+        const effectiveVolume = sliderValue * 1.5;
+
+        // Update backend
+        window.electron.ipcRenderer.send('set-soundboard-volume', { volume: effectiveVolume });
+
+        // Save state (debounced ideally, but on input for now is fine for local app)
+        saveSoundboardState();
     });
 
     addCreatureForm.addEventListener('submit', (event) => {
@@ -785,9 +795,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const SOUNDBOARD_SIZE = 3;
 
     // Load state from backend
+
+    // Load state from backend
     window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
-        if (savedState && Array.isArray(savedState) && savedState.length === SOUNDBOARD_SIZE) {
-            soundboardState = migrateSoundboardState(savedState);
+        let slotsToLoad = [];
+        let volumeToLoad = 0.5; // Default slider value (which is ~0.75 effective volume)
+
+        if (savedState) {
+            if (Array.isArray(savedState)) {
+                // Legacy format: just an array of slots
+                slotsToLoad = savedState;
+            } else if (typeof savedState === 'object') {
+                // New format: { volume, slots }
+                if (savedState.slots) slotsToLoad = savedState.slots;
+                if (savedState.volume !== undefined) volumeToLoad = savedState.volume;
+            }
+        }
+
+        // Apply Logic
+        if (slotsToLoad && slotsToLoad.length === SOUNDBOARD_SIZE) {
+            soundboardState = migrateSoundboardState(slotsToLoad);
         } else {
             // Initialize defaults
             soundboardState = [];
@@ -803,8 +830,38 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
         }
+
+        // Set Volume UI and Backend
+        const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+        if (soundboardVolumeSlider) {
+            soundboardVolumeSlider.value = volumeToLoad;
+            // Trigger 1.5x scaling logic immediately
+            const effectiveVolume = volumeToLoad * 1.5;
+            window.electron.ipcRenderer.send('set-soundboard-volume', { volume: effectiveVolume });
+        }
+
+        // Force a render
         renderSoundboard();
     });
+
+    let saveSoundboardStateTimeout;
+    function saveSoundboardState() {
+        const volume = parseFloat(document.getElementById('soundboard-volume').value);
+        const stateToSave = {
+            volume: volume,
+            slots: soundboardState.map(slot => ({
+                ...slot,
+                isPlaying: false // Don't save playing state
+            }))
+        };
+
+        clearTimeout(saveSoundboardStateTimeout);
+        saveSoundboardStateTimeout = setTimeout(() => {
+            window.electron.ipcRenderer.send('save-soundboard-state', stateToSave);
+        }, 1000);
+    }
+
+
 
     // --- Preset Buttons ---
     const savePresetBtn = document.getElementById('save-preset-btn');
@@ -1600,12 +1657,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Volume Control ---
-    const soundboardVolumeSlider = document.getElementById('soundboard-volume');
-    if (soundboardVolumeSlider) {
-        soundboardVolumeSlider.addEventListener('input', (e) => {
-            const volume = parseFloat(e.target.value);
-            window.electron.ipcRenderer.send('set-soundboard-volume', { volume });
-        });
-    }
+
+    // Ensure state is saved when closing the window
+    window.addEventListener('beforeunload', () => {
+        if (saveSoundboardStateTimeout) {
+            clearTimeout(saveSoundboardStateTimeout);
+        }
+        // Force immediate save
+        const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+        if (soundboardVolumeSlider) {
+            const volume = parseFloat(soundboardVolumeSlider.value);
+            const stateToSave = {
+                volume: volume,
+                slots: soundboardState.map(slot => ({
+                    ...slot,
+                    isPlaying: false
+                }))
+            };
+            window.electron.ipcRenderer.send('save-soundboard-state', stateToSave);
+        }
+    });
+
 });
