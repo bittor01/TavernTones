@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
 const path = require('path');
-const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder } = require('discord.js');
 const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
@@ -72,13 +72,13 @@ const DND_CONDITIONS = {
 };
 
 const hpBarEmojiMap = {
-    '#007bff': ':blue_square:',      // Blue
-    '#28a745': ':green_square:',     // Green
-    '#ffc107': ':yellow_square:',    // Yellow
-    '#dc3545': ':red_square:',       // Red
-    '#8a2be2': ':purple_square:',    // Purple
-    '#6c757d': ':x:',               // Grey (Dead)
-    'empty': ':black_large_square:'
+    '#007bff': '🟦',      // Blue (100%)
+    '#28a745': '🟩',     // Green (50-99%)
+    '#ffc107': '🟨',    // Yellow (25-49%)
+    '#dc3545': '🟥',       // Red (<25%)
+    '#8a2be2': '🟪',    // Purple (Temp HP)
+    '#6c757d': '💀',     // Dead
+    'empty': '⬛'
 };
 
 async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
@@ -289,7 +289,7 @@ function createEmojiHpBar(creature) {
     const tempHpBlocks = Math.min(BAR_LENGTH, Math.round((tempHp / maxHp) * BAR_LENGTH)); // Cap at bar length
 
     const hpColorEmoji = hpBarEmojiMap[getHpColor(hp, maxHp)] || hpBarEmojiMap['#007bff'];
-    const tempHpEmoji = '⭐';
+    const tempHpEmoji = hpBarEmojiMap['#8a2be2'];
     const emptyEmoji = hpBarEmojiMap['empty'];
 
     let bar = '';
@@ -1258,12 +1258,12 @@ setInterval(() => {
 
 
 function getHpColor(current, max) {
-    if (current <= 0) return '#6c757d'; // Grey
-    if (current > max) return '#8a2be2'; // Purple
+    if (current <= 0) return '#6c757d'; // Dead
+    if (current > max) return '#007bff'; // Overhealed? Treat as blue/100% or purple? Sticking to blue for base HP.
 
     const percentage = (current / max) * 100;
-    if (percentage <= 25) return '#dc3545'; // Red
-    if (percentage <= 50) return '#ffc107'; // Yellow
-    if (percentage <= 75) return '#28a745'; // Green
-    return '#007bff'; // Blue
+    if (percentage >= 100) return '#007bff'; // Blue
+    if (percentage >= 50) return '#28a745'; // Green
+    if (percentage >= 25) return '#ffc107'; // Yellow
+    return '#dc3545'; // Red (< 25%)
 }
