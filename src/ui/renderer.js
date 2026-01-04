@@ -571,8 +571,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // --- Populate basic fields ---
         document.getElementById('creature-name').value = creature.name || '';
         document.getElementById('creature-initiative').value = creature.initiative || '';
-        // When editing, show the formula for single creatures, or current HP for mobs
-        document.getElementById('creature-hp').value = (!creature.isMob && creature.hpFormula) ? creature.hpFormula : (creature.hp || '');
+        // When editing, show the CURRENT HP so the user can edit the value directly.
+        // We do store the formula separately if needed, but the user requested editing current values.
+        document.getElementById('creature-hp').value = creature.hp || '';
         document.getElementById('creature-ac').value = creature.ac || '';
         document.getElementById('creature-speed').value = creature.speed || '';
         document.getElementById('attack-modifier').value = creature.attackMod || '';
@@ -632,7 +633,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Populate basic fields
         document.getElementById('creature-name').value = creature.name || '';
-        document.getElementById('creature-initiative').value = creature.initiative || '';
+        document.getElementById('creature-initiative').value = creature.initiativeFormula || creature.initiative || '';
         document.getElementById('creature-hp').value = creature.hpFormula || creature.hp || '';
         document.getElementById('creature-ac').value = creature.ac || '';
         document.getElementById('creature-speed').value = creature.speed || '';
@@ -1095,6 +1096,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!initiativeOrder || initiativeOrder.length === 0) return;
 
         initiativeOrder.forEach((creature, index) => {
+            if (creature.hidden) return; // Skip hidden creatures (e.g. being edited)
+
             const isActive = index === currentTurnIndex;
             const creatureDiv = document.createElement('div');
             creatureDiv.className = 'initiative-entry' + (isActive ? ' active-turn' : '');
