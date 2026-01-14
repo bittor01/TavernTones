@@ -592,6 +592,26 @@ async function ipcloader() {
         return await dialog.showMessageBox(focusedWindow, options);
     });
 
+    ipcMain.handle('read-combat-file', async () => {
+        const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openFile'],
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+        if (canceled || filePaths.length === 0) {
+            return null;
+        }
+        try {
+            const content = fs.readFileSync(filePaths[0], 'utf8');
+            const data = JSON.parse(content);
+            // Support both full save state (with initiativeOrder) or simple array
+            const combatants = Array.isArray(data) ? data : (data.initiativeOrder || []);
+            return combatants;
+        } catch (e) {
+            logToRenderer(`Error reading combat file: ${e.message}`);
+            return null;
+        }
+    });
+
     ipcMain.handle('open-file-dialog', async () => {
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
             title: 'Select Music File',
@@ -931,6 +951,13 @@ async function ipcloader() {
 
     ipcMain.on('remove-creature', (event, { creatureId }) => {
         initiativeTracker.removeCreature(creatureId);
+    });
+
+    ipcMain.on('copy-creature', (event, { creatureId }) => {
+        const creature = initiativeTracker.getCreature(creatureId);
+        if (creature) {
+            mainWindow.webContents.send('populate-add-form', creature);
+        }
     });
 
     ipcMain.on('previous-turn', async () => {

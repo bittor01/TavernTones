@@ -56,7 +56,37 @@ Each item in the `initiativeOrder` array must be a creature object with the foll
 | `isConcentrating` | Boolean | No | Whether the creature is concentrating on a spell. |
 | `isFriendly` | Boolean | No | Flags the creature as friendly/player (affects some reminders). |
 | `reminders` | Object | No | Custom text reminders. Structure: `{ "start": "Text...", "end": "Text..." }`. |
-| `rawData` | String | No | A JSON-stringified object containing the full 5eTools statblock data. Used for "Stat Block" display. |
+| `rawData` | String | No | A **JSON-stringified** object containing the full statblock data (actions, traits, etc.). This follows the 5eTools bestiary data structure. See "Raw Data Structure" below. |
+
+### Raw Data Structure (for `rawData`)
+
+The `rawData` string should parse into an object with fields necessary for displaying the full statblock. Important fields include:
+
+- `trait`: Array of objects `{ name, entries }`.
+- `action`: Array of objects `{ name, entries }`.
+- `reaction`: Array of objects `{ name, entries }`.
+- `legendary`: Array of objects `{ name, entries }`.
+- `spellcasting`: Array of objects describing spell slots and known spells.
+
+Example of the object *before* stringifying:
+```json
+{
+  "name": "Goblin",
+  "size": "S",
+  "type": "humanoid",
+  "alignment": "neutral evil",
+  "ac": [15],
+  "hp": { "average": 7, "formula": "2d6" },
+  "speed": { "walk": 30 },
+  "str": 8, "dex": 14, "con": 10, "int": 10, "wis": 8, "cha": 8,
+  "action": [
+    {
+      "name": "Scimitar",
+      "entries": ["Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage."]
+    }
+  ]
+}
+```
 
 ### Mob Rules (Optional)
 
