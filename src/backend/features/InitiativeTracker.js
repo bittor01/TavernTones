@@ -35,20 +35,37 @@ class InitiativeTracker {
         this.autosavePath = autosavePath;
         this.initiativeOrder = [];
         this.currentTurnIndex = 0;
+
+        // Debounced methods to optimize performance during rapid updates
+        this._debouncedSave = this._debounce(this._performSave.bind(this), 1000);
+        this._debouncedUpdate = this._debounce(this._performUpdate.bind(this), 100);
+
         this.loadState();
     }
 
+    _debounce(fn, delay) {
+        let timeoutId;
+        return (...args) => {
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                fn.apply(this, args);
+            }, delay);
+        };
+    }
+
     _saveState() {
-        try {
-            const state = {
-                initiativeOrder: this.initiativeOrder,
-                currentTurnIndex: this.currentTurnIndex
-            };
-            fs.writeFileSync(this.autosavePath, JSON.stringify(state, null, 2));
-            this.logToRenderer(`Encounter state autosaved with ${this.initiativeOrder.length} creatures.`);
-        } catch (error) {
-            this.logToRenderer(`Error autosaving state: ${error.message}`);
-        }
+        this._debouncedSave();
+    }
+
+    _performSave() {
+        const state = {
+            initiativeOrder: this.initiativeOrder,
+            currentTurnIndex: this.currentTurnIndex
+        };
+        fs.promises.writeFile(this.autosavePath, JSON.stringify(state, null, 2))
+            .catch(error => {
+                this.logToRenderer(`Error autosaving state: ${error.message}`);
+            });
     }
 
     loadState() {
@@ -73,10 +90,15 @@ class InitiativeTracker {
     }
 
     sendFullState() {
-        this._updateFrontend();
+        // Immediate update for explicit requests
+        this.sendInitiativeUpdate(this.initiativeOrder, this.currentTurnIndex);
     }
 
     _updateFrontend() {
+        this._debouncedUpdate();
+    }
+
+    _performUpdate() {
         this.sendInitiativeUpdate(this.initiativeOrder, this.currentTurnIndex);
     }
 
