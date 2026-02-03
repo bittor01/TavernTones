@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
     const diceLog = document.getElementById('diceLog');
     const playPauseButton = document.getElementById('playPauseButton');
+    const playNextButton = document.getElementById('playNextButton');
     const activeFileLabel = document.getElementById('activeFileLabel');
     const pendingFileLabel = document.getElementById('pendingFileLabel');
     const pendingFileLabelContainer = document.getElementById('pendingFileLabelContainer');
@@ -386,6 +387,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.electron.ipcRenderer.send('play-music');
                 }
                 break;
+            case 'playNextButton':
+                const isPlayNextEnabled = !playNextButton.classList.contains('active');
+                window.electron.ipcRenderer.send('play-next', { enabled: isPlayNextEnabled });
+                break;
             case 'previewButton':
                 if (!previewAudioPlayer.paused) {
                     previewAudioPlayer.pause();
@@ -559,6 +564,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         isPlaying = status.isPlaying;
         playPauseButton.textContent = isPlaying ? 'Pause' : 'Play';
         previewButton.disabled = !status.activeFilePath && !status.pendingFilePath;
+
+        // Play Next button state
+        playNextButton.disabled = !status.pendingFilePath;
+        if (status.playNextMode) {
+            playNextButton.classList.add('active');
+        } else {
+            playNextButton.classList.remove('active');
+        }
 
         // Handle Pending Track
         if (status.isCaching && status.pendingFilePath) {
@@ -990,6 +1003,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (target.classList.contains('remove-condition-btn')) {
             const { condition } = target.dataset;
             window.electron.ipcRenderer.send('remove-condition', { creatureId, condition });
+            // Hide tooltip immediately when condition is removed
+            if (globalTooltip) {
+                globalTooltip.style.visibility = 'hidden';
+                globalTooltip.style.opacity = '0';
+            }
         } else if (target.classList.contains('reminders-btn')) {
             createPopup('reminders', creatureId, target);
         } else if (target.classList.contains('copy-btn')) {
@@ -1411,12 +1429,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <button id="popup-hp-ok">Ok</button>
             `;
         } else if (type === 'condition') {
-            contentHTML = `
-                <select id="popup-condition-select">
-                    ${Object.keys(DND_CONDITIONS).map(c => `<option value="${c}">${c}</option>`).join('')}
-                </select>
-                <button id="popup-condition-add">Add</button>
-            `;
+            const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
+            const existingConditions = creature ? (creature.conditions || []) : [];
+            const availableConditions = Object.keys(DND_CONDITIONS).filter(c => !existingConditions.includes(c));
+
+            if (availableConditions.length === 0) {
+                contentHTML = `<p style="padding: 10px; margin: 0; font-size: 0.9em; color: #666;">All conditions applied.</p>`;
+            } else {
+                contentHTML = `
+                    <select id="popup-condition-select">
+                        ${availableConditions.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                    <button id="popup-condition-add">Add</button>
+                `;
+            }
         } else if (type === 'stat-roll' || type === 'attack-roll') {
             contentHTML = `
                 <button class="roll-type-btn" data-roll="adv">Advantage</button>
@@ -1492,11 +1518,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         } else if (type === 'condition') {
-            document.getElementById('popup-condition-add').addEventListener('click', () => {
-                const condition = document.getElementById('popup-condition-select').value;
-                window.electron.ipcRenderer.send('add-condition', { creatureId: parseInt(creatureId), condition });
-                popup.remove();
-            });
+            const addBtn = document.getElementById('popup-condition-add');
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    const condition = document.getElementById('popup-condition-select').value;
+                    window.electron.ipcRenderer.send('add-condition', { creatureId: parseInt(creatureId), condition });
+                    popup.remove();
+                });
+            }
         } else if (type === 'temp-hp') {
             const input = document.getElementById('popup-temp-hp-input');
             document.getElementById('popup-temp-hp-ok').addEventListener('click', () => {

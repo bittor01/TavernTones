@@ -23,6 +23,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.pendingFilePath = null; // New state for the pending file path
         this.promoteAndPause = false; // Flag to promote a track without playing it
         this.loopToggle = true;
+        this.playNextMode = false; // Flag to play pending track after current one finishes
         this.playbackVolume = 1.0;
         this.playbackVolume = 1.0;
         this.soundboardVolume = 0.5;
@@ -65,6 +66,7 @@ class BackendAudioPlayer extends EventEmitter {
             isCaching: this.isCaching,
             activeFilePath: getRelativePath(this.activeFilePath),
             pendingFilePath: getRelativePath(this.pendingFilePath),
+            playNextMode: this.playNextMode
         };
         this.emit('status-change', status);
     }
@@ -114,6 +116,12 @@ class BackendAudioPlayer extends EventEmitter {
     toggleLoop() {
         this.loopToggle = !this.loopToggle;
         this.log(`Looping is now ${this.loopToggle ? 'ON' : 'OFF'}`);
+    }
+
+    setPlayNext(enabled) {
+        this.playNextMode = enabled;
+        this.log(`Play Next mode is now ${enabled ? 'ON' : 'OFF'}`);
+        this._emitStatusUpdate();
     }
 
     // --- Internal File Handling ---
@@ -247,6 +255,14 @@ class BackendAudioPlayer extends EventEmitter {
 
     _handleMusicFinish() {
         const duration = Date.now() - (this.lastPlayStartTime || 0);
+
+        if (this.playNextMode && this.pendingFilePath) {
+            this.log(`Play Next: Finishing current track and starting: ${this.pendingFilePath}`);
+            this.playNextMode = false;
+            this._movePendingToActive();
+            this._play();
+            return;
+        }
 
         if (this.loopToggle && this.activeFilePath) {
             if (duration < 2000) {

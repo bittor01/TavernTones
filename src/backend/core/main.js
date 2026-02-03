@@ -576,6 +576,13 @@ async function ipcloader() {
         musicPlayer.pause();
     });
 
+    ipcMain.on('play-next', (event, { enabled }) => {
+        logToRenderer(`IPC 'play-next' received: ${enabled}`);
+        if (musicPlayer) {
+            musicPlayer.setPlayNext(enabled);
+        }
+    });
+
     ipcMain.handle('get-preview-audio-data', async () => {
         const filePath = musicPlayer.getPreviewFilePath();
         if (!filePath) {
