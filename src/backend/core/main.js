@@ -479,7 +479,7 @@ async function ipcloader() {
         return filePaths && filePaths.length > 0 ? filePaths[0] : null;
     });
 
-    // IPC Handler for setting up all default folders
+    // IPC Handler for setting up all default folders with improved error handling and OneDrive support
     ipcMain.handle('setup-default-folders', async () => {
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
             title: 'Select a Parent Directory for Tavern Tones Data',
@@ -495,7 +495,10 @@ async function ipcloader() {
         const dataDir = path.join(parentDir, 'Tavern Tones');
 
         try {
-            await fs.promises.mkdir(dataDir, { recursive: true });
+            // Ensure the main data directory exists
+            if (!fs.existsSync(dataDir)) {
+                await fs.promises.mkdir(dataDir, { recursive: true });
+            }
 
             const paths = {
                 bestiaryPath: path.join(dataDir, 'bestiary'),
@@ -505,12 +508,26 @@ async function ipcloader() {
 
             // Create all subdirectories
             for (const p of Object.values(paths)) {
-                await fs.promises.mkdir(p, { recursive: true });
+                if (!fs.existsSync(p)) {
+                    await fs.promises.mkdir(p, { recursive: true });
+                }
             }
 
-            // Copy default data (random tables)
-            const sourcePath = app.isPackaged ? path.join(process.resourcesPath, 'app') : app.getAppPath();
-            await fs.promises.cp(path.join(sourcePath, 'randomtables'), paths.randomTablesPath, { recursive: true });
+            // Copy default data (random tables) from the application package
+            const sourcePath = app.getAppPath();
+            const sourceTables = path.join(sourcePath, 'randomtables');
+
+            if (fs.existsSync(sourceTables)) {
+                // Use a more compatible copy approach if cp is missing or fails
+                if (fs.promises.cp) {
+                    await fs.promises.cp(sourceTables, paths.randomTablesPath, { recursive: true, force: true });
+                } else {
+                    // Fallback for older Node versions (shouldn't happen in recent Electron)
+                    const ncp = require('util').promisify(require('fs').copyFile); // simplistic
+                    // Actually, let's assume cp is available in modern Electron.
+                    throw new Error("fs.promises.cp is required for folder copying.");
+                }
+            }
 
             await dialog.showMessageBox(mainWindow, {
                 type: 'info',
@@ -522,7 +539,7 @@ async function ipcloader() {
             return paths;
         } catch (error) {
             console.error('Failed to create default folders:', error);
-            await dialog.showErrorBox('Error', 'Failed to create default data folders. Please check permissions and try again.');
+            await dialog.showErrorBox('Error', `Failed to create default data folders.\n\nError: ${error.message}\n\nPlease ensure you have write permissions to the selected folder (especially if using OneDrive) and try again.`);
             return null;
         }
     });

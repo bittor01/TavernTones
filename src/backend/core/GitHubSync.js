@@ -44,7 +44,10 @@ class GitHubSync {
             const response = await axios.get(apiUrl, { headers });
             const remoteFiles = response.data.filter(f => f.type === 'file' && f.name.endsWith('.json'));
 
-            if (!await fs.stat(localPath).catch(() => null)) {
+            // Ensure local path exists
+            const stats = await fs.stat(localPath).catch(() => null);
+            if (!stats) {
+                this.log(`Creating local directory: ${localPath}`);
                 await fs.mkdir(localPath, { recursive: true });
             }
 
@@ -135,7 +138,8 @@ class GitHubSync {
                 this.log("GitHub API Error: 403 Forbidden. This is likely a rate limit issue.");
                 return { success: false, error: "GitHub rate limit exceeded. Please provide a Personal Access Token in settings to continue." };
             }
-            this.log(`Error syncing Bestiary data: ${error.message}`);
+            const errorMessage = `Error syncing Bestiary data: ${error.message}`;
+            this.log(errorMessage);
             return { success: false, error: error.message };
         }
     }
