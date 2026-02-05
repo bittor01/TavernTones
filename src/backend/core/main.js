@@ -1287,7 +1287,7 @@ app.on('before-quit', (e) => {
     }
 });
 
-client.once('ready', async () => {
+client.once('clientReady', async () => {
     logToRenderer('TavernTones is online!');
 
     //Connect to the voice channel

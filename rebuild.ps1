@@ -128,8 +128,10 @@ Write-Host "=============================================" -ForegroundColor Cyan
 # -------------------------
 Write-Host "`n--- Cleaning Up Running Processes ---" -ForegroundColor Yellow
 Write-Host "Ensuring no instances of TavernTones are running..." -ForegroundColor DarkGray
-Stop-Process -Name "TavernTones" -ErrorAction SilentlyContinue
-Stop-Process -Name "TavernTonesSetup" -ErrorAction SilentlyContinue
+$ProcessNames = @("TavernTones", "TavernTonesSetup", "taverntones")
+foreach ($name in $ProcessNames) {
+    Stop-Process -Name $name -Force -ErrorAction SilentlyContinue
+}
 Start-Sleep -Seconds 2
 
 # 1. GIT PULL/CHECKOUT
@@ -179,7 +181,7 @@ if (Test-Path ".\build") {
 # 3. RUN NPM BUILD
 # -----------------
 Write-Host "`n--- Running NPM Build ---" -ForegroundColor Yellow
-Invoke-WithRetry -Command "npm" -Arguments @("run", "build") -ErrorName "NPM Build"
+$null = Invoke-WithRetry -Command "npm" -Arguments @("run", "build") -ErrorName "NPM Build"
 
 # 4. START EXECUTABLE (Fire and Forget)
 # ---------------------------------------
