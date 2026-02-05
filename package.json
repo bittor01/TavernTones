@@ -4,7 +4,8 @@
   "main": "src/backend/core/main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win"
+    "build": "electron-builder --win portable",
+    "installer": "electron-builder --win nsis"
   },
   "keywords": [],
   "author": "CrispyChestnuts",
@@ -29,16 +30,22 @@
   "build": {
     "appId": "com.CrispyChestnuts.TavernTones",
     "win": {
-      "target": "nsis",
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "icon.ico",
-      "forceCodeSigning": false,
-      "artifactName": "TavernTonesSetup.exe"
+      "forceCodeSigning": false
     },
     "nsis": {
+      "artifactName": "TavernTonesSetup.exe",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "shortcutName": "TavernTones"
+    },
+    "portable": {
+      "artifactName": "TavernTones.exe"
     },
     "files": [
       "src/",

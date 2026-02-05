@@ -173,6 +173,7 @@ if (Test-Path ".\build") {
 # -----------------
 Write-Host "`n--- Running NPM Build ---" -ForegroundColor Yellow
 Invoke-WithRetry -Command "npm" -Arguments @("run", "build") -ErrorName "NPM Build"
+Invoke-WithRetry -Command "npm" -Arguments @("run", "installer") -ErrorName "NPM Installer"
 
 # 4. START EXECUTABLE (Fire and Forget)
 # ---------------------------------------
