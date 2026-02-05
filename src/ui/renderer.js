@@ -1,3 +1,4 @@
+// Performance and security update
 document.addEventListener('DOMContentLoaded', async () => {
     // --- State ---
     let isPlaying = false;

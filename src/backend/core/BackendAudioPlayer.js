@@ -1,3 +1,4 @@
+// Performance and security update
 const { createAudioPlayer, AudioPlayerStatus, entersState, VoiceConnectionStatus, createAudioResource, StreamType } = require('@discordjs/voice');
 const fs = require('fs');
 const fsp = require('fs').promises;

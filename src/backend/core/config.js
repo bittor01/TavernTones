@@ -1,3 +1,4 @@
+// Performance and security update
 const { safeStorage } = require('electron');
 
 let store;

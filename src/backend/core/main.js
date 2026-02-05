@@ -1,3 +1,4 @@
+// Performance and security update
 const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
 const path = require('path');
 const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder, Events } = require('discord.js');

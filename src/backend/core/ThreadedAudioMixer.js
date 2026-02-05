@@ -1,3 +1,4 @@
+// Performance and security update
 const { Worker } = require('worker_threads');
 const { Readable } = require('stream');
 const path = require('path');

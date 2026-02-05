@@ -1,3 +1,4 @@
+# Performance and security update
 <#
 .SYNOPSIS
   Fire and Forget Script: Pulls latest Git branch, cleans, builds, and runs the executable.

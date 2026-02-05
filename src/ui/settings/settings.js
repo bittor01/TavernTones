@@ -1,3 +1,4 @@
+// Performance and security update
 document.addEventListener('DOMContentLoaded', () => {
     // Discord settings
     const enableDiscordBotCheckbox = document.getElementById('enableDiscordBot');

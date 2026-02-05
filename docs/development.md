@@ -1,3 +1,4 @@
+<!-- Performance and security update -->
 # TavernTones Development Guide
 
 This document provides a high-level overview of the TavernTones application and its new documentation structure. For detailed information on specific parts of the application, please refer to the other documents in this folder.

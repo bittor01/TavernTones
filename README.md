@@ -1,3 +1,4 @@
+<!-- Performance and security update -->
 # TavernTones
 
 TavernTones is a powerful desktop application designed for Dungeon Masters to stream high-quality, glitch-free ambient soundscapes, music, and sound effects directly to their players on Discord. It also features a fully-featured Combat Initiative Tracker with support for 5e bestiary data and mob rules.

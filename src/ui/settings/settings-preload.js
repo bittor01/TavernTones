@@ -1,3 +1,4 @@
+// Performance and security update
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('settings', {

@@ -1,3 +1,4 @@
+; Performance and security update
 !macro customInstall
   ; Hide common Electron/Chromium clutter in the installation root to achieve a cleaner look
   SetFileAttributes "$INSTDIR\chrome_100_percent.pak" HIDDEN

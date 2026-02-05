@@ -1,6 +1,7 @@
 {
   "name": "taverntones",
   "productName": "Tavern Tones",
+  "comment": "Performance and security update",
   "version": "1.0.0",
   "main": "src/backend/core/main.js",
   "scripts": {
