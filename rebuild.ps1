@@ -9,7 +9,7 @@
 
 # --- Configuration ---
 $MaxRetries = 9
-$ExecutablePath = "build/TavernTones.exe"
+$ExecutablePath = "build/TavernTonesSetup.exe"
 $DataDirToKeep = "build/Data"
 # ---------------------
 
@@ -124,6 +124,13 @@ Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host "     Starting Automated Build and Run" -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
 
+# 0. KILL RUNNING PROCESSES
+# -------------------------
+Write-Host "`n--- Cleaning Up Running Processes ---" -ForegroundColor Yellow
+Write-Host "Ensuring no instances of TavernTones are running..." -ForegroundColor DarkGray
+Stop-Process -Name "TavernTones" -ErrorAction SilentlyContinue
+Stop-Process -Name "TavernTonesSetup" -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 2
 
 # 1. GIT PULL/CHECKOUT
 # ----------------------
@@ -173,7 +180,6 @@ if (Test-Path ".\build") {
 # -----------------
 Write-Host "`n--- Running NPM Build ---" -ForegroundColor Yellow
 Invoke-WithRetry -Command "npm" -Arguments @("run", "build") -ErrorName "NPM Build"
-Invoke-WithRetry -Command "npm" -Arguments @("run", "installer") -ErrorName "NPM Installer"
 
 # 4. START EXECUTABLE (Fire and Forget)
 # ---------------------------------------
