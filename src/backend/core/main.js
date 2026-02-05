@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
 const path = require('path');
-const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder, Events } = require('discord.js');
 const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
@@ -1288,7 +1288,7 @@ app.on('before-quit', (e) => {
     }
 });
 
-client.once('clientReady', async () => {
+client.once(Events.ClientReady, async () => {
     logToRenderer('TavernTones is online!');
 
     //Connect to the voice channel

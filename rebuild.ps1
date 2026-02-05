@@ -23,7 +23,9 @@ function Invoke-WithRetry {
         [Parameter(Mandatory=$true)]
         [string]$ErrorName,
         [Parameter(Mandatory=$false)]
-        [string]$WorkingDirectory
+        [string]$WorkingDirectory,
+        [Parameter(Mandatory=$false)]
+        [int]$RetryLimit = $script:MaxRetries
     )
     
     $Attempt = 0
@@ -31,7 +33,7 @@ function Invoke-WithRetry {
     $LogArguments = $Arguments -join ' '
     # No need for $FullArguments = @($Arguments) if $Arguments is already a string array
     
-    $CurrentMaxRetries = $global:MaxRetries
+    $CurrentMaxRetries = $RetryLimit
     
     $ContinueLoop = $true
     while ($ContinueLoop) {
@@ -74,7 +76,7 @@ function Invoke-WithRetry {
         }
     }
     
-    Set-Location $ScriptBaseDir
+    Set-Location $script:ScriptBaseDir
 
     if (-not $Succeeded) {
         Write-Host "FATAL ERROR: $ErrorName failed after $($CurrentMaxRetries) attempts. Aborting script." -ForegroundColor Red
@@ -181,8 +183,8 @@ if (Test-Path ".\build") {
 # 3. RUN NPM BUILD
 # -----------------
 Write-Host "`n--- Running NPM Build ---" -ForegroundColor Yellow
-$null = Invoke-WithRetry -Command "npm" -Arguments @("run", "build") -ErrorName "NPM Build"
-$null = Invoke-WithRetry -Command "npm" -Arguments @("run", "installer") -ErrorName "NPM Installer"
+$null = Invoke-WithRetry -Command "npm" -Arguments @("run", "build") -ErrorName "NPM Build" -RetryLimit $MaxRetries
+$null = Invoke-WithRetry -Command "npm" -Arguments @("run", "installer") -ErrorName "NPM Installer" -RetryLimit $MaxRetries
 
 # 4. START EXECUTABLE (Fire and Forget)
 # ---------------------------------------
