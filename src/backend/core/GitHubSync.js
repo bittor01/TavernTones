@@ -17,10 +17,11 @@ function calculateGitSha(buffer) {
 }
 
 class GitHubSync {
-    constructor(logCallback, dialog, mainWindow) {
+    constructor(logCallback, dialog, mainWindow, githubToken) {
         this.log = logCallback || console.log;
         this.dialog = dialog;
         this.mainWindow = mainWindow;
+        this.githubToken = githubToken;
     }
 
     async syncBestiary(repoUrl, localPath) {
@@ -32,7 +33,11 @@ class GitHubSync {
             }
             const [_, owner, repo] = match;
             const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/data/bestiary`;
+
             const headers = { 'User-Agent': 'TavernTones-App' };
+            if (this.githubToken) {
+                headers['Authorization'] = `token ${this.githubToken}`;
+            }
 
             this.log(`Fetching file list from: ${apiUrl}`);
             const response = await axios.get(apiUrl, { headers });
@@ -125,6 +130,10 @@ class GitHubSync {
             return { success: true, message: `Successfully updated ${count} files.` };
 
         } catch (error) {
+            if (error.response && error.response.status === 403) {
+                this.log("GitHub API Error: 403 Forbidden. This is likely a rate limit issue.");
+                return { success: false, error: "GitHub rate limit exceeded. Please provide a Personal Access Token in settings to continue." };
+            }
             this.log(`Error syncing Bestiary data: ${error.message}`);
             return { success: false, error: error.message };
         }

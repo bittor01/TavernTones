@@ -11,5 +11,5 @@ contextBridge.exposeInMainWorld('settings', {
     setupDefaultFolders: () => ipcRenderer.invoke('setup-default-folders'),
     detectFfmpeg: () => ipcRenderer.invoke('detect-ffmpeg'),
     selectFfmpeg: () => ipcRenderer.invoke('select-ffmpeg-file'),
-    fetchBestiaryData: (repoUrl, localPath) => ipcRenderer.invoke('fetch-bestiary-data', { repoUrl, localPath })
+    fetchBestiaryData: (repoUrl, localPath, githubToken) => ipcRenderer.invoke('fetch-bestiary-data', { repoUrl, localPath, githubToken })
 });

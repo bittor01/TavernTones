@@ -171,9 +171,8 @@ function createSettingsWindow() {
  * backend services and IPC handlers. It runs once the Electron app is ready.
  */
 async function apploader() {
-    discordConfig = await getDiscordConfig();
-
     await app.whenReady().then(async () => {
+        discordConfig = await getDiscordConfig();
         protocol.registerFileProtocol('safe-media', (request, callback) => {
             const url = request.url.substr(13); // 'safe-media://'.length
             const decodedPath = decodeURI(url);
@@ -516,8 +515,8 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.handle('fetch-bestiary-data', async (event, { repoUrl, localPath }) => {
-        const sync = new GitHubSync(logToRenderer, dialog, mainWindow);
+    ipcMain.handle('fetch-bestiary-data', async (event, { repoUrl, localPath, githubToken }) => {
+        const sync = new GitHubSync(logToRenderer, dialog, mainWindow, githubToken);
         return await sync.syncBestiary(repoUrl, localPath);
     });
 

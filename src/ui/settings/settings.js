@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ffmpegPathInput = document.getElementById('ffmpegPath');
     const bestiaryPathInput = document.getElementById('bestiaryPath');
     const gitRepoUrlInput = document.getElementById('gitRepoUrl');
+    const githubTokenInput = document.getElementById('githubToken');
     const randomTablesPathInput = document.getElementById('randomTablesPath');
     const defaultMusicPathInput = document.getElementById('defaultMusicPath');
 
@@ -35,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ffmpegPath: ffmpegPathInput.value,
             bestiaryPath: bestiaryPathInput.value,
             gitRepoUrl: gitRepoUrlInput.value,
+            githubToken: githubTokenInput.value,
             randomTablesPath: randomTablesPathInput.value,
             defaultMusicPath: defaultMusicPathInput.value
         };
@@ -68,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Add input listeners to all fields
-    [tokenInput, voiceChannelInput, textChannelInput, botRoleIdInput, ffmpegPathInput, bestiaryPathInput, gitRepoUrlInput, randomTablesPathInput, defaultMusicPathInput].forEach(el => {
+    [tokenInput, voiceChannelInput, textChannelInput, botRoleIdInput, ffmpegPathInput, bestiaryPathInput, gitRepoUrlInput, githubTokenInput, randomTablesPathInput, defaultMusicPathInput].forEach(el => {
         el.addEventListener('input', checkDirty);
     });
 
@@ -111,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         fetchBestiaryBtn.disabled = true;
         fetchBestiaryBtn.textContent = "Syncing...";
-        const result = await window.settings.fetchBestiaryData(gitRepoUrlInput.value, bestiaryPathInput.value);
+        const result = await window.settings.fetchBestiaryData(gitRepoUrlInput.value, bestiaryPathInput.value, githubTokenInput.value);
         if (result.success) {
             alert(result.message);
         } else {
@@ -139,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ffmpegPathInput.value = config.ffmpegPath || '';
             bestiaryPathInput.value = config.bestiaryPath || '';
             gitRepoUrlInput.value = config.gitRepoUrl || 'https://github.com/5etools-mirror-3/5etools-src';
+            githubTokenInput.value = config.githubToken || '';
             randomTablesPathInput.value = config.randomTablesPath || '';
             defaultMusicPathInput.value = config.defaultMusicPath || '';
 
@@ -172,6 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ffmpegPath: ffmpegPathInput.value,
             bestiaryPath: bestiaryPathInput.value,
             gitRepoUrl: gitRepoUrlInput.value,
+            githubToken: githubTokenInput.value,
             randomTablesPath: randomTablesPathInput.value,
             defaultMusicPath: defaultMusicPathInput.value
         };
