@@ -17,4 +17,14 @@
   SetFileAttributes "$INSTDIR\vk_swiftshader_icd.json" HIDDEN
   SetFileAttributes "$INSTDIR\vulkan-1.dll" HIDDEN
   SetFileAttributes "$INSTDIR\dxgi.dll" HIDDEN
+
+  ; Hide uninstaller and manifest
+  SetFileAttributes "$INSTDIR\Uninstall Tavern Tones.exe" HIDDEN
+  SetFileAttributes "$INSTDIR\TavernTones.visualelementsmanifest.xml" HIDDEN
+!macroend
+
+!macro customUnInstall
+  ; Ask the user if they want to delete their AppData (autosaves, settings, etc.)
+  MessageBox MB_YESNO "Do you want to delete all Tavern Tones settings and encounter data (AppData)?" IDNO +2
+    RMDir /r "$APPDATA\Tavern Tones"
 !macroend

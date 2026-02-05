@@ -26,7 +26,7 @@ function Invoke-WithRetry {
         [Parameter(Mandatory=$false)]
         [string]$WorkingDirectory,
         [Parameter(Mandatory=$false)]
-        [int]$RetryLimit = $script:MaxRetries
+        [int]$RetryLimit = -1
     )
     
     $Attempt = 0
@@ -34,7 +34,8 @@ function Invoke-WithRetry {
     $LogArguments = $Arguments -join ' '
     # No need for $FullArguments = @($Arguments) if $Arguments is already a string array
     
-    $CurrentMaxRetries = $RetryLimit
+    # If no limit is provided, use the global script default
+    $CurrentMaxRetries = if ($RetryLimit -eq -1) { $script:MaxRetries } else { $RetryLimit }
     
     $ContinueLoop = $true
     while ($ContinueLoop) {

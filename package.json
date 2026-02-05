@@ -49,7 +49,7 @@
       "createDesktopShortcut": true,
       "shortcutName": "Tavern Tones",
       "uninstallDisplayName": "Tavern Tones",
-      "deleteAppDataOnUninstall": true,
+      "deleteAppDataOnUninstall": false,
       "include": "installer.nsh",
       "installerIcon": "icon.ico",
       "uninstallerIcon": "icon.ico"
