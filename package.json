@@ -29,23 +29,32 @@
   "build": {
     "appId": "com.CrispyChestnuts.TavernTones",
     "win": {
-      "target": "portable",
+      "target": "nsis",
       "icon": "icon.ico",
       "forceCodeSigning": false,
-      "artifactName": "TavernTones.exe"
+      "artifactName": "TavernTonesSetup.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "TavernTones"
     },
     "files": [
       "src/",
-      "package.json"
+      "package.json",
+      "randomtables/"
+    ],
+    "extraFiles": [
+      {
+        "from": "resources/ffmpeg",
+        "to": "."
+      }
     ],
     "extraResources": [
       {
         "from": "resources/MobRules",
         "to": "MobRules"
-      },
-      {
-        "from": "resources/ffmpeg",
-        "to": "ffmpeg"
       }
     ],
     "directories": {

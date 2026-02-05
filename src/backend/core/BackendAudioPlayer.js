@@ -32,6 +32,11 @@ class BackendAudioPlayer extends EventEmitter {
 
         // Audio Pipelines
         this.mixer = new ThreadedAudioMixer();
+        this.mixer.on('error', (err) => {
+            if (err.code === 'ERR_STREAM_PREMATURE_CLOSE') return;
+            this.log(`Mixer Error: ${err.message}`);
+        });
+
         // We play the mixer stream continuously.
         this.mixedResource = createAudioResource(this.mixer, {
             inputType: StreamType.Raw,
@@ -453,6 +458,9 @@ class BackendAudioPlayer extends EventEmitter {
 
     destroy() {
         this.log("Destroying BackendAudioPlayer: Killing all active streams.");
+        if (this.player) {
+            this.player.stop();
+        }
         this.activeStreams.forEach(({ process }) => {
             try {
                 process.kill();

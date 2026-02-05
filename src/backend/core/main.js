@@ -276,6 +276,16 @@ ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
 // This prevents crashes related to GPU initialization.
 app.disableHardwareAcceleration();
 
+// Handle uncaught exceptions to prevent the app from crashing on non-critical stream errors
+process.on('uncaughtException', (error) => {
+    if (error.code === 'ERR_STREAM_PREMATURE_CLOSE') {
+        // This error is a known side effect of destroying audio streams during track changes or shutdown.
+        // It is harmless in this context and can be safely ignored.
+        return;
+    }
+    console.error('Uncaught Exception in Main Process:', error);
+});
+
 apploader();
 
 
@@ -550,6 +560,13 @@ async function ipcloader() {
         const exeName = isWin ? 'ffmpeg.exe' : 'ffmpeg';
         const bundledPath = path.join(process.resourcesPath, 'ffmpeg', exeName);
         if (fs.existsSync(bundledPath)) return bundledPath;
+
+        const appDirFfmpeg = path.join(path.dirname(process.execPath), 'ffmpeg', exeName);
+        if (fs.existsSync(appDirFfmpeg)) return appDirFfmpeg;
+
+        // Check same directory as executable
+        const sameDirFfmpeg = path.join(path.dirname(process.execPath), exeName);
+        if (fs.existsSync(sameDirFfmpeg)) return sameDirFfmpeg;
 
         const localFfmpeg = path.join(app.getAppPath(), 'ffmpeg', exeName);
         if (fs.existsSync(localFfmpeg)) return localFfmpeg;
