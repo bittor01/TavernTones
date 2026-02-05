@@ -192,18 +192,13 @@ async function apploader() {
         ipcloader(); // Load all IPC handlers BEFORE creating window
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
-        // Create the main window first, so we can show dialogs.
-        // Don't show it yet if we might need to show the settings window first.
-        await createWindow(false);
-        isAppReady = true;
-
-        // Now, check for folder configuration.
+        // Check for folder configuration first
         const { bestiaryPath, randomTablesPath } = discordConfig;
         const pathsConfigured = bestiaryPath && randomTablesPath;
 
         if (!pathsConfigured) {
             logToRenderer("Essential data folders are not configured.");
-            await dialog.showMessageBox(mainWindow, {
+            await dialog.showMessageBox(null, {
                 type: 'warning',
                 title: 'Configuration Required',
                 message: 'One or more essential data folders have not been set up. Please configure them in the settings.',
@@ -214,8 +209,8 @@ async function apploader() {
         }
 
         // If we've reached here, paths are configured, so we can show the main window.
-        mainWindow.maximize();
-        mainWindow.show();
+        await createWindow(true);
+        isAppReady = true;
 
         // Handle Discord Bot setup.
         if (discordConfig && discordConfig.enabled) {
@@ -1282,15 +1277,20 @@ const shutdown = async () => {
             connection.destroy();
         }
 
-        // Optionally logout
+        // Optionally logout with a timeout to prevent hanging the shutdown
         if (client) {
             try {
-                await client.destroy();
+                const destroyPromise = client.destroy();
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Discord client destroy timed out')), 5000)
+                );
+                await Promise.race([destroyPromise, timeoutPromise]);
             } catch (e) {
                 console.error("Error destroying discord client:", e);
             }
         }
 
+        console.log('Final exit.');
         app.exit(0);
     }
     catch (error) {
@@ -1303,6 +1303,14 @@ app.on('before-quit', (e) => {
     if (!isShuttingDown) {
         e.preventDefault();
         shutdown();
+    }
+});
+
+app.on('window-all-closed', () => {
+    // Standard behavior: quit when all windows are closed,
+    // unless on macOS where apps typically stay active.
+    if (process.platform !== 'darwin') {
+        app.quit();
     }
 });
 
