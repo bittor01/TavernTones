@@ -29,6 +29,12 @@
             width: 100%;
             padding: 10px;
             margin-top: 10px;
+            background-color: #3c3c3c; /* Default grey */
+            border-color: #555;
+        }
+        #save-button.dirty {
+            background-color: #28a745; /* Green when dirty */
+            border-color: #218838;
         }
         .path-input-group {
             display: flex;
@@ -42,8 +48,18 @@
             width: 100%;
             padding: 10px;
             margin-bottom: 10px; /* Add space between this and the save button */
-            background-color: #218838; /* A slightly different green */
-            border-color: #1e7e34;
+            background-color: #ffc107; /* Yellow */
+            border-color: #e0a800;
+            color: #212529;
+        }
+        #setup-default-folders:hover {
+            background-color: #e0a800;
+        }
+        #fetch-bestiary-btn {
+            width: 100%;
+            margin-top: 5px;
+            font-size: 0.9em;
+            padding: 5px;
         }
     </style>
 </head>
@@ -67,26 +83,31 @@
             <input type="text" id="botRoleId" placeholder="Enter the role ID for the bot">
         </div>
         <hr>
-        <h2>Folder Settings</h2>
+        <h2>External Dependencies</h2>
         <div class="form-group">
-            <label for="resourcesPath">Resources Path</label>
+            <label for="ffmpegPath">FFmpeg Path</label>
             <div class="path-input-group">
-                <input type="text" id="resourcesPath" placeholder="Path to 5etools data, etc." readonly>
-                <button id="browse-resources">Browse</button>
+                <input type="text" id="ffmpegPath" placeholder="Path to ffmpeg executable">
+                <button id="browse-ffmpeg">Browse</button>
             </div>
+        </div>
+        <hr>
+        <h2>Data Paths</h2>
+        <div class="form-group">
+            <label for="bestiaryPath">Bestiary Data Path</label>
+            <div class="path-input-group">
+                <input type="text" id="bestiaryPath" placeholder="Path to bestiary .json files" readonly>
+                <button id="browse-bestiary">Browse</button>
+            </div>
+            <label for="gitRepoUrl" style="margin-top: 10px; font-size: 0.8em;">Git Repo URL (Bestiary Source)</label>
+            <input type="text" id="gitRepoUrl" placeholder="https://github.com/5etools-mirror-3/5etools-src" style="font-size: 0.8em;">
+            <button id="fetch-bestiary-btn">Fetch/Update Bestiary Data</button>
         </div>
         <div class="form-group">
             <label for="randomTablesPath">Random Tables Path</label>
             <div class="path-input-group">
                 <input type="text" id="randomTablesPath" placeholder="Path to random tables" readonly>
                 <button id="browse-random-tables">Browse</button>
-            </div>
-        </div>
-        <div class="form-group">
-            <label for="tasksPath">Tasks Path</label>
-            <div class="path-input-group">
-                <input type="text" id="tasksPath" placeholder="Path to gamify task files" readonly>
-                <button id="browse-tasks">Browse</button>
             </div>
         </div>
         <div class="form-group">

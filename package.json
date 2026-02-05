@@ -4,7 +4,6 @@
   "main": "src/backend/core/main.js",
   "scripts": {
     "start": "electron .",
-    "json": "electron . --tool=gamify",
     "build": "electron-builder --win"
   },
   "keywords": [],

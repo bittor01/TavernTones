@@ -17,6 +17,7 @@ const { mobRules } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
+const GitHubSync = require('./GitHubSync.js');
 
 let discordConfig;
 
@@ -187,7 +188,7 @@ async function apploader() {
         console.log('App is ready.');
 
         // Initialize components
-        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
+        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, discordConfig.ffmpegPath);
         ipcloader(); // Load all IPC handlers BEFORE creating window
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
@@ -197,8 +198,8 @@ async function apploader() {
         isAppReady = true;
 
         // Now, check for folder configuration.
-        const { resourcesPath, randomTablesPath, tasksPath } = discordConfig;
-        const pathsConfigured = resourcesPath && randomTablesPath && tasksPath;
+        const { bestiaryPath, randomTablesPath } = discordConfig;
+        const pathsConfigured = bestiaryPath && randomTablesPath;
 
         if (!pathsConfigured) {
             logToRenderer("Essential data folders are not configured.");
@@ -451,10 +452,17 @@ async function ipcloader() {
     };
 
     // IPC Handlers for individual folder browsing
-    ipcMain.handle('select-resources-folder', () => selectDirectory('Select Resources Folder'));
+    ipcMain.handle('select-bestiary-folder', () => selectDirectory('Select Bestiary Data Folder'));
     ipcMain.handle('select-random-tables-folder', () => selectDirectory('Select Random Tables Folder'));
-    ipcMain.handle('select-tasks-folder', () => selectDirectory('Select Tasks Folder'));
     ipcMain.handle('select-music-folder', () => selectDirectory('Select Default Music Folder'));
+    ipcMain.handle('select-ffmpeg-file', async () => {
+        const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
+            title: 'Select FFmpeg Executable',
+            properties: ['openFile'],
+            filters: [{ name: 'Executables', extensions: process.platform === 'win32' ? ['exe'] : ['*'] }]
+        });
+        return filePaths && filePaths.length > 0 ? filePaths[0] : null;
+    });
 
     // IPC Handler for setting up all default folders
     ipcMain.handle('setup-default-folders', async () => {
@@ -471,30 +479,27 @@ async function ipcloader() {
         const dataDir = path.join(parentDir, 'TavernTones_Data');
 
         try {
-            await fs.mkdir(dataDir, { recursive: true });
+            await fs.promises.mkdir(dataDir, { recursive: true });
 
             const paths = {
-                resourcesPath: path.join(dataDir, 'resources'),
+                bestiaryPath: path.join(dataDir, 'bestiary'),
                 randomTablesPath: path.join(dataDir, 'randomtables'),
-                tasksPath: path.join(dataDir, 'tasks'),
                 defaultMusicPath: path.join(dataDir, 'music')
             };
 
             // Create all subdirectories
             for (const p of Object.values(paths)) {
-                await fs.mkdir(p, { recursive: true });
+                await fs.promises.mkdir(p, { recursive: true });
             }
 
-            // Copy default data
+            // Copy default data (random tables)
             const sourcePath = app.isPackaged ? path.join(process.resourcesPath, 'app') : app.getAppPath();
-            await fs.cp(path.join(sourcePath, 'resources'), paths.resourcesPath, { recursive: true });
-            await fs.cp(path.join(sourcePath, 'randomtables'), paths.randomTablesPath, { recursive: true });
-            // For tasks, we'll just create the directory for now, user can place tasks there.
+            await fs.promises.cp(path.join(sourcePath, 'randomtables'), paths.randomTablesPath, { recursive: true });
 
             await dialog.showMessageBox(mainWindow, {
                 type: 'info',
                 title: 'Success',
-                message: `Default folders created inside:\n${dataDir}\n\nPlease place your task files in the 'tasks' folder.`,
+                message: `Default folders created inside:\n${dataDir}\n\nYou can now fetch bestiary data from the settings.`,
                 buttons: ['OK']
             });
 
@@ -504,6 +509,25 @@ async function ipcloader() {
             await dialog.showErrorBox('Error', 'Failed to create default data folders. Please check permissions and try again.');
             return null;
         }
+    });
+
+    ipcMain.handle('fetch-bestiary-data', async (event, { repoUrl, localPath }) => {
+        const sync = new GitHubSync(logToRenderer, dialog, mainWindow);
+        return await sync.syncBestiary(repoUrl, localPath);
+    });
+
+    ipcMain.handle('detect-ffmpeg', async () => {
+        const { exec } = require('child_process');
+        const checkFfmpeg = (cmd) => new Promise(resolve => {
+            exec(`${cmd} -version`, (error) => resolve(!error));
+        });
+
+        if (await checkFfmpeg('ffmpeg')) return 'ffmpeg';
+
+        const localFfmpeg = path.join(app.getAppPath(), 'ffmpeg', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
+        if (fs.existsSync(localFfmpeg)) return localFfmpeg;
+
+        return null;
     });
 
 
@@ -521,6 +545,7 @@ async function ipcloader() {
         // The music player instance also needs to be told about the new path.
         if (musicPlayer) {
             musicPlayer.musicFolder = config.defaultMusicPath;
+            musicPlayer.ffmpegPath = config.ffmpegPath;
             logToRenderer(`[IPC] Updated music player's default folder to: ${musicPlayer.musicFolder}`);
         }
         // --- End of update ---
@@ -568,6 +593,10 @@ async function ipcloader() {
 
     ipcMain.on('play-music', () => {
         logToRenderer(`IPC 'play-music' (command) received.`);
+        if (!musicPlayer.ffmpegPath) {
+            dialog.showErrorBox('FFmpeg Not Configured', 'Please configure the FFmpeg path in settings to play music.');
+            return;
+        }
         musicPlayer.play();
     });
 
@@ -673,6 +702,10 @@ async function ipcloader() {
     ipcMain.on('play-sound', (event, { slotId, filePath }) => {
         logToRenderer(`IPC 'play-sound' slot ${slotId}, file: ${filePath}`);
         if (filePath && musicPlayer) {
+            if (!musicPlayer.ffmpegPath) {
+                dialog.showErrorBox('FFmpeg Not Configured', 'Please configure the FFmpeg path in settings to use the soundboard.');
+                return;
+            }
             musicPlayer.playSound(filePath, slotId);
             // Notify renderer of state change? 
             // The renderer usually updates its own UI state, but if we want valid feedback:

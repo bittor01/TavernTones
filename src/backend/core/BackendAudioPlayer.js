@@ -8,12 +8,13 @@ const { spawn } = require('child_process');
 const ThreadedAudioMixer = require('./ThreadedAudioMixer');
 
 class BackendAudioPlayer extends EventEmitter {
-    constructor(logCallback, shell, musicFolder) {
+    constructor(logCallback, shell, musicFolder, ffmpegPath) {
         super();
         // Dependencies
         this.log = logCallback || console.log;
         this.shell = shell;
         this.musicFolder = musicFolder;
+        this.ffmpegPath = ffmpegPath;
 
         // State
         this.playerStatus = AudioPlayerStatus.Idle;
@@ -24,7 +25,6 @@ class BackendAudioPlayer extends EventEmitter {
         this.promoteAndPause = false; // Flag to promote a track without playing it
         this.loopToggle = true;
         this.playNextMode = false; // Flag to play pending track after current one finishes
-        this.playbackVolume = 1.0;
         this.playbackVolume = 1.0;
         this.soundboardVolume = 0.5;
         this.duckingVolume = 0.3; // Volume multiplier for music when SFX is playing
@@ -179,6 +179,10 @@ class BackendAudioPlayer extends EventEmitter {
     // --- Internal Playback ---
 
     _createFfmpegStream(filePath) {
+        if (!this.ffmpegPath) {
+            throw new Error("FFmpeg path not configured. Please set it in the settings.");
+        }
+
         const args = [
             '-re',
             '-i', filePath,
@@ -188,7 +192,11 @@ class BackendAudioPlayer extends EventEmitter {
             'pipe:1'
         ];
 
-        const ffmpeg = spawn('ffmpeg', args);
+        const ffmpeg = spawn(this.ffmpegPath, args);
+
+        ffmpeg.on('error', (err) => {
+            this.log(`Failed to start FFmpeg process at ${this.ffmpegPath}: ${err.message}`);
+        });
 
         ffmpeg.stderr.on('data', (data) => {
             console.error(`ffmpeg stderr: ${data}`);

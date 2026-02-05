@@ -12,7 +12,11 @@ async function getStore() {
                 voiceChannel: { type: 'string' },
                 textChannel: { type: 'string' },
                 botRoleId: { type: 'string' },
-                defaultMusicPath: { type: 'string' }
+                defaultMusicPath: { type: 'string' },
+                bestiaryPath: { type: 'string' },
+                randomTablesPath: { type: 'string' },
+                ffmpegPath: { type: 'string' },
+                gitRepoUrl: { type: 'string' }
             },
             default: {}
         }
@@ -38,7 +42,11 @@ async function getDiscordConfig() {
         voiceChannel: '',
         textChannel: '',
         botRoleId: '',
-        defaultMusicPath: ''
+        defaultMusicPath: '',
+        bestiaryPath: '',
+        randomTablesPath: '',
+        ffmpegPath: '',
+        gitRepoUrl: 'https://github.com/5etools-mirror-3/5etools-src'
     };
 
     return { ...defaults, ...config };

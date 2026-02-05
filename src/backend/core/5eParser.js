@@ -18,15 +18,15 @@ class FiveEToolsParser {
     constructor(logToRenderer, app, config) {
         this.logToRenderer = logToRenderer;
 
-        if (!config || !config.resourcesPath || !config.randomTablesPath) {
+        if (!config || !config.bestiaryPath || !config.randomTablesPath) {
             this.logToRenderer('[5eParser] ERROR: Configuration with folder paths not provided. Parser will not function.');
-            this.dataPath = '';
+            this.bestiaryPath = '';
             this.randomTablesPath = '';
             this.cache = new Map();
             return;
         }
 
-        this.dataPath = path.join(config.resourcesPath, '5etoolsdata');
+        this.bestiaryPath = config.bestiaryPath;
         this.randomTablesPath = path.join(config.randomTablesPath, 'origin');
         this.cache = new Map(); // Simple cache to store loaded data
     }
@@ -48,6 +48,12 @@ class FiveEToolsParser {
             return [];
         }
 
+        // Special handling for TavernTones: we only support Bestiary (monsters) for now
+        if (category !== 'bestiary') {
+            this.logToRenderer(`[5eParser] Category ${category} is not supported in this version.`);
+            return [];
+        }
+
         const itemMap = new Map();
 
         const processJsonData = (jsonData) => {
@@ -66,19 +72,14 @@ class FiveEToolsParser {
 
         try {
             if (sourceInfo.type === 'directory') {
-                const categoryPath = path.join(this.dataPath, sourceInfo.path);
-                const files = await fs.readdir(categoryPath);
+                const files = await fs.readdir(this.bestiaryPath);
                 for (const file of files) {
                     if (path.extname(file) === '.json') {
-                        const filePath = path.join(categoryPath, file);
+                        const filePath = path.join(this.bestiaryPath, file);
                         const fileContent = await fs.readFile(filePath, 'utf8');
                         processJsonData(JSON.parse(fileContent));
                     }
                 }
-            } else { // type === 'file'
-                const filePath = path.join(this.dataPath, sourceInfo.path);
-                const fileContent = await fs.readFile(filePath, 'utf8');
-                processJsonData(JSON.parse(fileContent));
             }
 
             const allItems = Array.from(itemMap.values());
