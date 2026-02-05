@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Discord settings
+    const enableDiscordBotCheckbox = document.getElementById('enableDiscordBot');
+    const discordFieldsContainer = document.getElementById('discord-fields');
     const tokenInput = document.getElementById('token');
     const voiceChannelInput = document.getElementById('voiceChannel');
     const textChannelInput = document.getElementById('textChannel');
@@ -25,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const checkDirty = () => {
         const currentConfig = {
+            enabled: enableDiscordBotCheckbox.checked,
             token: tokenInput.value,
             voiceChannel: voiceChannelInput.value,
             textChannel: textChannelInput.value,
@@ -36,13 +39,33 @@ document.addEventListener('DOMContentLoaded', () => {
             defaultMusicPath: defaultMusicPathInput.value
         };
 
-        const isDirty = Object.keys(currentConfig).some(key => currentConfig[key] !== (originalConfig[key] || ''));
-        if (isDirty) {
+        const isDirty = Object.keys(currentConfig).some(key => {
+            const val = currentConfig[key];
+            const orig = originalConfig[key];
+            if (typeof val === 'boolean') return val !== !!orig;
+            return val !== (orig || '');
+        });
+
+        // Validation: If bot enabled, all 4 fields must be present
+        let isValid = true;
+        if (enableDiscordBotCheckbox.checked) {
+            if (!tokenInput.value || !voiceChannelInput.value || !textChannelInput.value || !botRoleIdInput.value) {
+                isValid = false;
+            }
+        }
+
+        if (isDirty && isValid) {
             saveButton.classList.add('dirty');
         } else {
             saveButton.classList.remove('dirty');
         }
     };
+
+    enableDiscordBotCheckbox.addEventListener('change', () => {
+        discordFieldsContainer.style.opacity = enableDiscordBotCheckbox.checked ? '1' : '0.5';
+        discordFieldsContainer.style.pointerEvents = enableDiscordBotCheckbox.checked ? 'auto' : 'none';
+        checkDirty();
+    });
 
     // Add input listeners to all fields
     [tokenInput, voiceChannelInput, textChannelInput, botRoleIdInput, ffmpegPathInput, bestiaryPathInput, gitRepoUrlInput, randomTablesPathInput, defaultMusicPathInput].forEach(el => {
@@ -105,6 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.settings.onConfigReceived((config) => {
         if (config) {
             originalConfig = config;
+            enableDiscordBotCheckbox.checked = !!config.enabled;
+            discordFieldsContainer.style.opacity = enableDiscordBotCheckbox.checked ? '1' : '0.5';
+            discordFieldsContainer.style.pointerEvents = enableDiscordBotCheckbox.checked ? 'auto' : 'none';
+
             tokenInput.value = config.token || '';
             voiceChannelInput.value = config.voiceChannel || '';
             textChannelInput.value = config.textChannel || '';
@@ -129,7 +156,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     saveButton.addEventListener('click', () => {
+        if (enableDiscordBotCheckbox.checked) {
+            if (!tokenInput.value || !voiceChannelInput.value || !textChannelInput.value || !botRoleIdInput.value) {
+                alert("Please enter all Discord bot settings or disable the bot.");
+                return;
+            }
+        }
+
         const newConfig = {
+            enabled: enableDiscordBotCheckbox.checked,
             token: tokenInput.value,
             voiceChannel: voiceChannelInput.value,
             textChannel: textChannelInput.value,

@@ -42,6 +42,10 @@
       {
         "from": "resources/MobRules",
         "to": "MobRules"
+      },
+      {
+        "from": "resources/ffmpeg",
+        "to": "ffmpeg"
       }
     ],
     "directories": {

@@ -218,11 +218,16 @@ async function apploader() {
         mainWindow.show();
 
         // Handle Discord Bot setup.
-        if (!discordConfig || !discordConfig.token) {
-            logToRenderer("Discord credentials not found. Bot functionality will be disabled.");
-            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+        if (discordConfig && discordConfig.enabled) {
+            if (!discordConfig.token) {
+                logToRenderer("Discord token not found despite bot being enabled. Bot functionality will be disabled.");
+                mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+            } else {
+                initializeDiscordBot();
+            }
         } else {
-            initializeDiscordBot();
+            logToRenderer("Discord bot is disabled in settings.");
+            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Disabled' });
         }
 
         app.on('activate', () => {
@@ -542,7 +547,12 @@ async function ipcloader() {
 
         if (await checkFfmpeg('ffmpeg')) return 'ffmpeg';
 
-        const localFfmpeg = path.join(app.getAppPath(), 'ffmpeg', isWin ? 'ffmpeg.exe' : 'ffmpeg');
+        // Check for bundled ffmpeg
+        const exeName = isWin ? 'ffmpeg.exe' : 'ffmpeg';
+        const bundledPath = path.join(process.resourcesPath, 'ffmpeg', exeName);
+        if (fs.existsSync(bundledPath)) return bundledPath;
+
+        const localFfmpeg = path.join(app.getAppPath(), 'ffmpeg', exeName);
         if (fs.existsSync(localFfmpeg)) return localFfmpeg;
 
         return null;
@@ -582,7 +592,7 @@ async function ipcloader() {
 
     ipcMain.on('open-settings-window', createSettingsWindow);
 
-    logToRenderer('ipcloader() called.');
+    // logToRenderer('ipcloader() called.');
     musicPlayer.on('status-change', (status) => {
         if (mainWindow && mainWindow.webContents) {
             mainWindow.webContents.send('music-player-status', status);
@@ -939,10 +949,7 @@ async function ipcloader() {
     });
 
     ipcMain.on('add-creature', (event, creature) => {
-        const rollLogMessage = initiativeTracker.addCreature(creature);
-        if (rollLogMessage) {
-            mainWindow.webContents.send('dice-log', rollLogMessage);
-        }
+        initiativeTracker.addCreature(creature);
     });
 
     ipcMain.on('update-creature', (event, creature) => {
@@ -1221,37 +1228,50 @@ function initializeDiscordBot() {
     });
 }
 
-client.once('clientReady', async () => {
-    const shutdown = async () => {
-        try {
-            console.log('Cleaning up and exiting.');
-            // Remove all event listeners
+let isShuttingDown = false;
+const shutdown = async () => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    try {
+        console.log('Cleaning up and exiting.');
+        // Remove all event listeners
+        if (client) {
             client.removeAllListeners();
-            if (musicPlayer && musicPlayer.player) {
-                musicPlayer.player.removeAllListeners();
-            }
-            if (connection) {
-                connection.removeAllListeners();
-            }
-            app.removeAllListeners();
-            ipcMain.removeAllListeners();
-
-            // Close any other resources, e.g., voice connections
-            if (connection) {
-                connection.destroy();
-            }
-
-            // Optionally logout
-            await client.destroy();
-
-            app.quit();
         }
-        catch (error) {
-            console.log('Error during shutdown:', error);
+        if (musicPlayer) {
+            if (musicPlayer.player) musicPlayer.player.removeAllListeners();
+            musicPlayer.destroy();
         }
-    };
-    app.on('before-quit', shutdown);
+        if (connection) {
+            connection.removeAllListeners();
+            connection.destroy();
+        }
 
+        // Optionally logout
+        if (client) {
+            try {
+                await client.destroy();
+            } catch (e) {
+                console.error("Error destroying discord client:", e);
+            }
+        }
+
+        app.exit(0);
+    }
+    catch (error) {
+        console.log('Error during shutdown:', error);
+        process.exit(1);
+    }
+};
+
+app.on('before-quit', (e) => {
+    if (!isShuttingDown) {
+        e.preventDefault();
+        shutdown();
+    }
+});
+
+client.once('clientReady', async () => {
     logToRenderer('TavernTones is online!');
 
     //Connect to the voice channel
@@ -1293,6 +1313,7 @@ client.once('clientReady', async () => {
 
             await entersState(connection, VoiceConnectionStatus.Ready, 60000);
             logToRenderer('Connection is ready!');
+            mainWindow.webContents.send('switch-panel', 'diceLog');
         }
         catch (error) {
             logToRenderer('Error joining voice channel: ', error);
@@ -1334,12 +1355,12 @@ client.once('clientReady', async () => {
     });
 });
 
-let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
-const startingMemUse = memoryUsage;
-setInterval(() => {
-    memoryUsage = process.memoryUsage().rss;
-    logToRenderer(`Memory usage is ${((memoryUsage - startingMemUse) / 1024 / 1024).toFixed(2)} MB higher than at launch (${(memoryUsage / 1024 / 1024).toFixed(2)} MB total)`);
-}, 60000);
+// let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
+// const startingMemUse = memoryUsage;
+// setInterval(() => {
+//     memoryUsage = process.memoryUsage().rss;
+//     logToRenderer(`Memory usage is ${((memoryUsage - startingMemUse) / 1024 / 1024).toFixed(2)} MB higher than at launch (${(memoryUsage / 1024 / 1024).toFixed(2)} MB total)`);
+// }, 60000);
 
 
 function getHpColor(current, max) {

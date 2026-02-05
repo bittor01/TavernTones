@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         { id: 'statBlockArea', title: 'Stat Block' }
     ];
     let currentPanelIndex = 0; // Default to 'Log'
+    let botStatus = { status: 'offline', message: 'Unknown' };
+    let isBotEnabled = false;
     let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
     let DND_CONDITIONS = {};
     let MOB_RULES_DATA = {};
@@ -377,6 +379,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 break;
             case 'playPauseButton':
+                if (!isBotEnabled) {
+                    showBotNag();
+                    return;
+                }
                 previewAudioPlayer.pause();
                 if (isPlaying) {
                     window.electron.ipcRenderer.send('pause-music');
@@ -385,6 +391,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 break;
             case 'playNextButton':
+                if (!isBotEnabled) {
+                    showBotNag();
+                    return;
+                }
                 const isPlayNextEnabled = !playNextButton.classList.contains('active');
                 window.electron.ipcRenderer.send('play-next', { enabled: isPlayNextEnabled });
                 break;
@@ -555,6 +565,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (diceLog.children.length > maxLogEntries) diceLog.removeChild(diceLog.firstChild);
         diceLog.scrollTop = diceLog.scrollHeight;
         showPanel('diceLog');
+    });
+
+    const showBotNag = () => {
+        let message = "The Discord bot is currently disabled. You need to enable and configure it in settings to use audio features on Discord. Open settings now?";
+
+        if (botStatus.message === 'Not Configured') {
+            message = "The Discord bot is enabled but not fully configured. Would you like to open settings to finish setup?";
+        }
+
+        if (confirm(message)) {
+            window.electron.ipcRenderer.send('open-settings-window');
+        }
+    };
+
+    window.electron.ipcRenderer.on('discord-bot-status', (event, status) => {
+        botStatus = status;
+        isBotEnabled = status.status !== 'offline';
+    });
+
+    window.electron.ipcRenderer.on('switch-panel', (event, panelId) => {
+        showPanel(panelId);
     });
 
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
@@ -1156,6 +1187,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function togglePlay(slotId) {
+        if (!isBotEnabled) {
+            showBotNag();
+            return;
+        }
         const slot = soundboardState[slotId];
         if (slot.tracks.length === 0) return;
 

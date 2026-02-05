@@ -450,6 +450,21 @@ class BackendAudioPlayer extends EventEmitter {
     getPreviewFilePath() {
         return this.pendingFilePath || this.activeFilePath;
     }
+
+    destroy() {
+        this.log("Destroying BackendAudioPlayer: Killing all active streams.");
+        this.activeStreams.forEach(({ process }) => {
+            try {
+                process.kill();
+            } catch (e) {
+                // Ignore
+            }
+        });
+        this.activeStreams.clear();
+        if (this.mixer) {
+            this.mixer.destroy();
+        }
+    }
 }
 
 module.exports = BackendAudioPlayer;

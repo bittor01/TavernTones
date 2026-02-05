@@ -64,22 +64,33 @@
 </head>
 <body>
     <div class="settings-container box">
-        <h2>Discord Bot Settings</h2>
-        <div class="form-group">
-            <label for="token">Bot Token</label>
-            <input type="password" id="token" placeholder="Enter your Discord bot token">
+        <div class="panel-header">
+            <h2>Discord Bot Settings</h2>
+            <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
+                <input type="checkbox" id="enableDiscordBot" style="margin-right: 5px; width: auto;"> Enable
+            </label>
         </div>
-        <div class="form-group">
-            <label for="voiceChannel">Voice Channel ID</label>
-            <input type="text" id="voiceChannel" placeholder="Enter the voice channel ID">
-        </div>
-        <div class="form-group">
-            <label for="textChannel">Text Channel ID</label>
-            <input type="text" id="textChannel" placeholder="Enter the text channel ID">
-        </div>
-        <div class="form-group">
-            <label for="botRoleId">Bot Role ID</label>
-            <input type="text" id="botRoleId" placeholder="Enter the role ID for the bot">
+        <div id="discord-fields">
+            <div class="form-group">
+                <label for="token">Bot Token</label>
+                <input type="password" id="token" placeholder="Enter your Discord bot token">
+            </div>
+            <div class="form-group">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="voiceChannel">Voice Channel ID</label>
+                        <input type="text" id="voiceChannel" placeholder="Channel ID">
+                    </div>
+                    <div class="form-group">
+                        <label for="textChannel">Text Channel ID</label>
+                        <input type="text" id="textChannel" placeholder="Channel ID">
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="botRoleId">Bot Role ID</label>
+                <input type="text" id="botRoleId" placeholder="Enter the role ID for the bot">
+            </div>
         </div>
         <hr>
         <h2>External Dependencies</h2>
@@ -93,18 +104,11 @@
         <hr>
         <h2>Data Paths</h2>
         <div class="form-group">
-            <label for="bestiaryPath">Bestiary Data Path</label>
+            <label for="defaultMusicPath">Default Music Path</label>
             <div class="path-input-group">
-                <input type="text" id="bestiaryPath" placeholder="Path to bestiary .json files" readonly>
-                <button id="browse-bestiary">Browse</button>
+                <input type="text" id="defaultMusicPath" placeholder="Path to default music folder" readonly>
+                <button id="browse-music">Browse</button>
             </div>
-        </div>
-        <div class="form-group">
-            <label for="gitRepoUrl">Git Repo URL (Bestiary Source)</label>
-            <input type="text" id="gitRepoUrl" placeholder="https://github.com/5etools-mirror-3/5etools-src">
-        </div>
-        <div class="form-group">
-            <button id="fetch-bestiary-btn">Fetch/Update Bestiary Data From Git</button>
         </div>
         <div class="form-group">
             <label for="randomTablesPath">Random Tables Path</label>
@@ -114,13 +118,23 @@
             </div>
         </div>
         <div class="form-group">
-            <label for="defaultMusicPath">Default Music Path</label>
+            <label for="bestiaryPath">Bestiary Data Path</label>
             <div class="path-input-group">
-                <input type="text" id="defaultMusicPath" placeholder="Path to default music folder" readonly>
-                <button id="browse-music">Browse</button>
+                <input type="text" id="bestiaryPath" placeholder="Path to bestiary .json files" readonly>
+                <button id="browse-bestiary">Browse</button>
             </div>
         </div>
+
         <button id="setup-default-folders">Create and Use Default Data Folders</button>
+
+        <div class="form-group" style="margin-top: 20px;">
+            <label for="gitRepoUrl">Git Repo URL (Bestiary Source)</label>
+            <input type="text" id="gitRepoUrl" placeholder="https://github.com/5etools-mirror-3/5etools-src">
+        </div>
+        <div class="form-group">
+            <button id="fetch-bestiary-btn">Fetch/Update Bestiary Data From Git</button>
+        </div>
+
         <button id="save-button">Save and Close</button>
     </div>
     <script src="settings.js"></script>

@@ -8,6 +8,7 @@ async function getStore() {
         discord: {
             type: 'object',
             properties: {
+                enabled: { type: 'boolean', default: false },
                 token: { type: 'string' },
                 voiceChannel: { type: 'string' },
                 textChannel: { type: 'string' },
@@ -38,6 +39,7 @@ async function getDiscordConfig() {
     // This prevents the app from crashing or behaving unexpectedly if the config file
     // is missing keys (e.g., on a fresh install).
     const defaults = {
+        enabled: false,
         token: '',
         voiceChannel: '',
         textChannel: '',
