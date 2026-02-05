@@ -4,7 +4,8 @@
   "main": "src/backend/core/main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win portable nsis"
+    "build": "electron-builder --win portable",
+    "installer": "electron-builder --win nsis"
   },
   "keywords": [],
   "author": "CrispyChestnuts",
