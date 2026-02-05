@@ -518,13 +518,31 @@ async function ipcloader() {
 
     ipcMain.handle('detect-ffmpeg', async () => {
         const { exec } = require('child_process');
+        const isWin = process.platform === 'win32';
+        const cmd = isWin ? 'where ffmpeg' : 'which ffmpeg';
+
+        const foundPath = await new Promise(resolve => {
+            exec(cmd, (error, stdout) => {
+                if (!error && stdout) {
+                    // stdout might contain multiple lines on Windows if multiple are found
+                    const lines = stdout.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+                    resolve(lines[0] || null);
+                } else {
+                    resolve(null);
+                }
+            });
+        });
+
+        if (foundPath && fs.existsSync(foundPath)) return foundPath;
+
+        // Fallback to checking if "ffmpeg" just works, though we prefer the full path
         const checkFfmpeg = (cmd) => new Promise(resolve => {
             exec(`${cmd} -version`, (error) => resolve(!error));
         });
 
         if (await checkFfmpeg('ffmpeg')) return 'ffmpeg';
 
-        const localFfmpeg = path.join(app.getAppPath(), 'ffmpeg', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
+        const localFfmpeg = path.join(app.getAppPath(), 'ffmpeg', isWin ? 'ffmpeg.exe' : 'ffmpeg');
         if (fs.existsSync(localFfmpeg)) return localFfmpeg;
 
         return null;

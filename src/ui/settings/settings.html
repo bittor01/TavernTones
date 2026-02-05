@@ -58,8 +58,7 @@
         #fetch-bestiary-btn {
             width: 100%;
             margin-top: 5px;
-            font-size: 0.9em;
-            padding: 5px;
+            padding: 8px;
         }
     </style>
 </head>
@@ -99,9 +98,13 @@
                 <input type="text" id="bestiaryPath" placeholder="Path to bestiary .json files" readonly>
                 <button id="browse-bestiary">Browse</button>
             </div>
-            <label for="gitRepoUrl" style="margin-top: 10px; font-size: 0.8em;">Git Repo URL (Bestiary Source)</label>
-            <input type="text" id="gitRepoUrl" placeholder="https://github.com/5etools-mirror-3/5etools-src" style="font-size: 0.8em;">
-            <button id="fetch-bestiary-btn">Fetch/Update Bestiary Data</button>
+        </div>
+        <div class="form-group">
+            <label for="gitRepoUrl">Git Repo URL (Bestiary Source)</label>
+            <input type="text" id="gitRepoUrl" placeholder="https://github.com/5etools-mirror-3/5etools-src">
+        </div>
+        <div class="form-group">
+            <button id="fetch-bestiary-btn">Fetch/Update Bestiary Data From Git</button>
         </div>
         <div class="form-group">
             <label for="randomTablesPath">Random Tables Path</label>
