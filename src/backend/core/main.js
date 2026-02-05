@@ -149,7 +149,7 @@ function createSettingsWindow() {
 
     settingsWindow = new BrowserWindow({
         width: 500,
-        height: 800,
+        height: 900,
         webPreferences: {
             preload: path.join(__dirname, '../../ui/settings/settings-preload.js'),
             contextIsolation: true,
@@ -481,7 +481,8 @@ async function ipcloader() {
     // IPC Handler for setting up all default folders
     ipcMain.handle('setup-default-folders', async () => {
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: 'Select a Parent Directory for TavernTones Data',
+            title: 'Select a Parent Directory for Tavern Tones Data',
+            defaultPath: app.getPath('documents'),
             properties: ['openDirectory']
         });
 
@@ -490,7 +491,7 @@ async function ipcloader() {
         }
 
         const parentDir = filePaths[0];
-        const dataDir = path.join(parentDir, 'TavernTones_Data');
+        const dataDir = path.join(parentDir, 'Tavern Tones');
 
         try {
             await fs.promises.mkdir(dataDir, { recursive: true });

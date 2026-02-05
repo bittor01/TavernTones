@@ -127,8 +127,8 @@ Write-Host "=============================================" -ForegroundColor Cyan
 # 0. KILL RUNNING PROCESSES
 # -------------------------
 Write-Host "`n--- Cleaning Up Running Processes ---" -ForegroundColor Yellow
-Write-Host "Ensuring no instances of TavernTones are running..." -ForegroundColor DarkGray
-$ProcessNames = @("TavernTones", "TavernTonesSetup", "taverntones")
+Write-Host "Ensuring no instances of Tavern Tones are running..." -ForegroundColor DarkGray
+$ProcessNames = @("Tavern Tones", "TavernTones", "TavernTonesSetup", "taverntones")
 foreach ($name in $ProcessNames) {
     Stop-Process -Name $name -Force -ErrorAction SilentlyContinue
 }
