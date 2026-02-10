@@ -639,6 +639,17 @@ async function ipcloader() {
         if (initiativeTracker) {
             initiativeTracker.sendFullState();
         }
+        if (discordConfig && discordConfig.enabled) {
+            if (client && client.isReady()) {
+                mainWindow.webContents.send('discord-bot-status', { status: 'online', message: 'Connected' });
+            } else if (!discordConfig.token) {
+                mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+            } else {
+                mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Connecting...' });
+            }
+        } else {
+            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Disabled' });
+        }
     });
 
     // Music Player IPC Handlers
@@ -1316,6 +1327,7 @@ app.on('window-all-closed', () => {
 
 client.once(Events.ClientReady, async () => {
     logToRenderer('TavernTones is online!');
+    mainWindow.webContents.send('discord-bot-status', { status: 'online', message: 'Connected' });
 
     //Connect to the voice channel
     const voiceChannel = client.channels.cache.get(discordConfig.voiceChannel);
