@@ -60,3 +60,13 @@ FFmpeg is licensed under LGPL/GPL. TavernTones bundles the FFmpeg binary without
 - We do not link TavernTones code with FFmpeg libraries; we interact via subprocess pipes.
 - Users can replace the `ffmpeg.exe` in the application directory with their own build.
 - Source code for FFmpeg can be found at https://ffmpeg.org/download.html.
+
+## Discord Voice Connection Troubleshooting (DAVE Protocol)
+
+When updating dependencies or troubleshooting the `@discordjs/voice` library, a connection might fail with `AbortError: The operation was aborted` or get stuck in the `signalling` state (where the internal networking transitions directly from state `1` to `6`).
+
+This is generally caused by the new Discord Audio/Video Encryption (DAVE) protocol requirements:
+1. **Missing AES Ciphers**: Discord now requires `aes-256-gcm`. `@discordjs/voice` relies on `@noble/ciphers` to provide this if native bindings are not available.
+2. **Incompatible Native Modules in Electron**: Installing `sodium-native` to accelerate cryptography will silently crash the voice connection in an Electron environment due to Node C++ ABI differences. **Do not use `sodium-native` with this Electron app.** Instead, rely on Node's native WebCrypto or `@noble/ciphers` with `libsodium-wrappers`.
+3. **Missing DAVE Protocol Package**: The `@snazzah/davey` package is now required by `@discordjs/voice` to handle the new End-to-End Encryption handshake. If it is missing, the connection is instantly rejected by Discord.
+

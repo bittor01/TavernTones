@@ -1333,10 +1333,20 @@ client.once(Events.ClientReady, async () => {
     const voiceChannel = client.channels.cache.get(discordConfig.voiceChannel);
     if (voiceChannel && voiceChannel.isVoiceBased()) {
         try {
+            // Check for and destroy any ghost connections
+            const { getVoiceConnection } = require('@discordjs/voice');
+            const existingConnection = getVoiceConnection(voiceChannel.guild.id);
+            if (existingConnection) {
+                logToRenderer('[Voice] Destroying existing zombie connection before reconnecting.');
+                existingConnection.destroy();
+            }
+
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
                 adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+                selfDeaf: false,
+                selfMute: false
             });
 
             // Listen for connection status changes
@@ -1345,15 +1355,19 @@ client.once(Events.ClientReady, async () => {
                 musicPlayer.setConnection(connection); // Pass connection to the player
             });
 
-            connection.on(VoiceConnectionStatus.Disconnected, () => {
+            connection.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {
                 logToRenderer('The bot has been disconnected. Attempting to reconnect...');
-                setTimeout(() => {
-                    joinVoiceChannel({
-                        channelId: voiceChannel.id,
-                        guildId: voiceChannel.guild.id,
-                        adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-                    });
-                }, 5000);
+                try {
+                    await Promise.race([
+                        entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+                        entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+                    ]);
+                    // Seems to be reconnecting to a new channel - ignore disconnect
+                } catch (error) {
+                    // Seems to be a real disconnect which shouldn't be recovered from
+                    logToRenderer('Real disconnect detected, destroying connection.');
+                    connection.destroy();
+                }
             });
 
             connection.on(VoiceConnectionStatus.Signalling, () => {
@@ -1366,12 +1380,15 @@ client.once(Events.ClientReady, async () => {
 
             logToRenderer(`Joined voice channel: ${voiceChannel.name}: ${connection.state.status}`);
 
-            await entersState(connection, VoiceConnectionStatus.Ready, 60000);
+            await entersState(connection, VoiceConnectionStatus.Ready, 30000);
             logToRenderer('Connection is ready!');
             mainWindow.webContents.send('switch-panel', 'diceLog');
         }
         catch (error) {
-            logToRenderer('Error joining voice channel: ', error);
+            logToRenderer('Error joining voice channel: ', error.message || error);
+            if (connection) {
+                connection.destroy();
+            }
         }
     }
     else {
