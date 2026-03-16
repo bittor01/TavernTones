@@ -1,3 +1,4 @@
+// Performance and security update
 const { createAudioPlayer, AudioPlayerStatus, entersState, VoiceConnectionStatus, createAudioResource, StreamType } = require('@discordjs/voice');
 const fs = require('fs');
 const fsp = require('fs').promises;
@@ -8,12 +9,13 @@ const { spawn } = require('child_process');
 const ThreadedAudioMixer = require('./ThreadedAudioMixer');
 
 class BackendAudioPlayer extends EventEmitter {
-    constructor(logCallback, shell, musicFolder) {
+    constructor(logCallback, shell, musicFolder, ffmpegPath) {
         super();
         // Dependencies
         this.log = logCallback || console.log;
         this.shell = shell;
         this.musicFolder = musicFolder;
+        this.ffmpegPath = ffmpegPath;
 
         // State
         this.playerStatus = AudioPlayerStatus.Idle;
@@ -23,7 +25,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.pendingFilePath = null; // New state for the pending file path
         this.promoteAndPause = false; // Flag to promote a track without playing it
         this.loopToggle = true;
-        this.playbackVolume = 1.0;
+        this.playNextMode = false; // Flag to play pending track after current one finishes
         this.playbackVolume = 1.0;
         this.soundboardVolume = 0.5;
         this.duckingVolume = 0.3; // Volume multiplier for music when SFX is playing
@@ -31,6 +33,11 @@ class BackendAudioPlayer extends EventEmitter {
 
         // Audio Pipelines
         this.mixer = new ThreadedAudioMixer();
+        this.mixer.on('error', (err) => {
+            if (err.code === 'ERR_STREAM_PREMATURE_CLOSE') return;
+            this.log(`Mixer Error: ${err.message}`);
+        });
+
         // We play the mixer stream continuously.
         this.mixedResource = createAudioResource(this.mixer, {
             inputType: StreamType.Raw,
@@ -65,6 +72,7 @@ class BackendAudioPlayer extends EventEmitter {
             isCaching: this.isCaching,
             activeFilePath: getRelativePath(this.activeFilePath),
             pendingFilePath: getRelativePath(this.pendingFilePath),
+            playNextMode: this.playNextMode
         };
         this.emit('status-change', status);
     }
@@ -114,6 +122,12 @@ class BackendAudioPlayer extends EventEmitter {
     toggleLoop() {
         this.loopToggle = !this.loopToggle;
         this.log(`Looping is now ${this.loopToggle ? 'ON' : 'OFF'}`);
+    }
+
+    setPlayNext(enabled) {
+        this.playNextMode = enabled;
+        this.log(`Play Next mode is now ${enabled ? 'ON' : 'OFF'}`);
+        this._emitStatusUpdate();
     }
 
     // --- Internal File Handling ---
@@ -171,6 +185,10 @@ class BackendAudioPlayer extends EventEmitter {
     // --- Internal Playback ---
 
     _createFfmpegStream(filePath) {
+        if (!this.ffmpegPath) {
+            throw new Error("FFmpeg path not configured. Please set it in the settings.");
+        }
+
         const args = [
             '-re',
             '-i', filePath,
@@ -180,7 +198,11 @@ class BackendAudioPlayer extends EventEmitter {
             'pipe:1'
         ];
 
-        const ffmpeg = spawn('ffmpeg', args);
+        const ffmpeg = spawn(this.ffmpegPath, args);
+
+        ffmpeg.on('error', (err) => {
+            this.log(`Failed to start FFmpeg process at ${this.ffmpegPath}: ${err.message}`);
+        });
 
         ffmpeg.stderr.on('data', (data) => {
             console.error(`ffmpeg stderr: ${data}`);
@@ -247,6 +269,14 @@ class BackendAudioPlayer extends EventEmitter {
 
     _handleMusicFinish() {
         const duration = Date.now() - (this.lastPlayStartTime || 0);
+
+        if (this.playNextMode && this.pendingFilePath) {
+            this.log(`Play Next: Finishing current track and starting: ${this.pendingFilePath}`);
+            this.playNextMode = false;
+            this._movePendingToActive();
+            this._play();
+            return;
+        }
 
         if (this.loopToggle && this.activeFilePath) {
             if (duration < 2000) {
@@ -425,6 +455,24 @@ class BackendAudioPlayer extends EventEmitter {
 
     getPreviewFilePath() {
         return this.pendingFilePath || this.activeFilePath;
+    }
+
+    destroy() {
+        this.log("Destroying BackendAudioPlayer: Killing all active streams.");
+        if (this.player) {
+            this.player.stop();
+        }
+        this.activeStreams.forEach(({ process }) => {
+            try {
+                process.kill();
+            } catch (e) {
+                // Ignore
+            }
+        });
+        this.activeStreams.clear();
+        if (this.mixer) {
+            this.mixer.destroy();
+        }
     }
 }
 

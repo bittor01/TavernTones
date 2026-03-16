@@ -1,3 +1,4 @@
+// Performance and security update
 document.addEventListener('DOMContentLoaded', async () => {
     // --- State ---
     let isPlaying = false;
@@ -10,6 +11,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         { id: 'statBlockArea', title: 'Stat Block' }
     ];
     let currentPanelIndex = 0; // Default to 'Log'
+    let botStatus = { status: 'offline', message: 'Unknown' };
+    let isBotEnabled = false;
     let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
     let DND_CONDITIONS = {};
     let MOB_RULES_DATA = {};
@@ -25,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
     const diceLog = document.getElementById('diceLog');
     const playPauseButton = document.getElementById('playPauseButton');
+    const playNextButton = document.getElementById('playNextButton');
     const activeFileLabel = document.getElementById('activeFileLabel');
     const pendingFileLabel = document.getElementById('pendingFileLabel');
     const pendingFileLabelContainer = document.getElementById('pendingFileLabelContainer');
@@ -356,9 +360,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             case 'load-button':
                 window.electron.ipcRenderer.invoke('load-encounter-dialog');
                 break;
-            case 'gamify-tool-button':
-                window.electron.ipcRenderer.send('open-gamify-tool');
-                break;
             case 'settings-button':
                 window.electron.ipcRenderer.send('open-settings-window');
                 break;
@@ -379,12 +380,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 break;
             case 'playPauseButton':
+                if (!isBotEnabled) {
+                    showBotNag();
+                    return;
+                }
                 previewAudioPlayer.pause();
                 if (isPlaying) {
                     window.electron.ipcRenderer.send('pause-music');
                 } else {
                     window.electron.ipcRenderer.send('play-music');
                 }
+                break;
+            case 'playNextButton':
+                if (!isBotEnabled) {
+                    showBotNag();
+                    return;
+                }
+                const isPlayNextEnabled = !playNextButton.classList.contains('active');
+                window.electron.ipcRenderer.send('play-next', { enabled: isPlayNextEnabled });
                 break;
             case 'previewButton':
                 if (!previewAudioPlayer.paused) {
@@ -555,10 +568,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         showPanel('diceLog');
     });
 
+    const showBotNag = () => {
+        let message = "The Discord bot is currently disabled. You need to enable and configure it in settings to use audio features on Discord. Open settings now?";
+
+        if (botStatus.message === 'Not Configured') {
+            message = "The Discord bot is enabled but not fully configured. Would you like to open settings to finish setup?";
+        }
+
+        if (confirm(message)) {
+            window.electron.ipcRenderer.send('open-settings-window');
+        }
+    };
+
+    window.electron.ipcRenderer.on('discord-bot-status', (event, status) => {
+        botStatus = status;
+        isBotEnabled = status.status !== 'offline';
+    });
+
+    window.electron.ipcRenderer.on('switch-panel', (event, panelId) => {
+        showPanel(panelId);
+    });
+
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
         isPlaying = status.isPlaying;
         playPauseButton.textContent = isPlaying ? 'Pause' : 'Play';
         previewButton.disabled = !status.activeFilePath && !status.pendingFilePath;
+
+        // Play Next button state
+        playNextButton.disabled = !status.pendingFilePath;
+        if (status.playNextMode) {
+            playNextButton.classList.add('active');
+        } else {
+            playNextButton.classList.remove('active');
+        }
 
         // Handle Pending Track
         if (status.isCaching && status.pendingFilePath) {
@@ -962,6 +1004,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.electron.ipcRenderer.send('save-soundboard-state', soundboardState);
     }
 
+    // --- Global Event Delegation for Combatant Details ---
+    combatantDetailsListDiv.addEventListener('click', (e) => {
+        const target = e.target;
+        const creatureId = parseInt(target.dataset.id, 10);
+        if (isNaN(creatureId)) return;
+
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+
+        if (target.classList.contains('attack-btn')) {
+            if (creature) {
+                if (creature.isMob) {
+                    displayMobRules(creatureId);
+                } else {
+                    createPopup('attack-roll', creatureId, target);
+                }
+            }
+        } else if (target.classList.contains('stat-roll-btn')) {
+            const { type, stat } = target.dataset;
+            createPopup('stat-roll', creatureId, target, { type, stat });
+        } else if (target.classList.contains('hp-change-btn')) {
+            createPopup('hp', creatureId, target);
+        } else if (target.classList.contains('add-condition-btn')) {
+            createPopup('condition', creatureId, target);
+        } else if (target.classList.contains('temp-hp-btn')) {
+            createPopup('temp-hp', creatureId, target);
+        } else if (target.classList.contains('remove-condition-btn')) {
+            const { condition } = target.dataset;
+            window.electron.ipcRenderer.send('remove-condition', { creatureId, condition });
+            // Hide tooltip immediately when condition is removed
+            if (globalTooltip) {
+                globalTooltip.style.visibility = 'hidden';
+                globalTooltip.style.opacity = '0';
+            }
+        } else if (target.classList.contains('reminders-btn')) {
+            createPopup('reminders', creatureId, target);
+        } else if (target.classList.contains('copy-btn')) {
+            window.electron.ipcRenderer.send('copy-creature', { creatureId });
+        } else if (target.classList.contains('edit-btn')) {
+            window.electron.ipcRenderer.send('edit-creature', { creatureId });
+        } else if (target.classList.contains('remove-btn')) {
+            window.electron.ipcRenderer.send('remove-creature', { creatureId });
+        } else if (target.classList.contains('move-to-bottom-btn')) {
+            const creatureIndex = combatantPanelOrder.findIndex(c => c.id === creatureId);
+            if (creatureIndex > -1) {
+                const [creature] = combatantPanelOrder.splice(creatureIndex, 1);
+                combatantPanelOrder.push(creature);
+                renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
+            }
+        }
+    });
+
+    combatantDetailsListDiv.addEventListener('change', (e) => {
+        const target = e.target;
+        const creatureId = parseInt(target.dataset.id, 10);
+        if (isNaN(creatureId)) return;
+
+        if (target.classList.contains('concentration-cb')) {
+            window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isConcentrating', value: e.target.checked });
+        } else if (target.classList.contains('friendly-cb')) {
+            window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isFriendly', value: e.target.checked });
+        }
+    });
+
     // --- Render Functions ---
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
@@ -1083,6 +1188,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function togglePlay(slotId) {
+        if (!isBotEnabled) {
+            showBotNag();
+            return;
+        }
         const slot = soundboardState[slotId];
         if (slot.tracks.length === 0) return;
 
@@ -1135,6 +1244,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderInitiativeList(initiativeOrder, currentTurnIndex) {
         initiativeListDiv.innerHTML = '';
         if (!initiativeOrder || initiativeOrder.length === 0) return;
+
+        const fragment = document.createDocumentFragment();
 
         initiativeOrder.forEach((creature, index) => {
             if (creature.hidden) return; // Skip hidden creatures (e.g. being edited)
@@ -1215,8 +1326,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            initiativeListDiv.appendChild(creatureDiv);
+            fragment.appendChild(creatureDiv);
         });
+        initiativeListDiv.appendChild(fragment);
     }
 
     function getHpColor(current, max) {
@@ -1234,6 +1346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         combatantDetailsListDiv.innerHTML = '';
         if (!orderToRender || orderToRender.length === 0) return;
 
+        const fragment = document.createDocumentFragment();
         const activeCreatureId = initiativeOrder.length > 0 ? initiativeOrder[currentTurnIndex]?.id : null;
 
         orderToRender.forEach((creature) => {
@@ -1330,67 +1443,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
             `;
-            combatantDetailsListDiv.appendChild(creatureDiv);
+            fragment.appendChild(creatureDiv);
         });
-
-        // Use event delegation for all buttons inside the combatant details list
-        combatantDetailsListDiv.addEventListener('click', (e) => {
-            const target = e.target;
-            const creatureId = parseInt(target.dataset.id, 10);
-            if (isNaN(creatureId)) return;
-
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-
-            if (target.classList.contains('attack-btn')) {
-                if (creature) {
-                    if (creature.isMob) {
-                        displayMobRules(creatureId);
-                    } else {
-                        createPopup('attack-roll', creatureId, target);
-                    }
-                }
-            } else if (target.classList.contains('stat-roll-btn')) {
-                const { type, stat } = target.dataset;
-                createPopup('stat-roll', creatureId, target, { type, stat });
-            } else if (target.classList.contains('hp-change-btn')) {
-                createPopup('hp', creatureId, target);
-            } else if (target.classList.contains('add-condition-btn')) {
-                createPopup('condition', creatureId, target);
-            } else if (target.classList.contains('temp-hp-btn')) {
-                createPopup('temp-hp', creatureId, target);
-            } else if (target.classList.contains('remove-condition-btn')) {
-                const { condition } = target.dataset;
-                window.electron.ipcRenderer.send('remove-condition', { creatureId, condition });
-            } else if (target.classList.contains('reminders-btn')) {
-                createPopup('reminders', creatureId, target);
-            } else if (target.classList.contains('copy-btn')) {
-                window.electron.ipcRenderer.send('copy-creature', { creatureId });
-            } else if (target.classList.contains('edit-btn')) {
-                window.electron.ipcRenderer.send('edit-creature', { creatureId });
-            } else if (target.classList.contains('remove-btn')) {
-                window.electron.ipcRenderer.send('remove-creature', { creatureId });
-            } else if (target.classList.contains('move-to-bottom-btn')) {
-                const creatureIndex = combatantPanelOrder.findIndex(c => c.id === creatureId);
-                if (creatureIndex > -1) {
-                    const [creature] = combatantPanelOrder.splice(creatureIndex, 1);
-                    combatantPanelOrder.push(creature);
-                    renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
-                }
-            }
-        });
-
-        // Handle checkboxes separately as they use the 'change' event
-        combatantDetailsListDiv.addEventListener('change', (e) => {
-            const target = e.target;
-            const creatureId = parseInt(target.dataset.id, 10);
-            if (isNaN(creatureId)) return;
-
-            if (target.classList.contains('concentration-cb')) {
-                window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isConcentrating', value: e.target.checked });
-            } else if (target.classList.contains('friendly-cb')) {
-                window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isFriendly', value: e.target.checked });
-            }
-        });
+        combatantDetailsListDiv.appendChild(fragment);
     }
 
     function createPopup(type, creatureId, targetElement, data = {}) {
@@ -1407,12 +1462,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <button id="popup-hp-ok">Ok</button>
             `;
         } else if (type === 'condition') {
-            contentHTML = `
-                <select id="popup-condition-select">
-                    ${Object.keys(DND_CONDITIONS).map(c => `<option value="${c}">${c}</option>`).join('')}
-                </select>
-                <button id="popup-condition-add">Add</button>
-            `;
+            const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
+            const existingConditions = creature ? (creature.conditions || []) : [];
+            const availableConditions = Object.keys(DND_CONDITIONS).filter(c => !existingConditions.includes(c));
+
+            if (availableConditions.length === 0) {
+                contentHTML = `<p style="padding: 10px; margin: 0; font-size: 0.9em; color: #666;">All conditions applied.</p>`;
+            } else {
+                contentHTML = `
+                    <select id="popup-condition-select">
+                        ${availableConditions.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                    <button id="popup-condition-add">Add</button>
+                `;
+            }
         } else if (type === 'stat-roll' || type === 'attack-roll') {
             contentHTML = `
                 <button class="roll-type-btn" data-roll="adv">Advantage</button>
@@ -1488,11 +1551,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         } else if (type === 'condition') {
-            document.getElementById('popup-condition-add').addEventListener('click', () => {
-                const condition = document.getElementById('popup-condition-select').value;
-                window.electron.ipcRenderer.send('add-condition', { creatureId: parseInt(creatureId), condition });
-                popup.remove();
-            });
+            const addBtn = document.getElementById('popup-condition-add');
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    const condition = document.getElementById('popup-condition-select').value;
+                    window.electron.ipcRenderer.send('add-condition', { creatureId: parseInt(creatureId), condition });
+                    popup.remove();
+                });
+            }
         } else if (type === 'temp-hp') {
             const input = document.getElementById('popup-temp-hp-input');
             document.getElementById('popup-temp-hp-ok').addEventListener('click', () => {

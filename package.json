@@ -1,11 +1,13 @@
 {
   "name": "taverntones",
+  "productName": "Tavern Tones",
+  "comment": "Performance and security update",
   "version": "1.0.0",
   "main": "src/backend/core/main.js",
   "scripts": {
     "start": "electron .",
-    "json": "electron . --tool=gamify",
-    "build": "electron-builder --win"
+    "build": "electron-builder --win portable",
+    "installer": "electron-builder --win nsis"
   },
   "keywords": [],
   "author": "CrispyChestnuts",
@@ -13,9 +15,11 @@
   "description": "TavernTones is a bot designed to help CrispyChestnuts stream licensed ambient soundscapes and background music during TTRPG sessions hosted remotely on Discord.",
   "dependencies": {
     "@dice-roller/rpg-dice-roller": "^5.5.1",
-    "@discordjs/voice": "^0.18.0",
+    "@discordjs/voice": "^0.19.0",
+    "@noble/ciphers": "^2.1.1",
+    "@snazzah/davey": "^0.1.10",
     "axios": "^1.7.9",
-    "discord.js": "^14.16.1",
+    "discord.js": "^14.25.1",
     "electron-store": "^11.0.0",
     "ffmpeg": "^0.0.4",
     "libsodium-wrappers": "^0.7.15",
@@ -29,15 +33,42 @@
   },
   "build": {
     "appId": "com.CrispyChestnuts.TavernTones",
+    "productName": "Tavern Tones",
     "win": {
-      "target": "portable",
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "icon.ico",
       "forceCodeSigning": false,
+      "executableName": "TavernTones"
+    },
+    "nsis": {
+      "artifactName": "TavernTonesSetup.exe",
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Tavern Tones",
+      "uninstallDisplayName": "Tavern Tones",
+      "deleteAppDataOnUninstall": false,
+      "include": "installer.nsh",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico"
+    },
+    "portable": {
       "artifactName": "TavernTones.exe"
     },
     "files": [
       "src/",
-      "package.json"
+      "package.json",
+      "randomtables/"
+    ],
+    "extraFiles": [
+      {
+        "from": "resources/ffmpeg",
+        "to": "ffmpeg"
+      }
     ],
     "extraResources": [
       {

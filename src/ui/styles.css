@@ -1,3 +1,4 @@
+/* Performance and security update */
 /* --- Global Styles --- */
 html,
 body {
@@ -34,6 +35,12 @@ button {
 
 button:hover {
     background-color: #4c4c4c;
+}
+
+button.active {
+    background-color: #007bff;
+    border-color: #0056b3;
+    color: white;
 }
 
 button:disabled {

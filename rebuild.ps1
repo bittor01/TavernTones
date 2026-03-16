@@ -1,3 +1,4 @@
+# Performance and security update
 <#
 .SYNOPSIS
   Fire and Forget Script: Pulls latest Git branch, cleans, builds, and runs the executable.
@@ -9,7 +10,7 @@
 
 # --- Configuration ---
 $MaxRetries = 9
-$ExecutablePath = "build/TavernTones.exe"
+$ExecutablePath = "build/TavernTonesSetup.exe"
 $DataDirToKeep = "build/Data"
 # ---------------------
 
@@ -23,7 +24,9 @@ function Invoke-WithRetry {
         [Parameter(Mandatory=$true)]
         [string]$ErrorName,
         [Parameter(Mandatory=$false)]
-        [string]$WorkingDirectory
+        [string]$WorkingDirectory,
+        [Parameter(Mandatory=$false)]
+        [int]$RetryLimit = -1
     )
     
     $Attempt = 0
@@ -31,7 +34,8 @@ function Invoke-WithRetry {
     $LogArguments = $Arguments -join ' '
     # No need for $FullArguments = @($Arguments) if $Arguments is already a string array
     
-    $CurrentMaxRetries = $global:MaxRetries
+    # If no limit is provided, use the global script default
+    $CurrentMaxRetries = if ($RetryLimit -eq -1) { $script:MaxRetries } else { $RetryLimit }
     
     $ContinueLoop = $true
     while ($ContinueLoop) {
@@ -74,7 +78,7 @@ function Invoke-WithRetry {
         }
     }
     
-    Set-Location $ScriptBaseDir
+    Set-Location $script:ScriptBaseDir
 
     if (-not $Succeeded) {
         Write-Host "FATAL ERROR: $ErrorName failed after $($CurrentMaxRetries) attempts. Aborting script." -ForegroundColor Red
@@ -124,6 +128,15 @@ Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host "     Starting Automated Build and Run" -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
 
+# 0. KILL RUNNING PROCESSES
+# -------------------------
+Write-Host "`n--- Cleaning Up Running Processes ---" -ForegroundColor Yellow
+Write-Host "Ensuring no instances of Tavern Tones are running..." -ForegroundColor DarkGray
+$ProcessNames = @("Tavern Tones", "TavernTones", "TavernTonesSetup", "taverntones")
+foreach ($name in $ProcessNames) {
+    Stop-Process -Name $name -Force -ErrorAction SilentlyContinue
+}
+Start-Sleep -Seconds 2
 
 # 1. GIT PULL/CHECKOUT
 # ----------------------
@@ -172,7 +185,8 @@ if (Test-Path ".\build") {
 # 3. RUN NPM BUILD
 # -----------------
 Write-Host "`n--- Running NPM Build ---" -ForegroundColor Yellow
-Invoke-WithRetry -Command "npm" -Arguments @("run", "build") -ErrorName "NPM Build"
+$null = Invoke-WithRetry -Command "npm" -Arguments @("run", "build") -ErrorName "NPM Build" -RetryLimit $MaxRetries
+$null = Invoke-WithRetry -Command "npm" -Arguments @("run", "installer") -ErrorName "NPM Installer" -RetryLimit $MaxRetries
 
 # 4. START EXECUTABLE (Fire and Forget)
 # ---------------------------------------
