@@ -28,11 +28,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
     const diceLog = document.getElementById('diceLog');
     const playPauseButton = document.getElementById('playPauseButton');
+    const playPrevButton = document.getElementById('playPrevButton');
     const playNextButton = document.getElementById('playNextButton');
-    const activeFileLabel = document.getElementById('activeFileLabel');
-    const pendingFileLabel = document.getElementById('pendingFileLabel');
-    const pendingFileLabelContainer = document.getElementById('pendingFileLabelContainer');
-    const previewButton = document.getElementById('previewButton');
+    const loopModeBtn = document.getElementById('loop-mode-btn');
+    const shuffleBtn = document.getElementById('shuffle-btn');
+    const clearStackBtn = document.getElementById('clear-stack-btn');
+    const saveMusicPresetBtn = document.getElementById('save-music-preset-btn');
+    const loadMusicPresetBtn = document.getElementById('load-music-preset-btn');
+    const musicStackList = document.getElementById('music-stack-list');
     const previewAudioPlayer = document.getElementById('preview-audio-player');
     const addCreatureForm = document.getElementById('add-creature-form');
     const initiativeListDiv = document.getElementById('initiative-list');
@@ -373,9 +376,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('push-initiative');
                 break;
             case 'selectFileButton':
-                window.electron.ipcRenderer.invoke('open-file-dialog').then(filePath => {
-                    if (filePath) {
-                        window.electron.ipcRenderer.send('load-music-file', filePath);
+                window.electron.ipcRenderer.invoke('open-file-dialog', { multi: true }).then(filePaths => {
+                    if (filePaths && filePaths.length > 0) {
+                        window.electron.ipcRenderer.send('load-music-file', filePaths);
                     }
                 });
                 break;
@@ -391,27 +394,40 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.electron.ipcRenderer.send('play-music');
                 }
                 break;
-            case 'playNextButton':
-                if (!isBotEnabled) {
-                    showBotNag();
-                    return;
-                }
-                const isPlayNextEnabled = !playNextButton.classList.contains('active');
-                window.electron.ipcRenderer.send('play-next', { enabled: isPlayNextEnabled });
+            case 'playPrevButton':
+                window.electron.ipcRenderer.send('play-prev');
                 break;
-            case 'previewButton':
-                if (!previewAudioPlayer.paused) {
-                    previewAudioPlayer.pause();
-                } else {
-                    window.electron.ipcRenderer.invoke('get-preview-audio-data').then(result => {
-                        if (result.success) {
-                            previewAudioPlayer.src = result.url; // Use the custom protocol URL
-                            previewAudioPlayer.play();
-                        } else {
-                            logMessage(`Preview Error: ${result.error}`);
-                        }
-                    });
+            case 'playNextButton':
+                window.electron.ipcRenderer.send('play-next');
+                break;
+            case 'loop-mode-btn': {
+                // Cycle loop mode: 0 -> 1 -> 2 -> 0
+                // We'll let the backend handle the state but we can optimistically cycle or just wait for update
+                // Actually BackendAudioPlayer has loopMode 0, 1, 2.
+                // Let's assume we want to send the command to cycle or set specifically.
+                // For simplicity, let's just cycle here.
+                const nextMode = (currentLoopMode + 1) % 3;
+                window.electron.ipcRenderer.send('set-loop-mode', { mode: nextMode });
+                break;
+            }
+            case 'shuffle-btn':
+                window.electron.ipcRenderer.send('set-shuffle', { enabled: !currentShuffleMode });
+                break;
+            case 'clear-stack-btn':
+                window.electron.ipcRenderer.send('clear-stack');
+                break;
+            case 'save-music-preset-btn':
+                // We need the current stack from the UI state or ask backend
+                // The renderer doesn't have a local 'stack' variable, it relies on status updates.
+                // We'll use the latest initiativeOrder as a proxy for 'has data',
+                // but actually we need the music stack.
+                // Let's store the last received stack.
+                if (lastMusicStatus && lastMusicStatus.stack) {
+                    window.electron.ipcRenderer.invoke('save-music-preset', lastMusicStatus.stack.map(t => t.path));
                 }
+                break;
+            case 'load-music-preset-btn':
+                window.electron.ipcRenderer.invoke('load-music-preset');
                 break;
         }
     });
@@ -589,40 +605,86 @@ document.addEventListener('DOMContentLoaded', async () => {
         showPanel(panelId);
     });
 
+    let currentLoopMode = 1;
+    let currentShuffleMode = false;
+    let lastMusicStatus = null;
+
+    function togglePreview(index = -1) {
+        if (!previewAudioPlayer.paused) {
+            previewAudioPlayer.pause();
+            // If we clicked preview on the SAME track that's already playing, just stop.
+            // If we clicked a DIFFERENT track, continue to play the new one.
+            if (index === -1 || previewAudioPlayer.dataset.currentIndex === index.toString()) {
+                return;
+            }
+        }
+
+        window.electron.ipcRenderer.invoke('get-preview-audio-data', { index }).then(result => {
+            if (result.success) {
+                previewAudioPlayer.src = result.url;
+                previewAudioPlayer.dataset.currentIndex = index.toString();
+                previewAudioPlayer.load(); // Explicitly reload the source
+                previewAudioPlayer.play().catch(e => {
+                    logMessage(`Playback Error: ${e.message}`);
+                });
+            } else {
+                logMessage(`Preview Error: ${result.error}`);
+            }
+        });
+    }
+
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
+        lastMusicStatus = status;
         isPlaying = status.isPlaying;
-        playPauseButton.textContent = isPlaying ? 'Pause' : 'Play';
-        previewButton.disabled = !status.activeFilePath && !status.pendingFilePath;
+        currentLoopMode = status.loopMode;
+        currentShuffleMode = status.shuffleMode;
 
-        // Play Next button state
-        playNextButton.disabled = !status.pendingFilePath;
-        if (status.playNextMode) {
-            playNextButton.classList.add('active');
-        } else {
-            playNextButton.classList.remove('active');
-        }
+        playPauseButton.textContent = isPlaying ? '⏸️' : '▶️';
+        playPauseButton.disabled = status.stack.length === 0;
 
-        // Handle Pending Track
-        if (status.isCaching && status.pendingFilePath) {
-            pendingFileLabel.textContent = `(Caching...) ${status.pendingFilePath}`;
-            pendingFileLabelContainer.style.display = 'block';
-        } else if (status.pendingFilePath) {
-            pendingFileLabel.textContent = status.pendingFilePath;
-            pendingFileLabelContainer.style.display = 'block';
-        } else {
-            pendingFileLabelContainer.style.display = 'none';
-        }
+        // Update Loop Button
+        const loopEmojis = ['➡️', '🔁', '1️⃣'];
+        const loopTitles = ['No Loop', 'Loop All', 'Loop Single'];
+        loopModeBtn.textContent = loopEmojis[currentLoopMode];
+        loopModeBtn.title = loopTitles[currentLoopMode];
 
-        // Handle Active Track & Button State
-        if (status.activeFilePath) {
-            activeFileLabel.textContent = status.activeFilePath;
-        } else {
-            activeFileLabel.textContent = 'No track loaded';
-        }
+        // Update Shuffle Button
+        shuffleBtn.classList.toggle('active', currentShuffleMode);
 
-        // The play button should be enabled if there's any track available to be played,
-        // either already active or pending.
-        playPauseButton.disabled = !status.activeFilePath && !status.pendingFilePath;
+        // Render Stack
+        musicStackList.innerHTML = '';
+        status.stack.forEach((track, index) => {
+            const div = document.createElement('div');
+            div.className = 'music-stack-item' + (index === status.currentIndex ? ' active' : '');
+            if (status.isCaching && index === status.currentIndex) div.classList.add('caching');
+
+            div.innerHTML = `
+                <span class="track-name">${track.name}</span>
+                <div class="item-actions">
+                    <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
+                    <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
+                </div>
+            `;
+            div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                togglePreview(index);
+            });
+            div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.electron.ipcRenderer.send('remove-from-stack', { index });
+            });
+            div.addEventListener('click', () => {
+                // Jump to this track logic could go here if backend supported it
+            });
+            musicStackList.appendChild(div);
+
+            // Auto-scroll to active track
+            if (index === status.currentIndex) {
+                setTimeout(() => {
+                    div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            }
+        });
     });
 
     window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {
@@ -1156,16 +1218,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.stack-add-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
-                window.electron.ipcRenderer.invoke('open-file-dialog').then(filePath => {
-                    if (filePath) {
-                        // We need the name. We can guess from path or ask backend. 
-                        // open-file-dialog returns path. Path manipulation in renderer is possible if nodeIntegration true.
-                        // Or we can invoke 'load-sound' logic which returns object?
-                        // Let's use a helper invocation to get name or just parse str string split.
-                        // Since nodeIntegration is true (per warnings earlier), we might have path module?
-                        // Usually safer to just split string.
-                        const name = filePath.replace(/^.*[\\\/]/, '');
-                        soundboardState[slotId].tracks.push({ path: filePath, name: name });
+                window.electron.ipcRenderer.invoke('load-sound', { slotId, multi: true }).then(tracks => {
+                    if (tracks && tracks.length > 0) {
+                        soundboardState[slotId].tracks.push(...tracks);
                         saveSoundboardState();
                         renderSoundboard();
                     }

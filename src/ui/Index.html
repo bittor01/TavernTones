@@ -31,20 +31,24 @@
         <div class="log-area" id="statBlockArea" style="display: none;"></div>
       </div>
       <div id="music-controls-container" class="box">
-        <h2>Music</h2>
-        <div class="controls">
-          <button id="playPauseButton" disabled>Play</button>
-          <button id="playNextButton" disabled title="Play pending track after current one finishes">Play Next</button>
-          <button id="selectFileButton">Select File</button>
-          <button id="previewButton" disabled>Preview</button>
+        <div class="panel-header">
+          <h2>Music Stack</h2>
+          <div class="panel-header-controls">
+            <button id="save-music-preset-btn" class="small-btn" title="Save Preset">💾</button>
+            <button id="load-music-preset-btn" class="small-btn" title="Load Preset">📂</button>
+          </div>
         </div>
-        <div class="fileLabel" id="pendingFileLabelContainer" style="display: none;">
-          <span>Pending:</span>
-          <span id="pendingFileLabel"></span>
+        <div class="controls music-controls">
+          <button id="playPrevButton">⏮️</button>
+          <button id="playPauseButton">▶️</button>
+          <button id="playNextButton">⏭️</button>
+          <button id="loop-mode-btn">🔁</button>
+          <button id="shuffle-btn">🔀</button>
+          <button id="selectFileButton" title="Add File(s)">➕</button>
+          <button id="clear-stack-btn" title="Clear Stack">🗑️</button>
         </div>
-        <div class="fileLabel">
-          <span>Active:</span>
-          <span id="activeFileLabel">No track loaded</span>
+        <div id="music-stack-list" style="max-height: 150px; overflow-y: auto; margin-top: 5px; border: 1px solid #444; background: #1a1a1a;">
+          <!-- Stack items will be rendered here -->
         </div>
       </div>
     </div>
