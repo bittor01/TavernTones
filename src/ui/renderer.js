@@ -636,7 +636,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Update Loop Button
         const loopEmojis = ['➡️', '🔁', '1️⃣'];
+        const loopTitles = ['No Loop', 'Loop All', 'Loop Single'];
         loopModeBtn.textContent = loopEmojis[currentLoopMode];
+        loopModeBtn.title = loopTitles[currentLoopMode];
 
         // Update Shuffle Button
         shuffleBtn.classList.toggle('active', currentShuffleMode);
@@ -657,9 +659,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('remove-from-stack', { index });
             });
             div.addEventListener('click', () => {
-                // Logic to jump to this track could be added
+                // Jump to this track logic could go here if backend supported it
             });
             musicStackList.appendChild(div);
+
+            // Auto-scroll to active track
+            if (index === status.currentIndex) {
+                setTimeout(() => {
+                    div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            }
         });
     });
 

@@ -900,6 +900,19 @@ input:disabled {
     opacity: 1;
 }
 
+.music-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px !important;
+}
+
+.music-controls button {
+    flex: 1 1 auto;
+    padding: 6px 8px;
+    font-size: 0.9em;
+    min-width: 40px;
+}
+
 /* --- Import Selection Dialog --- */
 #import-selection-dialog {
     background-color: #444;
