@@ -1,5 +1,5 @@
 // Performance and security update
-const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } = require('electron');
 const path = require('path');
 const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder, Events } = require('discord.js');
 const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
@@ -174,16 +174,9 @@ function createSettingsWindow() {
 async function apploader() {
     await app.whenReady().then(async () => {
         discordConfig = await getDiscordConfig();
-        protocol.registerFileProtocol('safe-media', (request, callback) => {
-            const url = request.url.substr(13); // 'safe-media://'.length
-            const decodedPath = decodeURI(url);
-            try {
-                return callback(decodedPath);
-            }
-            catch (error) {
-                console.error('Failed to register protocol', error);
-                return callback('404');
-            }
+        protocol.handle('safe-media', (request) => {
+            const filePath = decodeURI(request.url.slice(13));
+            return net.fetch('file:///' + filePath);
         });
         console.log('App is ready.');
 
