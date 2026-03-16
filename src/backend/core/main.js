@@ -182,26 +182,16 @@ async function apploader() {
         discordConfig = await getDiscordConfig();
         protocol.handle('safe-media', async (request) => {
             try {
-                const urlStr = request.url.substring(13); // 'safe-media://'.length
-                // Handle different types of encoding that might occur
-                const decodedPath = decodeURIComponent(urlStr.replace(/\+/g, ' '));
-                const absolutePath = path.resolve(decodedPath);
+                const url = new URL(request.url);
+                const absolutePath = url.searchParams.get('path');
 
-                if (!fs.existsSync(absolutePath)) {
-                    console.error(`[safe-media] File not found: ${absolutePath}`);
+                if (!absolutePath || !fs.existsSync(absolutePath)) {
+                    console.error(`[safe-media] File not found or invalid: ${absolutePath}`);
                     return new Response('File not found', { status: 404 });
                 }
 
-                const ext = path.extname(absolutePath).toLowerCase();
-                const mimeTypes = {
-                    '.mp3': 'audio/mpeg',
-                    '.wav': 'audio/wav',
-                    '.ogg': 'audio/ogg',
-                    '.lnk': 'audio/mpeg' // Shortcut might point to mp3
-                };
-                const contentType = mimeTypes[ext] || 'audio/mpeg';
-
-                // Return net.fetch directly, which handles ranges/streaming much better than a buffer
+                // net.fetch of a file:// URL is the most reliable way in Electron
+                // to handle all media requirements like range requests.
                 return await net.fetch(pathToFileURL(absolutePath).toString());
 
             } catch (error) {
@@ -838,8 +828,8 @@ async function ipcloader() {
         if (!filePath) {
             return { success: false, error: 'No file available for preview.' };
         }
-        // Simplified URL construction. Let the protocol handler deal with the decoding.
-        const safeUrl = `safe-media://${encodeURIComponent(filePath)}`;
+        // Use a more standard URL format with search params for better parsing
+        const safeUrl = `safe-media://local/?path=${encodeURIComponent(filePath)}`;
         return { success: true, url: safeUrl };
     });
 

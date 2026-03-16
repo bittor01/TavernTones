@@ -623,6 +623,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (result.success) {
                 previewAudioPlayer.src = result.url;
                 previewAudioPlayer.dataset.currentIndex = index.toString();
+                previewAudioPlayer.load(); // Explicitly reload the source
                 previewAudioPlayer.play().catch(e => {
                     logMessage(`Playback Error: ${e.message}`);
                 });
