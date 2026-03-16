@@ -6,17 +6,25 @@
     <title>Settings</title>
     <link rel="stylesheet" href="../styles.css">
     <style>
-        /* Add some specific styles for the settings page */
         body {
             padding: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            background-color: #1a1a1a;
         }
         .settings-container {
             width: 100%;
-            max-width: 500px;
+            max-width: 850px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
         }
         .form-group {
             margin-bottom: 15px;
@@ -25,17 +33,7 @@
             display: block;
             margin-bottom: 5px;
             color: #ccc;
-        }
-        #save-button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            background-color: #3c3c3c; /* Default grey */
-            border-color: #555;
-        }
-        #save-button.dirty {
-            background-color: #28a745; /* Green when dirty */
-            border-color: #218838;
+            font-size: 0.9em;
         }
         .path-input-group {
             display: flex;
@@ -48,102 +46,123 @@
         #setup-default-folders {
             width: 100%;
             padding: 10px;
-            margin-bottom: 10px; /* Add space between this and the save button */
-            background-color: #ffc107; /* Yellow */
+            background-color: #ffc107;
             border-color: #e0a800;
             color: #212529;
+            font-weight: bold;
         }
-        #setup-default-folders:hover {
-            background-color: #e0a800;
-        }
-        #fetch-bestiary-btn {
+        #save-button {
             width: 100%;
-            margin-top: 5px;
-            padding: 8px;
+            padding: 12px;
+            background-color: #3c3c3c;
+            border-color: #555;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        #save-button.dirty {
+            background-color: #28a745;
+            border-color: #218838;
+        }
+        .slash-commands-row {
+            display: flex;
+            gap: 10px;
+        }
+        .slash-commands-row button {
+            flex: 1;
+        }
+        h2 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
         }
     </style>
 </head>
 <body>
     <div class="settings-container box">
-        <div class="panel-header">
-            <h2>Discord Bot Settings</h2>
-            <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
-                <input type="checkbox" id="enableDiscordBot" style="margin-right: 5px; width: auto;"> Enable
-            </label>
-        </div>
-        <div id="discord-fields">
-            <div class="form-group">
-                <label for="token">Bot Token</label>
-                <input type="password" id="token" placeholder="Enter your Discord bot token">
-            </div>
-            <div class="form-group">
-                <label for="voiceChannel">Voice Channel ID</label>
-                <input type="text" id="voiceChannel" placeholder="Voice Channel ID">
-            </div>
-            <div class="form-group">
-                <label for="textChannel">Text Channel ID</label>
-                <input type="text" id="textChannel" placeholder="Text Channel ID">
-            </div>
-            <div class="form-group">
-                <label for="botRoleId">Bot Role ID</label>
-                <input type="text" id="botRoleId" placeholder="Enter the role ID for the bot">
-            </div>
-        </div>
-        <hr>
-        <h2>External Dependencies</h2>
-        <div class="form-group">
-            <label for="ffmpegPath">FFmpeg Path</label>
-            <div class="path-input-group">
-                <input type="text" id="ffmpegPath" placeholder="Path to ffmpeg executable">
-                <button id="browse-ffmpeg">Browse</button>
-            </div>
-        </div>
-        <hr>
-        <h2>Data Paths</h2>
-        <div class="form-group">
-            <label for="defaultMusicPath">Default Music Path</label>
-            <div class="path-input-group">
-                <input type="text" id="defaultMusicPath" placeholder="Path to default music folder" readonly>
-                <button id="browse-music">Browse</button>
-            </div>
-        </div>
-        <div class="form-group">
-            <label for="randomTablesPath">Random Tables Path</label>
-            <div class="path-input-group">
-                <input type="text" id="randomTablesPath" placeholder="Path to random tables" readonly>
-                <button id="browse-random-tables">Browse</button>
-            </div>
-        </div>
-        <div class="form-group">
-            <label for="bestiaryPath">Bestiary Data Path</label>
-            <div class="path-input-group">
-                <input type="text" id="bestiaryPath" placeholder="Path to bestiary .json files" readonly>
-                <button id="browse-bestiary">Browse</button>
-            </div>
-        </div>
+        <div class="settings-grid">
+            <!-- Left Column: Discord -->
+            <div class="settings-column">
+                <div class="panel-header">
+                    <h2>Discord Bot</h2>
+                    <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
+                        <input type="checkbox" id="enableDiscordBot" style="margin-right: 5px; width: auto;"> Enable
+                    </label>
+                </div>
+                <div id="discord-fields">
+                    <div class="form-group">
+                        <label for="token">Bot Token</label>
+                        <input type="password" id="token" placeholder="Enter your Discord bot token">
+                    </div>
+                    <div class="form-group">
+                        <label for="voiceChannel">Voice Channel ID</label>
+                        <input type="text" id="voiceChannel" placeholder="Voice Channel ID">
+                    </div>
+                    <div class="form-group">
+                        <label for="textChannel">Text Channel ID</label>
+                        <input type="text" id="textChannel" placeholder="Text Channel ID">
+                    </div>
+                    <div class="form-group">
+                        <label for="botRoleId">Bot Role ID</label>
+                        <input type="text" id="botRoleId" placeholder="Enter the role ID for the bot">
+                    </div>
+                </div>
 
-        <button id="setup-default-folders">Create and Use Default Data Folders</button>
-
-        <div class="form-group" style="margin-top: 20px;">
-            <label for="gitRepoUrl">Git Repo URL (Bestiary Source)</label>
-            <input type="text" id="gitRepoUrl" placeholder="https://github.com/5etools-mirror-3/5etools-src">
-        </div>
-        <div class="form-group">
-            <label for="githubToken" style="font-size: 0.8em;">GitHub Personal Access Token (Optional)</label>
-            <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" style="font-size: 0.8em;">
-        </div>
-        <div class="form-group">
-            <button id="fetch-bestiary-btn">Fetch/Update Bestiary Data From Git</button>
-        </div>
-
-            <hr>
-            <h2>Slash Commands</h2>
-            <div class="form-group">
-                <button id="register-slash-btn" title="Register Slash Commands">Register Slash Commands</button>
+                <hr>
+                <h2>Discord Slash Commands</h2>
+                <div class="slash-commands-row">
+                    <button id="register-slash-btn">Register</button>
+                    <button id="unregister-slash-btn">Unregister</button>
+                </div>
             </div>
-            <div class="form-group">
-                <button id="unregister-slash-btn" title="Unregister Slash Commands">Unregister Slash Commands</button>
+
+            <!-- Right Column: Paths & Dependencies -->
+            <div class="settings-column">
+                <h2>External Dependencies</h2>
+                <div class="form-group">
+                    <label for="ffmpegPath">FFmpeg Path</label>
+                    <div class="path-input-group">
+                        <input type="text" id="ffmpegPath" placeholder="Path to ffmpeg executable">
+                        <button id="browse-ffmpeg">Browse</button>
+                    </div>
+                </div>
+
+                <hr>
+                <h2>Data Paths</h2>
+                <div class="form-group">
+                    <label for="defaultMusicPath">Default Music Path</label>
+                    <div class="path-input-group">
+                        <input type="text" id="defaultMusicPath" placeholder="Path to default music folder" readonly>
+                        <button id="browse-music">Browse</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="randomTablesPath">Random Tables Path</label>
+                    <div class="path-input-group">
+                        <input type="text" id="randomTablesPath" placeholder="Path to random tables" readonly>
+                        <button id="browse-random-tables">Browse</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="bestiaryPath">Bestiary Data Path</label>
+                    <div class="path-input-group">
+                        <input type="text" id="bestiaryPath" placeholder="Path to bestiary .json files" readonly>
+                        <button id="browse-bestiary">Browse</button>
+                    </div>
+                </div>
+
+                <button id="setup-default-folders">Setup Default Folders</button>
+
+                <hr>
+                <div class="form-group">
+                    <label for="gitRepoUrl">Bestiary Source (Git Repo)</label>
+                    <input type="text" id="gitRepoUrl" placeholder="https://github.com/.../5etools-src">
+                </div>
+                <div class="form-group">
+                    <label for="githubToken">GitHub Token (Optional)</label>
+                    <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx">
+                </div>
+                <button id="fetch-bestiary-btn" style="width: 100%;">Fetch/Update Bestiary</button>
             </div>
+        </div>
 
         <button id="save-button">Save and Close</button>
     </div>

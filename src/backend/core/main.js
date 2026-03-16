@@ -156,8 +156,8 @@ function createSettingsWindow() {
     }
 
     settingsWindow = new BrowserWindow({
-        width: 500,
-        height: 900,
+        width: 900,
+        height: 700,
         webPreferences: {
             preload: path.join(__dirname, '../../ui/settings/settings-preload.js'),
             contextIsolation: true,
