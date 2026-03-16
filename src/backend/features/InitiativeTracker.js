@@ -48,9 +48,10 @@ class InitiativeTracker {
         let timeoutId;
         return (...args) => {
             if (timeoutId) clearTimeout(timeoutId);
+            const safeDelay = Math.max(0, delay);
             timeoutId = setTimeout(() => {
                 fn.apply(this, args);
-            }, delay);
+            }, safeDelay);
         };
     }
 

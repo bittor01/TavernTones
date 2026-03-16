@@ -891,12 +891,14 @@ input:disabled {
     margin-right: 10px;
 }
 
-.music-stack-item .remove-track-btn {
+.music-stack-item .item-actions {
+    display: flex;
+    gap: 5px;
     opacity: 0.5;
     transition: opacity 0.2s;
 }
 
-.music-stack-item:hover .remove-track-btn {
+.music-stack-item:hover .item-actions {
     opacity: 1;
 }
 

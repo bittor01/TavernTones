@@ -431,18 +431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.invoke('load-music-preset');
                 break;
             case 'previewButton':
-                if (!previewAudioPlayer.paused) {
-                    previewAudioPlayer.pause();
-                } else {
-                    window.electron.ipcRenderer.invoke('get-preview-audio-data').then(result => {
-                        if (result.success) {
-                            previewAudioPlayer.src = result.url; // Use the custom protocol URL
-                            previewAudioPlayer.play();
-                        } else {
-                            logMessage(`Preview Error: ${result.error}`);
-                        }
-                    });
-                }
+                togglePreview();
                 break;
         }
     });
@@ -624,6 +613,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentShuffleMode = false;
     let lastMusicStatus = null;
 
+    function togglePreview(index = -1) {
+        if (!previewAudioPlayer.paused) {
+            previewAudioPlayer.pause();
+            // If we clicked preview on the SAME track that's already playing, just stop.
+            // If we clicked a DIFFERENT track, continue to play the new one.
+            if (index === -1 || previewAudioPlayer.dataset.currentIndex === index.toString()) {
+                return;
+            }
+        }
+
+        window.electron.ipcRenderer.invoke('get-preview-audio-data', { index }).then(result => {
+            if (result.success) {
+                previewAudioPlayer.src = result.url;
+                previewAudioPlayer.dataset.currentIndex = index.toString();
+                previewAudioPlayer.play().catch(e => {
+                    logMessage(`Playback Error: ${e.message}`);
+                });
+            } else {
+                logMessage(`Preview Error: ${result.error}`);
+            }
+        });
+    }
+
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
         lastMusicStatus = status;
         isPlaying = status.isPlaying;
@@ -652,8 +664,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             div.innerHTML = `
                 <span class="track-name">${track.name}</span>
-                <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
+                <div class="item-actions">
+                    <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">👁️</button>
+                    <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
+                </div>
             `;
+            div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                togglePreview(index);
+            });
             div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 window.electron.ipcRenderer.send('remove-from-stack', { index });

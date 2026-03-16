@@ -294,7 +294,9 @@ class BackendAudioPlayer extends EventEmitter {
 
         if (this.loopMode === 2) { // Loop 1
             this.log("Looping single track.");
-            setTimeout(() => this._play(), 100);
+            if (!this.isDestroyed) {
+                setTimeout(() => this._play(), 100);
+            }
         } else {
             this.next();
         }
@@ -432,6 +434,7 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     destroy() {
+        this.isDestroyed = true;
         if (this.player) this.player.stop();
         this.activeStreams.forEach(({ process }) => {
             try { if (process) process.kill(); } catch (e) {}

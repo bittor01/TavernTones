@@ -812,8 +812,14 @@ async function ipcloader() {
         return { canceled: true };
     });
 
-    ipcMain.handle('get-preview-audio-data', async () => {
-        const filePath = musicPlayer.getPreviewFilePath();
+    ipcMain.handle('get-preview-audio-data', async (event, { index = -1 } = {}) => {
+        let filePath;
+        if (index >= 0 && index < musicPlayer.stack.length) {
+            filePath = musicPlayer.stack[index];
+        } else {
+            filePath = musicPlayer.getPreviewFilePath();
+        }
+
         if (!filePath) {
             return { success: false, error: 'No file available for preview.' };
         }
