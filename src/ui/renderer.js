@@ -1,3 +1,4 @@
+// Performance and security update
 document.addEventListener('DOMContentLoaded', async () => {
     // --- State ---
     let isPlaying = false;
@@ -10,6 +11,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         { id: 'statBlockArea', title: 'Stat Block' }
     ];
     let currentPanelIndex = 0; // Default to 'Log'
+    let botStatus = { status: 'offline', message: 'Unknown' };
+    let isBotEnabled = false;
     let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
     let DND_CONDITIONS = {};
     let MOB_RULES_DATA = {};
@@ -25,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
     const diceLog = document.getElementById('diceLog');
     const playPauseButton = document.getElementById('playPauseButton');
+    const playNextButton = document.getElementById('playNextButton');
     const activeFileLabel = document.getElementById('activeFileLabel');
     const pendingFileLabel = document.getElementById('pendingFileLabel');
     const pendingFileLabelContainer = document.getElementById('pendingFileLabelContainer');
@@ -53,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Initial UI Setup ---
     addCreatureForm.innerHTML = `
-        <h2>Add Combatant</h2>
+        <h2>Add Combatant <button id="import-from-file-btn" class="small-btn" title="Import from File" style="font-size: 0.8em; padding: 2px 6px; margin-left: 10px;">⬇️</button></h2>
         <div class="form-row">
             <div class="form-group name-group">
                 <label for="creature-name">Combatant:</label>
@@ -306,7 +310,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 addCreatureForm.reset();
                 document.getElementById('imported-monster-info-btn').style.display = 'none';
                 delete addCreatureForm.dataset.monsterRawData;
-                // Reset mob state
+                // Reset edit/mob state
+                delete addCreatureForm.dataset.editingId;
                 creatureBeingEdited = null;
                 isMobMode = false;
                 document.getElementById('mob-controls').style.display = 'none';
@@ -355,9 +360,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             case 'load-button':
                 window.electron.ipcRenderer.invoke('load-encounter-dialog');
                 break;
-            case 'gamify-tool-button':
-                window.electron.ipcRenderer.send('open-gamify-tool');
-                break;
             case 'settings-button':
                 window.electron.ipcRenderer.send('open-settings-window');
                 break;
@@ -378,12 +380,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 break;
             case 'playPauseButton':
+                if (!isBotEnabled) {
+                    showBotNag();
+                    return;
+                }
                 previewAudioPlayer.pause();
                 if (isPlaying) {
                     window.electron.ipcRenderer.send('pause-music');
                 } else {
                     window.electron.ipcRenderer.send('play-music');
                 }
+                break;
+            case 'playNextButton':
+                if (!isBotEnabled) {
+                    showBotNag();
+                    return;
+                }
+                const isPlayNextEnabled = !playNextButton.classList.contains('active');
+                window.electron.ipcRenderer.send('play-next', { enabled: isPlayNextEnabled });
                 break;
             case 'previewButton':
                 if (!previewAudioPlayer.paused) {
@@ -403,95 +417,143 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // --- Soundboard Listeners (placeholders for now) ---
-    document.getElementById('soundboard-volume').addEventListener('input', (e) => {
-        console.log("Soundboard volume changed to:", e.target.value);
-        // This will later send an IPC message, e.g., window.electron.ipcRenderer.send('set-soundboard-volume', e.target.value);
+    // --- Soundboard Listeners ---
+    const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+
+    soundboardVolumeSlider.addEventListener('input', (e) => {
+        const sliderValue = parseFloat(e.target.value);
+        // Scale: 0-1 slider maps to 0-1.5 actual volume (150%)
+        const effectiveVolume = sliderValue * 1.5;
+
+        // Update backend
+        window.electron.ipcRenderer.send('set-soundboard-volume', { volume: effectiveVolume });
+
+        // Save state (debounced ideally, but on input for now is fine for local app)
+        saveSoundboardState();
     });
 
     addCreatureForm.addEventListener('submit', (event) => {
         event.preventDefault();
-        const getVal = (id) => document.getElementById(id).value;
-        const getInt = (id) => getVal(id) ? parseInt(getVal(id), 10) : null;
+        try {
+            const getVal = (id) => document.getElementById(id).value;
+            const getInt = (id) => getVal(id) ? parseInt(getVal(id), 10) : null;
 
-        const isEditing = !!creatureBeingEdited;
-        let creature;
+            // Use dataset ID as primary source of truth, fallback to global variable if needed
+            const editingId = addCreatureForm.dataset.editingId ? parseInt(addCreatureForm.dataset.editingId, 10) : null;
+            const isEditing = !!editingId || !!creatureBeingEdited;
 
-        if (isEditing) {
-            // Start with a copy of the creature being edited to preserve existing state
-            creature = { ...creatureBeingEdited };
+            // console.log('[Form Submit] Editing ID:', editingId, 'Is Editing:', isEditing);
 
-            // Overwrite properties from the form
-            creature.name = getVal('creature-name');
-            creature.initiative = getVal('creature-initiative');
-            creature.ac = getInt('creature-ac');
-            creature.speed = getVal('creature-speed');
-            creature.attackMod = getVal('attack-modifier');
-            creature.saveDc = getInt('save-dc');
-            creature.scores = { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), };
-            creature.saves = { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), };
-            creature.isMob = isMobMode;
-            creature.hp = getInt('creature-hp'); // Always take current HP from form for edits
+            let creature;
 
-            if (isMobMode) {
-                const newMobSize = getInt('mob-size');
-                // Preserve the original hpFormula if converting, otherwise it's already there.
-                if (!creatureBeingEdited.isMob) {
-                    creature.hpFormula = singleCreatureHPForMob;
+            if (isEditing) {
+                // alert(`[DEBUG] Entering Edit Mode Logic`);
+                // If we have an ID but lost the object (due to reload/race condition),
+                // we reconstruct a partial object with the ID. 
+                // Ideally we have the full object in creatureBeingEdited.
+                if (creatureBeingEdited && creatureBeingEdited.id === editingId) {
+                    creature = { ...creatureBeingEdited };
+                } else if (editingId) {
+                    // Fallback: create object with just ID so backend can find it
+                    creature = { id: editingId };
+                    // We might miss some hidden fields here (like reminders), 
+                    // but backend merge logic usually replaces the whole object.
+                    // IMPORTANT: To avoid data loss, we should try to fetch it from the initiativeOrder if possible,
+                    // but renderer doesn't have direct access.
+                    // However, since we populate from initiativeOrder, we can find it in the local global var.
+                    const existing = initiativeOrder.find(c => c.id === editingId);
+                    if (existing) {
+                        creature = { ...existing };
+                    } else if (creatureBeingEdited) {
+                        creature = { ...creatureBeingEdited };
+                    }
+                } else {
+                    creature = { ...creatureBeingEdited };
                 }
-                creature.singleCreatureHP = calculatedSingleCreatureHP;
-                creature.maxHp = newMobSize * calculatedSingleCreatureHP;
-                creature.mobInitialCount = creatureBeingEdited.isMob ? creatureBeingEdited.mobInitialCount : newMobSize;
-            } else {
-                // If converting from a mob, the hpFormula is still correct on the object.
-                creature.hpFormula = singleCreatureHPForMob;
-                creature.maxHp = creatureBeingEdited.isMob ? calculatedSingleCreatureHP : creatureBeingEdited.maxHp;
-                delete creature.mobInitialCount;
-                delete creature.singleCreatureHP;
+
+                // Overwrite properties from the form
+                creature.name = getVal('creature-name');
+                creature.ac = getInt('creature-ac');
+                creature.speed = getVal('creature-speed');
+                creature.attackMod = getVal('attack-modifier');
+                creature.saveDc = getInt('save-dc');
+                creature.scores = { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), };
+                creature.saves = { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), };
+                creature.isMob = isMobMode;
+                creature.hp = getInt('creature-hp'); // Always take current HP from form for edits
+                creature.hidden = false; // Ensure creature is visible after update
+
+                // Parse initiative as a number for updates (it's already been rolled)
+                const initVal = getVal('creature-initiative');
+                creature.initiative = parseFloat(initVal) || creature.initiative;
+
+                if (isMobMode) {
+                    const newMobSize = getInt('mob-size');
+                    // Preserve the original hpFormula if converting, otherwise it's already there.
+                    if (creatureBeingEdited && !creatureBeingEdited.isMob) {
+                        creature.hpFormula = singleCreatureHPForMob;
+                    }
+                    creature.singleCreatureHP = calculatedSingleCreatureHP;
+                    creature.maxHp = newMobSize * calculatedSingleCreatureHP;
+                    creature.mobInitialCount = (creatureBeingEdited && creatureBeingEdited.isMob) ? creatureBeingEdited.mobInitialCount : newMobSize;
+                } else {
+                    // If converting from a mob, the hpFormula is still correct on the object.
+                    creature.hpFormula = singleCreatureHPForMob;
+                    creature.maxHp = (creatureBeingEdited && creatureBeingEdited.isMob) ? calculatedSingleCreatureHP : (creature.maxHp || getInt('creature-hp'));
+                    delete creature.mobInitialCount;
+                    delete creature.singleCreatureHP;
+                }
+
+                // console.log('[Form Submit] Sending update-creature', creature);
+                window.electron.ipcRenderer.send('update-creature', creature);
+
+            } else { // This is a new creature
+                creature = {
+                    id: Date.now(),
+                    name: getVal('creature-name'),
+                    initiative: getVal('creature-initiative'),
+                    hp: getVal('creature-hp') || '10', // Keep as string for dice notation in backend
+                    ac: getInt('creature-ac'),
+                    speed: getVal('creature-speed'),
+                    attackMod: getVal('attack-modifier'),
+                    saveDc: getInt('save-dc'),
+                    scores: { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), },
+                    saves: { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), },
+                    tempHp: 0, conditions: [], isConcentrating: false, isFriendly: false, reminders: { start: '', end: '' },
+                    isMob: isMobMode,
+                };
+
+                if (isMobMode) {
+                    // The 'hp' field now contains the dice formula for a single creature.
+                    // The backend will handle the calculation.
+                    creature.hp = getVal('creature-hp') || '10'; // Send the formula string
+                    creature.mobInitialCount = getInt('mob-size');
+                    // No need to set maxHp, singleCreatureHP, or hpFormula here.
+                    // The backend will derive everything from the .hp formula and mobInitialCount.
+                }
+
+                if (addCreatureForm.dataset.monsterRawData) {
+                    creature.rawData = addCreatureForm.dataset.monsterRawData;
+                }
+
+                // console.log('[Form Submit] Sending add-creature', creature);
+                window.electron.ipcRenderer.send('add-creature', creature);
             }
 
-            window.electron.ipcRenderer.send('update-creature', creature);
-
-        } else { // This is a new creature
-            creature = {
-                id: Date.now(),
-                name: getVal('creature-name'),
-                initiative: getVal('creature-initiative'),
-                hp: getVal('creature-hp') || '10', // Keep as string for dice notation in backend
-                ac: getInt('creature-ac'),
-                speed: getVal('creature-speed'),
-                attackMod: getVal('attack-modifier'),
-                saveDc: getInt('save-dc'),
-                scores: { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), },
-                saves: { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), },
-                tempHp: 0, conditions: [], isConcentrating: false, isFriendly: false, reminders: { start: '', end: '' },
-                isMob: isMobMode,
-            };
-
-            if (isMobMode) {
-                // The 'hp' field now contains the dice formula for a single creature.
-                // The backend will handle the calculation.
-                creature.hp = getVal('creature-hp') || '10'; // Send the formula string
-                creature.mobInitialCount = getInt('mob-size');
-                // No need to set maxHp, singleCreatureHP, or hpFormula here.
-                // The backend will derive everything from the .hp formula and mobInitialCount.
-            }
-
-            if (addCreatureForm.dataset.monsterRawData) {
-                creature.rawData = addCreatureForm.dataset.monsterRawData;
-            }
-
-            window.electron.ipcRenderer.send('add-creature', creature);
+            // --- Reset Form ---
+            addCreatureForm.reset();
+            document.getElementById('imported-monster-info-btn').style.display = 'none';
+            delete addCreatureForm.dataset.monsterRawData;
+            delete addCreatureForm.dataset.editingId;
+            creatureBeingEdited = null;
+            isMobMode = false;
+            document.getElementById('mob-controls').style.display = 'none';
+            document.getElementById('convert-to-mob-btn').textContent = 'Convert to Mob';
+            document.getElementById('creature-name').focus();
+        } catch (err) {
+            console.error('[Form Submit Error]', err);
+            alert('Error submitting form: ' + err.message);
         }
-
-        // --- Reset Form ---
-        addCreatureForm.reset();
-        document.getElementById('imported-monster-info-btn').style.display = 'none';
-        delete addCreatureForm.dataset.monsterRawData;
-        creatureBeingEdited = null;
-        isMobMode = false;
-        document.getElementById('mob-controls').style.display = 'none';
-        document.getElementById('convert-to-mob-btn').textContent = 'Convert to Mob';
-        document.getElementById('creature-name').focus();
     });
 
     // --- IPC Listeners ---
@@ -506,10 +568,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         showPanel('diceLog');
     });
 
+    const showBotNag = () => {
+        let message = "The Discord bot is currently disabled. You need to enable and configure it in settings to use audio features on Discord. Open settings now?";
+
+        if (botStatus.message === 'Not Configured') {
+            message = "The Discord bot is enabled but not fully configured. Would you like to open settings to finish setup?";
+        }
+
+        if (confirm(message)) {
+            window.electron.ipcRenderer.send('open-settings-window');
+        }
+    };
+
+    window.electron.ipcRenderer.on('discord-bot-status', (event, status) => {
+        botStatus = status;
+        isBotEnabled = status.status !== 'offline';
+    });
+
+    window.electron.ipcRenderer.on('switch-panel', (event, panelId) => {
+        showPanel(panelId);
+    });
+
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
         isPlaying = status.isPlaying;
         playPauseButton.textContent = isPlaying ? 'Pause' : 'Play';
         previewButton.disabled = !status.activeFilePath && !status.pendingFilePath;
+
+        // Play Next button state
+        playNextButton.disabled = !status.pendingFilePath;
+        if (status.playNextMode) {
+            playNextButton.classList.add('active');
+        } else {
+            playNextButton.classList.remove('active');
+        }
 
         // Handle Pending Track
         if (status.isCaching && status.pendingFilePath) {
@@ -557,12 +648,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // --- Store the creature for submission ---
         creatureBeingEdited = creature;
+        addCreatureForm.dataset.editingId = creature.id; // Store ID in dataset for robust state tracking
 
         // --- Populate basic fields ---
         document.getElementById('creature-name').value = creature.name || '';
         document.getElementById('creature-initiative').value = creature.initiative || '';
-        // When editing, show the formula for single creatures, or current HP for mobs
-        document.getElementById('creature-hp').value = (!creature.isMob && creature.hpFormula) ? creature.hpFormula : (creature.hp || '');
+        // When editing, show the CURRENT HP so the user can edit the value directly.
+        // We do store the formula separately if needed, but the user requested editing current values.
+        document.getElementById('creature-hp').value = creature.hp || '';
         document.getElementById('creature-ac').value = creature.ac || '';
         document.getElementById('creature-speed').value = creature.speed || '';
         document.getElementById('attack-modifier').value = creature.attackMod || '';
@@ -619,10 +712,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         // This is for "Copying" a creature. It populates the form but doesn't
         // put the form into "edit mode".
         creatureBeingEdited = null; // Ensure we are not in edit mode
+        delete addCreatureForm.dataset.editingId;
 
         // Populate basic fields
         document.getElementById('creature-name').value = creature.name || '';
-        document.getElementById('creature-initiative').value = creature.initiative || '';
+        document.getElementById('creature-initiative').value = creature.initiativeFormula || creature.initiative || '';
         document.getElementById('creature-hp').value = creature.hpFormula || creature.hp || '';
         document.getElementById('creature-ac').value = creature.ac || '';
         document.getElementById('creature-speed').value = creature.speed || '';
@@ -785,9 +879,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const SOUNDBOARD_SIZE = 3;
 
     // Load state from backend
+
+    // Load state from backend
     window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
-        if (savedState && Array.isArray(savedState) && savedState.length === SOUNDBOARD_SIZE) {
-            soundboardState = migrateSoundboardState(savedState);
+        let slotsToLoad = [];
+        let volumeToLoad = 0.5; // Default slider value (which is ~0.75 effective volume)
+
+        if (savedState) {
+            if (Array.isArray(savedState)) {
+                // Legacy format: just an array of slots
+                slotsToLoad = savedState;
+            } else if (typeof savedState === 'object') {
+                // New format: { volume, slots }
+                if (savedState.slots) slotsToLoad = savedState.slots;
+                if (savedState.volume !== undefined) volumeToLoad = savedState.volume;
+            }
+        }
+
+        // Apply Logic
+        if (slotsToLoad && slotsToLoad.length === SOUNDBOARD_SIZE) {
+            soundboardState = migrateSoundboardState(slotsToLoad);
         } else {
             // Initialize defaults
             soundboardState = [];
@@ -803,8 +914,38 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
         }
+
+        // Set Volume UI and Backend
+        const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+        if (soundboardVolumeSlider) {
+            soundboardVolumeSlider.value = volumeToLoad;
+            // Trigger 1.5x scaling logic immediately
+            const effectiveVolume = volumeToLoad * 1.5;
+            window.electron.ipcRenderer.send('set-soundboard-volume', { volume: effectiveVolume });
+        }
+
+        // Force a render
         renderSoundboard();
     });
+
+    let saveSoundboardStateTimeout;
+    function saveSoundboardState() {
+        const volume = parseFloat(document.getElementById('soundboard-volume').value);
+        const stateToSave = {
+            volume: volume,
+            slots: soundboardState.map(slot => ({
+                ...slot,
+                isPlaying: false // Don't save playing state
+            }))
+        };
+
+        clearTimeout(saveSoundboardStateTimeout);
+        saveSoundboardStateTimeout = setTimeout(() => {
+            window.electron.ipcRenderer.send('save-soundboard-state', stateToSave);
+        }, 1000);
+    }
+
+
 
     // --- Preset Buttons ---
     const savePresetBtn = document.getElementById('save-preset-btn');
@@ -862,6 +1003,69 @@ document.addEventListener('DOMContentLoaded', async () => {
     function saveSoundboardState() {
         window.electron.ipcRenderer.send('save-soundboard-state', soundboardState);
     }
+
+    // --- Global Event Delegation for Combatant Details ---
+    combatantDetailsListDiv.addEventListener('click', (e) => {
+        const target = e.target;
+        const creatureId = parseInt(target.dataset.id, 10);
+        if (isNaN(creatureId)) return;
+
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+
+        if (target.classList.contains('attack-btn')) {
+            if (creature) {
+                if (creature.isMob) {
+                    displayMobRules(creatureId);
+                } else {
+                    createPopup('attack-roll', creatureId, target);
+                }
+            }
+        } else if (target.classList.contains('stat-roll-btn')) {
+            const { type, stat } = target.dataset;
+            createPopup('stat-roll', creatureId, target, { type, stat });
+        } else if (target.classList.contains('hp-change-btn')) {
+            createPopup('hp', creatureId, target);
+        } else if (target.classList.contains('add-condition-btn')) {
+            createPopup('condition', creatureId, target);
+        } else if (target.classList.contains('temp-hp-btn')) {
+            createPopup('temp-hp', creatureId, target);
+        } else if (target.classList.contains('remove-condition-btn')) {
+            const { condition } = target.dataset;
+            window.electron.ipcRenderer.send('remove-condition', { creatureId, condition });
+            // Hide tooltip immediately when condition is removed
+            if (globalTooltip) {
+                globalTooltip.style.visibility = 'hidden';
+                globalTooltip.style.opacity = '0';
+            }
+        } else if (target.classList.contains('reminders-btn')) {
+            createPopup('reminders', creatureId, target);
+        } else if (target.classList.contains('copy-btn')) {
+            window.electron.ipcRenderer.send('copy-creature', { creatureId });
+        } else if (target.classList.contains('edit-btn')) {
+            window.electron.ipcRenderer.send('edit-creature', { creatureId });
+        } else if (target.classList.contains('remove-btn')) {
+            window.electron.ipcRenderer.send('remove-creature', { creatureId });
+        } else if (target.classList.contains('move-to-bottom-btn')) {
+            const creatureIndex = combatantPanelOrder.findIndex(c => c.id === creatureId);
+            if (creatureIndex > -1) {
+                const [creature] = combatantPanelOrder.splice(creatureIndex, 1);
+                combatantPanelOrder.push(creature);
+                renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
+            }
+        }
+    });
+
+    combatantDetailsListDiv.addEventListener('change', (e) => {
+        const target = e.target;
+        const creatureId = parseInt(target.dataset.id, 10);
+        if (isNaN(creatureId)) return;
+
+        if (target.classList.contains('concentration-cb')) {
+            window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isConcentrating', value: e.target.checked });
+        } else if (target.classList.contains('friendly-cb')) {
+            window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isFriendly', value: e.target.checked });
+        }
+    });
 
     // --- Render Functions ---
     function renderSoundboard() {
@@ -984,6 +1188,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function togglePlay(slotId) {
+        if (!isBotEnabled) {
+            showBotNag();
+            return;
+        }
         const slot = soundboardState[slotId];
         if (slot.tracks.length === 0) return;
 
@@ -1037,7 +1245,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         initiativeListDiv.innerHTML = '';
         if (!initiativeOrder || initiativeOrder.length === 0) return;
 
+        const fragment = document.createDocumentFragment();
+
         initiativeOrder.forEach((creature, index) => {
+            if (creature.hidden) return; // Skip hidden creatures (e.g. being edited)
+
             const isActive = index === currentTurnIndex;
             const creatureDiv = document.createElement('div');
             creatureDiv.className = 'initiative-entry' + (isActive ? ' active-turn' : '');
@@ -1057,13 +1269,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
 
-            let conditionEmojis = (creature.conditions || []).map(c => DND_CONDITIONS[c]?.emoji || '');
-            let conditionStr;
-            if (conditionEmojis.length > 3) {
-                conditionStr = conditionEmojis.slice(0, 3).join('') + '♾️';
-            } else {
-                conditionStr = conditionEmojis.join('');
+            let conditionHTML = '';
+            const allConditionNames = creature.conditions || [];
+
+            // Render up to 3, plus an indicator if more
+            const visibleConditions = allConditionNames.slice(0, 3);
+
+            visibleConditions.forEach(name => {
+                const cond = DND_CONDITIONS[name];
+                if (cond) {
+                    conditionHTML += `
+                    <span class="has-tooltip" data-tooltip="${name}: ${cond.text}">
+                        ${cond.emoji}
+                    </span>`;
+                }
+            });
+
+            if (allConditionNames.length > 3) {
+                const tooltipText = allConditionNames.slice(3).map(name => {
+                    const c = DND_CONDITIONS[name];
+                    return c ? `${name}: ${c.text}` : name;
+                }).join('\n\n');
+                conditionHTML += `
+                 <span class="has-tooltip" data-tooltip="${tooltipText}">
+                    ♾️
+                 </span>`;
             }
+            let conditionStr = conditionHTML;
 
             let displayName = creature.name;
             if (creature.isMob) {
@@ -1094,28 +1326,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            initiativeListDiv.appendChild(creatureDiv);
+            fragment.appendChild(creatureDiv);
         });
+        initiativeListDiv.appendChild(fragment);
     }
 
     function getHpColor(current, max) {
-        if (current <= 0) return '#6c757d'; // Grey
-        if (current > max) return '#8a2be2'; // Purple
+        if (current <= 0) return '#6c757d'; // Grey (dead/0 HP)
+        if (current > max) return '#8a2be2'; // Purple (overhealed/temp HP)
 
         const percentage = (current / max) * 100;
-        if (percentage <= 25) return '#dc3545'; // Red
-        if (percentage <= 50) return '#ffc107'; // Yellow
-        if (percentage <= 75) return '#28a745'; // Green
-        return '#007bff'; // Blue
+        if (percentage >= 100) return '#007bff'; // Blue (full HP)
+        if (percentage >= 50) return '#28a745'; // Green (50-99%)
+        if (percentage >= 25) return '#ffc107'; // Yellow (25-49%)
+        return '#dc3545'; // Red (<25%)
     }
 
     function renderCombatantDetailsList(orderToRender, currentTurnIndex) {
         combatantDetailsListDiv.innerHTML = '';
         if (!orderToRender || orderToRender.length === 0) return;
 
+        const fragment = document.createDocumentFragment();
         const activeCreatureId = initiativeOrder.length > 0 ? initiativeOrder[currentTurnIndex]?.id : null;
 
         orderToRender.forEach((creature) => {
+            if (creature.hidden) return; // Skip hidden creatures (e.g. being edited)
+
             const creatureDiv = document.createElement('div');
             const isActive = activeCreatureId === creature.id;
             creatureDiv.className = 'combatant-details-entry' + (isActive ? ' active-turn' : '');
@@ -1195,7 +1431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const condition = DND_CONDITIONS[conditionName];
                 if (!condition) return '';
                 return `
-                                <span class="condition-tag" style="background-color: ${condition.color};" title="${condition.text}">
+                                <span class="condition-tag has-tooltip" style="background-color: ${condition.color};" data-tooltip="${conditionName}: ${condition.text}">
                                     ${condition.emoji} ${conditionName}
                                     <button class="remove-condition-btn" data-id="${creature.id}" data-condition="${conditionName}">x</button>
                                 </span>`;
@@ -1207,67 +1443,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
             `;
-            combatantDetailsListDiv.appendChild(creatureDiv);
+            fragment.appendChild(creatureDiv);
         });
-
-        // Use event delegation for all buttons inside the combatant details list
-        combatantDetailsListDiv.addEventListener('click', (e) => {
-            const target = e.target;
-            const creatureId = parseInt(target.dataset.id, 10);
-            if (isNaN(creatureId)) return;
-
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-
-            if (target.classList.contains('attack-btn')) {
-                if (creature) {
-                    if (creature.isMob) {
-                        displayMobRules(creatureId);
-                    } else {
-                        createPopup('attack-roll', creatureId, target);
-                    }
-                }
-            } else if (target.classList.contains('stat-roll-btn')) {
-                const { type, stat } = target.dataset;
-                createPopup('stat-roll', creatureId, target, { type, stat });
-            } else if (target.classList.contains('hp-change-btn')) {
-                createPopup('hp', creatureId, target);
-            } else if (target.classList.contains('add-condition-btn')) {
-                createPopup('condition', creatureId, target);
-            } else if (target.classList.contains('temp-hp-btn')) {
-                createPopup('temp-hp', creatureId, target);
-            } else if (target.classList.contains('remove-condition-btn')) {
-                const { condition } = target.dataset;
-                window.electron.ipcRenderer.send('remove-condition', { creatureId, condition });
-            } else if (target.classList.contains('reminders-btn')) {
-                createPopup('reminders', creatureId, target);
-            } else if (target.classList.contains('copy-btn')) {
-                window.electron.ipcRenderer.send('copy-creature', { creatureId });
-            } else if (target.classList.contains('edit-btn')) {
-                window.electron.ipcRenderer.send('edit-creature', { creatureId });
-            } else if (target.classList.contains('remove-btn')) {
-                window.electron.ipcRenderer.send('remove-creature', { creatureId });
-            } else if (target.classList.contains('move-to-bottom-btn')) {
-                const creatureIndex = combatantPanelOrder.findIndex(c => c.id === creatureId);
-                if (creatureIndex > -1) {
-                    const [creature] = combatantPanelOrder.splice(creatureIndex, 1);
-                    combatantPanelOrder.push(creature);
-                    renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
-                }
-            }
-        });
-
-        // Handle checkboxes separately as they use the 'change' event
-        combatantDetailsListDiv.addEventListener('change', (e) => {
-            const target = e.target;
-            const creatureId = parseInt(target.dataset.id, 10);
-            if (isNaN(creatureId)) return;
-
-            if (target.classList.contains('concentration-cb')) {
-                window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isConcentrating', value: e.target.checked });
-            } else if (target.classList.contains('friendly-cb')) {
-                window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isFriendly', value: e.target.checked });
-            }
-        });
+        combatantDetailsListDiv.appendChild(fragment);
     }
 
     function createPopup(type, creatureId, targetElement, data = {}) {
@@ -1284,12 +1462,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <button id="popup-hp-ok">Ok</button>
             `;
         } else if (type === 'condition') {
-            contentHTML = `
-                <select id="popup-condition-select">
-                    ${Object.keys(DND_CONDITIONS).map(c => `<option value="${c}">${c}</option>`).join('')}
-                </select>
-                <button id="popup-condition-add">Add</button>
-            `;
+            const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
+            const existingConditions = creature ? (creature.conditions || []) : [];
+            const availableConditions = Object.keys(DND_CONDITIONS).filter(c => !existingConditions.includes(c));
+
+            if (availableConditions.length === 0) {
+                contentHTML = `<p style="padding: 10px; margin: 0; font-size: 0.9em; color: #666;">All conditions applied.</p>`;
+            } else {
+                contentHTML = `
+                    <select id="popup-condition-select">
+                        ${availableConditions.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                    <button id="popup-condition-add">Add</button>
+                `;
+            }
         } else if (type === 'stat-roll' || type === 'attack-roll') {
             contentHTML = `
                 <button class="roll-type-btn" data-roll="adv">Advantage</button>
@@ -1365,11 +1551,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         } else if (type === 'condition') {
-            document.getElementById('popup-condition-add').addEventListener('click', () => {
-                const condition = document.getElementById('popup-condition-select').value;
-                window.electron.ipcRenderer.send('add-condition', { creatureId: parseInt(creatureId), condition });
-                popup.remove();
-            });
+            const addBtn = document.getElementById('popup-condition-add');
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    const condition = document.getElementById('popup-condition-select').value;
+                    window.electron.ipcRenderer.send('add-condition', { creatureId: parseInt(creatureId), condition });
+                    popup.remove();
+                });
+            }
         } else if (type === 'temp-hp') {
             const input = document.getElementById('popup-temp-hp-input');
             document.getElementById('popup-temp-hp-ok').addEventListener('click', () => {
@@ -1600,12 +1789,152 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Volume Control ---
-    const soundboardVolumeSlider = document.getElementById('soundboard-volume');
-    if (soundboardVolumeSlider) {
-        soundboardVolumeSlider.addEventListener('input', (e) => {
-            const volume = parseFloat(e.target.value);
-            window.electron.ipcRenderer.send('set-soundboard-volume', { volume });
+
+    // Ensure state is saved when closing the window
+    window.addEventListener('beforeunload', () => {
+        if (saveSoundboardStateTimeout) {
+            clearTimeout(saveSoundboardStateTimeout);
+        }
+        // Force immediate save
+        const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+        if (soundboardVolumeSlider) {
+            const volume = parseFloat(soundboardVolumeSlider.value);
+            const stateToSave = {
+                volume: volume,
+                slots: soundboardState.map(slot => ({
+                    ...slot,
+                    isPlaying: false
+                }))
+            };
+            window.electron.ipcRenderer.send('save-soundboard-state', stateToSave);
+        }
+    });
+
+    // --- Import Combatants Logic ---
+    const importDialog = document.getElementById('import-selection-dialog');
+    const importListContainer = document.getElementById('import-list-container');
+    const importBtn = document.getElementById('import-from-file-btn');
+    const confirmImportBtn = document.getElementById('confirm-import-btn');
+    const importSelectAllBtn = document.getElementById('import-select-all');
+    const importClearAllBtn = document.getElementById('import-clear-all');
+
+    if (importSelectAllBtn) {
+        importSelectAllBtn.addEventListener('click', () => {
+            const checkboxes = importListContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
         });
     }
+
+    if (importClearAllBtn) {
+        importClearAllBtn.addEventListener('click', () => {
+            const checkboxes = importListContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        });
+    }
+
+    if (importBtn) {
+        importBtn.addEventListener('click', async () => {
+            const combatants = await window.electron.ipcRenderer.invoke('read-combat-file');
+            if (combatants && combatants.length > 0) {
+                importListContainer.innerHTML = '';
+                combatants.forEach((c, index) => {
+                    const div = document.createElement('div');
+                    div.style.padding = '5px';
+                    div.style.borderBottom = '1px solid #ddd';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `import-check-${index}`;
+                    checkbox.value = index;
+                    checkbox.checked = false; // Default to UNCHECKED per user request
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `import-check-${index}`;
+                    label.textContent = ` ${c.name} (Init: ${c.initiativeFormula || c.initiative || '?'}, HP: ${c.hpFormula || c.hp || '?'})`;
+                    label.style.marginLeft = '10px';
+
+                    div.appendChild(checkbox);
+                    div.appendChild(label);
+                    importListContainer.appendChild(div);
+                });
+                // Store the combatants temporarily on the dialog
+                importDialog.dataset.combatants = JSON.stringify(combatants);
+                importDialog.showModal();
+            }
+        });
+    }
+
+    if (confirmImportBtn) {
+        confirmImportBtn.addEventListener('click', (e) => {
+            if (importDialog.returnValue === 'cancel') return;
+
+            const combatants = JSON.parse(importDialog.dataset.combatants || '[]');
+            const checkedBoxes = importListContainer.querySelectorAll('input[type="checkbox"]:checked');
+
+            // Use a base timestamp that is definitely unique for this batch
+            const baseTimestamp = Date.now();
+
+            checkedBoxes.forEach((box, i) => {
+                const index = parseInt(box.value);
+                const c = combatants[index];
+                if (c) {
+                    const newCreature = { ...c };
+                    // Ensure unique ID by adding loop index to timestamp.
+                    // This guarantees they are distinct and integers.
+                    newCreature.id = baseTimestamp + i;
+
+                    window.electron.ipcRenderer.send('add-creature', newCreature);
+                }
+            });
+            importDialog.close();
+        });
+    }
+
+    // --- Global Tooltip Logic ---
+    const globalTooltip = document.getElementById('global-tooltip');
+
+    if (globalTooltip) {
+        document.addEventListener('mouseover', (e) => {
+            const target = e.target.closest('.has-tooltip');
+            if (target && target.dataset.tooltip) {
+                globalTooltip.textContent = target.dataset.tooltip;
+                globalTooltip.style.visibility = 'visible';
+                globalTooltip.style.opacity = '1';
+                updateTooltipPosition(e);
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (globalTooltip.style.visibility === 'visible') {
+                updateTooltipPosition(e);
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const target = e.target.closest('.has-tooltip');
+            if (target) {
+                globalTooltip.style.visibility = 'hidden';
+                globalTooltip.style.opacity = '0';
+            }
+        });
+
+        function updateTooltipPosition(e) {
+            const offset = 15;
+            let x = e.clientX + offset;
+            let y = e.clientY + offset;
+
+            // Prevent going off screen (basic check)
+            const rect = globalTooltip.getBoundingClientRect();
+            if (x + rect.width > window.innerWidth) {
+                x = e.clientX - rect.width - offset;
+            }
+            if (y + rect.height > window.innerHeight) {
+                y = e.clientY - rect.height - offset;
+            }
+
+            globalTooltip.style.left = `${x}px`;
+            globalTooltip.style.top = `${y}px`;
+        }
+    }
+
 });

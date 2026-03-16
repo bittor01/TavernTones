@@ -1,6 +1,7 @@
+// Performance and security update
 const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
 const path = require('path');
-const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder, Events } = require('discord.js');
 const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
@@ -17,6 +18,7 @@ const { mobRules } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
+const GitHubSync = require('./GitHubSync.js');
 
 let discordConfig;
 
@@ -72,13 +74,13 @@ const DND_CONDITIONS = {
 };
 
 const hpBarEmojiMap = {
-    '#007bff': ':blue_square:',      // Blue
-    '#28a745': ':green_square:',     // Green
-    '#ffc107': ':yellow_square:',    // Yellow
-    '#dc3545': ':red_square:',       // Red
-    '#8a2be2': ':purple_square:',    // Purple
-    '#6c757d': ':x:',               // Grey (Dead)
-    'empty': ':black_large_square:'
+    '#007bff': '🟦',      // Blue (100%)
+    '#28a745': '🟩',     // Green (50-99%)
+    '#ffc107': '🟨',    // Yellow (25-49%)
+    '#dc3545': '🟥',       // Red (<25%)
+    '#8a2be2': '🟪',    // Purple (Temp HP)
+    '#6c757d': '💀',     // Dead
+    'empty': '⬛'
 };
 
 async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
@@ -148,7 +150,7 @@ function createSettingsWindow() {
 
     settingsWindow = new BrowserWindow({
         width: 500,
-        height: 800,
+        height: 900,
         webPreferences: {
             preload: path.join(__dirname, '../../ui/settings/settings-preload.js'),
             contextIsolation: true,
@@ -170,9 +172,8 @@ function createSettingsWindow() {
  * backend services and IPC handlers. It runs once the Electron app is ready.
  */
 async function apploader() {
-    discordConfig = await getDiscordConfig();
-
     await app.whenReady().then(async () => {
+        discordConfig = await getDiscordConfig();
         protocol.registerFileProtocol('safe-media', (request, callback) => {
             const url = request.url.substr(13); // 'safe-media://'.length
             const decodedPath = decodeURI(url);
@@ -187,22 +188,17 @@ async function apploader() {
         console.log('App is ready.');
 
         // Initialize components
-        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
+        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, discordConfig.ffmpegPath);
         ipcloader(); // Load all IPC handlers BEFORE creating window
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
-        // Create the main window first, so we can show dialogs.
-        // Don't show it yet if we might need to show the settings window first.
-        await createWindow(false);
-        isAppReady = true;
-
-        // Now, check for folder configuration.
-        const { resourcesPath, randomTablesPath, tasksPath } = discordConfig;
-        const pathsConfigured = resourcesPath && randomTablesPath && tasksPath;
+        // Check for folder configuration first
+        const { bestiaryPath, randomTablesPath } = discordConfig;
+        const pathsConfigured = bestiaryPath && randomTablesPath;
 
         if (!pathsConfigured) {
             logToRenderer("Essential data folders are not configured.");
-            await dialog.showMessageBox(mainWindow, {
+            await dialog.showMessageBox(null, {
                 type: 'warning',
                 title: 'Configuration Required',
                 message: 'One or more essential data folders have not been set up. Please configure them in the settings.',
@@ -213,15 +209,20 @@ async function apploader() {
         }
 
         // If we've reached here, paths are configured, so we can show the main window.
-        mainWindow.maximize();
-        mainWindow.show();
+        await createWindow(true);
+        isAppReady = true;
 
         // Handle Discord Bot setup.
-        if (!discordConfig || !discordConfig.token) {
-            logToRenderer("Discord credentials not found. Bot functionality will be disabled.");
-            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+        if (discordConfig && discordConfig.enabled) {
+            if (!discordConfig.token) {
+                logToRenderer("Discord token not found despite bot being enabled. Bot functionality will be disabled.");
+                mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+            } else {
+                initializeDiscordBot();
+            }
         } else {
-            initializeDiscordBot();
+            logToRenderer("Discord bot is disabled in settings.");
+            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Disabled' });
         }
 
         app.on('activate', () => {
@@ -271,6 +272,16 @@ ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
 // This prevents crashes related to GPU initialization.
 app.disableHardwareAcceleration();
 
+// Handle uncaught exceptions to prevent the app from crashing on non-critical stream errors
+process.on('uncaughtException', (error) => {
+    if (error.code === 'ERR_STREAM_PREMATURE_CLOSE') {
+        // This error is a known side effect of destroying audio streams during track changes or shutdown.
+        // It is harmless in this context and can be safely ignored.
+        return;
+    }
+    console.error('Uncaught Exception in Main Process:', error);
+});
+
 apploader();
 
 
@@ -289,7 +300,7 @@ function createEmojiHpBar(creature) {
     const tempHpBlocks = Math.min(BAR_LENGTH, Math.round((tempHp / maxHp) * BAR_LENGTH)); // Cap at bar length
 
     const hpColorEmoji = hpBarEmojiMap[getHpColor(hp, maxHp)] || hpBarEmojiMap['#007bff'];
-    const tempHpEmoji = '⭐';
+    const tempHpEmoji = hpBarEmojiMap['#8a2be2'];
     const emptyEmoji = hpBarEmojiMap['empty'];
 
     let bar = '';
@@ -451,15 +462,23 @@ async function ipcloader() {
     };
 
     // IPC Handlers for individual folder browsing
-    ipcMain.handle('select-resources-folder', () => selectDirectory('Select Resources Folder'));
+    ipcMain.handle('select-bestiary-folder', () => selectDirectory('Select Bestiary Data Folder'));
     ipcMain.handle('select-random-tables-folder', () => selectDirectory('Select Random Tables Folder'));
-    ipcMain.handle('select-tasks-folder', () => selectDirectory('Select Tasks Folder'));
     ipcMain.handle('select-music-folder', () => selectDirectory('Select Default Music Folder'));
+    ipcMain.handle('select-ffmpeg-file', async () => {
+        const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
+            title: 'Select FFmpeg Executable',
+            properties: ['openFile'],
+            filters: [{ name: 'Executables', extensions: process.platform === 'win32' ? ['exe'] : ['*'] }]
+        });
+        return filePaths && filePaths.length > 0 ? filePaths[0] : null;
+    });
 
-    // IPC Handler for setting up all default folders
+    // IPC Handler for setting up all default folders with improved error handling and OneDrive support
     ipcMain.handle('setup-default-folders', async () => {
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: 'Select a Parent Directory for TavernTones Data',
+            title: 'Select a Parent Directory for Tavern Tones Data',
+            defaultPath: app.getPath('documents'),
             properties: ['openDirectory']
         });
 
@@ -468,42 +487,105 @@ async function ipcloader() {
         }
 
         const parentDir = filePaths[0];
-        const dataDir = path.join(parentDir, 'TavernTones_Data');
+        const dataDir = path.join(parentDir, 'Tavern Tones');
 
         try {
-            await fs.mkdir(dataDir, { recursive: true });
+            // Ensure the main data directory exists
+            if (!fs.existsSync(dataDir)) {
+                await fs.promises.mkdir(dataDir, { recursive: true });
+            }
 
             const paths = {
-                resourcesPath: path.join(dataDir, 'resources'),
+                bestiaryPath: path.join(dataDir, 'bestiary'),
                 randomTablesPath: path.join(dataDir, 'randomtables'),
-                tasksPath: path.join(dataDir, 'tasks'),
                 defaultMusicPath: path.join(dataDir, 'music')
             };
 
             // Create all subdirectories
             for (const p of Object.values(paths)) {
-                await fs.mkdir(p, { recursive: true });
+                if (!fs.existsSync(p)) {
+                    await fs.promises.mkdir(p, { recursive: true });
+                }
             }
 
-            // Copy default data
-            const sourcePath = app.isPackaged ? path.join(process.resourcesPath, 'app') : app.getAppPath();
-            await fs.cp(path.join(sourcePath, 'resources'), paths.resourcesPath, { recursive: true });
-            await fs.cp(path.join(sourcePath, 'randomtables'), paths.randomTablesPath, { recursive: true });
-            // For tasks, we'll just create the directory for now, user can place tasks there.
+            // Copy default data (random tables) from the application package
+            const sourcePath = app.getAppPath();
+            const sourceTables = path.join(sourcePath, 'randomtables');
+
+            if (fs.existsSync(sourceTables)) {
+                // Use a more compatible copy approach if cp is missing or fails
+                if (fs.promises.cp) {
+                    await fs.promises.cp(sourceTables, paths.randomTablesPath, { recursive: true, force: true });
+                } else {
+                    // Fallback for older Node versions (shouldn't happen in recent Electron)
+                    const ncp = require('util').promisify(require('fs').copyFile); // simplistic
+                    // Actually, let's assume cp is available in modern Electron.
+                    throw new Error("fs.promises.cp is required for folder copying.");
+                }
+            }
 
             await dialog.showMessageBox(mainWindow, {
                 type: 'info',
                 title: 'Success',
-                message: `Default folders created inside:\n${dataDir}\n\nPlease place your task files in the 'tasks' folder.`,
+                message: `Default folders created inside:\n${dataDir}\n\nYou can now fetch bestiary data from the settings.`,
                 buttons: ['OK']
             });
 
             return paths;
         } catch (error) {
             console.error('Failed to create default folders:', error);
-            await dialog.showErrorBox('Error', 'Failed to create default data folders. Please check permissions and try again.');
+            await dialog.showErrorBox('Error', `Failed to create default data folders.\n\nError: ${error.message}\n\nPlease ensure you have write permissions to the selected folder (especially if using OneDrive) and try again.`);
             return null;
         }
+    });
+
+    ipcMain.handle('fetch-bestiary-data', async (event, { repoUrl, localPath, githubToken }) => {
+        const sync = new GitHubSync(logToRenderer, dialog, mainWindow, githubToken);
+        return await sync.syncBestiary(repoUrl, localPath);
+    });
+
+    ipcMain.handle('detect-ffmpeg', async () => {
+        const { exec } = require('child_process');
+        const isWin = process.platform === 'win32';
+        const cmd = isWin ? 'where ffmpeg' : 'which ffmpeg';
+
+        const foundPath = await new Promise(resolve => {
+            exec(cmd, (error, stdout) => {
+                if (!error && stdout) {
+                    // stdout might contain multiple lines on Windows if multiple are found
+                    const lines = stdout.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+                    resolve(lines[0] || null);
+                } else {
+                    resolve(null);
+                }
+            });
+        });
+
+        if (foundPath && fs.existsSync(foundPath)) return foundPath;
+
+        // Fallback to checking if "ffmpeg" just works, though we prefer the full path
+        const checkFfmpeg = (cmd) => new Promise(resolve => {
+            exec(`${cmd} -version`, (error) => resolve(!error));
+        });
+
+        if (await checkFfmpeg('ffmpeg')) return 'ffmpeg';
+
+        // Check for bundled ffmpeg
+        const exeName = isWin ? 'ffmpeg.exe' : 'ffmpeg';
+        const bundledPath = path.join(process.resourcesPath, 'ffmpeg', exeName);
+        if (fs.existsSync(bundledPath)) return bundledPath;
+
+        const appDirFfmpeg = path.join(path.dirname(process.execPath), 'ffmpeg', exeName);
+        if (fs.existsSync(appDirFfmpeg)) return appDirFfmpeg;
+
+        // Check same directory as executable
+        const sameDirFfmpeg = path.join(path.dirname(process.execPath), exeName);
+        if (fs.existsSync(sameDirFfmpeg)) return sameDirFfmpeg;
+
+        const localFfmpeg = path.join(app.getAppPath(), 'ffmpeg', exeName);
+        if (fs.existsSync(localFfmpeg)) return localFfmpeg;
+
+        return null;
     });
 
 
@@ -521,6 +603,7 @@ async function ipcloader() {
         // The music player instance also needs to be told about the new path.
         if (musicPlayer) {
             musicPlayer.musicFolder = config.defaultMusicPath;
+            musicPlayer.ffmpegPath = config.ffmpegPath;
             logToRenderer(`[IPC] Updated music player's default folder to: ${musicPlayer.musicFolder}`);
         }
         // --- End of update ---
@@ -539,7 +622,7 @@ async function ipcloader() {
 
     ipcMain.on('open-settings-window', createSettingsWindow);
 
-    logToRenderer('ipcloader() called.');
+    // logToRenderer('ipcloader() called.');
     musicPlayer.on('status-change', (status) => {
         if (mainWindow && mainWindow.webContents) {
             mainWindow.webContents.send('music-player-status', status);
@@ -556,6 +639,17 @@ async function ipcloader() {
         if (initiativeTracker) {
             initiativeTracker.sendFullState();
         }
+        if (discordConfig && discordConfig.enabled) {
+            if (client && client.isReady()) {
+                mainWindow.webContents.send('discord-bot-status', { status: 'online', message: 'Connected' });
+            } else if (!discordConfig.token) {
+                mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+            } else {
+                mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Connecting...' });
+            }
+        } else {
+            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Disabled' });
+        }
     });
 
     // Music Player IPC Handlers
@@ -568,12 +662,23 @@ async function ipcloader() {
 
     ipcMain.on('play-music', () => {
         logToRenderer(`IPC 'play-music' (command) received.`);
+        if (!musicPlayer.ffmpegPath) {
+            dialog.showErrorBox('FFmpeg Not Configured', 'Please configure the FFmpeg path in settings to play music.');
+            return;
+        }
         musicPlayer.play();
     });
 
     ipcMain.on('pause-music', () => {
         logToRenderer(`IPC 'pause-music' received.`);
         musicPlayer.pause();
+    });
+
+    ipcMain.on('play-next', (event, { enabled }) => {
+        logToRenderer(`IPC 'play-next' received: ${enabled}`);
+        if (musicPlayer) {
+            musicPlayer.setPlayNext(enabled);
+        }
     });
 
     ipcMain.handle('get-preview-audio-data', async () => {
@@ -590,6 +695,26 @@ async function ipcloader() {
         const focusedWindow = BrowserWindow.getFocusedWindow();
         if (!focusedWindow) return { response: options.cancelId || 1 }; // Default to cancel if no window
         return await dialog.showMessageBox(focusedWindow, options);
+    });
+
+    ipcMain.handle('read-combat-file', async () => {
+        const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openFile'],
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+        if (canceled || filePaths.length === 0) {
+            return null;
+        }
+        try {
+            const content = fs.readFileSync(filePaths[0], 'utf8');
+            const data = JSON.parse(content);
+            // Support both full save state (with initiativeOrder) or simple array
+            const combatants = Array.isArray(data) ? data : (data.initiativeOrder || []);
+            return combatants;
+        } catch (e) {
+            logToRenderer(`Error reading combat file: ${e.message}`);
+            return null;
+        }
     });
 
     ipcMain.handle('open-file-dialog', async () => {
@@ -646,6 +771,10 @@ async function ipcloader() {
     ipcMain.on('play-sound', (event, { slotId, filePath }) => {
         logToRenderer(`IPC 'play-sound' slot ${slotId}, file: ${filePath}`);
         if (filePath && musicPlayer) {
+            if (!musicPlayer.ffmpegPath) {
+                dialog.showErrorBox('FFmpeg Not Configured', 'Please configure the FFmpeg path in settings to use the soundboard.');
+                return;
+            }
             musicPlayer.playSound(filePath, slotId);
             // Notify renderer of state change? 
             // The renderer usually updates its own UI state, but if we want valid feedback:
@@ -861,10 +990,7 @@ async function ipcloader() {
     });
 
     ipcMain.on('add-creature', (event, creature) => {
-        const rollLogMessage = initiativeTracker.addCreature(creature);
-        if (rollLogMessage) {
-            mainWindow.webContents.send('dice-log', rollLogMessage);
-        }
+        initiativeTracker.addCreature(creature);
     });
 
     ipcMain.on('update-creature', (event, creature) => {
@@ -931,6 +1057,13 @@ async function ipcloader() {
 
     ipcMain.on('remove-creature', (event, { creatureId }) => {
         initiativeTracker.removeCreature(creatureId);
+    });
+
+    ipcMain.on('copy-creature', (event, { creatureId }) => {
+        const creature = initiativeTracker.getCreature(creatureId);
+        if (creature) {
+            mainWindow.webContents.send('populate-add-form', creature);
+        }
     });
 
     ipcMain.on('previous-turn', async () => {
@@ -1136,47 +1269,84 @@ function initializeDiscordBot() {
     });
 }
 
-client.once('clientReady', async () => {
-    const shutdown = async () => {
-        try {
-            console.log('Cleaning up and exiting.');
-            // Remove all event listeners
+let isShuttingDown = false;
+const shutdown = async () => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    try {
+        console.log('Cleaning up and exiting.');
+        // Remove all event listeners
+        if (client) {
             client.removeAllListeners();
-            if (musicPlayer && musicPlayer.player) {
-                musicPlayer.player.removeAllListeners();
-            }
-            if (connection) {
-                connection.removeAllListeners();
-            }
-            app.removeAllListeners();
-            ipcMain.removeAllListeners();
-
-            // Close any other resources, e.g., voice connections
-            if (connection) {
-                connection.destroy();
-            }
-
-            // Optionally logout
-            await client.destroy();
-
-            app.quit();
         }
-        catch (error) {
-            console.log('Error during shutdown:', error);
+        if (musicPlayer) {
+            if (musicPlayer.player) musicPlayer.player.removeAllListeners();
+            musicPlayer.destroy();
         }
-    };
-    app.on('before-quit', shutdown);
+        if (connection) {
+            connection.removeAllListeners();
+            connection.destroy();
+        }
 
+        // Optionally logout with a timeout to prevent hanging the shutdown
+        if (client) {
+            try {
+                const destroyPromise = client.destroy();
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Discord client destroy timed out')), 5000)
+                );
+                await Promise.race([destroyPromise, timeoutPromise]);
+            } catch (e) {
+                console.error("Error destroying discord client:", e);
+            }
+        }
+
+        console.log('Final exit.');
+        app.exit(0);
+    }
+    catch (error) {
+        console.log('Error during shutdown:', error);
+        process.exit(1);
+    }
+};
+
+app.on('before-quit', (e) => {
+    if (!isShuttingDown) {
+        e.preventDefault();
+        shutdown();
+    }
+});
+
+app.on('window-all-closed', () => {
+    // Standard behavior: quit when all windows are closed,
+    // unless on macOS where apps typically stay active.
+    if (process.platform !== 'darwin') {
+        app.quit();
+    }
+});
+
+client.once(Events.ClientReady, async () => {
     logToRenderer('TavernTones is online!');
+    mainWindow.webContents.send('discord-bot-status', { status: 'online', message: 'Connected' });
 
     //Connect to the voice channel
     const voiceChannel = client.channels.cache.get(discordConfig.voiceChannel);
     if (voiceChannel && voiceChannel.isVoiceBased()) {
         try {
+            // Check for and destroy any ghost connections
+            const { getVoiceConnection } = require('@discordjs/voice');
+            const existingConnection = getVoiceConnection(voiceChannel.guild.id);
+            if (existingConnection) {
+                logToRenderer('[Voice] Destroying existing zombie connection before reconnecting.');
+                existingConnection.destroy();
+            }
+
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
                 adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+                selfDeaf: false,
+                selfMute: false
             });
 
             // Listen for connection status changes
@@ -1185,15 +1355,19 @@ client.once('clientReady', async () => {
                 musicPlayer.setConnection(connection); // Pass connection to the player
             });
 
-            connection.on(VoiceConnectionStatus.Disconnected, () => {
+            connection.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {
                 logToRenderer('The bot has been disconnected. Attempting to reconnect...');
-                setTimeout(() => {
-                    joinVoiceChannel({
-                        channelId: voiceChannel.id,
-                        guildId: voiceChannel.guild.id,
-                        adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-                    });
-                }, 5000);
+                try {
+                    await Promise.race([
+                        entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+                        entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+                    ]);
+                    // Seems to be reconnecting to a new channel - ignore disconnect
+                } catch (error) {
+                    // Seems to be a real disconnect which shouldn't be recovered from
+                    logToRenderer('Real disconnect detected, destroying connection.');
+                    connection.destroy();
+                }
             });
 
             connection.on(VoiceConnectionStatus.Signalling, () => {
@@ -1206,11 +1380,15 @@ client.once('clientReady', async () => {
 
             logToRenderer(`Joined voice channel: ${voiceChannel.name}: ${connection.state.status}`);
 
-            await entersState(connection, VoiceConnectionStatus.Ready, 60000);
+            await entersState(connection, VoiceConnectionStatus.Ready, 30000);
             logToRenderer('Connection is ready!');
+            mainWindow.webContents.send('switch-panel', 'diceLog');
         }
         catch (error) {
-            logToRenderer('Error joining voice channel: ', error);
+            logToRenderer('Error joining voice channel: ', error.message || error);
+            if (connection) {
+                connection.destroy();
+            }
         }
     }
     else {
@@ -1249,21 +1427,21 @@ client.once('clientReady', async () => {
     });
 });
 
-let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
-const startingMemUse = memoryUsage;
-setInterval(() => {
-    memoryUsage = process.memoryUsage().rss;
-    logToRenderer(`Memory usage is ${((memoryUsage - startingMemUse) / 1024 / 1024).toFixed(2)} MB higher than at launch (${(memoryUsage / 1024 / 1024).toFixed(2)} MB total)`);
-}, 60000);
+// let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
+// const startingMemUse = memoryUsage;
+// setInterval(() => {
+//     memoryUsage = process.memoryUsage().rss;
+//     logToRenderer(`Memory usage is ${((memoryUsage - startingMemUse) / 1024 / 1024).toFixed(2)} MB higher than at launch (${(memoryUsage / 1024 / 1024).toFixed(2)} MB total)`);
+// }, 60000);
 
 
 function getHpColor(current, max) {
-    if (current <= 0) return '#6c757d'; // Grey
-    if (current > max) return '#8a2be2'; // Purple
+    if (current <= 0) return '#6c757d'; // Dead
+    if (current > max) return '#007bff'; // Overhealed? Treat as blue/100% or purple? Sticking to blue for base HP.
 
     const percentage = (current / max) * 100;
-    if (percentage <= 25) return '#dc3545'; // Red
-    if (percentage <= 50) return '#ffc107'; // Yellow
-    if (percentage <= 75) return '#28a745'; // Green
-    return '#007bff'; // Blue
+    if (percentage >= 100) return '#007bff'; // Blue
+    if (percentage >= 50) return '#28a745'; // Green
+    if (percentage >= 25) return '#ffc107'; // Yellow
+    return '#dc3545'; // Red (< 25%)
 }

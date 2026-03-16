@@ -14,7 +14,7 @@ contextBridge.exposeInMainWorld('electron', {
         'update-hp', 'add-condition', 'remove-condition',
         'update-creature-flag', 'show-reminders-dialog',
         'save-encounter', 'load-encounter', 'update-reminders',
-        'roll-stat', 'add-temp-hp', 'edit-creature',
+        'roll-stat', 'add-temp-hp', 'edit-creature', 'update-creature',
         'remove-creature', 'move-creature-bottom',
         'reset-encounter', 'clear-encounter', 'update-initiative',
         'copy-creature', 'window-ready',
@@ -37,14 +37,15 @@ contextBridge.exposeInMainWorld('electron', {
         'get-high-score', 'load-task-by-path', 'open-task-file-dialog',
         'scrap-and-get-next-item', 'show-confirm-dialog', 'get-mob-rules-data',
         'get-image-as-data-url', 'get-preview-audio-data', 'load-sound',
-        'get-soundboard-state', 'save-soundboard-preset', 'load-soundboard-preset'
+        'get-soundboard-state', 'save-soundboard-preset', 'load-soundboard-preset',
+        'read-combat-file'
       ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);
       }
     },
     on: (channel, func) => {
-      const validChannels = ['log-message', 'music-player-status', 'dice-log', 'update-initiative-list', 'populate-edit-form', 'soundboard-state-change', 'populate-add-form', 'sound-finished'];
+      const validChannels = ['log-message', 'music-player-status', 'dice-log', 'update-initiative-list', 'populate-edit-form', 'soundboard-state-change', 'populate-add-form', 'sound-finished', 'discord-bot-status', 'switch-panel'];
       if (validChannels.includes(channel)) {
         const subscription = (event, ...args) => func(event, ...args);
         ipcRenderer.on(channel, subscription);

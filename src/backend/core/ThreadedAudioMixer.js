@@ -1,3 +1,4 @@
+// Performance and security update
 const { Worker } = require('worker_threads');
 const { Readable } = require('stream');
 const path = require('path');
@@ -34,6 +35,15 @@ class ThreadedAudioMixer extends Readable {
         });
 
         this.isReading = false;
+
+        this.on('error', (err) => {
+            if (err.code === 'ERR_STREAM_PREMATURE_CLOSE') {
+                // Ignore premature close errors, as they are expected during shutdown or track changes
+                return;
+            }
+            // Ensure we don't crash the main process if this is the only listener
+            console.error('ThreadedAudioMixer error:', err);
+        });
     }
 
     _read(size) {

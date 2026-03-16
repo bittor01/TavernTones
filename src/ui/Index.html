@@ -1,3 +1,4 @@
+<!-- Performance and security update -->
 <!DOCTYPE html>
 <html lang="en">
 
@@ -33,6 +34,7 @@
         <h2>Music</h2>
         <div class="controls">
           <button id="playPauseButton" disabled>Play</button>
+          <button id="playNextButton" disabled title="Play pending track after current one finishes">Play Next</button>
           <button id="selectFileButton">Select File</button>
           <button id="previewButton" disabled>Preview</button>
         </div>
@@ -122,6 +124,24 @@
     </form>
   </dialog>
 
+  <dialog id="import-selection-dialog">
+    <form method="dialog">
+      <h3>Select Combatants to Import</h3>
+      <div class="dialog-toolbar" style="margin-bottom: 5px;">
+        <button id="import-select-all" type="button" class="small-btn">Select All</button>
+        <button id="import-clear-all" type="button" class="small-btn">Clear All</button>
+      </div>
+      <div id="import-list-container" style="max-height: 300px; overflow-y: auto; margin-bottom: 10px;">
+        <!-- Checkboxes will be added here -->
+      </div>
+      <div class="dialog-actions">
+        <button value="cancel">Cancel</button>
+        <button id="confirm-import-btn" value="confirm">Import</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="global-tooltip"></div>
   <script src="renderer.js"></script>
 </body>
 
