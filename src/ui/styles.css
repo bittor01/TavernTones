@@ -1,16 +1,16 @@
 /* Performance and security update */
 
 :root {
-  --bg-color: #f8f9fa;
-  --box-bg: #ffffff;
-  --text-color: #333;
-  --border-color: #dee2e6;
-  --primary-color: #007bff;
-  --secondary-color: #6c757d;
-  --success-color: #28a745;
-  --danger-color: #dc3545;
-  --warning-color: #ffc107;
-  --accent-color: #6f42c1;
+  --bg-color: #121212;
+  --box-bg: #1e1e1e;
+  --text-color: #e0e0e0;
+  --border-color: #333;
+  --primary-color: #3792ff;
+  --secondary-color: #a0a0a0;
+  --success-color: #2ebd59;
+  --danger-color: #f44336;
+  --warning-color: #ffca28;
+  --accent-color: #bb86fc;
 }
 
 body {
@@ -44,14 +44,12 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 15px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 
-h2, h3, h4 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-weight: 600;
-}
+h2 { font-size: 1.1em; margin-top: 0; margin-bottom: 10px; font-weight: 600; color: var(--text-color); }
+h3 { font-size: 1.0em; margin-top: 0; margin-bottom: 8px; font-weight: 600; color: var(--text-color); }
+h4 { font-size: 0.9em; margin-top: 0; margin-bottom: 6px; font-weight: 600; color: var(--text-color); }
 
 hr {
   border: 0;
@@ -83,6 +81,8 @@ input, select, textarea {
   border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 0.9em;
+  background-color: #2c2c2c;
+  color: var(--text-color);
 }
 
 .stats-grid {
@@ -120,18 +120,19 @@ button {
   padding: 6px 12px;
   border-radius: 4px;
   border: 1px solid var(--border-color);
-  background-color: #fff;
+  background-color: #2c2c2c;
+  color: var(--text-color);
   cursor: pointer;
   font-size: 0.9em;
   transition: all 0.2s;
 }
 
 button:hover:not(:disabled) {
-  background-color: #f1f3f5;
+  background-color: #3d3d3d;
 }
 
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -143,7 +144,7 @@ button:disabled {
 }
 
 .add-creature-button:hover:not(:disabled) {
-  background-color: #0056b3;
+  filter: brightness(1.1);
 }
 
 .small-btn {
@@ -168,14 +169,15 @@ button:disabled {
 
 .log-area {
   flex: 1;
-  background: #fdfdfd;
-  border: 1px solid #eee;
+  background: #181818;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 8px;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 0.85em;
   overflow-y: auto;
   white-space: pre-wrap;
+  color: #ccc;
 }
 
 /* --- Music Player --- */
@@ -186,6 +188,7 @@ button:disabled {
   border-radius: 4px;
   margin: 10px 0;
   font-size: 0.85em;
+  background: #181818;
 }
 
 .music-stack-item {
@@ -193,7 +196,7 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .music-stack-item:last-child {
@@ -201,7 +204,7 @@ button:disabled {
 }
 
 .music-stack-item.active {
-  background-color: #e7f5ff;
+  background-color: #1a2733;
   border-left: 3px solid var(--primary-color);
 }
 
@@ -248,17 +251,17 @@ button:disabled {
   align-items: center;
   gap: 10px;
   padding: 8px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
   cursor: pointer;
   position: relative;
 }
 
 .initiative-entry:hover {
-  background-color: #f8f9fa;
+  background-color: #252525;
 }
 
 .initiative-entry.active-turn {
-  background-color: #fff9db;
+  background-color: #2d2a1c;
   border-left: 4px solid var(--warning-color);
 }
 
@@ -268,17 +271,18 @@ button:disabled {
 }
 
 .initiative-score {
-  background: #eee;
+  background: #333;
   border-radius: 4px;
   text-align: center;
   padding: 2px 4px;
   font-weight: bold;
   font-size: 0.9em;
+  color: var(--text-color);
 }
 
 .initiative-hp-bar-container {
   height: 4px;
-  background: #eee;
+  background: #333;
   grid-column: 1 / span 4;
   position: relative;
   border-radius: 2px;
@@ -317,7 +321,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   padding: 8px;
-  background: #fdfdfd;
+  background: #252525;
   transition: transform 0.1s;
 }
 
@@ -371,6 +375,7 @@ button:disabled {
   border-radius: 6px;
   margin-bottom: 15px;
   overflow: hidden;
+  background: var(--box-bg);
 }
 
 .combatant-details-entry.active-turn {
@@ -379,7 +384,7 @@ button:disabled {
 }
 
 .combatant-header {
-  background: #f8f9fa;
+  background: #252525;
   padding: 8px 12px;
   display: flex;
   justify-content: space-between;
@@ -406,10 +411,11 @@ button:disabled {
 }
 
 .interactive-stat {
-  background: #eee;
+  background: #333;
   padding: 2px 6px;
   border-radius: 4px;
   cursor: pointer;
+  color: var(--text-color);
 }
 
 .combatant-body {
@@ -426,7 +432,7 @@ button:disabled {
 .hp-bar-container {
   flex: 1;
   height: 24px;
-  background: #eee;
+  background: #333;
   border-radius: 4px;
   position: relative;
   overflow: hidden;
@@ -440,8 +446,8 @@ button:disabled {
   font-weight: bold;
   line-height: 24px;
   z-index: 2;
-  color: #333;
-  text-shadow: 0 0 2px white;
+  color: #fff;
+  text-shadow: 1px 1px 2px black;
 }
 
 .secondary-controls {
@@ -500,14 +506,15 @@ button:disabled {
 /* --- Popups --- */
 .popup-dialog {
   position: absolute;
-  background: white;
+  background: #2c2c2c;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.5);
   padding: 10px;
   z-index: 1000;
   display: flex;
   gap: 5px;
+  color: var(--text-color);
 }
 
 .roll-type-btn {
@@ -538,7 +545,7 @@ button:disabled {
 
 #global-tooltip {
   position: fixed;
-  background: #333;
+  background: #444;
   color: white;
   padding: 8px 12px;
   border-radius: 4px;
@@ -550,18 +557,21 @@ button:disabled {
   transition: opacity 0.2s;
   pointer-events: none;
   white-space: pre-wrap;
+  border: 1px solid #666;
 }
 
 /* --- Dialogs --- */
 dialog {
+  background: #1e1e1e;
+  color: var(--text-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
 }
 
 dialog::backdrop {
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.7);
 }
 
 .dialog-controls {

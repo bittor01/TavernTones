@@ -46,74 +46,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.electron.ipcRenderer.send('window-ready');
     setTimeout(() => window.electron.ipcRenderer.send('request-initial-load'), 100);
 
-    // --- Form Setup ---
-    addCreatureForm.innerHTML = `
-        <h2>Add Combatant <button id="import-from-file-btn" class="small-btn" title="Import from File">⬇️</button></h2>
-        <div class="form-row">
-            <div class="form-group name-group">
-                <label>Combatant:</label>
-                <input type="text" id="creature-name" required>
-                <span id="imported-monster-info-btn" class="info-btn" style="display: none;">ℹ️</span>
-            </div>
-            <div id="mob-controls" class="form-group" style="display: none; align-items: center;">
-                <label>Count:</label>
-                <input type="number" id="mob-size" min="1" value="5" style="width: 60px;">
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group"><label>Initiative:</label><input type="text" id="creature-initiative" placeholder="+3 or 15"></div>
-            <div class="form-group"><label>HP:</label><input type="text" id="creature-hp" placeholder="2d8+2"></div>
-            <div class="form-group"><label>AC:</label><input type="number" id="creature-ac" placeholder="15"></div>
-        </div>
-        <div class="form-row">
-            <div class="form-group"><label>Speed:</label><input type="text" id="creature-speed" placeholder="30ft"></div>
-            <div class="form-group"><label>Atk Mod:</label><input type="text" id="attack-modifier" placeholder="+5"></div>
-            <div class="form-group"><label>Save DC:</label><input type="number" id="save-dc" placeholder="13"></div>
-        </div>
-        <hr>
-        <div class="stats-grid">
-            <div class="grid-header"></div><div class="grid-header">STR</div><div class="grid-header">DEX</div><div class="grid-header">CON</div><div class="grid-header">INT</div><div class="grid-header">WIS</div><div class="grid-header">CHA</div>
-            <div class="grid-label">Score</div>
-            <input type="number" id="str-score" placeholder="12"><input type="number" id="dex-score" placeholder="12"><input type="number" id="con-score" placeholder="12"><input type="number" id="int-score" placeholder="12"><input type="number" id="wis-score" placeholder="12"><input type="number" id="cha-score" placeholder="12">
-            <div class="grid-label">Save</div>
-            <input type="text" id="str-save" placeholder="+1"><input type="text" id="dex-save" placeholder="+1"><input type="text" id="con-save" placeholder="+1"><input type="text" id="int-save" placeholder="+1"><input type="text" id="wis-save" placeholder="+1"><input type="text" id="cha-save" placeholder="+1">
-        </div>
-        <div class="form-actions">
-            <button type="button" id="convert-to-mob-btn">Convert to Mob</button>
-            <button type="button" id="import-monster-btn">Import Combatant</button>
-            <button type="submit" class="add-creature-button">Add Combatant</button>
-            <button type="button" id="clear-form-btn">Clear</button>
-        </div>
-    `;
-
-    // --- Music UI Re-design ---
-    const musicContainer = document.getElementById('music-controls-container');
-    musicContainer.innerHTML = `
-        <div class="panel-header">
-            <h2>Music</h2>
-            <div class="panel-header-controls">
-                <button id="music-clear-btn" class="small-btn" title="Clear Stack">🗑️</button>
-            </div>
-        </div>
-        <div class="music-stack-list" id="music-stack-list"></div>
-        <div class="controls">
-            <button id="music-prev-btn" title="Previous">⏮️</button>
-            <button id="music-play-btn">▶️ Play</button>
-            <button id="music-next-btn" title="Next">⏭️</button>
-            <button id="music-loop-btn" title="Loop Mode">🔁</button>
-            <button id="music-shuffle-btn" title="Shuffle">🔀</button>
-        </div>
-        <div class="controls">
-            <button id="music-add-file-btn">➕ Files</button>
-            <button id="music-add-folder-btn">➕ Folder</button>
-            <button id="music-preview-btn">👁️ Preview</button>
-        </div>
-        <div class="fileLabel">
-            <span>Now Playing:</span>
-            <span id="music-now-playing" class="active-track-name">None</span>
-        </div>
-    `;
-
     function updateMusicUI() {
         const list = document.getElementById('music-stack-list');
         list.innerHTML = musicStatus.stack.map((t, i) => `
@@ -165,10 +97,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         pushButton.style.display = (panelId === 'diceLog' || panelId === 'statBlockArea') ? 'inline-block' : 'none';
     }
 
+    // --- Soundboard Rows ---
+    let soundboardRows = 3; // Default 3 rows (9 slots)
+
     // --- Core Listeners ---
     document.addEventListener('click', async (e) => {
         const target = e.target;
-        const id = target.id;
+        const btn = target.closest('button');
+        const id = btn ? btn.id : target.id;
 
         if (target.classList.contains('stack-item-remove')) {
             const index = parseInt(target.dataset.index);
@@ -176,20 +112,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        if (target.classList.contains('stack-play-btn')) {
-            const slotId = parseInt(target.dataset.id);
+        if (target.classList.contains('stack-play-btn') || (btn && btn.classList.contains('stack-play-btn'))) {
+            const actualBtn = target.classList.contains('stack-play-btn') ? target : btn;
+            const slotId = parseInt(actualBtn.dataset.id);
             toggleSoundboardPlay(slotId);
             return;
         }
 
-        if (target.classList.contains('stack-add-btn')) {
-            const slotId = parseInt(target.dataset.id);
+        if (target.classList.contains('stack-add-btn') || (btn && btn.classList.contains('stack-add-btn'))) {
+            const actualBtn = target.classList.contains('stack-add-btn') ? target : btn;
+            const slotId = parseInt(actualBtn.dataset.id);
             const tracks = await window.electron.ipcRenderer.invoke('load-sound', { slotId });
             if (tracks) {
                 soundboardState[slotId].tracks.push(...tracks);
                 saveSoundboardState();
                 renderSoundboard();
             }
+            return;
+        }
+
+        if (btn && btn.classList.contains('row-select-btn')) {
+            soundboardRows = parseInt(btn.dataset.rows);
+            document.querySelectorAll('.row-select-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderSoundboard();
             return;
         }
 
@@ -353,7 +299,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
         grid.innerHTML = '';
-        soundboardState.forEach((slot, i) => {
+        const slotsToShow = soundboardRows * 3;
+        soundboardState.slice(0, slotsToShow).forEach((slot, i) => {
             const div = document.createElement('div');
             div.className = 'soundboard-stack-slot';
             div.innerHTML = `
