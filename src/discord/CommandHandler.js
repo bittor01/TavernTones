@@ -264,7 +264,7 @@ class CommandHandler {
                     const ext = path.extname(file).toLowerCase();
                     if (['.mp3', '.wav', '.ogg', '.lnk'].includes(ext)) results.push(file);
                 }
-            };
+            });
             return results;
         };
 
