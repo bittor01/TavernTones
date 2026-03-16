@@ -23,6 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const browseRandomTablesBtn = document.getElementById('browse-random-tables');
     const browseMusicBtn = document.getElementById('browse-music');
     const setupDefaultFoldersBtn = document.getElementById('setup-default-folders');
+    const registerSlashBtn = document.getElementById('register-slash-btn');
+    const unregisterSlashBtn = document.getElementById('unregister-slash-btn');
     const saveButton = document.getElementById('save-button');
 
     let originalConfig = {};
@@ -123,6 +125,34 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchBestiaryBtn.disabled = false;
         fetchBestiaryBtn.textContent = "Fetch/Update Bestiary Data";
     });
+
+    // --- Slash Commands ---
+    const updateSlashButtonState = (status) => {
+        const isOnline = status && status.status === 'online';
+        [registerSlashBtn, unregisterSlashBtn].forEach(btn => {
+            btn.disabled = !isOnline;
+            btn.style.opacity = isOnline ? '1' : '0.5';
+            btn.title = isOnline ? "" : "Restart the application with the info in here to make these buttons work";
+        });
+    };
+
+    registerSlashBtn.addEventListener('click', async () => {
+        registerSlashBtn.disabled = true;
+        const result = await window.settings.registerSlashCommands();
+        if (result.success) alert("Slash commands registered!");
+        else alert("Error: " + result.error);
+        registerSlashBtn.disabled = false;
+    });
+
+    unregisterSlashBtn.addEventListener('click', async () => {
+        unregisterSlashBtn.disabled = true;
+        const result = await window.settings.unregisterSlashCommands();
+        if (result.success) alert("Slash commands unregistered!");
+        else alert("Error: " + result.error);
+        unregisterSlashBtn.disabled = false;
+    });
+
+    window.settings.onBotStatus(updateSlashButtonState);
 
     // Request existing config from main process when window loads
     window.settings.getDiscordConfig();

@@ -535,7 +535,13 @@ async function ipcloader() {
             return paths;
         } catch (error) {
             console.error('Failed to create default folders:', error);
-            await dialog.showErrorBox('Error', `Failed to create default data folders.\n\nError: ${error.message}\n\nPlease ensure you have write permissions to the selected folder (especially if using OneDrive) and try again.`);
+            await dialog.showMessageBox(mainWindow, {
+                type: 'error',
+                title: 'Folder Creation Failed',
+                message: 'Tavern Tones was unable to create the data folders automatically.',
+                detail: `This often happens if the location (like Program Files) has restricted permissions.\n\nError: ${error.message}\n\nSuggested Fix: Try creating the "Tavern Tones" folder manually in your Documents folder first, or choose a different location.`,
+                buttons: ['OK']
+            });
             return null;
         }
     });
@@ -623,6 +629,66 @@ async function ipcloader() {
 
     ipcMain.on('open-settings-window', createSettingsWindow);
 
+    ipcMain.handle('register-slash-commands', async () => {
+        if (!discordConfig.token) return { success: false, error: 'No bot token' };
+        try {
+            const rest = new REST({ version: '10' }).setToken(discordConfig.token);
+            const commands = [
+                {
+                    name: 'roll',
+                    description: 'Roll arbitrary dice using RPG notation',
+                    options: [{
+                        name: 'notation',
+                        type: 3, // STRING
+                        description: 'e.g. 2d20kh1 + 5',
+                        required: true
+                    }]
+                },
+                {
+                    name: 'dice-help',
+                    description: 'Get help with RPG dice notation'
+                },
+                {
+                    name: 'play',
+                    description: 'Play music by folder or song name',
+                    options: [
+                        { name: 'folder', type: 3, description: 'Folder name', required: false },
+                        { name: 'song', type: 3, description: 'Song name', required: false }
+                    ]
+                },
+                { name: 'pause', description: 'Pause current audio' },
+                { name: 'stop', description: 'Stop audio and clear stack' },
+                { name: 'ping', description: 'Test bot connectivity' },
+                { name: 'surge', description: 'Roll on the Wild Magic Surge table' },
+                { name: 'shield', description: 'Roll on the Wild Magic Shield table' },
+                {
+                    name: 'roll-table',
+                    description: 'Roll on random tables',
+                    options: [
+                        { name: 'folder', type: 3, description: 'Folder name', required: true },
+                        { name: 'count', type: 4, description: 'Number of rolls', required: true },
+                        { name: 'args', type: 3, description: 'Weights and tables (e.g. "8 lvl1 4 lvl2")', required: true }
+                    ]
+                }
+            ];
+            await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    });
+
+    ipcMain.handle('unregister-slash-commands', async () => {
+        if (!discordConfig.token) return { success: false, error: 'No bot token' };
+        try {
+            const rest = new REST({ version: '10' }).setToken(discordConfig.token);
+            await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    });
+
     // logToRenderer('ipcloader() called.');
     musicPlayer.on('status-change', (status) => {
         if (mainWindow && mainWindow.webContents) {
@@ -654,10 +720,9 @@ async function ipcloader() {
     });
 
     // Music Player IPC Handlers
-    ipcMain.on('load-music-file', (event, filePath) => {
-        logToRenderer(`IPC 'load-music-file' received for: ${filePath}`);
-        if (filePath) {
-            musicPlayer.loadFile(filePath);
+    ipcMain.on('load-music-file', (event, filePaths) => {
+        if (filePaths) {
+            musicPlayer.addToStack(filePaths);
         }
     });
 
@@ -675,11 +740,68 @@ async function ipcloader() {
         musicPlayer.pause();
     });
 
-    ipcMain.on('play-next', (event, { enabled }) => {
-        logToRenderer(`IPC 'play-next' received: ${enabled}`);
-        if (musicPlayer) {
-            musicPlayer.setPlayNext(enabled);
+    ipcMain.on('play-next', (event) => {
+        if (musicPlayer) musicPlayer.next();
+    });
+
+    ipcMain.on('play-prev', (event) => {
+        if (musicPlayer) musicPlayer.prev();
+    });
+
+    ipcMain.on('set-loop-mode', (event, { mode }) => {
+        if (musicPlayer) musicPlayer.setLoopMode(mode);
+    });
+
+    ipcMain.on('set-shuffle', (event, { enabled }) => {
+        if (musicPlayer) musicPlayer.setShuffle(enabled);
+    });
+
+    ipcMain.on('remove-from-stack', (event, { index }) => {
+        if (musicPlayer) musicPlayer.removeFromStack(index);
+    });
+
+    ipcMain.on('clear-stack', (event) => {
+        if (musicPlayer) musicPlayer.clearStack();
+    });
+
+    ipcMain.handle('save-music-preset', async (event, stack) => {
+        const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+            title: 'Save Music Stack Preset',
+            defaultPath: 'music-preset.json',
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+        if (!canceled && filePath) {
+            try {
+                await fs.promises.writeFile(filePath, JSON.stringify(stack, null, 2));
+                return { success: true };
+            } catch (e) {
+                return { success: false, error: e.message };
+            }
         }
+        return { canceled: true };
+    });
+
+    ipcMain.handle('load-music-preset', async () => {
+        const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Load Music Stack Preset',
+            filters: [{ name: 'JSON', extensions: ['json'] }],
+            properties: ['openFile']
+        });
+        if (!canceled && filePaths.length > 0) {
+            try {
+                const data = await fs.promises.readFile(filePaths[0], 'utf-8');
+                const stack = JSON.parse(data);
+                if (Array.isArray(stack)) {
+                    musicPlayer.clearStack();
+                    await musicPlayer.addToStack(stack);
+                    return { success: true };
+                }
+                throw new Error("Invalid preset format.");
+            } catch (e) {
+                return { success: false, error: e.message };
+            }
+        }
+        return { canceled: true };
     });
 
     ipcMain.handle('get-preview-audio-data', async () => {
@@ -718,37 +840,66 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.handle('open-file-dialog', async () => {
+    const getAudioFilesRecursive = async (paths) => {
+        let results = [];
+        const extensions = ['.mp3', '.wav', '.ogg', '.lnk'];
+        for (const p of paths) {
+            try {
+                const stats = await fs.promises.stat(p);
+                if (stats.isDirectory()) {
+                    const files = await fs.promises.readdir(p);
+                    const subResults = await getAudioFilesRecursive(files.map(f => path.join(p, f)));
+                    results = results.concat(subResults);
+                } else {
+                    if (extensions.includes(path.extname(p).toLowerCase())) {
+                        results.push(p);
+                    }
+                }
+            } catch (e) {
+                console.error(`Error processing path ${p}:`, e);
+            }
+        }
+        return results;
+    };
+
+    ipcMain.handle('open-file-dialog', async (event, options = {}) => {
+        const properties = ['openFile', 'openDirectory'];
+        if (options.multi) properties.push('multiSelections');
+
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: 'Select Music File',
+            title: 'Select Music File(s) or Folder(s)',
             defaultPath: discordConfig.defaultMusicPath,
-            properties: ['openFile'],
+            properties,
             filters: [
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
             ]
         });
 
         if (filePaths && filePaths.length > 0) {
-            return filePaths[0];
+            return await getAudioFilesRecursive(filePaths);
         }
-        return null;
+        return [];
     });
 
     // --- Soundboard IPC ---
-    ipcMain.handle('load-sound', async (event, { slotId }) => {
+    ipcMain.handle('load-sound', async (event, { slotId, multi = false } = {}) => {
+        const properties = ['openFile', 'openDirectory'];
+        if (multi) properties.push('multiSelections');
+
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: `Select Sound for Slot ${slotId + 1}`,
+            title: `Select Sound(s) or Folder(s) for Slot ${slotId + 1}`,
             defaultPath: discordConfig.defaultMusicPath,
-            properties: ['openFile'],
+            properties,
             filters: [
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
             ]
         });
 
         if (filePaths && filePaths.length > 0) {
-            return { path: filePaths[0], name: path.basename(filePaths[0]) };
+            const allFiles = await getAudioFilesRecursive(filePaths);
+            return allFiles.map(p => ({ path: p, name: path.basename(p) }));
         }
-        return null;
+        return [];
     });
 
     ipcMain.on('play-sound', (event, { slotId }) => {
@@ -1407,6 +1558,78 @@ client.once(Events.ClientReady, async () => {
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
     client.on('interactionCreate', async interaction => {
+        if (interaction.isChatInputCommand()) {
+            const { commandName, options } = interaction;
+
+            if (commandName === 'roll') {
+                const notation = options.getString('notation');
+                try {
+                    const roller = new DiceRoller();
+                    const roll = roller.roll(notation);
+                    await interaction.reply(`🎲 **Roll Result:** ${roll.total}\n\`${roll.toString()}\``);
+                } catch (e) {
+                    await interaction.reply({ content: 'Invalid notation.', ephemeral: true });
+                }
+            } else if (commandName === 'dice-help') {
+                const embed = new EmbedBuilder()
+                    .setTitle("RPG Dice Notation Help")
+                    .setColor(0x00FF00)
+                    .setDescription("TavernTones uses the `@dice-roller/rpg-dice-roller` library.")
+                    .addFields(
+                        { name: "Basic", value: "`2d20`, `1d12 + 4`, `3d6 - 2`" },
+                        { name: "Keep/Drop", value: "`4d6kh3` (Keep Highest 3), `2d20kl1` (Keep Lowest 1), `4d6dl1` (Drop Lowest 1)" },
+                        { name: "Exploding", value: "`4d10!` (Explode on max), `4d10!>8` (Explode on 8 or higher)" },
+                        { name: "Reroll", value: "`1d20r1` (Reroll 1s), `1d20r<3` (Reroll 3 or less)" },
+                        { name: "Success/Failure", value: "`10d6>4` (Count dice > 4)" }
+                    );
+                await interaction.reply({ embeds: [embed] });
+            } else if (commandName === 'play') {
+                const f = options.getString('folder') || 'chill';
+                const s = options.getString('song');
+                const songFilePath = await client.commandHandler.findMusic(f, s);
+                if (songFilePath) {
+                    await interaction.reply(`Playing: **${path.parse(songFilePath).name}**`);
+                    musicPlayer.clearStack();
+                    await musicPlayer.addToStack(songFilePath);
+                    musicPlayer.play();
+                } else {
+                    await interaction.reply({ content: "Could not find that music.", ephemeral: true });
+                }
+            } else if (commandName === 'pause') {
+                musicPlayer.pause();
+                await interaction.reply('Paused.');
+            } else if (commandName === 'stop') {
+                musicPlayer.stop();
+                musicPlayer.clearStack();
+                await interaction.reply('Stopped and cleared stack.');
+            } else if (commandName === 'ping') {
+                await interaction.reply('Pong!');
+            } else if (commandName === 'surge') {
+                // Emulate surge command
+                const msg = { author: interaction.user, reply: (c) => interaction.reply(c), content: '!su', mentions: { has: () => true, roles: { has: () => false } } };
+                await client.commandHandler.handleMessage(msg);
+            } else if (commandName === 'shield') {
+                const msg = { author: interaction.user, reply: (c) => interaction.reply(c), content: '!sh', mentions: { has: () => true, roles: { has: () => false } } };
+                await client.commandHandler.handleMessage(msg);
+            } else if (commandName === 'roll-table') {
+                const folder = interaction.options.getString('folder');
+                const count = interaction.options.getInteger('count');
+                const args = interaction.options.getString('args');
+                const msg = {
+                    author: interaction.user,
+                    reply: (c) => interaction.reply(c),
+                    content: `!ro ${folder} ${count} ${args}`,
+                    mentions: { has: () => true, roles: { has: () => false } },
+                    channel: interaction.channel,
+                    startThread: (o) => interaction.channel.threads.create(o)
+                };
+                // Interaction needs to be deferred if it takes long
+                await interaction.deferReply();
+                msg.reply = (c) => interaction.editReply(c);
+                await client.commandHandler.handleMessage(msg);
+            }
+        }
+
         if (interaction.isStringSelectMenu()) {
             const { customId, values } = interaction;
 

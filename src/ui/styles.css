@@ -858,6 +858,48 @@ input:disabled {
     margin-top: 4px;
 }
 
+/* --- Music Stack Styles --- */
+.music-stack-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+    border-bottom: 1px solid #333;
+    font-size: 0.85em;
+    cursor: default;
+}
+
+.music-stack-item:hover {
+    background-color: #333;
+}
+
+.music-stack-item.active {
+    background-color: #4f5b66;
+    font-weight: bold;
+    color: #fff;
+}
+
+.music-stack-item.caching {
+    color: #ffc107;
+}
+
+.music-stack-item .track-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    margin-right: 10px;
+}
+
+.music-stack-item .remove-track-btn {
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.music-stack-item:hover .remove-track-btn {
+    opacity: 1;
+}
+
 /* --- Import Selection Dialog --- */
 #import-selection-dialog {
     background-color: #444;
