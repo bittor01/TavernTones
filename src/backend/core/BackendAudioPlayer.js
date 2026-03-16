@@ -425,6 +425,8 @@ class BackendAudioPlayer extends EventEmitter {
     getPreviewFilePath() {
         if (this.currentIndex >= 0 && this.currentIndex < this.stack.length) {
             return this.stack[this.currentIndex];
+        } else if (this.stack.length > 0) {
+            return this.stack[0];
         }
         return null;
     }

@@ -632,7 +632,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         playPauseButton.textContent = isPlaying ? '⏸️' : '▶️';
         playPauseButton.disabled = status.stack.length === 0;
-        previewButton.disabled = status.currentIndex < 0;
+        previewButton.disabled = status.stack.length === 0;
 
         // Update Loop Button
         const loopEmojis = ['➡️', '🔁', '1️⃣'];

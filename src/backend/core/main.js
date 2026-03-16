@@ -176,10 +176,12 @@ async function apploader() {
     await app.whenReady().then(async () => {
         discordConfig = await getDiscordConfig();
         protocol.handle('safe-media', async (request) => {
-            const url = request.url.substring(13); // 'safe-media://'.length
-            const decodedPath = decodeURI(url);
+            const urlStr = request.url.substring(13); // 'safe-media://'.length
+            const decodedPath = decodeURIComponent(urlStr);
             try {
-                return await net.fetch(pathToFileURL(decodedPath).toString());
+                const normalizedPath = path.normalize(decodedPath);
+                const fileUrl = pathToFileURL(normalizedPath).toString();
+                return await net.fetch(fileUrl);
             }
             catch (error) {
                 console.error('Failed to handle protocol', error);
@@ -809,8 +811,8 @@ async function ipcloader() {
         if (!filePath) {
             return { success: false, error: 'No file available for preview.' };
         }
-        // Encode the file path to handle special characters and create a URL
-        const safeUrl = `safe-media://${encodeURI(filePath.replace(/\\/g, '/'))}`;
+        // Use encodeURIComponent to safely encode the path for the protocol URL
+        const safeUrl = `safe-media://${encodeURIComponent(filePath)}`;
         return { success: true, url: safeUrl };
     });
 
