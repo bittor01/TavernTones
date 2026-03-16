@@ -110,7 +110,8 @@ async function logDiceRollToRenderer(message) {
 }
 
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    const safeMs = Math.max(0, Number(ms) || 0);
+    return new Promise(resolve => setTimeout(resolve, safeMs));
 }
 
 //Begin UI
@@ -190,9 +191,20 @@ async function apploader() {
                     return new Response('File not found', { status: 404 });
                 }
 
-                // net.fetch of a file:// URL is the most reliable way in Electron
-                // to handle all media requirements like range requests.
-                return await net.fetch(pathToFileURL(absolutePath).toString());
+                const ext = path.extname(absolutePath).toLowerCase();
+                const mimeTypes = {
+                    '.mp3': 'audio/mpeg',
+                    '.wav': 'audio/wav',
+                    '.ogg': 'audio/ogg'
+                };
+                const contentType = mimeTypes[ext] || 'audio/mpeg';
+
+                // Reading file into memory for the Response.
+                // This is less efficient but avoids many issues with custom protocols and Range requests.
+                const buffer = await fs.promises.readFile(absolutePath);
+                return new Response(buffer, {
+                    headers: { 'Content-Type': contentType }
+                });
 
             } catch (error) {
                 console.error('[safe-media] Protocol error:', error);
