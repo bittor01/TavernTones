@@ -36,7 +36,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const saveMusicPresetBtn = document.getElementById('save-music-preset-btn');
     const loadMusicPresetBtn = document.getElementById('load-music-preset-btn');
     const musicStackList = document.getElementById('music-stack-list');
-    const previewButton = document.getElementById('previewButton');
     const previewAudioPlayer = document.getElementById('preview-audio-player');
     const addCreatureForm = document.getElementById('add-creature-form');
     const initiativeListDiv = document.getElementById('initiative-list');
@@ -430,9 +429,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             case 'load-music-preset-btn':
                 window.electron.ipcRenderer.invoke('load-music-preset');
                 break;
-            case 'previewButton':
-                togglePreview();
-                break;
         }
     });
 
@@ -644,7 +640,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         playPauseButton.textContent = isPlaying ? '⏸️' : '▶️';
         playPauseButton.disabled = status.stack.length === 0;
-        previewButton.disabled = status.stack.length === 0;
 
         // Update Loop Button
         const loopEmojis = ['➡️', '🔁', '1️⃣'];
@@ -665,7 +660,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             div.innerHTML = `
                 <span class="track-name">${track.name}</span>
                 <div class="item-actions">
-                    <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">👁️</button>
+                    <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
                     <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
                 </div>
             `;

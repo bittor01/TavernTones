@@ -181,17 +181,32 @@ async function apploader() {
     await app.whenReady().then(async () => {
         discordConfig = await getDiscordConfig();
         protocol.handle('safe-media', async (request) => {
-            const urlStr = request.url.substring(13); // 'safe-media://'.length
-            // Use decodeURIComponent twice to handle double-encoded paths which can occur in some Electron versions/environments
-            const decodedPath = decodeURIComponent(decodeURIComponent(urlStr));
             try {
-                const normalizedPath = path.resolve(decodedPath);
-                const fileUrl = pathToFileURL(normalizedPath).toString();
-                return await net.fetch(fileUrl);
-            }
-            catch (error) {
-                console.error('Failed to handle protocol', error);
-                return new Response('Error', { status: 404 });
+                const urlStr = request.url.substring(13); // 'safe-media://'.length
+                // Handle different types of encoding that might occur
+                const decodedPath = decodeURIComponent(urlStr.replace(/\+/g, ' '));
+                const absolutePath = path.resolve(decodedPath);
+
+                if (!fs.existsSync(absolutePath)) {
+                    console.error(`[safe-media] File not found: ${absolutePath}`);
+                    return new Response('File not found', { status: 404 });
+                }
+
+                const ext = path.extname(absolutePath).toLowerCase();
+                const mimeTypes = {
+                    '.mp3': 'audio/mpeg',
+                    '.wav': 'audio/wav',
+                    '.ogg': 'audio/ogg',
+                    '.lnk': 'audio/mpeg' // Shortcut might point to mp3
+                };
+                const contentType = mimeTypes[ext] || 'audio/mpeg';
+
+                // Return net.fetch directly, which handles ranges/streaming much better than a buffer
+                return await net.fetch(pathToFileURL(absolutePath).toString());
+
+            } catch (error) {
+                console.error('[safe-media] Protocol error:', error);
+                return new Response('Error: ' + error.message, { status: 500 });
             }
         });
         console.log('App is ready.');
@@ -823,9 +838,8 @@ async function ipcloader() {
         if (!filePath) {
             return { success: false, error: 'No file available for preview.' };
         }
-        // Use encodeURIComponent to safely encode the path for the protocol URL
-        // On Windows, the path needs to be converted to a URL-friendly format
-        const safeUrl = `safe-media://${encodeURIComponent(filePath.replace(/\\/g, '/'))}`;
+        // Simplified URL construction. Let the protocol handler deal with the decoding.
+        const safeUrl = `safe-media://${encodeURIComponent(filePath)}`;
         return { success: true, url: safeUrl };
     });
 
