@@ -56,19 +56,40 @@ class CommandHandler {
                 { name: '!ping', value: 'Test to see if the bot is working.' },
                 { name: '!su (!surge)', value: 'Roll on the Wild Magic Surge table.' },
                 { name: '!sh (!shield)', value: 'Roll on the Wild Magic Shield table.' },
-                { name: '!ro (!roll)', value: 'Roll on random tables. Provide the folder name, then the number of rolls you want to make, then an arbitrary number of weights and tables in pairs. Can be used for things like random weather, random loot, random spells, etc. Example usage: `!ro spells 3 8 lvl1 4 lvl2 2 lvl3 1 lvl4`' },
-                { name: '!pl (!play)', value: 'Will play music. You can specify a folder, or specify a folder and a song. Example usages are `!pl`, `!pl chill`, `!pl chill humblewood`.' },
+                { name: '!ro (!roll)', value: 'Roll on random tables. Example: `!ro spells 3 8 lvl1 4 lvl2`' },
+                { name: '!pl (!play)', value: 'Play music. Folder, song, or search. Example: `!pl`, `!pl chill`, `!pl chill humblewood`, `!pl humblewood`.' },
                 { name: '!pa (!pause)', value: 'Pauses the current audio.' },
+                { name: '!dr (!dice)', value: 'Roll arbitrary dice. Example: `!dr 2d20kh1 + 5`' },
+                { name: '!dh (!dicehelp)', value: 'Get help with dice notation.' }
             )
             .setTimestamp();
 
-        if (musicPlayer.isPlaying && musicPlayer.activeFilePath) {
-            const albumName = path.basename(path.dirname(musicPlayer.activeFilePath));
-            const trackName = path.basename(musicPlayer.activeFilePath, path.extname(musicPlayer.activeFilePath));
-            helpEmbed.setFooter({ text: `🎵 Now Playing: ${trackName} from ${albumName}` });
+        if (musicPlayer.isPlaying && musicPlayer.stack.length > 0) {
+            const track = musicPlayer.stack[musicPlayer.currentTrackIndex];
+            if (track) {
+                helpEmbed.setFooter({ text: `🎵 Now Playing: ${track.name}` });
+            }
         }
 
         await message.reply({ embeds: [helpEmbed] });
+    }
+
+    async _sendDiceHelpEmbed(message) {
+        const embed = new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle('Dice Rolling Help')
+            .setDescription('TavernTones uses standard RPG dice notation.')
+            .addFields(
+                { name: 'Basic Rolls', value: '`1d20`, `3d6 + 2`, `4d10 - 5`', inline: true },
+                { name: 'Keep/Drop', value: '`2d20kh1` (Advantage), `2d20kl1` (Disadvantage), `4d6kh3` (Roll stats)', inline: true },
+                { name: 'Criticals', value: '`1d20cs>=19` (Crit on 19 or 20)', inline: true },
+                { name: 'Rerolls', value: '`1d8r<3` (Reroll 1s and 2s)', inline: true },
+                { name: 'Exploding', value: '`4d6!` (Explode on max)', inline: true },
+                { name: 'Math Functions', value: '`floor(1d20 / 2)`, `abs(-1d6)`', inline: true }
+            )
+            .setFooter({ text: 'Powered by @dice-roller/rpg-dice-roller' });
+
+        await message.reply({ embeds: [embed] });
     }
 
     /**
@@ -95,312 +116,147 @@ class CommandHandler {
                 let typingInterval;
                 switch (true) {
                     case content.startsWith('!ping'):
-                        logToRenderer('Ping command detected'); // Log when ping command is detected
                         await message.reply('Pong!');
-                        logToRenderer('Ping successfully ponged.');
                         break;
 
                     case content.startsWith('!su'):
+                    case content.startsWith('!surge'):
                         logToRenderer('Surge command detected');
                         const surgeFilePath = path.join(this.randomTablesPath, 'surge.json');
                         const surgeData = JSON.parse(fs.readFileSync(surgeFilePath, 'utf8'));
                         const surgeEffect = getRandomEffect(surgeData, userId);
                         if (surgeEffect) {
                             const evaluatedText = evaluateDiceRolls(surgeEffect.text);
-                            logToRenderer(evaluatedText + (surgeEffect.unique ? '  - Unique!' : ''));
                             await message.reply(evaluatedText + (surgeEffect.unique ? '  - 🥳Unique!🎊' : ''));
 
                             if (surgeEffect.unique) {
-                                if (!Array.isArray(surgeEffect.used)) {
-                                    surgeEffect.used = [];
-                                }
+                                if (!Array.isArray(surgeEffect.used)) surgeEffect.used = [];
                                 surgeEffect.used.push(userId);
                                 fs.writeFileSync(surgeFilePath, JSON.stringify(surgeData, null, 2), 'utf8');
-                                logToRenderer('Updated surgeData written to file.');
                             }
-
                         } else {
                             await message.reply('No available effects for you.');
                         }
                         break;
 
-                    case content.includes('!sh'):
+                    case content.startsWith('!sh'):
+                    case content.startsWith('!shield'):
                         logToRenderer('Shield command detected');
                         const shieldFilePath = path.join(this.randomTablesPath, 'shield.json');
                         const shieldData = JSON.parse(fs.readFileSync(shieldFilePath, 'utf8'));
                         const shieldEffect = getRandomEffect(shieldData, userId);
                         if (shieldEffect) {
                             const evaluatedText = evaluateDiceRolls(shieldEffect.text);
-                            logToRenderer(evaluatedText + (shieldEffect.unique ? '  - Unique!' : ''));
                             await message.reply(evaluatedText + (shieldEffect.unique ? '  - 🥳Unique!🎊' : ''));
 
-                            // Mark the effect as used by the user if it's unique
                             if (shieldEffect.unique) {
-                                if (!Array.isArray(shieldEffect.used)) {
-                                    shieldEffect.used = [];
-                                }
+                                if (!Array.isArray(shieldEffect.used)) shieldEffect.used = [];
                                 shieldEffect.used.push(userId);
                                 fs.writeFileSync(shieldFilePath, JSON.stringify(shieldData, null, 2), 'utf8');
-                                logToRenderer('Updated shieldData written to file.');
                             }
                         } else {
-                            logToRenderer('No Available effects for user!');
                             await message.reply('No available effects for you.');
                         }
                         break;
 
-
-                    case content.includes('!ro'):
+                    case content.startsWith('!ro'):
+                    case content.startsWith('!roll'):
                         logToRenderer('Roll command detected');
-                        // Find the index of '!ro' (case-insensitive)
                         const roIndex = message.content.toLowerCase().indexOf('!ro');
-                        if (roIndex === -1) {
-                            await message.reply('Invalid command format. Usage: @TT !ro <folderName> <numberOfIterations> <weight1> <tableName1> <weight2> <tableName2> ...');
-                            break;
-                        }
-                        // Get everything after '!ro'
                         const roArgsStr = message.content.slice(roIndex + 3).trim();
                         const roArgs = roArgsStr.split(/\s+/);
 
                         if (roArgs.length < 3) {
-                            await message.reply('Invalid command format. Usage: @TT !ro <folderName> <numberOfIterations> <weight1> <tableName1> <weight2> <tableName2> ...');
+                            await message.reply('Invalid format. Usage: @TT !ro <folder> <count> <w1> <t1> ...');
                             break;
                         }
 
                         const folderName = roArgs[0];
-                        const iterationCountStr = roArgs[1];
+                        const iterationCount = parseInt(roArgs[1], 10);
                         const tableArgs = roArgs.slice(2);
 
-                        // Validate folderName
-                        const validFolders = this.getValidTableFolders();
-                        if (!validFolders.includes(folderName)) {
-                            await message.reply(`Folder '${folderName}' not found. Valid folders are: ${validFolders.join(', ')}.`);
+                        if (isNaN(iterationCount) || iterationCount <= 0 || iterationCount > 100) {
+                            await message.reply('Please use a count between 1 and 100.');
                             break;
                         }
 
-                        // Parse and validate iterationCount
-                        const iterationCount = parseInt(iterationCountStr, 10);
-                        if (isNaN(iterationCount) || iterationCount <= 0 || iterationCount > 999) {
-                            await message.reply('Invalid number of iterations. Please use a number between 1 and 999.');
-                            break;
-                        }
-
-                        // Parse tableArgs for tableEntries
                         const roTableEntries = [];
-                        if (tableArgs.length === 0 || tableArgs.length % 2 !== 0) {
-                            await message.reply('Invalid weight or table name format in table arguments. Ensure you have pairs of weight and table names, and at least one pair.');
-                            break;
-                        }
-
-                        let validRoTableArgs = true;
                         for (let i = 0; i < tableArgs.length; i += 2) {
-                            const weightStr = tableArgs[i];
-                            const tableName = tableArgs[i + 1];
-                            const weight = parseInt(weightStr, 10);
-
-                            if (isNaN(weight) || weight <= 0 || !tableName) {
-                                await message.reply('Invalid weight or table name format. Weights must be positive integers and table names must be provided.');
-                                validRoTableArgs = false;
-                                break;
-                            }
-                            roTableEntries.push({ weight, tableName });
+                            roTableEntries.push({ weight: parseInt(tableArgs[i]), tableName: tableArgs[i + 1] });
                         }
 
-                        if (!validRoTableArgs) {
-                            break;
-                        }
-
-                        if (roTableEntries.length === 0) {
-                            await message.reply('You must specify at least one valid table and weight.');
-                            break;
-                        }
-
-                        await message.reply(`Starting ${iterationCount} rolls from folder '${folderName}' in a new thread...`);
-                        const thread = await message.startThread({
-                            name: `Rolls from ${folderName} (${iterationCount} times)`,
-                            autoArchiveDuration: 60, // 60 minutes
-                        });
-
+                        await message.reply(`Rolling ${iterationCount} times...`);
+                        const thread = await message.startThread({ name: `Rolls from ${folderName}` });
                         for (let i = 0; i < iterationCount; i++) {
                             const result = await this.rollFromTable(folderName, roTableEntries, message.channel.id);
-                            if (result.success) {
-                                await thread.send(`Roll ${i + 1}: ${result.text}`);
-                            } else {
-                                await thread.send(`Roll ${i + 1} Error: ${result.message}`);
-                            }
-                            // Delay to prevent flooding and potential rate limits
-                            await new Promise(resolve => setTimeout(resolve, 100));
-                        }
-                        await thread.send(`Completed ${iterationCount} rolls from ${folderName}.`);
-                        break;
-
-                    case content.includes('!ll'):
-                        logToRenderer('LL command detected');
-                        const llCommandRegex = /!ll\w*\s+(.*)/;
-                        const llMatch = content.match(llCommandRegex);
-                        if (llMatch && llMatch[1]) {
-                            const prompt = llMatch[1];
-                            try {
-                                const startTime = Date.now();
-                                const thinkingMessage = await message.reply('Checking local docs with Llama...');
-                                typingInterval = setInterval(() => message.channel.sendTyping(), 5000); // Show typing indicator every 5 seconds
-                                let response = await askGPT4All(prompt, 'll');
-                                clearInterval(typingInterval); // Stop typing indicator
-                                if (response.length > 1940) {
-                                    const llThread = await message.startThread({
-                                        name: `Response to ${llMatch[1]}`,
-                                        autoArchiveDuration: 15,
-                                        reason: `Response to ${llMatch[1]}`
-                                    });
-                                    const parts = response.match(/[\s\S]{1,1940}/g) || [];
-                                    response += ` (${parts.length} total messages)`;
-                                    for (const part of parts) {
-                                        await llThread.send(part);
-                                        await new Promise(resolve => setTimeout(resolve, 100));
-                                    }
-                                    let time = (Date.now() - startTime) / 1000;
-                                    await thinkingMessage.edit(` - Response sent in ${parts.length} parts and took ${time} seconds.`);
-                                }
-                                else {
-                                    let time = (Date.now() - startTime) / 1000;
-                                    response += `\nResponse sent in ${time} seconds.`;
-                                    await thinkingMessage.edit(response);
-                                }
-                            } catch (error) {
-                                logToRenderer(`Error: ${error}`);
-                                clearInterval(typingInterval);
-                                await message.reply('An error occurred while processing your request. Ask Crisp if it\'s on?');
-                            }
-                        } else {
-                            await message.reply('Invalid format. Please use the command like this: @TT !ll your prompt here');
+                            await thread.send(`Roll ${i + 1}: ${result.success ? result.text : result.message}`);
+                            await new Promise(r => setTimeout(r, 100));
                         }
                         break;
 
-                    case content.includes('!re'):
-                        logToRenderer('RE command detected');
-                        const reCommandRegex = /!re\w*\s+(.*)/;
-                        const reMatch = content.match(reCommandRegex);
-                        if (reMatch && reMatch[1]) {
-                            const prompt = reMatch[1];
-                            try {
-                                const startTime = Date.now();
-                                const thinkingMessage = await message.reply('Checking local docs with Reasoner...');
-                                typingInterval = setInterval(() => message.channel.sendTyping(), 5000); // Show typing indicator every 5 seconds
-                                let response = await askGPT4All(prompt, 're');
-                                clearInterval(typingInterval); // Stop typing indicator
-                                if (response.length > 1940) {
-                                    const reThread = await message.startThread({
-                                        name: `Response to ${reMatch[1]}`,
-                                        autoArchiveDuration: 15,
-                                        reason: `Response to ${reMatch[1]}`
-                                    });
-                                    const parts = response.match(/[\s\S]{1,1940}/g) || [];
-                                    response += ` (${parts.length} total messages)`;
-                                    for (const part of parts) {
-                                        await reThread.send(part);
-                                        await new Promise(resolve => setTimeout(resolve, 100));
-                                    }
-                                    let time = (Date.now() - startTime) / 1000;
-                                    await thinkingMessage.edit(` - Response sent in ${parts.length} parts and took ${time} seconds.`);
-                                }
-                                else {
-                                    let time = (Date.now() - startTime) / 1000;
-                                    response += `\nResponse sent in ${time} seconds.`;
-                                    await thinkingMessage.edit(response);
-                                }
-                            } catch (error) {
-                                logToRenderer(`Error: ${error}`);
-                                clearInterval(typingInterval);
-                                await message.reply('An error occurred while processing your request. Ask Crisp if it\'s on?');
-                            }
-                        } else {
-                            await message.reply('Invalid format. Please use the command like this: @TT !re your prompt here');
+                    case content.startsWith('!dr'):
+                    case content.startsWith('!dice'): {
+                        const notation = commandBody.replace(/^!dr\w*/i, '').trim();
+                        if (!notation) {
+                            await message.reply("Please provide a dice notation. Use `!dh` for help.");
+                            break;
+                        }
+                        try {
+                            const roller = new DiceRoller();
+                            const roll = roller.roll(notation);
+                            await message.reply(`🎲 **${roll.total}**\n\`${roll.toString()}\``);
+                        } catch (e) {
+                            await message.reply(`Error rolling dice: ${e.message}`);
                         }
                         break;
+                    }
 
-                    case content.includes('!in'):
-                        logToRenderer('Inspect command detected');
-                        if (this.lastResponse && this.lastResponse.choices && this.lastResponse.choices[0].references) {
-                            const thread = await message.startThread({
-                                name: 'References',
-                                autoArchiveDuration: 15,
-                                reason: 'References from the last query'
-                            });
-                            for (const ref of this.lastResponse.choices[0].references) {
-                                await thread.send(`${ref.file}\n\`\`\`${ref.text}\`\`\``);
-                                await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms before sending the next message
-                            }
-                        } else {
-                            await message.reply('No references available from the last response.');
-                        }
+                    case content.startsWith('!dh'):
+                    case content.startsWith('!dicehelp'):
+                        await this._sendDiceHelpEmbed(message);
                         break;
 
-                    case content.includes('!pl'):
+                    case content.startsWith('!pl'):
+                    case content.startsWith('!play'):
                         logToRenderer('Play command detected');
+                        const plParts = commandBody.split(/\s+/);
+                        const plArgs = plParts.slice(1).filter(a => a.length > 0);
 
-                        const fullCommand = message.content.substring(message.content.toLowerCase().indexOf('!pl')).trim();
-                        const parts = fullCommand.split(/\s+/); // Split by one or more spaces
-                        // parts[0] is "!pl" itself. commandArgs will be the actual arguments after "!pl".
-                        const commandArgs = parts.slice(1).filter(arg => arg.length > 0); // Filter out empty strings that might result from multiple spaces
-
-                        let parsedFolder = null;
-                        let parsedSong = null;
-
-                        if (commandArgs.length === 1) {
-                            parsedFolder = commandArgs[0];
-                        } else if (commandArgs.length >= 2) {
-                            parsedFolder = commandArgs[0];
-                            parsedSong = commandArgs[1];
-                        }
+                        let parsedFolder = plArgs[0] || null;
+                        let parsedSong = plArgs[1] || null;
 
                         let songFilePath = await this.findMusic(parsedFolder, parsedSong);
 
                         if (songFilePath) {
-                            if (path.extname(songFilePath).toLowerCase() === '.lnk') {
-                                try {
-                                    const shortcut = shell.readShortcutLink(songFilePath);
-                                    const targetPath = shortcut.target || null;
-
-                                    if (targetPath && fs.existsSync(targetPath)) {
-                                        songFilePath = targetPath;
-                                    } else {
-                                        songFilePath = null;
-                                    }
-                                } catch (error) {
-                                    songFilePath = null;
-                                }
-                            }
-
-                            if (songFilePath) {
-                                const songNameForMessage = path.parse(songFilePath).name;
-                                await message.reply(`Okay, playing: **${songNameForMessage}**.`);
-                                await musicPlayer.playFile(songFilePath);
-                            } else {
-                                await message.reply("Sorry, I couldn't find the music you were looking for.");
-                            }
+                            const songName = path.parse(songFilePath).name;
+                            await message.reply(`Okay, playing: **${songName}**.`);
+                            musicPlayer.clearStack();
+                            musicPlayer.addToStack(songFilePath);
+                            musicPlayer.play();
                         } else {
                             await message.reply("Sorry, I couldn't find the music you were looking for.");
                         }
                         break;
 
-                    case content.includes('!pa'):
-                        logToRenderer('Pause command detected');
+                    case content.startsWith('!pa'):
+                    case content.startsWith('!pause'):
                         if (musicPlayer.isPlaying) {
                             musicPlayer.pause();
-                            await message.reply('Playback paused.');
+                            await message.reply('Paused.');
                         } else {
-                            await message.reply('Nothing is currently playing to pause.');
+                            await message.reply('Nothing is playing.');
                         }
                         break;
 
-                    case content.includes('!h'):
-                        logToRenderer('Help command detected');
+                    case content.startsWith('!h'):
+                    case content.startsWith('!help'):
                         await this._sendHelpEmbed(message);
                         break;
 
                     default:
-                        logToRenderer('No recognized command found.');
-                        await this._sendHelpEmbed(message);
+                        if (content.length > 0) {
+                            await this._sendHelpEmbed(message);
+                        }
                         break;
                 }
             } catch (error) {
@@ -409,316 +265,125 @@ class CommandHandler {
         }
     }
 
-    /**
-     * Gets a list of valid subdirectories within the randomtables folder.
-     * @returns {string[]} An array of folder names.
-     */
     getValidTableFolders() {
-        const randomTablesPath = this.randomTablesPath;
         try {
-            const allEntries = fs.readdirSync(randomTablesPath, { withFileTypes: true });
-            const directories = allEntries
-                .filter(dirent => dirent.isDirectory())
-                .map(dirent => dirent.name);
-            return directories;
+            return fs.readdirSync(this.randomTablesPath, { withFileTypes: true })
+                .filter(d => d.isDirectory()).map(d => d.name);
         } catch (error) {
-            logToRenderer(`Error reading '${randomTablesPath}': ${error.message}`);
             return [];
         }
     }
 
-    /**
-     * Rolls on a weighted selection of random tables from a specified folder.
-     * @param {string} folderName - The subfolder within randomtables to use.
-     * @param {Array<{weight: number, tableName: string}>} tablesConfig - The configuration of tables to roll on.
-     * @param {string} channelId - The ID of the channel where the roll was initiated.
-     * @returns {Promise<{success: boolean, text?: string, message?: string}>} The result of the roll.
-     */
     async rollFromTable(folderName, tablesConfig, channelId) {
         const encounterTablesFolder = path.join(this.randomTablesPath, folderName);
-        const missingTables = [];
+        const validTables = [];
         for (const entry of tablesConfig) {
             const filePath = path.join(encounterTablesFolder, `${entry.tableName}.json`);
-            if (!fs.existsSync(filePath)) {
-                missingTables.push(entry.tableName);
+            if (fs.existsSync(filePath)) {
+                try {
+                    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                    validTables.push({ ...entry, data, filePath });
+                } catch (e) {}
             }
         }
 
-        if (missingTables.length > 0) {
-            return { success: false, message: `Missing tables: ${missingTables.join(', ')}` };
-        }
-
-        const tables = tablesConfig.map(entry => {
-            const filePath = path.join(encounterTablesFolder, `${entry.tableName}.json`);
-            try {
-                const tableData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-                return { ...entry, data: tableData, filePath: filePath };
-            } catch (error) {
-                logToRenderer(`Error loading table ${entry.tableName}: ${error.message}`);
-                return { ...entry, data: null, filePath: filePath, error: true };
-            }
-        });
-
-        const validTables = tables.filter(table => !table.error && table.data);
-        if (validTables.length !== tablesConfig.length) {
-            const erroredTableNames = tables.filter(t => t.error).map(t => t.tableName).join(', ');
-            return { success: false, message: `Error loading or parsing tables: ${erroredTableNames}` };
-        }
+        if (validTables.length === 0) return { success: false, message: "No valid tables found." };
 
         const totalWeight = validTables.reduce((sum, entry) => sum + entry.weight, 0);
-        if (totalWeight <= 0) {
-            return { success: false, message: "Total weight of tables must be positive." };
-        }
-
-        const roller = new DiceRoller();
-        const tableRoll = roller.roll(`1d${totalWeight}`).total;
-        let cumulativeWeight = 0;
-        let selectedTableEntry = null;
+        const roll = Math.floor(Math.random() * totalWeight) + 1;
+        let cumulative = 0;
+        let selected = null;
 
         for (const entry of validTables) {
-            cumulativeWeight += entry.weight;
-            if (tableRoll <= cumulativeWeight) {
-                selectedTableEntry = entry;
+            cumulative += entry.weight;
+            if (roll <= cumulative) {
+                selected = entry;
                 break;
             }
         }
 
-        if (!selectedTableEntry) {
-            logToRenderer(`Error selecting table. Roll: ${tableRoll}, TotalWeight: ${totalWeight}, Tables: ${JSON.stringify(validTables.map(t => ({ tn: t.tableName, w: t.weight })))}`);
-            return { success: false, message: "Error selecting table." };
-        }
+        const available = selected.data.filter(e => !e.unique || !e.used?.includes(channelId));
+        if (available.length === 0) return { success: false, message: "No available effects." };
 
-        if (!Array.isArray(selectedTableEntry.data)) {
-            logToRenderer(`Selected table ${selectedTableEntry.tableName} does not contain an array of effects.`);
-            return { success: false, message: `Data format error in table ${selectedTableEntry.tableName}.` };
-        }
-
-        const availableEffects = selectedTableEntry.data.filter(effect => {
-            return !effect.unique || !Array.isArray(effect.used) || !effect.used.includes(channelId);
-        });
-
-        if (availableEffects.length === 0) {
-            return { success: false, message: `No available effects in the selected table: ${selectedTableEntry.tableName}.` };
-        }
-
-        const effect = availableEffects[Math.floor(Math.random() * availableEffects.length)];
-
+        const effect = available[Math.floor(Math.random() * available.length)];
         if (effect.unique) {
-            if (!Array.isArray(effect.used)) {
-                effect.used = [];
-            }
+            if (!effect.used) effect.used = [];
             effect.used.push(channelId);
-
-            const effectIndexInOriginalTable = selectedTableEntry.data.findIndex(e => e.text === effect.text);
-            if (effectIndexInOriginalTable !== -1) {
-                selectedTableEntry.data[effectIndexInOriginalTable] = effect;
-                try {
-                    fs.writeFileSync(selectedTableEntry.filePath, JSON.stringify(selectedTableEntry.data, null, 2), 'utf8');
-                    logToRenderer(`Updated unique effect usage in ${selectedTableEntry.filePath}`);
-                } catch (error) {
-                    logToRenderer(`Error writing updated table ${selectedTableEntry.filePath}: ${error.message}`);
-                }
-            } else {
-                logToRenderer(`Could not find effect in original table data to update 'used' status. This is unexpected. Effect: ${effect.text}`);
-            }
+            fs.writeFileSync(selected.filePath, JSON.stringify(selected.data, null, 2));
         }
 
-        return { success: true, text: effect.text };
+        return { success: true, text: evaluateDiceRolls(effect.text) };
     }
 
-    /**
-     * Finds a music file based on a folder and optional song name.
-     * @param {string | null} folderSearchTerm - The term to search for in folder names. Defaults to 'chill'.
-     * @param {string | null} songSearchTerm - The term to search for in song names. If null, a random song is chosen.
-     * @returns {Promise<string | null>} The full path to the music file, or null if not found.
-     */
     async findMusic(folderSearchTerm, songSearchTerm) {
-        logToRenderer(`findMusic: Initiating search with folderSearchTerm='${folderSearchTerm}', songSearchTerm='${songSearchTerm}'.`);
+        logToRenderer(`findMusic: Search f='${folderSearchTerm}', s='${songSearchTerm}'`);
+        const musicPath = this.config.defaultMusicPath;
+        if (!musicPath || !fs.existsSync(musicPath)) return null;
 
-        let targetFolderToSearch;
-        // Determine the folder name to search for. Default to "chill" if no folder term is provided.
-        if (!folderSearchTerm || folderSearchTerm.trim() === "") {
-            targetFolderToSearch = "chill";
-            logToRenderer(`findMusic: folderSearchTerm is empty or null. Using default 'chill' folder.`);
-        } else {
-            targetFolderToSearch = folderSearchTerm;
-        }
-
-        let actualFolderPath = null;
-        let foundFolderOriginalName = null;
-
-        // Phase 1: Find the folder
-        try {
-            const musicPath = this.config.defaultMusicPath;
-            if (!musicPath || !fs.existsSync(musicPath)) {
-                logToRenderer(`findMusic: Error - Default Music Path ('${musicPath}') is not defined or does not exist.`);
-                return null;
-            }
-
-            // Get all directory names from the configured music path
-            const allEntities = fs.readdirSync(musicPath, { withFileTypes: true });
-            const subDirectories = allEntities.filter(dirent => dirent.isDirectory()).map(dirent => dirent.name);
-
-            if (subDirectories.length === 0) {
-                logToRenderer(`findMusic: No sub-folders found within the configured music path ('${musicPath}').`);
-                return null;
-            }
-
-            // Attempt to match the targetFolderToSearch with a directory name (substring match, case-insensitive)
-            const targetFolderLower = targetFolderToSearch.toLowerCase();
-            for (const dirName of subDirectories) {
-                if (dirName.toLowerCase().includes(targetFolderLower)) {
-                    actualFolderPath = path.join(musicPath, dirName);
-                    foundFolderOriginalName = dirName; // Store the actual name of the matched folder
-                    logToRenderer(`findMusic: Successfully matched folder: name='${foundFolderOriginalName}', path='${actualFolderPath}'.`);
-                    break; // Use the first match
+        const getAllFiles = (dir, filter) => {
+            let results = [];
+            const list = fs.readdirSync(dir, { withFileTypes: true });
+            list.forEach(file => {
+                const fullPath = path.join(dir, file.name);
+                if (file.isDirectory()) {
+                    results = results.concat(getAllFiles(fullPath, filter));
+                } else if (filter(file.name)) {
+                    results.push(fullPath);
                 }
-            }
-
-            if (!actualFolderPath) {
-                logToRenderer(`findMusic: No folder found containing '${targetFolderToSearch}' within '${musicPath}'.`);
-                return null; // Folder not found
-            }
-
-        } catch (error) {
-            logToRenderer(`findMusic: Exception while accessing or reading the configured music path: ${error.message}`);
-            return null;
-        }
-
-        // Phase 2: Find the song within the identified folder
-        try {
-            const filesInFolder = fs.readdirSync(actualFolderPath);
-            // Filter for .mp3 and .wav files
-            const audioFiles = filesInFolder.filter(file => {
-                const ext = path.extname(file).toLowerCase();
-                return ext === '.wav' || ext === '.lnk';
             });
+            return results;
+        };
 
-            if (audioFiles.length === 0) {
-                logToRenderer(`findMusic: No audio files (.wav, .lnk) found in the folder '${foundFolderOriginalName}'.`);
-                return null;
-            }
+        const isAudio = (name) => {
+            const ext = path.extname(name).toLowerCase();
+            return ['.mp3', '.wav', '.ogg', '.lnk'].includes(ext);
+        };
 
-            let songFilePath = null;
+        // 1. Exact or partial folder match
+        if (folderSearchTerm) {
+            const subdirs = fs.readdirSync(musicPath, { withFileTypes: true }).filter(d => d.isDirectory());
+            const matchedDir = subdirs.find(d => d.name.toLowerCase().includes(folderSearchTerm.toLowerCase()));
 
-            // If a songSearchTerm is provided, try to find a matching song
-            if (songSearchTerm && songSearchTerm.trim() !== "") {
-                const songSearchLower = songSearchTerm.toLowerCase();
-                for (const fileName of audioFiles) {
-                    const songNameWithoutExt = path.parse(fileName).name; // Get filename without extension
-                    if (songNameWithoutExt.toLowerCase().includes(songSearchLower)) {
-                        songFilePath = path.join(actualFolderPath, fileName);
-                        logToRenderer(`findMusic: Successfully matched song: '${fileName}' in folder '${foundFolderOriginalName}'. Full path: '${songFilePath}'.`);
-                        break; // Use the first match
+            if (matchedDir) {
+                const dirPath = path.join(musicPath, matchedDir.name);
+                const audioFiles = fs.readdirSync(dirPath).filter(isAudio);
+
+                if (audioFiles.length > 0) {
+                    if (songSearchTerm) {
+                        const matchedSong = audioFiles.find(f => f.toLowerCase().includes(songSearchTerm.toLowerCase()));
+                        if (matchedSong) return path.join(dirPath, matchedSong);
+                    } else {
+                        return path.join(dirPath, audioFiles[Math.floor(Math.random() * audioFiles.length)]);
                     }
                 }
-                if (!songFilePath) {
-                    logToRenderer(`findMusic: No song found containing '${songSearchTerm}' in folder '${foundFolderOriginalName}'.`);
-                    return null; // Specific song not found
-                }
-            } else {
-                // No songSearchTerm provided, so pick a random song from the folder
-                const randomIndex = Math.floor(Math.random() * audioFiles.length);
-                const randomSongName = audioFiles[randomIndex];
-                songFilePath = path.join(actualFolderPath, randomSongName);
-                logToRenderer(`findMusic: No songSearchTerm provided. Selected random song: '${randomSongName}' from folder '${foundFolderOriginalName}'. Full path: '${songFilePath}'.`);
             }
-
-            return songFilePath; // Return the full path to the song, or null if errors occurred
-
-        } catch (error) {
-            logToRenderer(`findMusic: Exception while reading files from folder '${foundFolderOriginalName}' (path: '${actualFolderPath}'): ${error.message}`);
-            return null;
         }
+
+        // 2. Loose file in root
+        const rootTerm = folderSearchTerm || songSearchTerm;
+        if (rootTerm) {
+            const rootFiles = fs.readdirSync(musicPath, { withFileTypes: true }).filter(f => f.isFile() && isAudio(f.name));
+            const matchedRoot = rootFiles.find(f => f.name.toLowerCase().includes(rootTerm.toLowerCase()));
+            if (matchedRoot) return path.join(musicPath, matchedRoot.name);
+        }
+
+        // 3. Deep search anywhere
+        const allAudio = getAllFiles(musicPath, isAudio);
+        const deepMatch = allAudio.find(f => path.basename(f).toLowerCase().includes(rootTerm.toLowerCase()));
+        if (deepMatch) return deepMatch;
+
+        return null;
     }
 }
 
-// Function to get a random effect from a table, filtering out used unique effects for the user
 function getRandomEffect(table, userId) {
-    const availableEffects = table.filter(effect => !effect.unique || !effect.used.includes(userId));
-    if (availableEffects.length === 0) {
-        return null; // No available effects
-    }
-    const randomIndex = Math.floor(Math.random() * availableEffects.length);
-    return availableEffects[randomIndex];
+    const available = table.filter(e => !e.unique || !e.used?.includes(userId));
+    return available.length > 0 ? available[Math.floor(Math.random() * available.length)] : null;
 }
 
-function evaluateDiceRolls(text, diceLimit = 24000) {
+function evaluateDiceRolls(text) {
     const roller = new DiceRoller();
-
-    while (text.includes("[[")) {
-        text = text.replace(/\[\[([^\[\]]+)\]\]/g, (match, diceExpression) => {
-            const roll = roller.roll(diceExpression);
-            let result = roll.total;
-
-            // Cap the result at diceLimit if exceeded
-            if (result > diceLimit) {
-                result = diceLimit;
-            }
-
-            return result;
-        });
-    }
-
-    return text;
+    return text.replace(/\[\[([^\[\]]+)\]\]/g, (m, expr) => roller.roll(expr).total);
 }
 
-async function askGPT4All(prompt, model, addSuffix = true) {
-    let chatmodel = 'Meta-Llama-3-8B-Instruct.Q4_0.gguf'; // Default to ll model
-    if (model === 're') {
-        chatmodel = 'qwen2.5-coder-7b-instruct-q4_0.gguf';
-    }
-
-    // Sanitize the prompt to prevent command injection
-    const sanitizedPrompt = prompt.replace(/"/g, '\\"');
-    let finalPrompt = sanitizedPrompt;
-
-    if (addSuffix) {
-        const tailPrompt = '\n - Thanks for the help!';
-        finalPrompt += tailPrompt;
-    }
-
-    try {
-        const response = await axios.post('http://localhost:4891/v1/chat/completions', {
-            "model": chatmodel,
-            "messages": [{ "role": "user", "content": finalPrompt }],
-            "max_tokens": 8000
-        });
-
-
-        // Log the entire response to inspect its structure
-        logToRenderer(`Response length: ${response.data.choices[0].message.content.length} characters`);
-
-        if (response.data && response.data.choices && response.data.choices[0].message.content) {
-            let reply = response.data.choices[0].message.content.trim();
-
-            // Append references to the reply
-            if (response.data.choices[0].references && response.data.choices[0].references.length > 0) {
-                //logToRenderer(JSON.stringify(response.data.choices[0].references));
-                reply += `\n\n${response.data.choices[0].references.length} Sources:`;
-                let refList = '';
-                for (const ref of response.data.choices[0].references) {
-                    if (!refList.includes(ref.file.toString().trim())) {
-                        refList += `\n${ref.file.toString()}`;
-                    }
-                }
-                reply += refList;
-            }
-            else {
-                reply += `\n\nSource: ***My butt*** (tell Crisp the RAG isn't working)`;
-            }
-
-            // Save the last response
-            lastResponse = response.data;
-
-            return reply;
-
-        } else {
-            throw new Error('Invalid response from GPT-4All server');
-        }
-    } catch (error) {
-        logToRenderer(`Error: ${error.message}`);
-        throw new Error(`An error occurred while running the query: ${error.message}`);
-    }
-}
 module.exports = CommandHandler;

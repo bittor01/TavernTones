@@ -1,187 +1,132 @@
 // Performance and security update
+const { ipcRenderer } = window.electron;
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Discord settings
-    const enableDiscordBotCheckbox = document.getElementById('enableDiscordBot');
-    const discordFieldsContainer = document.getElementById('discord-fields');
-    const tokenInput = document.getElementById('token');
-    const voiceChannelInput = document.getElementById('voiceChannel');
-    const textChannelInput = document.getElementById('textChannel');
-    const botRoleIdInput = document.getElementById('botRoleId');
-
-    // Settings fields
-    const ffmpegPathInput = document.getElementById('ffmpegPath');
-    const bestiaryPathInput = document.getElementById('bestiaryPath');
-    const gitRepoUrlInput = document.getElementById('gitRepoUrl');
-    const githubTokenInput = document.getElementById('githubToken');
-    const randomTablesPathInput = document.getElementById('randomTablesPath');
-    const defaultMusicPathInput = document.getElementById('defaultMusicPath');
-
-    // Buttons
-    const browseFfmpegBtn = document.getElementById('browse-ffmpeg');
-    const browseBestiaryBtn = document.getElementById('browse-bestiary');
-    const fetchBestiaryBtn = document.getElementById('fetch-bestiary-btn');
-    const browseRandomTablesBtn = document.getElementById('browse-random-tables');
-    const browseMusicBtn = document.getElementById('browse-music');
-    const setupDefaultFoldersBtn = document.getElementById('setup-default-folders');
+    const fields = ['token', 'voiceChannel', 'textChannel', 'botRoleId', 'ffmpegPath', 'defaultMusicPath', 'randomTablesPath', 'bestiaryPath', 'gitRepoUrl', 'githubToken'];
+    const enableDiscordBot = document.getElementById('enableDiscordBot');
     const saveButton = document.getElementById('save-button');
-
     let originalConfig = {};
 
-    const checkDirty = () => {
-        const currentConfig = {
-            enabled: enableDiscordBotCheckbox.checked,
-            token: tokenInput.value,
-            voiceChannel: voiceChannelInput.value,
-            textChannel: textChannelInput.value,
-            botRoleId: botRoleIdInput.value,
-            ffmpegPath: ffmpegPathInput.value,
-            bestiaryPath: bestiaryPathInput.value,
-            gitRepoUrl: gitRepoUrlInput.value,
-            githubToken: githubTokenInput.value,
-            randomTablesPath: randomTablesPathInput.value,
-            defaultMusicPath: defaultMusicPathInput.value
-        };
+    // --- Slash Command Buttons ---
+    const settingsContainer = document.querySelector('.settings-container');
+    const slashBtnGroup = document.createElement('div');
+    slashBtnGroup.className = 'form-group';
+    slashBtnGroup.style.marginTop = '20px';
+    slashBtnGroup.innerHTML = `
+        <label>Slash Commands</label>
+        <div style="display: flex; gap: 5px;">
+            <button id="register-slash-btn" style="flex: 1;">Register</button>
+            <button id="unregister-slash-btn" style="flex: 1;">Unregister</button>
+        </div>
+        <p id="slash-hint" style="font-size: 0.75em; color: #888; margin-top: 5px; display: none;">Restart the application with the info in here to make these buttons work.</p>
+    `;
+    // Insert before save button
+    settingsContainer.insertBefore(slashBtnGroup, saveButton);
 
-        const isDirty = Object.keys(currentConfig).some(key => {
-            const val = currentConfig[key];
-            const orig = originalConfig[key];
-            if (typeof val === 'boolean') return val !== !!orig;
-            return val !== (orig || '');
+    const regBtn = document.getElementById('register-slash-btn');
+    const unregBtn = document.getElementById('unregister-slash-btn');
+    const hint = document.getElementById('slash-hint');
+
+    function updateSlashButtons(botReady) {
+        const msg = "Restart the application with the info in here to make these buttons work.";
+        regBtn.disabled = !botReady;
+        unregBtn.disabled = !botReady;
+        regBtn.title = botReady ? "" : msg;
+        unregBtn.title = botReady ? "" : msg;
+        hint.style.display = botReady ? 'none' : 'block';
+    }
+
+    regBtn.addEventListener('click', async () => {
+        const res = await ipcRenderer.invoke('register-slash-commands');
+        alert(res.success ? 'Slash commands registered!' : 'Error: ' + res.error);
+    });
+
+    unregBtn.addEventListener('click', async () => {
+        const res = await ipcRenderer.invoke('unregister-slash-commands');
+        alert(res.success ? 'Slash commands removed.' : 'Error: ' + res.error);
+    });
+
+    // --- Load Config ---
+    ipcRenderer.send('get-discord-config');
+    ipcRenderer.on('discord-config', (event, config) => {
+        originalConfig = { ...config };
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = config[id] || '';
         });
+        enableDiscordBot.checked = !!config.enabled;
+        document.getElementById('discord-fields').style.opacity = enableDiscordBot.checked ? '1' : '0.5';
 
-        // Validation: If bot enabled, all 4 fields must be present
-        let isValid = true;
-        if (enableDiscordBotCheckbox.checked) {
-            if (!tokenInput.value || !voiceChannelInput.value || !textChannelInput.value || !botRoleIdInput.value) {
-                isValid = false;
-            }
-        }
-
-        if (isDirty && isValid) {
-            saveButton.classList.add('dirty');
-        } else {
-            saveButton.classList.remove('dirty');
-        }
-    };
-
-    enableDiscordBotCheckbox.addEventListener('change', () => {
-        discordFieldsContainer.style.opacity = enableDiscordBotCheckbox.checked ? '1' : '0.5';
-        discordFieldsContainer.style.pointerEvents = enableDiscordBotCheckbox.checked ? 'auto' : 'none';
-        checkDirty();
+        // Initial button state - we don't know if bot is ready yet, but assume if no token, it isn't.
+        updateSlashButtons(!!config.token);
     });
 
-    // Add input listeners to all fields
-    [tokenInput, voiceChannelInput, textChannelInput, botRoleIdInput, ffmpegPathInput, bestiaryPathInput, gitRepoUrlInput, githubTokenInput, randomTablesPathInput, defaultMusicPathInput].forEach(el => {
-        el.addEventListener('input', checkDirty);
+    // --- Save Logic ---
+    saveButton.addEventListener('click', () => {
+        const config = { enabled: enableDiscordBot.checked };
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) config[id] = el.value;
+        });
+        ipcRenderer.send('set-discord-config', config);
     });
 
-    // Function to handle browsing for a folder
-    const handleBrowse = async (ipcChannel, inputElement) => {
-        const path = await window.settings.selectFolder(ipcChannel);
-        if (path) {
-            inputElement.value = path;
-        }
-    };
-
-    // Event Listeners for Browse buttons
-    browseFfmpegBtn.addEventListener('click', async () => {
-        const path = await window.settings.selectFfmpeg();
-        if (path) {
-            ffmpegPathInput.value = path;
-            checkDirty();
-        }
-    });
-
-    browseBestiaryBtn.addEventListener('click', () => handleBrowse('select-bestiary-folder', bestiaryPathInput).then(checkDirty));
-    browseRandomTablesBtn.addEventListener('click', () => handleBrowse('select-random-tables-folder', randomTablesPathInput).then(checkDirty));
-    browseMusicBtn.addEventListener('click', () => handleBrowse('select-music-folder', defaultMusicPathInput).then(checkDirty));
-
-    // Event Listener for Setup Default Folders button
-    setupDefaultFoldersBtn.addEventListener('click', async () => {
-        const paths = await window.settings.setupDefaultFolders();
+    // --- Folder Setup ---
+    document.getElementById('setup-default-folders').addEventListener('click', async () => {
+        const paths = await ipcRenderer.invoke('setup-default-folders');
         if (paths) {
-            bestiaryPathInput.value = paths.bestiaryPath;
-            randomTablesPathInput.value = paths.randomTablesPath;
-            defaultMusicPathInput.value = paths.defaultMusicPath;
-            checkDirty();
+            Object.keys(paths).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = paths[id];
+            });
+            saveButton.classList.add('dirty');
         }
     });
 
-    fetchBestiaryBtn.addEventListener('click', async () => {
-        if (!bestiaryPathInput.value) {
-            alert("Please set a Bestiary Data Path first.");
+    // --- Browse Buttons ---
+    const bindBrowse = (btnId, fieldId, channel) => {
+        document.getElementById(btnId).addEventListener('click', async () => {
+            const path = await ipcRenderer.invoke(channel);
+            if (path) {
+                document.getElementById(fieldId).value = path;
+                saveButton.classList.add('dirty');
+            }
+        });
+    };
+
+    bindBrowse('browse-ffmpeg', 'ffmpegPath', 'select-ffmpeg-file');
+    bindBrowse('browse-music', 'defaultMusicPath', 'select-music-folder');
+    bindBrowse('browse-random-tables', 'randomTablesPath', 'select-random-tables-folder');
+    bindBrowse('browse-bestiary', 'bestiaryPath', 'select-bestiary-folder');
+
+    // --- Bestiary Fetch ---
+    document.getElementById('fetch-bestiary-btn').addEventListener('click', async () => {
+        const repoUrl = document.getElementById('gitRepoUrl').value;
+        const localPath = document.getElementById('bestiaryPath').value;
+        const githubToken = document.getElementById('githubToken').value;
+
+        if (!repoUrl || !localPath) {
+            alert('Please provide both the Git Repo URL and a local path for the bestiary.');
             return;
         }
-        fetchBestiaryBtn.disabled = true;
-        fetchBestiaryBtn.textContent = "Syncing...";
-        const result = await window.settings.fetchBestiaryData(gitRepoUrlInput.value, bestiaryPathInput.value, githubTokenInput.value);
-        if (result.success) {
-            alert(result.message);
-        } else {
-            alert("Error: " + result.error);
-        }
-        fetchBestiaryBtn.disabled = false;
-        fetchBestiaryBtn.textContent = "Fetch/Update Bestiary Data";
+
+        document.getElementById('fetch-bestiary-btn').disabled = true;
+        document.getElementById('fetch-bestiary-btn').innerText = 'Syncing... (Check Main Log)';
+
+        const result = await ipcRenderer.invoke('fetch-bestiary-data', { repoUrl, localPath, githubToken });
+        alert(result.success ? 'Bestiary sync complete!' : 'Bestiary sync failed: ' + result.error);
+
+        document.getElementById('fetch-bestiary-btn').disabled = false;
+        document.getElementById('fetch-bestiary-btn').innerText = 'Fetch/Update Bestiary Data From Git';
     });
 
-    // Request existing config from main process when window loads
-    window.settings.getDiscordConfig();
-
-    // Populate fields when config is received
-    window.settings.onConfigReceived((config) => {
-        if (config) {
-            originalConfig = config;
-            enableDiscordBotCheckbox.checked = !!config.enabled;
-            discordFieldsContainer.style.opacity = enableDiscordBotCheckbox.checked ? '1' : '0.5';
-            discordFieldsContainer.style.pointerEvents = enableDiscordBotCheckbox.checked ? 'auto' : 'none';
-
-            tokenInput.value = config.token || '';
-            voiceChannelInput.value = config.voiceChannel || '';
-            textChannelInput.value = config.textChannel || '';
-            botRoleIdInput.value = config.botRoleId || '';
-            ffmpegPathInput.value = config.ffmpegPath || '';
-            bestiaryPathInput.value = config.bestiaryPath || '';
-            gitRepoUrlInput.value = config.gitRepoUrl || 'https://github.com/5etools-mirror-3/5etools-src';
-            githubTokenInput.value = config.githubToken || '';
-            randomTablesPathInput.value = config.randomTablesPath || '';
-            defaultMusicPathInput.value = config.defaultMusicPath || '';
-
-            // Auto-detect FFmpeg if not set
-            if (!config.ffmpegPath) {
-                window.settings.detectFfmpeg().then(path => {
-                    if (path) {
-                        ffmpegPathInput.value = path;
-                        checkDirty();
-                    }
-                });
-            }
-            checkDirty();
-        }
+    // --- UI State ---
+    enableDiscordBot.addEventListener('change', () => {
+        document.getElementById('discord-fields').style.opacity = enableDiscordBot.checked ? '1' : '0.5';
+        saveButton.classList.add('dirty');
     });
 
-    saveButton.addEventListener('click', () => {
-        if (enableDiscordBotCheckbox.checked) {
-            if (!tokenInput.value || !voiceChannelInput.value || !textChannelInput.value || !botRoleIdInput.value) {
-                alert("Please enter all Discord bot settings or disable the bot.");
-                return;
-            }
-        }
-
-        const newConfig = {
-            enabled: enableDiscordBotCheckbox.checked,
-            token: tokenInput.value,
-            voiceChannel: voiceChannelInput.value,
-            textChannel: textChannelInput.value,
-            botRoleId: botRoleIdInput.value,
-            ffmpegPath: ffmpegPathInput.value,
-            bestiaryPath: bestiaryPathInput.value,
-            gitRepoUrl: gitRepoUrlInput.value,
-            githubToken: githubTokenInput.value,
-            randomTablesPath: randomTablesPathInput.value,
-            defaultMusicPath: defaultMusicPathInput.value
-        };
-        window.settings.setDiscordConfig(newConfig);
-        originalConfig = newConfig;
-        checkDirty();
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', () => saveButton.classList.add('dirty'));
     });
 });

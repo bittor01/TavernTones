@@ -534,7 +534,7 @@ async function ipcloader() {
             return paths;
         } catch (error) {
             console.error('Failed to create default folders:', error);
-            await dialog.showErrorBox('Error', `Failed to create default data folders.\n\nError: ${error.message}\n\nPlease ensure you have write permissions to the selected folder (especially if using OneDrive) and try again.`);
+            await dialog.showErrorBox('Error', `Failed to create default data folders.\n\nError: ${error.message}\n\nWe couldn't create the folders automatically in this location. Please try choosing a different folder, or create the 'Tavern Tones' folder manually and then try again.`);
             return null;
         }
     });
@@ -656,29 +656,49 @@ async function ipcloader() {
     ipcMain.on('load-music-file', (event, filePath) => {
         logToRenderer(`IPC 'load-music-file' received for: ${filePath}`);
         if (filePath) {
-            musicPlayer.loadFile(filePath);
+            musicPlayer.addToStack(filePath);
         }
     });
 
     ipcMain.on('play-music', () => {
-        logToRenderer(`IPC 'play-music' (command) received.`);
+        logToRenderer(`IPC 'play-music' received.`);
         if (!musicPlayer.ffmpegPath) {
-            dialog.showErrorBox('FFmpeg Not Configured', 'Please configure the FFmpeg path in settings to play music.');
+            dialog.showErrorBox('FFmpeg Not Configured', 'Please configure the FFmpeg path in settings.');
             return;
         }
         musicPlayer.play();
     });
 
     ipcMain.on('pause-music', () => {
-        logToRenderer(`IPC 'pause-music' received.`);
         musicPlayer.pause();
     });
 
-    ipcMain.on('play-next', (event, { enabled }) => {
-        logToRenderer(`IPC 'play-next' received: ${enabled}`);
-        if (musicPlayer) {
-            musicPlayer.setPlayNext(enabled);
-        }
+    ipcMain.on('stop-music', () => {
+        musicPlayer.stop();
+    });
+
+    ipcMain.on('next-track', () => {
+        musicPlayer.next();
+    });
+
+    ipcMain.on('previous-track', () => {
+        musicPlayer.previous();
+    });
+
+    ipcMain.on('clear-music-stack', () => {
+        musicPlayer.clearStack();
+    });
+
+    ipcMain.on('remove-from-stack', (event, index) => {
+        musicPlayer.removeFromStack(index);
+    });
+
+    ipcMain.on('set-music-loop-mode', (event, mode) => {
+        musicPlayer.setLoopMode(mode);
+    });
+
+    ipcMain.on('set-music-shuffle', (event, enabled) => {
+        musicPlayer.setShuffle(enabled);
     });
 
     ipcMain.handle('get-preview-audio-data', async () => {
@@ -717,18 +737,39 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.handle('open-file-dialog', async () => {
+    ipcMain.handle('open-file-dialog', async (event, options = {}) => {
+        const properties = [];
+        if (options.multi) properties.push('multiSelections');
+        if (options.directory) properties.push('openDirectory');
+        else properties.push('openFile');
+
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: 'Select Music File',
+            title: options.title || 'Select Audio',
             defaultPath: discordConfig.defaultMusicPath,
-            properties: ['openFile'],
+            properties: properties,
             filters: [
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
             ]
         });
 
         if (filePaths && filePaths.length > 0) {
-            return filePaths[0];
+            if (options.directory) {
+                // If directory, return all audio files inside
+                const allFiles = [];
+                for (const dir of filePaths) {
+                    try {
+                        const files = fs.readdirSync(dir);
+                        files.forEach(f => {
+                            const ext = path.extname(f).toLowerCase();
+                            if (['.mp3', '.wav', '.ogg'].includes(ext)) {
+                                allFiles.push(path.join(dir, f));
+                            }
+                        });
+                    } catch (e) {}
+                }
+                return allFiles;
+            }
+            return options.multi ? filePaths : filePaths[0];
         }
         return null;
     });
@@ -736,48 +777,42 @@ async function ipcloader() {
     // --- Soundboard IPC ---
     ipcMain.handle('load-sound', async (event, { slotId }) => {
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: `Select Sound for Slot ${slotId + 1}`,
+            title: `Select Sounds for Slot ${slotId + 1}`,
             defaultPath: discordConfig.defaultMusicPath,
-            properties: ['openFile'],
+            properties: ['openFile', 'openDirectory', 'multiSelections'],
             filters: [
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
             ]
         });
 
         if (filePaths && filePaths.length > 0) {
-            return { path: filePaths[0], name: path.basename(filePaths[0]) };
+            const allFiles = [];
+            for (const p of filePaths) {
+                if (fs.statSync(p).isDirectory()) {
+                    const files = fs.readdirSync(p);
+                    files.forEach(f => {
+                        const ext = path.extname(f).toLowerCase();
+                        if (['.mp3', '.wav', '.ogg'].includes(ext)) {
+                            allFiles.push(path.join(p, f));
+                        }
+                    });
+                } else {
+                    allFiles.push(p);
+                }
+            }
+            return allFiles.map(p => ({ path: p, name: path.basename(p) }));
         }
         return null;
     });
 
-    ipcMain.on('play-sound', (event, { slotId }) => {
-        // We need the renderer to tell us WHAT file to play, or we store it in backend.
-        // The renderer state seems to hold the file path, so it should send it, 
-        // OR the renderer sends "play slot X" and the backend looks up what slot X is.
-        // But currently main.js doesn't store soundboard state. 
-        // The renderer calls 'play-sound' with { slotId }... wait.
-        // My implementation plan said: "Trigger BackendAudioPlayer.playSound(file)".
-        // BUT the renderer's `play-sound` event in the *existing code (renderer.js)* 
-        // implies it might send just ID? 
-        // Let's check renderer.js again.
-        // Actually I haven't written the renderer code yet, but the *existing* placeholder code in renderer.js:
-        // window.electron.ipcRenderer.send('play-sound', { slotId });
-        // It doesn't send the file path. Ideally the backend should know, OR the renderer should send it.
-        // To keep backend stateless regarding UI config if possible, I'll update renderer to send the path always.
-        // Updating `main.js` to expect `filePath` in the payload.
-    });
-
-    // Redoing the above block properly:
     ipcMain.on('play-sound', (event, { slotId, filePath }) => {
         logToRenderer(`IPC 'play-sound' slot ${slotId}, file: ${filePath}`);
         if (filePath && musicPlayer) {
             if (!musicPlayer.ffmpegPath) {
-                dialog.showErrorBox('FFmpeg Not Configured', 'Please configure the FFmpeg path in settings to use the soundboard.');
+                dialog.showErrorBox('FFmpeg Not Configured', 'Please configure the FFmpeg path in settings.');
                 return;
             }
             musicPlayer.playSound(filePath, slotId);
-            // Notify renderer of state change? 
-            // The renderer usually updates its own UI state, but if we want valid feedback:
             mainWindow.webContents.send('soundboard-state-change', { slotId, isPlaying: true });
         }
     });
@@ -857,6 +892,65 @@ async function ipcloader() {
             }
         }
         return { canceled: true };
+    });
+
+    // --- Slash Command IPC ---
+    ipcMain.handle('register-slash-commands', async () => {
+        if (!discordConfig || !discordConfig.token || !client.user) {
+            return { success: false, error: 'Bot not ready or not configured.' };
+        }
+        const commands = [
+            { name: 'ping', description: 'Test the bot' },
+            { name: 'surge', description: 'Roll on the Wild Magic Surge table' },
+            { name: 'shield', description: 'Roll on the Wild Magic Shield table' },
+            {
+                name: 'roll',
+                description: 'Roll on random tables',
+                options: [
+                    { name: 'folder', description: 'Folder name', type: 3, required: true },
+                    { name: 'count', description: 'Number of rolls', type: 4, required: true },
+                    { name: 'args', description: 'Weights and tables (e.g. 1 tableA 2 tableB)', type: 3, required: true }
+                ]
+            },
+            {
+                name: 'play',
+                description: 'Play music',
+                options: [
+                    { name: 'query', description: 'Folder or song name', type: 3, required: false }
+                ]
+            },
+            { name: 'pause', description: 'Pause playback' },
+            {
+                name: 'dice',
+                description: 'Roll arbitrary dice',
+                options: [
+                    { name: 'notation', description: 'Dice notation (e.g. 2d20kh1 + 5)', type: 3, required: true }
+                ]
+            },
+            { name: 'dicehelp', description: 'Show dice rolling help' }
+        ];
+
+        const rest = new REST({ version: '10' }).setToken(discordConfig.token);
+        try {
+            await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+            return { success: true };
+        } catch (error) {
+            console.error('Slash Command Error:', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('unregister-slash-commands', async () => {
+        if (!discordConfig || !discordConfig.token || !client.user) {
+            return { success: false, error: 'Bot not ready.' };
+        }
+        const rest = new REST({ version: '10' }).setToken(discordConfig.token);
+        try {
+            await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
     });
 
 
@@ -1406,6 +1500,34 @@ client.once(Events.ClientReady, async () => {
     client.on('messageCreate', message => commandHandler.handleMessage(message));
 
     client.on('interactionCreate', async interaction => {
+        if (interaction.isChatInputCommand()) {
+            const { commandName, options } = interaction;
+            const commandBody = `!${commandName} ${options.data.map(o => o.value).join(' ')}`;
+
+            // Emulate message for command handler
+            const fakeMessage = {
+                content: `<@${client.user.id}> ${commandBody}`,
+                author: interaction.user,
+                channel: interaction.channel,
+                guild: interaction.guild,
+                mentions: {
+                    has: (u) => u.id === client.user.id,
+                    roles: { has: () => false }
+                , users: new Map([[client.user.id, client.user]]), members: new Map() },
+                reply: async (content) => {
+                    if (typeof content === 'string') return interaction.reply({ content });
+                    return interaction.reply(content);
+                },
+                startThread: async (options) => {
+                    const msg = await interaction.fetchReply();
+                    return msg.startThread(options);
+                }
+            };
+
+            await commandHandler.handleMessage(fakeMessage);
+            return;
+        }
+
         if (interaction.isStringSelectMenu()) {
             const { customId, values } = interaction;
 
