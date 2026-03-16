@@ -28,6 +28,7 @@ class ThreadedAudioMixer extends Readable {
         });
 
         this.worker.on('exit', (code) => {
+            if (this.isDestroyed) return;
             if (code !== 0) {
                 console.error(`AudioMixerWorker stopped with exit code ${code}`);
                 this.emit('error', new Error(`Worker stopped with exit code ${code}`));
@@ -35,6 +36,7 @@ class ThreadedAudioMixer extends Readable {
         });
 
         this.isReading = false;
+        this.isDestroyed = false;
 
         this.on('error', (err) => {
             if (err.code === 'ERR_STREAM_PREMATURE_CLOSE') {
@@ -91,6 +93,7 @@ class ThreadedAudioMixer extends Readable {
     }
 
     destroy() {
+        this.isDestroyed = true;
         this.worker.terminate();
         super.destroy();
     }

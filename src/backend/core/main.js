@@ -1,5 +1,10 @@
 // Performance and security update
 const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } = require('electron');
+
+protocol.registerSchemesAsPrivileged([
+    { scheme: 'safe-media', privileges: { secure: true, standard: true, supportFetchAPI: true, bypassCSP: true, stream: true } }
+]);
+
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder, Events } = require('discord.js');
@@ -177,9 +182,10 @@ async function apploader() {
         discordConfig = await getDiscordConfig();
         protocol.handle('safe-media', async (request) => {
             const urlStr = request.url.substring(13); // 'safe-media://'.length
-            const decodedPath = decodeURIComponent(urlStr);
+            // Use decodeURIComponent twice to handle double-encoded paths which can occur in some Electron versions/environments
+            const decodedPath = decodeURIComponent(decodeURIComponent(urlStr));
             try {
-                const normalizedPath = path.normalize(decodedPath);
+                const normalizedPath = path.resolve(decodedPath);
                 const fileUrl = pathToFileURL(normalizedPath).toString();
                 return await net.fetch(fileUrl);
             }
@@ -812,7 +818,8 @@ async function ipcloader() {
             return { success: false, error: 'No file available for preview.' };
         }
         // Use encodeURIComponent to safely encode the path for the protocol URL
-        const safeUrl = `safe-media://${encodeURIComponent(filePath)}`;
+        // On Windows, the path needs to be converted to a URL-friendly format
+        const safeUrl = `safe-media://${encodeURIComponent(filePath.replace(/\\/g, '/'))}`;
         return { success: true, url: safeUrl };
     });
 
@@ -1392,10 +1399,10 @@ async function logToRenderer(...args) {
         return arg;
     }).join(' ');
 
-    if (isAppReady) {
+    if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send('log-message', message);
     }
-    else {
+    else if (!isAppReady) {
         await sleep(100);
         logToRenderer(message);
     }
