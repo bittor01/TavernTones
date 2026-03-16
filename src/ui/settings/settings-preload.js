@@ -1,3 +1,4 @@
+// Performance and security update
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('settings', {
@@ -8,5 +9,8 @@ contextBridge.exposeInMainWorld('settings', {
 
     // New functions for folder selection
     selectFolder: (channel) => ipcRenderer.invoke(channel),
-    setupDefaultFolders: () => ipcRenderer.invoke('setup-default-folders')
+    setupDefaultFolders: () => ipcRenderer.invoke('setup-default-folders'),
+    detectFfmpeg: () => ipcRenderer.invoke('detect-ffmpeg'),
+    selectFfmpeg: () => ipcRenderer.invoke('select-ffmpeg-file'),
+    fetchBestiaryData: (repoUrl, localPath, githubToken) => ipcRenderer.invoke('fetch-bestiary-data', { repoUrl, localPath, githubToken })
 });

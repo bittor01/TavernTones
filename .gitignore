@@ -19,3 +19,6 @@ Thumbs.db
 environmentvars.env
 
 # small change
+resources/ffmpeg/
+ffmpeg.exe
+ffmpeg
