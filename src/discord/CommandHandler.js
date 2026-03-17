@@ -25,6 +25,41 @@ class CommandHandler {
         this.randomTablesPath = this.config.randomTablesPath;
     }
 
+    /**
+     * Lists all songs in a given folder.
+     * @param {string} folderPath
+     * @returns {string[]}
+     */
+    getFolderSongs(folderPath) {
+        if (!fs.existsSync(folderPath)) return [];
+        return fs.readdirSync(folderPath)
+            .filter(f => ['.mp3', '.wav', '.ogg', '.lnk'].includes(path.extname(f).toLowerCase()))
+            .map(f => path.join(folderPath, f));
+    }
+
+    /**
+     * Finds a folder by partial name.
+     * @param {string} query
+     * @returns {string|null}
+     */
+    findFolder(query) {
+        const musicPath = this.config.defaultMusicPath;
+        if (!musicPath || !fs.existsSync(musicPath)) return null;
+
+        const subDirs = fs.readdirSync(musicPath, { withFileTypes: true })
+            .filter(d => d.isDirectory()).map(d => d.name);
+
+        // 1. Exact match
+        const exact = subDirs.find(d => d.toLowerCase() === query.toLowerCase());
+        if (exact) return path.join(musicPath, exact);
+
+        // 2. Partial match
+        const partial = subDirs.find(d => d.toLowerCase().includes(query.toLowerCase()));
+        if (partial) return path.join(musicPath, partial);
+
+        return null;
+    }
+
     async _sendHelpEmbed(message) {
         const helpEmbed = new EmbedBuilder()
             .setColor(0x0099FF)

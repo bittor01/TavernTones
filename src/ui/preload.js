@@ -25,7 +25,7 @@ contextBridge.exposeInMainWorld('electron', {
         'open-gamify-tool', 'save-high-score', 'open-settings-window',
         'roll-attack', 'push-mob-rules-to-discord', 'save-soundboard-state',
         'play-next', 'play-prev', 'set-loop-mode', 'set-shuffle', 'remove-from-stack', 'clear-stack',
-        'request-bot-status'
+        'request-bot-status', 'voice-toggle'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);

@@ -416,6 +416,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             case 'clear-stack-btn':
                 window.electron.ipcRenderer.send('clear-stack');
                 break;
+            case 'voice-toggle-btn':
+                window.electron.ipcRenderer.send('voice-toggle');
+                break;
             case 'save-music-preset-btn':
                 // We need the current stack from the UI state or ask backend
                 // The renderer doesn't have a local 'stack' variable, it relies on status updates.
@@ -612,6 +615,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 indicator.textContent = '🟥';
             }
             indicator.title = `Bot Status: ${status.message}`;
+        }
+
+        const voiceBtn = document.getElementById('voice-toggle-btn');
+        if (voiceBtn) {
+            if (status.voiceStatus === 'connected') {
+                voiceBtn.textContent = '🚪';
+                voiceBtn.title = 'Leave Voice Channel';
+            } else if (status.voiceStatus === 'connecting') {
+                voiceBtn.textContent = '⏱️';
+                voiceBtn.title = 'Connecting...';
+            } else {
+                voiceBtn.textContent = '💬';
+                voiceBtn.title = 'Join Voice Channel';
+            }
         }
     });
 
