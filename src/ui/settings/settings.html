@@ -82,7 +82,10 @@
             <!-- Left Column: Discord -->
             <div class="settings-column">
                 <div class="panel-header">
-                    <h2>Discord Bot</h2>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <h2>Discord Bot</h2>
+                        <span id="bot-status-indicator" class="status-indicator" title="Bot Status: Unknown">🟥</span>
+                    </div>
                     <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
                         <input type="checkbox" id="enableDiscordBot" style="margin-right: 5px; width: auto;"> Enable
                     </label>

@@ -416,6 +416,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             case 'clear-stack-btn':
                 window.electron.ipcRenderer.send('clear-stack');
                 break;
+            case 'bot-status-indicator':
+                window.electron.ipcRenderer.send('voice-toggle');
+                break;
             case 'save-music-preset-btn':
                 // We need the current stack from the UI state or ask backend
                 // The renderer doesn't have a local 'stack' variable, it relies on status updates.
@@ -599,6 +602,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.electron.ipcRenderer.on('discord-bot-status', (event, status) => {
         botStatus = status;
         isBotEnabled = status.status !== 'offline';
+
+        const indicator = document.getElementById('bot-status-indicator');
+        if (indicator) {
+            if (status.voiceStatus === 'connected') {
+                indicator.textContent = '🟩';
+                indicator.title = `Bot: ${status.message} | Voice: Connected (Click to leave)`;
+            } else if (status.voiceStatus === 'connecting') {
+                indicator.textContent = '🟨';
+                indicator.title = `Bot: ${status.message} | Voice: Connecting... (Click to cancel)`;
+            } else {
+                indicator.textContent = '🟥';
+                indicator.title = `Bot: ${status.message} | Voice: Disconnected (Click to join)`;
+            }
+        }
     });
 
     window.electron.ipcRenderer.on('switch-panel', (event, panelId) => {
@@ -643,7 +660,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         playPauseButton.disabled = status.stack.length === 0;
 
         // Update Loop Button
-        const loopEmojis = ['➡️', '🔁', '1️⃣'];
+        const loopEmojis = ['➡️', '🔁', '🔂'];
         const loopTitles = ['No Loop', 'Loop All', 'Loop Single'];
         loopModeBtn.textContent = loopEmojis[currentLoopMode];
         loopModeBtn.title = loopTitles[currentLoopMode];

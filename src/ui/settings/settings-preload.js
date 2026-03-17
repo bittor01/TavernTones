@@ -15,5 +15,6 @@ contextBridge.exposeInMainWorld('settings', {
     fetchBestiaryData: (repoUrl, localPath, githubToken) => ipcRenderer.invoke('fetch-bestiary-data', { repoUrl, localPath, githubToken }),
     registerSlashCommands: () => ipcRenderer.invoke('register-slash-commands'),
     unregisterSlashCommands: () => ipcRenderer.invoke('unregister-slash-commands'),
+    requestBotStatus: () => ipcRenderer.send('request-bot-status'),
     onBotStatus: (callback) => ipcRenderer.on('discord-bot-status', (event, status) => callback(status))
 });

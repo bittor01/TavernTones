@@ -127,13 +127,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Slash Commands ---
-    const updateSlashButtonState = (status) => {
+    const updateBotStatusUI = (status) => {
         const isOnline = status && status.status === 'online';
+        const isConnecting = status && status.status === 'offline' && status.message === 'Connecting...';
+
+        // Update Buttons
         [registerSlashBtn, unregisterSlashBtn].forEach(btn => {
             btn.disabled = !isOnline;
             btn.style.opacity = isOnline ? '1' : '0.5';
-            btn.title = isOnline ? "" : "Restart the application with the info in here to make these buttons work";
+            btn.title = isOnline ? "" : "The bot must be connected to register slash commands.";
         });
+
+        // Update Status Indicator
+        const indicator = document.getElementById('bot-status-indicator');
+        if (indicator) {
+            if (isOnline) {
+                indicator.textContent = '🟩';
+            } else if (isConnecting) {
+                indicator.textContent = '🟨';
+            } else {
+                indicator.textContent = '🟥';
+            }
+            indicator.title = `Bot Status: ${status.message}`;
+        }
     };
 
     registerSlashBtn.addEventListener('click', async () => {
@@ -152,10 +168,11 @@ document.addEventListener('DOMContentLoaded', () => {
         unregisterSlashBtn.disabled = false;
     });
 
-    window.settings.onBotStatus(updateSlashButtonState);
+    window.settings.onBotStatus(updateBotStatusUI);
 
     // Request existing config from main process when window loads
     window.settings.getDiscordConfig();
+    window.settings.requestBotStatus();
 
     // Populate fields when config is received
     window.settings.onConfigReceived((config) => {

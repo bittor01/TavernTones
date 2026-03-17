@@ -424,6 +424,29 @@ class BackendAudioPlayer extends EventEmitter {
         });
     }
 
+    getMusicFiles() {
+        if (!this.musicFolder || !fs.existsSync(this.musicFolder)) return [];
+
+        const getAllFiles = (dir, results = []) => {
+            const list = fs.readdirSync(dir);
+            list.forEach(file => {
+                const fullPath = path.join(dir, file);
+                const stat = fs.statSync(fullPath);
+                if (stat && stat.isDirectory()) {
+                    getAllFiles(fullPath, results);
+                } else {
+                    const ext = path.extname(fullPath).toLowerCase();
+                    if (['.mp3', '.wav', '.ogg', '.lnk'].includes(ext)) {
+                        results.push(fullPath);
+                    }
+                }
+            });
+            return results;
+        };
+
+        return getAllFiles(this.musicFolder);
+    }
+
     getPreviewFilePath() {
         if (this.currentIndex >= 0 && this.currentIndex < this.stack.length) {
             return this.stack[this.currentIndex];

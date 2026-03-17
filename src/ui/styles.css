@@ -215,6 +215,14 @@ button:disabled {
     padding: 0;
 }
 
+.status-indicator {
+    cursor: help;
+    font-size: 1.1em;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+}
+
 .panel-header-controls {
     display: flex;
     gap: 5px;
