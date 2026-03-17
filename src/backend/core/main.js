@@ -720,12 +720,12 @@ async function ipcloader() {
             ];
 
             const guildIds = new Set();
-            if (discordConfig.textChannel) {
-                const chan = client.channels.cache.get(discordConfig.textChannel);
-                if (chan && chan.guild) guildIds.add(chan.guild.id);
-            }
-            if (discordConfig.voiceChannel) {
-                const chan = client.channels.cache.get(discordConfig.voiceChannel);
+            const channelsToTry = [discordConfig.textChannel, discordConfig.voiceChannel].filter(id => !!id);
+            for (const id of channelsToTry) {
+                let chan = client.channels.cache.get(id);
+                if (!chan) {
+                    try { chan = await client.channels.fetch(id); } catch(e) {}
+                }
                 if (chan && chan.guild) guildIds.add(chan.guild.id);
             }
 
@@ -748,12 +748,12 @@ async function ipcloader() {
         try {
             const rest = new REST({ version: '10' }).setToken(discordConfig.token);
             const guildIds = new Set();
-            if (discordConfig.textChannel) {
-                const chan = client.channels.cache.get(discordConfig.textChannel);
-                if (chan && chan.guild) guildIds.add(chan.guild.id);
-            }
-            if (discordConfig.voiceChannel) {
-                const chan = client.channels.cache.get(discordConfig.voiceChannel);
+            const channelsToTry = [discordConfig.textChannel, discordConfig.voiceChannel].filter(id => !!id);
+            for (const id of channelsToTry) {
+                let chan = client.channels.cache.get(id);
+                if (!chan) {
+                    try { chan = await client.channels.fetch(id); } catch(e) {}
+                }
                 if (chan && chan.guild) guildIds.add(chan.guild.id);
             }
 
@@ -1664,6 +1664,7 @@ client.once(Events.ClientReady, async () => {
     broadcastBotStatus();
 
     joinVoiceChannelAction();
+    updateDiscordMediaControl();
 
 
     logToRenderer(`Logged in as ${client.user.tag}`);
@@ -1680,14 +1681,48 @@ client.once(Events.ClientReady, async () => {
 
     let lastMediaMessage = null;
     let isUpdatingMediaControl = false;
+    let pendingMediaUpdate = false;
     let selectedSongInDropdown = null;
     let currentDropdownPage = 0;
     const PAGE_SIZE = 23;
 
+    // Map to handle long file paths in Discord select menus (100 char limit)
+    const songPathToIdMap = new Map();
+    const idToSongPathMap = new Map();
+    let songIdCounter = 0;
+
+    function getSongId(filePath) {
+        if (songPathToIdMap.has(filePath)) return songPathToIdMap.get(filePath);
+        const id = `s_${songIdCounter++}`;
+        songPathToIdMap.set(filePath, id);
+        idToSongPathMap.set(id, filePath);
+        return id;
+    }
+
     async function updateDiscordMediaControl(disabled = false) {
-        if (!discordConfig.textChannel || isUpdatingMediaControl) return;
-        const channel = client.channels.cache.get(discordConfig.textChannel);
-        if (!channel) return;
+        if (!discordConfig.textChannel) {
+            logToRenderer('[Discord] No text channel configured for media controls.');
+            return;
+        }
+        if (isUpdatingMediaControl) {
+            pendingMediaUpdate = true;
+            return;
+        }
+
+        let targetChannel = client.channels.cache.get(discordConfig.textChannel);
+        if (!targetChannel) {
+            try {
+                targetChannel = await client.channels.fetch(discordConfig.textChannel);
+            } catch (err) {
+                logToRenderer(`[Discord] Failed to fetch channel ${discordConfig.textChannel}: ${err.message}`);
+                return;
+            }
+        }
+
+        if (!targetChannel) {
+            logToRenderer(`[Discord] Channel ${discordConfig.textChannel} not found.`);
+            return;
+        }
 
         isUpdatingMediaControl = true;
 
@@ -1717,7 +1752,7 @@ client.once(Events.ClientReady, async () => {
         // --- Row 1: Song Selector Dropdown ---
         const songs = musicPlayer.getMusicFiles().map(p => ({
             label: path.basename(p).substring(0, 100),
-            value: p
+            value: getSongId(p)
         }));
 
         const totalPages = Math.ceil(songs.length / PAGE_SIZE);
@@ -1773,18 +1808,24 @@ client.once(Events.ClientReady, async () => {
 
         try {
             if (lastMediaMessage) {
+                // Check if message still exists by fetching or just trying to edit
                 await lastMediaMessage.edit({ embeds: [embed], components });
             } else {
-                lastMediaMessage = await channel.send({ embeds: [embed], components });
+                lastMediaMessage = await targetChannel.send({ embeds: [embed], components });
             }
         } catch (e) {
             try {
-                lastMediaMessage = await channel.send({ embeds: [embed], components });
+                // If edit fails, it might be deleted. Send new one.
+                lastMediaMessage = await targetChannel.send({ embeds: [embed], components });
             } catch (err) {
                 logToRenderer(`Failed to send Discord media control: ${err.message}`);
             }
         } finally {
             isUpdatingMediaControl = false;
+            if (pendingMediaUpdate) {
+                pendingMediaUpdate = false;
+                updateDiscordMediaControl(disabled);
+            }
         }
     }
 
@@ -1938,7 +1979,7 @@ client.once(Events.ClientReady, async () => {
                 } else if (val === 'prev_page') {
                     currentDropdownPage--;
                 } else {
-                    selectedSongInDropdown = val;
+                    selectedSongInDropdown = idToSongPathMap.get(val);
                 }
                 await interaction.deferUpdate();
                 updateDiscordMediaControl();
