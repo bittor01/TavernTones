@@ -607,13 +607,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (indicator) {
             if (status.voiceStatus === 'connected') {
                 indicator.textContent = '🟩';
-                indicator.title = 'Voice: Connected (Click to leave)';
+                indicator.title = `Bot: ${status.message} | Voice: Connected (Click to leave)`;
             } else if (status.voiceStatus === 'connecting') {
                 indicator.textContent = '🟨';
-                indicator.title = 'Voice: Connecting... (Click to cancel)';
+                indicator.title = `Bot: ${status.message} | Voice: Connecting... (Click to cancel)`;
             } else {
                 indicator.textContent = '🟥';
-                indicator.title = 'Voice: Disconnected (Click to join)';
+                indicator.title = `Bot: ${status.message} | Voice: Disconnected (Click to join)`;
             }
         }
     });

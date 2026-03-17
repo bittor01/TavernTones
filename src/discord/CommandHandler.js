@@ -38,6 +38,33 @@ class CommandHandler {
     }
 
     /**
+     * Finds a song by partial name.
+     * @param {string} query
+     * @returns {string|null}
+     */
+    findSong(query) {
+        const musicPath = this.config.defaultMusicPath;
+        if (!musicPath || !fs.existsSync(musicPath)) return null;
+
+        const getAllFiles = (dir, results = []) => {
+            const list = fs.readdirSync(dir);
+            list.forEach(file => {
+                file = path.join(dir, file);
+                const stat = fs.statSync(file);
+                if (stat && stat.isDirectory()) getAllFiles(file, results);
+                else {
+                    const ext = path.extname(file).toLowerCase();
+                    if (['.mp3', '.wav', '.ogg', '.lnk'].includes(ext)) results.push(file);
+                }
+            });
+            return results;
+        };
+
+        const allFiles = getAllFiles(musicPath);
+        return allFiles.find(f => path.parse(f).name.toLowerCase().includes(query.toLowerCase()));
+    }
+
+    /**
      * Finds a folder by partial name.
      * @param {string} query
      * @returns {string|null}
