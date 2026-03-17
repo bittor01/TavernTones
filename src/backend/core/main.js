@@ -1696,8 +1696,10 @@ client.once(Events.ClientReady, async () => {
 
     let lastMediaMessage = null;
     let selectedSongInDropdown = null;
+    let currentDropdownPage = 0;
+    const PAGE_SIZE = 23;
 
-    async function updateDiscordMediaControl() {
+    async function updateDiscordMediaControl(disabled = false) {
         if (!discordConfig.textChannel) return;
         const channel = client.channels.cache.get(discordConfig.textChannel);
         if (!channel) return;
@@ -1713,20 +1715,40 @@ client.once(Events.ClientReady, async () => {
         const currentTrack = status.currentIndex >= 0 ? status.stack[status.currentIndex] : null;
         const trackName = currentTrack ? path.basename(currentTrack, path.extname(currentTrack)) : "None";
 
+        const loopModes = ['None', 'All', 'Single'];
+        const loopIcons = ['➡️', '🔁', '🔂'];
+
         const embed = new EmbedBuilder()
             .setColor(0x0099FF)
             .setTitle('🎵 TavernTones Media Control')
             .setDescription(`**Now Playing:** ${trackName}\n**Stack size:** ${status.stack.length}`)
-            .setFooter({ text: `Loop: ${['None', 'All', 'Single'][status.loopMode]} | Shuffle: ${status.shuffleMode ? 'On' : 'Off'}` });
+            .setFooter({ text: `Loop: ${loopModes[status.loopMode]} | Shuffle: ${status.shuffleMode ? 'On' : 'Off'}` });
 
         const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-        // Row 1: Song Selector Dropdown
-        const songOptions = status.stack.slice(0, 20).map((p, i) => ({
-            label: path.basename(p, path.extname(p)),
-            value: i.toString(),
-            default: i === status.currentIndex
-        }));
+        // --- Row 1: Paginated Song Selector Dropdown ---
+        const totalPages = Math.ceil(status.stack.length / PAGE_SIZE);
+        if (currentDropdownPage >= totalPages && totalPages > 0) currentDropdownPage = totalPages - 1;
+
+        const start = currentDropdownPage * PAGE_SIZE;
+        const end = Math.min(start + PAGE_SIZE, status.stack.length);
+        const pageSongs = status.stack.slice(start, end);
+
+        let songOptions = pageSongs.map((p, i) => {
+            const index = start + i;
+            return {
+                label: `${index + 1}. ${path.basename(p, path.extname(p))}`,
+                value: index.toString(),
+                default: index === status.currentIndex
+            };
+        });
+
+        if (currentDropdownPage > 0) {
+            songOptions.unshift({ label: "⬅️ Prev Page", value: "prev_page" });
+        }
+        if (currentDropdownPage < totalPages - 1) {
+            songOptions.push({ label: "➡️ Next Page", value: "next_page" });
+        }
 
         if (songOptions.length === 0) {
             songOptions.push({ label: "No songs loaded", value: "none" });
@@ -1737,36 +1759,38 @@ client.once(Events.ClientReady, async () => {
                 .setCustomId('media-song-select')
                 .setPlaceholder('Select a song from the stack...')
                 .addOptions(songOptions)
-                .setDisabled(status.stack.length === 0)
+                .setDisabled(disabled || status.stack.length === 0)
         );
 
-        // Row 2: Selected Song Actions
+        // --- Row 2: Selected Song Actions ---
         const selectionActions = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('media-play-next').setLabel('⬆️ Play Next').setStyle(ButtonStyle.Secondary).setDisabled(!selectedSongInDropdown),
-            new ButtonBuilder().setCustomId('media-play-now').setLabel('▶️ Play Now').setStyle(ButtonStyle.Primary).setDisabled(!selectedSongInDropdown),
-            new ButtonBuilder().setCustomId('media-remove').setLabel('❌ Remove').setStyle(ButtonStyle.Danger).setDisabled(!selectedSongInDropdown)
+            new ButtonBuilder().setCustomId('media-play-next').setLabel('⬆️ Play Next').setStyle(ButtonStyle.Secondary).setDisabled(disabled || selectedSongInDropdown === null),
+            new ButtonBuilder().setCustomId('media-play-now').setLabel('▶️ Play Now').setStyle(ButtonStyle.Primary).setDisabled(disabled || selectedSongInDropdown === null),
+            new ButtonBuilder().setCustomId('media-remove').setLabel('❌ Remove').setStyle(ButtonStyle.Danger).setDisabled(disabled || selectedSongInDropdown === null)
         );
 
-        // Row 3: Playback Controls
+        // --- Row 3: Playback Controls ---
         const playbackControls = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('media-prev').setLabel('⏮️').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('media-play-pause').setLabel(status.isPlaying ? '⏸️' : '▶️').setStyle(status.isPlaying ? ButtonStyle.Success : ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('media-next').setLabel('⏭️').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('media-loop').setLabel('🔁').setStyle(status.loopMode > 0 ? ButtonStyle.Success : ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('media-shuffle').setLabel('🔀').setStyle(status.shuffleMode ? ButtonStyle.Success : ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId('media-prev').setLabel('⏮️').setStyle(ButtonStyle.Secondary).setDisabled(disabled),
+            new ButtonBuilder().setCustomId('media-play-pause').setLabel(status.isPlaying ? '⏸️' : '▶️').setStyle(ButtonStyle.Primary).setDisabled(disabled),
+            new ButtonBuilder().setCustomId('media-next').setLabel('⏭️').setStyle(ButtonStyle.Secondary).setDisabled(disabled),
+            new ButtonBuilder().setCustomId('media-loop').setLabel(loopIcons[status.loopMode]).setStyle(ButtonStyle.Secondary).setDisabled(disabled),
+            new ButtonBuilder().setCustomId('media-shuffle').setLabel('🔀').setStyle(status.shuffleMode ? ButtonStyle.Success : ButtonStyle.Secondary).setDisabled(disabled)
         );
 
         const components = [songSelector, selectionActions, playbackControls];
 
         try {
             if (lastMediaMessage) {
+                // To avoid multiple embeds, we use a global flag or check message presence.
+                // We'll try to find the last message in the channel history if lastMediaMessage is null but was sent.
                 await lastMediaMessage.edit({ embeds: [embed], components });
             } else {
                 lastMediaMessage = await channel.send({ embeds: [embed], components });
             }
         } catch (e) {
-            lastMediaMessage = null;
-            updateDiscordMediaControl();
+            // If edit fails (e.g. message deleted), send a new one.
+            lastMediaMessage = await channel.send({ embeds: [embed], components });
         }
     }
 
@@ -1831,15 +1855,20 @@ client.once(Events.ClientReady, async () => {
                 }
             } else if (commandName === 'play-folder') {
                 const query = options.getString('query');
-                const match = await client.commandHandler.findMusic(query); // findMusic picks a random song if it's a folder
-                if (match) {
-                    musicPlayer.clearStack();
-                    await musicPlayer.addToStack(match);
-                    if (voiceStatus !== 'connected') joinVoiceChannelAction();
-                    musicPlayer.play();
-                    await interaction.reply({ content: `Playing random song from folder: **${path.parse(match).name}**` });
+                const folder = client.commandHandler.findFolder(query);
+                if (folder) {
+                    const songs = client.commandHandler.getFolderSongs(folder);
+                    if (songs.length > 0) {
+                        musicPlayer.clearStack();
+                        await musicPlayer.addToStack(songs);
+                        if (voiceStatus !== 'connected') joinVoiceChannelAction();
+                        musicPlayer.play();
+                        await interaction.reply({ content: `Playing folder: **${path.basename(folder)}** (${songs.length} songs)` });
+                    } else {
+                        await interaction.reply({ content: "Folder is empty.", ephemeral: true });
+                    }
                 } else {
-                    await interaction.reply({ content: "Could not find that folder or it's empty.", ephemeral: true });
+                    await interaction.reply({ content: "Could not find that folder.", ephemeral: true });
                 }
             } else if (commandName === 'add-folder') {
                 const query = options.getString('query');
@@ -1895,6 +1924,7 @@ client.once(Events.ClientReady, async () => {
         if (interaction.isButton()) {
             const { customId } = interaction;
             await interaction.deferUpdate();
+            await updateDiscordMediaControl(true); // Disable while processing
 
             if (customId === 'media-prev') musicPlayer.prev();
             else if (customId === 'media-next') musicPlayer.next();
@@ -1929,7 +1959,7 @@ client.once(Events.ClientReady, async () => {
                 }
             }
 
-            updateDiscordMediaControl();
+            await updateDiscordMediaControl();
             return;
         }
 
@@ -1937,9 +1967,16 @@ client.once(Events.ClientReady, async () => {
             const { customId, values } = interaction;
 
             if (customId === 'media-song-select') {
-                selectedSongInDropdown = parseInt(values[0]);
+                const val = values[0];
+                if (val === 'next_page') {
+                    currentDropdownPage++;
+                } else if (val === 'prev_page') {
+                    currentDropdownPage--;
+                } else if (val !== 'none') {
+                    selectedSongInDropdown = parseInt(val);
+                }
                 await interaction.deferUpdate();
-                updateDiscordMediaControl();
+                await updateDiscordMediaControl();
                 return;
             }
 

@@ -660,7 +660,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         playPauseButton.disabled = status.stack.length === 0;
 
         // Update Loop Button
-        const loopEmojis = ['➡️', '🔁', '1️⃣'];
+        const loopEmojis = ['➡️', '🔁', '🔂'];
         const loopTitles = ['No Loop', 'Loop All', 'Loop Single'];
         loopModeBtn.textContent = loopEmojis[currentLoopMode];
         loopModeBtn.title = loopTitles[currentLoopMode];
