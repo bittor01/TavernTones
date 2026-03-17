@@ -1681,6 +1681,9 @@ ipcMain.on('voice-toggle', () => {
 client.once(Events.ClientReady, async () => {
     logToRenderer('TavernTones is online!');
     broadcastBotStatus('online', 'Connected');
+    if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('switch-panel', 'diceLog');
+    }
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 

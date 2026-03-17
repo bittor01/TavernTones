@@ -606,13 +606,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const indicator = document.getElementById('bot-status-indicator');
         if (indicator) {
             if (status.voiceStatus === 'connected') {
-                indicator.textContent = '🚪';
+                indicator.textContent = '🟩';
                 indicator.title = 'Voice: Connected (Click to leave)';
             } else if (status.voiceStatus === 'connecting') {
-                indicator.textContent = '⏱️';
+                indicator.textContent = '🟨';
                 indicator.title = 'Voice: Connecting... (Click to cancel)';
             } else {
-                indicator.textContent = '💬';
+                indicator.textContent = '🟥';
                 indicator.title = 'Voice: Disconnected (Click to join)';
             }
         }
