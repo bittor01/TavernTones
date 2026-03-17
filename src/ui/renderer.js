@@ -599,6 +599,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.electron.ipcRenderer.on('discord-bot-status', (event, status) => {
         botStatus = status;
         isBotEnabled = status.status !== 'offline';
+        const isOnline = status.status === 'online';
+        const isConnecting = status.status === 'offline' && status.message === 'Connecting...';
+
+        const indicator = document.getElementById('bot-status-indicator');
+        if (indicator) {
+            if (isOnline) {
+                indicator.textContent = '🟩';
+            } else if (isConnecting) {
+                indicator.textContent = '🟨';
+            } else {
+                indicator.textContent = '🟥';
+            }
+            indicator.title = `Bot Status: ${status.message}`;
+        }
     });
 
     window.electron.ipcRenderer.on('switch-panel', (event, panelId) => {

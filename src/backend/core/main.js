@@ -10,7 +10,7 @@ const { pathToFileURL } = require('url');
 const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder, Events } = require('discord.js');
 const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.DirectMessages] });
 client.npcDropdownHandlers = new Map();
 console.log('Discord client instantiated.');
 const axios = require('axios');
@@ -106,6 +106,21 @@ async function logDiceRollToRenderer(message) {
     } else {
         await sleep(100);
         logDiceRollToRenderer(message);
+    }
+}
+
+/**
+ * Broadcasts the Discord bot's status to all open windows (Main and Settings).
+ * @param {string} status - 'online', 'offline', or 'connecting'.
+ * @param {string} message - A descriptive status message.
+ */
+function broadcastBotStatus(status, message) {
+    const statusObj = { status, message };
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+        mainWindow.webContents.send('discord-bot-status', statusObj);
+    }
+    if (settingsWindow && !settingsWindow.isDestroyed() && settingsWindow.webContents) {
+        settingsWindow.webContents.send('discord-bot-status', statusObj);
     }
 }
 
@@ -242,13 +257,13 @@ async function apploader() {
         if (discordConfig && discordConfig.enabled) {
             if (!discordConfig.token) {
                 logToRenderer("Discord token not found despite bot being enabled. Bot functionality will be disabled.");
-                mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+                broadcastBotStatus('offline', 'Not Configured');
             } else {
                 initializeDiscordBot();
             }
         } else {
             logToRenderer("Discord bot is disabled in settings.");
-            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Disabled' });
+            broadcastBotStatus('offline', 'Disabled');
         }
 
         app.on('activate', () => {
@@ -656,6 +671,8 @@ async function ipcloader() {
 
     ipcMain.handle('register-slash-commands', async () => {
         if (!discordConfig.token) return { success: false, error: 'No bot token' };
+        if (!client.user) return { success: false, error: 'Bot is not logged in. Please ensure the bot is online before registering commands.' };
+
         try {
             const rest = new REST({ version: '10' }).setToken(discordConfig.token);
             const commands = [
@@ -696,7 +713,23 @@ async function ipcloader() {
                     ]
                 }
             ];
-            await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+
+            let guildId = null;
+            if (discordConfig.textChannel) {
+                const channel = client.channels.cache.get(discordConfig.textChannel);
+                if (channel) guildId = channel.guild.id;
+            }
+            if (!guildId && discordConfig.voiceChannel) {
+                const channel = client.channels.cache.get(discordConfig.voiceChannel);
+                if (channel) guildId = channel.guild.id;
+            }
+
+            if (!guildId) {
+                return { success: false, error: 'Could not determine Guild ID. Please ensure the bot is in a voice or text channel configured in settings.' };
+            }
+
+            logToRenderer(`Registering Guild Commands for Guild ID: ${guildId}`);
+            await rest.put(Routes.applicationGuildCommands(client.user.id, guildId), { body: commands });
             return { success: true };
         } catch (e) {
             return { success: false, error: e.message };
@@ -705,9 +738,27 @@ async function ipcloader() {
 
     ipcMain.handle('unregister-slash-commands', async () => {
         if (!discordConfig.token) return { success: false, error: 'No bot token' };
+        if (!client.user) return { success: false, error: 'Bot is not logged in.' };
+
         try {
             const rest = new REST({ version: '10' }).setToken(discordConfig.token);
+
+            let guildId = null;
+            if (discordConfig.textChannel) {
+                const channel = client.channels.cache.get(discordConfig.textChannel);
+                if (channel) guildId = channel.guild.id;
+            }
+            if (!guildId && discordConfig.voiceChannel) {
+                const channel = client.channels.cache.get(discordConfig.voiceChannel);
+                if (channel) guildId = channel.guild.id;
+            }
+
+            if (guildId) {
+                await rest.put(Routes.applicationGuildCommands(client.user.id, guildId), { body: [] });
+            }
+            // Also clear global just in case
             await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+
             return { success: true };
         } catch (e) {
             return { success: false, error: e.message };
@@ -733,14 +784,28 @@ async function ipcloader() {
         }
         if (discordConfig && discordConfig.enabled) {
             if (client && client.isReady()) {
-                mainWindow.webContents.send('discord-bot-status', { status: 'online', message: 'Connected' });
+                broadcastBotStatus('online', 'Connected');
             } else if (!discordConfig.token) {
-                mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+                broadcastBotStatus('offline', 'Not Configured');
             } else {
-                mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Connecting...' });
+                broadcastBotStatus('offline', 'Connecting...');
             }
         } else {
-            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Disabled' });
+            broadcastBotStatus('offline', 'Disabled');
+        }
+    });
+
+    ipcMain.on('request-bot-status', () => {
+        if (discordConfig && discordConfig.enabled) {
+            if (client && client.isReady()) {
+                broadcastBotStatus('online', 'Connected');
+            } else if (!discordConfig.token) {
+                broadcastBotStatus('offline', 'Not Configured');
+            } else {
+                broadcastBotStatus('offline', 'Connecting...');
+            }
+        } else {
+            broadcastBotStatus('offline', 'Disabled');
         }
     });
 
@@ -1448,6 +1513,7 @@ function initializeDiscordBot() {
 
     client.login(discordConfig.token).catch(error => {
         logToRenderer(`Discord login failed: ${error.message}`);
+        broadcastBotStatus('offline', `Login Failed: ${error.message}`);
         dialog.showErrorBox('Discord Login Failed', `Could not log in to Discord. Please check your token in the settings.\n\n${error.message}`);
     });
 }
@@ -1510,7 +1576,7 @@ app.on('window-all-closed', () => {
 
 client.once(Events.ClientReady, async () => {
     logToRenderer('TavernTones is online!');
-    mainWindow.webContents.send('discord-bot-status', { status: 'online', message: 'Connected' });
+    broadcastBotStatus('online', 'Connected');
 
     //Connect to the voice channel
     const voiceChannel = client.channels.cache.get(discordConfig.voiceChannel);
