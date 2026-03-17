@@ -804,12 +804,13 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.on('play-music', () => {
+    ipcMain.on('play-music', async () => {
         logToRenderer(`IPC 'play-music' (command) received.`);
         if (!musicPlayer.ffmpegPath) {
             dialog.showErrorBox('FFmpeg Not Configured', 'Please configure the FFmpeg path in settings to play music.');
             return;
         }
+        if (voiceStatus !== 'connected') await joinVoiceChannelAction();
         musicPlayer.play();
     });
 
@@ -1016,13 +1017,14 @@ async function ipcloader() {
     });
 
     // Redoing the above block properly:
-    ipcMain.on('play-sound', (event, { slotId, filePath }) => {
+    ipcMain.on('play-sound', async (event, { slotId, filePath }) => {
         logToRenderer(`IPC 'play-sound' slot ${slotId}, file: ${filePath}`);
         if (filePath && musicPlayer) {
             if (!musicPlayer.ffmpegPath) {
                 dialog.showErrorBox('FFmpeg Not Configured', 'Please configure the FFmpeg path in settings to use the soundboard.');
                 return;
             }
+            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
             musicPlayer.playSound(filePath, slotId);
             // Notify renderer of state change? 
             // The renderer usually updates its own UI state, but if we want valid feedback:
@@ -1663,7 +1665,6 @@ client.once(Events.ClientReady, async () => {
     logToRenderer('TavernTones is online!');
     broadcastBotStatus();
 
-    joinVoiceChannelAction();
     updateDiscordMediaControl();
 
 
@@ -1676,7 +1677,15 @@ client.once(Events.ClientReady, async () => {
     const basePath = app.isPackaged
         ? path.dirname(app.getPath('exe'))
         : app.getAppPath();
-    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, discordConfig, fiveEToolsParser);
+
+    const extendedConfig = {
+        ...discordConfig,
+        joinVoiceCallback: async () => {
+            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+        }
+    };
+
+    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, extendedConfig, fiveEToolsParser);
     client.commandHandler = commandHandler;
 
     let lastMediaMessage = null;
@@ -1763,7 +1772,7 @@ client.once(Events.ClientReady, async () => {
         const songOptions = pageSongs.map(s => ({
             label: s.label,
             value: s.value,
-            default: selectedSongInDropdown === s.value
+            default: selectedSongInDropdown === idToSongPathMap.get(s.value)
         }));
 
         // Add pagination options if needed
@@ -1791,8 +1800,8 @@ client.once(Events.ClientReady, async () => {
         // --- Row 2: Selection Actions ---
         const selectionActions = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('media-play-next').setLabel('Play Next').setStyle(ButtonStyle.Primary).setDisabled(disabled || !selectedSongInDropdown),
-            new ButtonBuilder().setCustomId('media-play-now').setLabel('Play Now').setStyle(ButtonStyle.Danger).setDisabled(disabled || !selectedSongInDropdown),
-            new ButtonBuilder().setCustomId('media-remove-stack').setLabel('Remove from Stack').setStyle(ButtonStyle.Secondary).setDisabled(disabled || status.stackSize === 0)
+            new ButtonBuilder().setCustomId('media-play-now').setLabel('Play Now').setStyle(ButtonStyle.Success).setDisabled(disabled || !selectedSongInDropdown),
+            new ButtonBuilder().setCustomId('media-remove-stack').setLabel('Remove').setStyle(ButtonStyle.Danger).setDisabled(disabled || status.stackSize === 0)
         );
 
         // --- Row 3: Playback Controls ---
@@ -1851,7 +1860,7 @@ client.once(Events.ClientReady, async () => {
                 const song = client.commandHandler.findSong(query);
                 if (song) {
                     await musicPlayer.addToStack(song);
-                    if (voiceStatus !== 'connected') joinVoiceChannelAction();
+                    if (voiceStatus !== 'connected') await joinVoiceChannelAction();
                     musicPlayer.play();
                     await interaction.reply(`Playing: **${path.basename(song)}**`);
                 } else {
@@ -1875,7 +1884,7 @@ client.once(Events.ClientReady, async () => {
                     if (songs.length > 0) {
                         musicPlayer.clearStack();
                         await musicPlayer.addToStack(songs);
-                        if (voiceStatus !== 'connected') joinVoiceChannelAction();
+                        if (voiceStatus !== 'connected') await joinVoiceChannelAction();
                         musicPlayer.play();
                         await interaction.editReply({ content: `Playing folder: **${path.basename(folder)}** (${songs.length} songs)` });
                     } else {
@@ -1920,6 +1929,7 @@ client.once(Events.ClientReady, async () => {
                     await interaction.reply(`Playing: **${path.parse(songFilePath).name}**`);
                     musicPlayer.clearStack();
                     await musicPlayer.addToStack(songFilePath);
+                    if (voiceStatus !== 'connected') await joinVoiceChannelAction();
                     musicPlayer.play();
                 } else {
                     await interaction.reply({ content: "Could not find that music.", ephemeral: true });
@@ -1994,19 +2004,25 @@ client.once(Events.ClientReady, async () => {
                     case 'media-prev': musicPlayer.prev(); break;
                     case 'media-next': musicPlayer.next(); break;
                     case 'media-play-pause':
-                        if (musicPlayer.isPlaying) musicPlayer.pause();
-                        else musicPlayer.play();
+                        if (musicPlayer.isPlaying) {
+                            musicPlayer.pause();
+                        } else {
+                            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+                            musicPlayer.play();
+                        }
                         break;
                     case 'media-loop': musicPlayer.setLoopMode((musicPlayer.loopMode + 1) % 3); break;
                     case 'media-shuffle': musicPlayer.setShuffle(!musicPlayer.shuffleMode); break;
                     case 'media-play-next':
                         if (selectedSongInDropdown) {
+                            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
                             musicPlayer.stack.splice(musicPlayer.currentIndex + 1, 0, selectedSongInDropdown);
                             selectedSongInDropdown = null;
                         }
                         break;
                     case 'media-play-now':
                         if (selectedSongInDropdown) {
+                            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
                             musicPlayer.stack.splice(musicPlayer.currentIndex + 1, 0, selectedSongInDropdown);
                             musicPlayer.next();
                             selectedSongInDropdown = null;
