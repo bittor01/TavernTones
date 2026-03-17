@@ -1662,15 +1662,16 @@ function joinVoiceChannelAction() {
  */
 function leaveVoiceChannelAction() {
     if (connection) {
+        connection.removeAllListeners();
         connection.destroy();
         connection = null;
-        voiceStatus = 'disconnected';
-        broadcastBotStatus('online', 'Connected');
     }
+    voiceStatus = 'disconnected';
+    broadcastBotStatus('online', 'Connected');
 }
 
 ipcMain.on('voice-toggle', () => {
-    if (voiceStatus === 'connected') {
+    if (voiceStatus === 'connected' || voiceStatus === 'connecting') {
         leaveVoiceChannelAction();
     } else {
         joinVoiceChannelAction();
