@@ -523,14 +523,7 @@ async function ipcloader() {
     ipcMain.handle('select-bestiary-folder', () => selectDirectory('Select Bestiary Data Folder'));
     ipcMain.handle('select-random-tables-folder', () => selectDirectory('Select Random Tables Folder'));
     ipcMain.handle('select-music-folder', () => selectDirectory('Select Default Music Folder'));
-    ipcMain.handle('select-ffmpeg-file', async () => {
-        const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
-            title: 'Select FFmpeg Executable',
-            properties: ['openFile'],
-            filters: [{ name: 'Executables', extensions: process.platform === 'win32' ? ['exe'] : ['*'] }]
-        });
-        return filePaths && filePaths.length > 0 ? filePaths[0] : null;
-    });
+    ipcMain.handle('select-ffmpeg-bin-folder', () => selectDirectory('Select Folder Containing FFmpeg and ffprobe'));
 
     // IPC Handler for setting up all default folders with improved error handling and OneDrive support
     ipcMain.handle('setup-default-folders', async () => {
@@ -616,7 +609,6 @@ async function ipcloader() {
         const foundPath = await new Promise(resolve => {
             exec(cmd, (error, stdout) => {
                 if (!error && stdout) {
-                    // stdout might contain multiple lines on Windows if multiple are found
                     const lines = stdout.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
                     resolve(lines[0] || null);
                 } else {
@@ -625,29 +617,22 @@ async function ipcloader() {
             });
         });
 
-        if (foundPath && fs.existsSync(foundPath)) return foundPath;
-
-        // Fallback to checking if "ffmpeg" just works, though we prefer the full path
-        const checkFfmpeg = (cmd) => new Promise(resolve => {
-            exec(`${cmd} -version`, (error) => resolve(!error));
-        });
-
-        if (await checkFfmpeg('ffmpeg')) return 'ffmpeg';
+        if (foundPath && fs.existsSync(foundPath)) return path.dirname(foundPath);
 
         // Check for bundled ffmpeg
         const exeName = isWin ? 'ffmpeg.exe' : 'ffmpeg';
         const bundledPath = path.join(process.resourcesPath, 'ffmpeg', exeName);
-        if (fs.existsSync(bundledPath)) return bundledPath;
+        if (fs.existsSync(bundledPath)) return path.dirname(bundledPath);
 
         const appDirFfmpeg = path.join(path.dirname(process.execPath), 'ffmpeg', exeName);
-        if (fs.existsSync(appDirFfmpeg)) return appDirFfmpeg;
+        if (fs.existsSync(appDirFfmpeg)) return path.dirname(appDirFfmpeg);
 
         // Check same directory as executable
         const sameDirFfmpeg = path.join(path.dirname(process.execPath), exeName);
-        if (fs.existsSync(sameDirFfmpeg)) return sameDirFfmpeg;
+        if (fs.existsSync(sameDirFfmpeg)) return path.dirname(sameDirFfmpeg);
 
         const localFfmpeg = path.join(app.getAppPath(), 'ffmpeg', exeName);
-        if (fs.existsSync(localFfmpeg)) return localFfmpeg;
+        if (fs.existsSync(localFfmpeg)) return path.dirname(localFfmpeg);
 
         return null;
     });
@@ -667,7 +652,7 @@ async function ipcloader() {
         // The music player instance also needs to be told about the new path.
         if (musicPlayer) {
             musicPlayer.musicFolder = config.defaultMusicPath;
-            musicPlayer.ffmpegPath = config.ffmpegPath;
+            musicPlayer.ffmpegBinFolder = config.ffmpegPath; // Note: config key remains ffmpegPath for compatibility
             logToRenderer(`[IPC] Updated music player's default folder to: ${musicPlayer.musicFolder}`);
         }
         // --- End of update ---
@@ -836,10 +821,6 @@ async function ipcloader() {
 
     ipcMain.on('play-music', async () => {
         logToRenderer(`IPC 'play-music' (command) received.`);
-        if (!musicPlayer.ffmpegPath) {
-            dialog.showErrorBox('FFmpeg Not Configured', 'Please configure the FFmpeg path in settings to play music.');
-            return;
-        }
         if (voiceStatus !== 'connected') await joinVoiceChannelAction();
         musicPlayer.play();
     });
@@ -1056,10 +1037,6 @@ async function ipcloader() {
     ipcMain.on('play-sound', async (event, { slotId, filePath }) => {
         logToRenderer(`IPC 'play-sound' slot ${slotId}, file: ${filePath}`);
         if (filePath && musicPlayer) {
-            if (!musicPlayer.ffmpegPath) {
-                dialog.showErrorBox('FFmpeg Not Configured', 'Please configure the FFmpeg path in settings to use the soundboard.');
-                return;
-            }
             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
             musicPlayer.playSound(filePath, slotId);
             // Notify renderer of state change? 

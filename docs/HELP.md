@@ -35,6 +35,6 @@ Welcome to Tavern Tones, your ultimate companion for ambient soundscapes and com
 ## ⚙️ Settings
 - **Paths**: Configure where your bestiary, music, and random tables are stored.
 - **GitHub Sync**: Fetch the latest bestiary data directly from official repositories.
-- **FFmpeg**: Ensure FFmpeg is correctly detected for audio streaming.
+- **FFmpeg**: Ensure the folder containing both `ffmpeg` and `ffprobe` is correctly selected in settings for audio streaming and duration detection.
 
 Need more help? Contact the application administrator for updates and support.

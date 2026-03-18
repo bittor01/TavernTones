@@ -9,13 +9,13 @@ const { spawn } = require('child_process');
 const ThreadedAudioMixer = require('./ThreadedAudioMixer');
 
 class BackendAudioPlayer extends EventEmitter {
-    constructor(logCallback, shell, musicFolder, ffmpegPath) {
+    constructor(logCallback, shell, musicFolder, ffmpegBinFolder) {
         super();
         // Dependencies
         this.log = logCallback || console.log;
         this.shell = shell;
         this.musicFolder = musicFolder;
-        this.ffmpegPath = ffmpegPath;
+        this.ffmpegBinFolder = ffmpegBinFolder;
 
         // State
         this.playerStatus = AudioPlayerStatus.Idle;
@@ -286,23 +286,32 @@ class BackendAudioPlayer extends EventEmitter {
         }
     }
 
+    _getFfmpegPath() {
+        if (!this.ffmpegBinFolder) return 'ffmpeg';
+        const exeName = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+        const fullPath = path.join(this.ffmpegBinFolder, exeName);
+        return fs.existsSync(fullPath) ? fullPath : 'ffmpeg';
+    }
+
+    _getFfprobePath() {
+        if (!this.ffmpegBinFolder) return 'ffprobe';
+        const exeName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+        const fullPath = path.join(this.ffmpegBinFolder, exeName);
+        return fs.existsSync(fullPath) ? fullPath : 'ffprobe';
+    }
+
     _createFfmpegStream(filePath, startTime = 0) {
-        if (!this.ffmpegPath) throw new Error("FFmpeg path not configured.");
+        const ffmpegPath = this._getFfmpegPath();
         const args = [];
         if (startTime > 0) {
             args.push('-ss', startTime.toString());
         }
         args.push('-re', '-i', filePath, '-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1');
-        return spawn(this.ffmpegPath, args);
+        return spawn(ffmpegPath, args);
     }
 
     _getDuration(filePath) {
         return new Promise((resolve) => {
-            if (!this.ffmpegPath) {
-                this.log("[Duration] FFmpeg path not set.");
-                return resolve(0);
-            }
-
             // Resolve shortcut if needed
             let targetPath = filePath;
             if (path.extname(filePath).toLowerCase() === '.lnk' && this.shell) {
@@ -316,15 +325,7 @@ class BackendAudioPlayer extends EventEmitter {
                 }
             }
 
-            // Construct ffprobe path reliably
-            const ffprobeName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
-            const ffprobePath = path.join(path.dirname(this.ffmpegPath), ffprobeName);
-
-            if (!fs.existsSync(ffprobePath)) {
-                this.log(`[Duration] ffprobe not found at: ${ffprobePath}`);
-                return resolve(0);
-            }
-
+            const ffprobePath = this._getFfprobePath();
             const { exec } = require('child_process');
             // Use double quotes for path to handle spaces
             const cmd = `"${ffprobePath}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${targetPath}"`;

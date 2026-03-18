@@ -11,7 +11,7 @@ contextBridge.exposeInMainWorld('settings', {
     selectFolder: (channel) => ipcRenderer.invoke(channel),
     setupDefaultFolders: () => ipcRenderer.invoke('setup-default-folders'),
     detectFfmpeg: () => ipcRenderer.invoke('detect-ffmpeg'),
-    selectFfmpeg: () => ipcRenderer.invoke('select-ffmpeg-file'),
+    selectFfmpeg: () => ipcRenderer.invoke('select-ffmpeg-bin-folder'),
     fetchBestiaryData: (repoUrl, localPath, githubToken) => ipcRenderer.invoke('fetch-bestiary-data', { repoUrl, localPath, githubToken }),
     registerSlashCommands: () => ipcRenderer.invoke('register-slash-commands'),
     unregisterSlashCommands: () => ipcRenderer.invoke('unregister-slash-commands'),
