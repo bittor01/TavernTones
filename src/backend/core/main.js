@@ -1599,6 +1599,12 @@ const shutdown = async () => {
     try {
         console.log('Cleaning up and exiting.');
 
+        // Cleanup heartbeat
+        if (client.heartbeatInterval) clearInterval(client.heartbeatInterval);
+        if (client.heartbeatMessage) {
+            try { await client.heartbeatMessage.delete().catch(() => {}); } catch(e) {}
+        }
+
         // Delete media control message gracefully
         if (client && client.lastMediaMessage) {
             try {
@@ -1671,36 +1677,11 @@ async function joinVoiceChannelAction() {
             voiceStatus = 'connecting';
             broadcastBotStatus();
 
-            // Perform a quick check to see if another instance is currently in voice via self-DM
-            logToRenderer("Checking for other active instances before joining voice...");
-            let checkMsg;
-            try {
-                checkMsg = await client.users.send(client.user.id, `<@${client.user.id}> TT_VOICE_CHECK:${sessionId}`);
-            } catch (e) {
-                logToRenderer("Failed to send voice check DM: " + e.message);
-            }
-
-            const collision = await new Promise(resolve => {
-                const filter = m => m.author.id === client.user.id && m.content.includes('TT_VOICE_BUSY:');
-                // Use a dm channel collector
-                client.users.createDM(client.user.id).then(dmChannel => {
-                    const collector = dmChannel.createMessageCollector({ filter, time: 5000, max: 1 });
-                    collector.on('collect', m => {
-                        const receivedId = m.content.split('TT_VOICE_BUSY:')[1];
-                        if (receivedId !== sessionId) resolve(receivedId);
-                    });
-                    collector.on('end', collected => {
-                        if (collected.size === 0) resolve(null);
-                    });
-                }).catch(() => resolve(null));
-            });
-
-            if (checkMsg) checkMsg.delete().catch(() => {});
-
-            if (collision) {
+            // Final check: Is anyone else in voice?
+            const me = voiceChannel.guild.members.me;
+            if (me && me.voice.channelId) {
+                logToRenderer(`[Anti-Collision] Bot is already in voice channel ${me.voice.channelId}. Entering soft-lock.`);
                 isSoftLocked = true;
-                otherInstanceSessionId = collision;
-                logToRenderer(`Join cancelled: Bot is already active in another instance (Session: ${collision}).`);
                 broadcastBotStatus();
                 return;
             }
@@ -1771,13 +1752,50 @@ client.once(Events.ClientReady, async () => {
         mainWindow.webContents.send('switch-panel', 'diceLog');
     }
 
-    // Handshake for collision detection via DM to self
-    try {
-        client.users.send(client.user.id, `<@${client.user.id}> TT_HANDSHAKE:${sessionId}`).then(msg => {
-            setTimeout(() => msg.delete().catch(() => {}), 5000);
-        });
-    } catch (e) {
-        logToRenderer("Failed to send handshake DM: " + e.message);
+    // Robust collision detection using a heartbeat in the text channel
+    if (discordConfig.textChannel) {
+        const channel = client.channels.cache.get(discordConfig.textChannel);
+        if (channel) {
+            logToRenderer("[Anti-Collision] Checking for active instances...");
+            try {
+                const messages = await channel.messages.fetch({ limit: 50 });
+                const activeHeartbeat = messages.find(m =>
+                    m.author.id === client.user.id &&
+                    m.content.includes('TT_HEARTBEAT:') &&
+                    (Date.now() - m.createdTimestamp < 90000) // Less than 90s old
+                );
+
+                if (activeHeartbeat) {
+                    const otherId = activeHeartbeat.content.split('TT_HEARTBEAT:')[1].split(' ')[0];
+                    if (otherId !== sessionId) {
+                        isSoftLocked = true;
+                        otherInstanceSessionId = otherId;
+                        logToRenderer(`[Anti-Collision] Soft-lock active: Instance ${otherId} is already running.`);
+                    }
+                }
+
+                if (!isSoftLocked) {
+                    // Start heartbeat
+                    const sendHeartbeat = async () => {
+                        if (isShuttingDown) return;
+                        try {
+                            const content = `TT_HEARTBEAT:${sessionId} (Active instance)`;
+                            if (client.heartbeatMessage) {
+                                await client.heartbeatMessage.edit(content);
+                            } else {
+                                client.heartbeatMessage = await channel.send(content);
+                            }
+                        } catch (e) {
+                            console.error("Heartbeat error:", e);
+                        }
+                    };
+                    await sendHeartbeat();
+                    client.heartbeatInterval = setInterval(sendHeartbeat, 60000);
+                }
+            } catch (e) {
+                logToRenderer("[Anti-Collision] Error during check: " + e.message);
+            }
+        }
     }
 
     broadcastBotStatus();
@@ -1787,40 +1805,6 @@ client.once(Events.ClientReady, async () => {
     logToRenderer(`Logged in as ${client.user.tag} (Session: ${sessionId})`);
 
     client.on('messageCreate', async message => {
-        // Internal handshake/collision detection via DM
-        if (message.author.id === client.user.id && message.channel.isDMBased()) {
-            const content = message.content;
-            if (content.includes('TT_HANDSHAKE:')) {
-                const receivedId = content.split('TT_HANDSHAKE:')[1];
-                if (receivedId !== sessionId) {
-                    client.users.send(client.user.id, `<@${client.user.id}> TT_COLLISION:${sessionId}`).then(m => {
-                        setTimeout(() => m.delete().catch(() => {}), 5000);
-                    });
-                    logToRenderer(`[Anti-Collision] Another instance detected (ID: ${receivedId}). Notifying it.`);
-                }
-                return;
-            }
-            if (content.includes('TT_COLLISION:')) {
-                const receivedId = content.split('TT_COLLISION:')[1].replace(/[^\w\s]/gi, '').trim().split(' ')[0];
-                if (receivedId !== sessionId) {
-                    isSoftLocked = true;
-                    otherInstanceSessionId = receivedId;
-                    logToRenderer(`[Anti-Collision] Soft-lock active: Instance ${receivedId} is already running.`);
-                    broadcastBotStatus();
-                }
-                return;
-            }
-            if (content.includes('TT_VOICE_CHECK:')) {
-                const receivedId = content.split('TT_VOICE_CHECK:')[1];
-                if (receivedId !== sessionId && voiceStatus === 'connected') {
-                    client.users.send(client.user.id, `<@${client.user.id}> TT_VOICE_BUSY:${sessionId}`).then(m => {
-                        setTimeout(() => m.delete().catch(() => {}), 5000);
-                    });
-                }
-                return;
-            }
-        }
-
         if (client.commandHandler) client.commandHandler.handleMessage(message);
     });
 

@@ -65,7 +65,8 @@
     "files": [
       "src/",
       "package.json",
-      "randomtables/"
+      "randomtables/",
+      "docs/"
     ],
     "extraFiles": [
       {

@@ -298,30 +298,51 @@ class BackendAudioPlayer extends EventEmitter {
 
     _getDuration(filePath) {
         return new Promise((resolve) => {
-            if (!this.ffmpegPath) return resolve(0);
+            if (!this.ffmpegPath) {
+                this.log("[Duration] FFmpeg path not set.");
+                return resolve(0);
+            }
 
             // Resolve shortcut if needed
+            let targetPath = filePath;
             if (path.extname(filePath).toLowerCase() === '.lnk' && this.shell) {
                 try {
                     const shortcut = this.shell.readShortcutLink(filePath);
                     if (shortcut.target && fs.existsSync(shortcut.target)) {
-                        filePath = shortcut.target;
+                        targetPath = shortcut.target;
                     }
                 } catch (e) {
-                    this.log(`Failed to resolve shortcut for duration: ${filePath}`);
+                    this.log(`[Duration] Failed to resolve shortcut: ${filePath}`);
                 }
             }
 
-            const ffprobePath = this.ffmpegPath.replace('ffmpeg', 'ffprobe');
-            const args = ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', filePath];
-            const proc = spawn(ffprobePath, args);
-            let output = '';
-            proc.stdout.on('data', (data) => output += data);
-            proc.on('close', () => {
-                const duration = parseFloat(output);
-                resolve(isNaN(duration) ? 0 : duration);
+            // Construct ffprobe path reliably
+            const ffprobeName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+            const ffprobePath = path.join(path.dirname(this.ffmpegPath), ffprobeName);
+
+            if (!fs.existsSync(ffprobePath)) {
+                this.log(`[Duration] ffprobe not found at: ${ffprobePath}`);
+                return resolve(0);
+            }
+
+            const { exec } = require('child_process');
+            // Use double quotes for path to handle spaces
+            const cmd = `"${ffprobePath}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${targetPath}"`;
+
+            exec(cmd, (error, stdout, stderr) => {
+                if (error) {
+                    this.log(`[Duration] Error executing ffprobe: ${error.message}`);
+                    resolve(0);
+                    return;
+                }
+                const duration = parseFloat(stdout.trim());
+                if (isNaN(duration)) {
+                    this.log(`[Duration] Invalid output for ${targetPath}: "${stdout.trim()}"`);
+                    resolve(0);
+                } else {
+                    resolve(duration);
+                }
             });
-            proc.on('error', () => resolve(0));
         });
     }
 

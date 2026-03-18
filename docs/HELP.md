@@ -22,10 +22,14 @@ Welcome to Tavern Tones, your ultimate companion for ambient soundscapes and com
 
 ## 🤖 Discord Bot
 - **Setup**: Enter your Bot Token and Channel IDs in the Settings menu.
-- **Commands**:
+- **Interaction Methods**:
+  - **Slash Commands**: Type `/` in Discord to see available commands like `/roll`, `/play-song`, and `/surge`. These are the recommended way to interact.
+  - **Text Commands**: You can use traditional prefix commands (e.g., `!pl`, `!ro`, `!dr`).
+    - ⚠️ **Important**: You MUST **@mention** the bot in your message for it to respond to text commands (e.g., `@TavernTones !pl chill`).
+- **Key Commands**:
   - `!pl <folder>`: Play music from a specific folder.
   - `!ro <folder> <count> <weight> <table...>`: Roll on random tables.
-  - `!dr <notation>`: Roll arbitrary dice (e.g., 2d20kh1).
+  - `!dr <notation>`: Roll arbitrary dice (e.g., `2d20kh1`).
 - **Collision Detection**: The bot will notify you if another instance is already using the same token to prevent chaos.
 
 ## ⚙️ Settings
