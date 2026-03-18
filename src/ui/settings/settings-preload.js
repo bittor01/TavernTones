@@ -16,5 +16,6 @@ contextBridge.exposeInMainWorld('settings', {
     registerSlashCommands: () => ipcRenderer.invoke('register-slash-commands'),
     unregisterSlashCommands: () => ipcRenderer.invoke('unregister-slash-commands'),
     requestBotStatus: () => ipcRenderer.send('request-bot-status'),
-    onBotStatus: (callback) => ipcRenderer.on('discord-bot-status', (event, status) => callback(status))
+    onBotStatus: (callback) => ipcRenderer.on('discord-bot-status', (event, status) => callback(status)),
+    getHelpContent: () => ipcRenderer.invoke('get-help-content')
 });

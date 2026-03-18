@@ -376,7 +376,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('push-initiative');
                 break;
             case 'selectFileButton':
-                window.electron.ipcRenderer.invoke('open-file-dialog', { multi: true }).then(filePaths => {
+                window.electron.ipcRenderer.invoke('open-file-dialog', { multi: true, folders: false }).then(filePaths => {
+                    if (filePaths && filePaths.length > 0) {
+                        window.electron.ipcRenderer.send('load-music-file', filePaths);
+                    }
+                });
+                break;
+            case 'selectFolderButton':
+                window.electron.ipcRenderer.invoke('open-file-dialog', { multi: true, folders: true }).then(filePaths => {
                     if (filePaths && filePaths.length > 0) {
                         window.electron.ipcRenderer.send('load-music-file', filePaths);
                     }
@@ -611,6 +618,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else if (status.voiceStatus === 'connecting') {
                 indicator.textContent = '🟨';
                 indicator.title = `Bot: ${status.message} | Voice: Connecting... (Click to cancel)`;
+            } else if (status.isSoftLocked) {
+                indicator.textContent = '⚠️';
+                indicator.title = `Bot: ${status.message} | Voice: Locked by another instance`;
             } else {
                 indicator.textContent = '🟥';
                 indicator.title = `Bot: ${status.message} | Voice: Disconnected (Click to join)`;
@@ -656,6 +666,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentLoopMode = status.loopMode;
         currentShuffleMode = status.shuffleMode;
 
+        // Update Progress Bar
+        const progressBar = document.getElementById('music-progress-bar');
+        const timeDisplay = document.getElementById('music-time-display');
+        if (progressBar && timeDisplay) {
+            const percent = status.duration > 0 ? (status.currentTime / status.duration) * 100 : 0;
+            progressBar.style.width = `${percent}%`;
+
+            const formatTime = (s) => {
+                const mins = Math.floor(s / 60);
+                const secs = Math.floor(s % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+            timeDisplay.textContent = `${formatTime(status.currentTime)} / ${formatTime(status.duration)}`;
+        }
+
         playPauseButton.textContent = isPlaying ? '⏸️' : '▶️';
         playPauseButton.disabled = status.stack.length === 0;
 
@@ -668,7 +693,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Update Shuffle Button
         shuffleBtn.classList.toggle('active', currentShuffleMode);
 
-        // Render Stack
+        // Render Playlist
         musicStackList.innerHTML = '';
         status.stack.forEach((track, index) => {
             const div = document.createElement('div');
@@ -678,10 +703,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             div.innerHTML = `
                 <span class="track-name">${track.name}</span>
                 <div class="item-actions">
+                    <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
                     <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
                     <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
                 </div>
             `;
+            div.querySelector('.play-track-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.electron.ipcRenderer.send('jump-to-track', { index });
+            });
             div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 togglePreview(index);
@@ -691,7 +721,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('remove-from-stack', { index });
             });
             div.addEventListener('click', () => {
-                // Jump to this track logic could go here if backend supported it
+                window.electron.ipcRenderer.send('jump-to-track', { index });
             });
             musicStackList.appendChild(div);
 
@@ -1177,7 +1207,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             slotDiv.innerHTML = `
                 <div class="stack-header">
                     <button class="stack-emoji-btn" data-id="${slot.id}" title="Edit Emoji">${slot.emoji}</button>
-                    <button class="stack-btn stack-add-btn" data-id="${slot.id}" title="Add Sound">${addOrCountIcon}</button>
+                    <button class="stack-btn stack-add-btn" data-id="${slot.id}" title="Add Sound">➕</button>
+                    <button class="stack-btn stack-add-folder-btn" data-id="${slot.id}" title="Add Folder">📁</button>
                     <button class="stack-btn stack-clear-btn" data-id="${slot.id}" title="Clear Stack">🗑️</button>
                 </div>
                 <div class="stack-controls">
@@ -1235,7 +1266,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.stack-add-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
-                window.electron.ipcRenderer.invoke('load-sound', { slotId, multi: true }).then(tracks => {
+                window.electron.ipcRenderer.invoke('load-sound', { slotId, multi: true, folders: false }).then(tracks => {
+                    if (tracks && tracks.length > 0) {
+                        soundboardState[slotId].tracks.push(...tracks);
+                        saveSoundboardState();
+                        renderSoundboard();
+                    }
+                });
+            });
+        });
+
+        // Add Folder
+        document.querySelectorAll('.stack-add-folder-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const slotId = parseInt(e.target.dataset.id, 10);
+                window.electron.ipcRenderer.invoke('load-sound', { slotId, multi: true, folders: true }).then(tracks => {
                     if (tracks && tracks.length > 0) {
                         soundboardState[slotId].tracks.push(...tracks);
                         saveSoundboardState();

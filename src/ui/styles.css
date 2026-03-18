@@ -906,6 +906,37 @@ input:disabled {
     transition: opacity 0.2s;
 }
 
+.progress-container {
+    height: 20px;
+    background-color: #333;
+    border-radius: 4px;
+    margin-top: 5px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: #28a745;
+    width: 0%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    transition: width 0.5s ease-in-out;
+}
+
+#music-time-display {
+    position: relative;
+    z-index: 2;
+    font-size: 0.8em;
+    width: 100%;
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 1px #000;
+}
+
 .music-stack-item:hover .item-actions {
     opacity: 1;
 }
@@ -913,14 +944,14 @@ input:disabled {
 .music-controls {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px !important;
+    gap: 2px !important;
 }
 
 .music-controls button {
     flex: 1 1 auto;
-    padding: 6px 8px;
-    font-size: 0.9em;
-    min-width: 40px;
+    padding: 6px 2px;
+    font-size: 0.85em;
+    min-width: 0;
 }
 
 /* --- Import Selection Dialog --- */

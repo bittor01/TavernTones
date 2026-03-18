@@ -9,8 +9,10 @@ TavernTones is a powerful desktop application designed for Dungeon Masters to st
 - **Combat Tracker**: Manage initiative, HP, conditions, and rolls for players and monsters.
 - **Mob Rules Support**: Easily handle large groups of creatures with integrated mob calculation rules.
 - **5e Bestiary Integration**: Import monster data directly and sync with official sources via GitHub.
-- **Soundboard**: Trigger quick sound effects with ducking support (music volume lowers when SFX play).
-- **Random Tables**: Roll on customizable random tables directly from the app.
+- **Soundboard**: Trigger quick sound effects with ducking support (music volume lowers when SFX play) and multi-track playlist support for each slot.
+- **Random Tables**: Roll on customizable random tables directly from the app with improved Discord feedback.
+- **Bot Collision Detection**: Prevents multiple instances from using the same bot token simultaneously.
+- **Enhanced Music Playlist**: Real-time progress bars, true pause/resume, and easy playlist management with folder support.
 
 ## Quick Start Guide
 

@@ -36,6 +36,11 @@ let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
 
+// Anti-collision state
+let sessionId = Math.random().toString(36).substring(7);
+let isSoftLocked = false;
+let otherInstanceSessionId = null;
+
 
 // --- JSDoc Comments ---
 
@@ -217,6 +222,7 @@ async function apploader() {
 
         // Initialize components
         musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, discordConfig.ffmpegPath);
+        setupFilesystemWatchers(discordConfig);
         ipcloader(); // Load all IPC handlers BEFORE creating window
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
@@ -472,6 +478,30 @@ async function checkAndShowReminders(creature, turnEvent) {
 }
 
 const InitiativeTracker = require('../features/InitiativeTracker.js');
+
+function setupFilesystemWatchers(config) {
+    const { defaultMusicPath, randomTablesPath, bestiaryPath } = config;
+
+    const watchers = [
+        { name: 'Music', path: defaultMusicPath, callback: () => musicPlayer && musicPlayer._emitStatusUpdate() },
+        { name: 'Random Tables', path: randomTablesPath, callback: () => logToRenderer("Random tables folder changed. Refreshing...") },
+        { name: 'Bestiary', path: bestiaryPath, callback: () => logToRenderer("Bestiary folder changed. Refreshing...") }
+    ];
+
+    watchers.forEach(w => {
+        if (w.path && fs.existsSync(w.path)) {
+            try {
+                fs.watch(w.path, { recursive: true }, (eventType, filename) => {
+                    logToRenderer(`[Watcher] ${w.name} change detected: ${eventType} ${filename || ''}`);
+                    w.callback();
+                });
+                logToRenderer(`[Watcher] Started watching ${w.name}: ${w.path}`);
+            } catch (err) {
+                logToRenderer(`[Watcher] Failed to watch ${w.name}: ${err.message}`);
+            }
+        }
+    });
+}
 
 /**
  * Registers all IPC (Inter-Process Communication) handlers for the application.
@@ -843,6 +873,12 @@ async function ipcloader() {
         if (musicPlayer) musicPlayer.clearStack();
     });
 
+    ipcMain.on('jump-to-track', (event, { index }) => {
+        if (musicPlayer) {
+            musicPlayer.jumpTo(index);
+        }
+    });
+
     ipcMain.handle('save-music-preset', async (event, stack) => {
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
             title: 'Save Music Stack Preset',
@@ -960,11 +996,11 @@ async function ipcloader() {
     };
 
     ipcMain.handle('open-file-dialog', async (event, options = {}) => {
-        const properties = ['openFile', 'openDirectory'];
+        const properties = options.folders ? ['openDirectory'] : ['openFile'];
         if (options.multi) properties.push('multiSelections');
 
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: 'Select Music File(s) or Folder(s)',
+            title: options.folders ? 'Select Music Folder(s)' : 'Select Music File(s)',
             defaultPath: discordConfig.defaultMusicPath,
             properties,
             filters: [
@@ -979,12 +1015,12 @@ async function ipcloader() {
     });
 
     // --- Soundboard IPC ---
-    ipcMain.handle('load-sound', async (event, { slotId, multi = false } = {}) => {
-        const properties = ['openFile', 'openDirectory'];
+    ipcMain.handle('load-sound', async (event, { slotId, multi = false, folders = false } = {}) => {
+        const properties = folders ? ['openDirectory'] : ['openFile'];
         if (multi) properties.push('multiSelections');
 
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: `Select Sound(s) or Folder(s) for Slot ${slotId + 1}`,
+            title: folders ? `Select Folder(s) for Slot ${slotId + 1}` : `Select Sound(s) for Slot ${slotId + 1}`,
             defaultPath: discordConfig.defaultMusicPath,
             properties,
             filters: [
@@ -1088,6 +1124,18 @@ async function ipcloader() {
             }
         }
         return { canceled: true };
+    });
+
+    ipcMain.handle('get-help-content', async () => {
+        const helpPath = path.join(__dirname, '../../../docs/HELP.md');
+        try {
+            if (fs.existsSync(helpPath)) {
+                return await fs.promises.readFile(helpPath, 'utf-8');
+            }
+            return "Help file not found.";
+        } catch (e) {
+            return `Error reading help file: ${e.message}`;
+        }
     });
 
     ipcMain.handle('load-soundboard-preset', async () => {
@@ -1521,13 +1569,14 @@ function initializeDiscordBot() {
 }
 
 function broadcastBotStatus() {
-    const status = client.isReady() ? 'online' : 'offline';
-    const message = client.isReady() ? 'Connected' : (discordConfig.token ? 'Connecting...' : 'Not Configured');
+    const status = client.isReady() ? (isSoftLocked ? 'soft-locked' : 'online') : 'offline';
+    const message = isSoftLocked ? `Busy (ID: ${otherInstanceSessionId})` : (client.isReady() ? 'Connected' : (discordConfig.token ? 'Connecting...' : 'Not Configured'));
 
     const payload = {
         status,
         message,
-        voiceStatus
+        voiceStatus,
+        isSoftLocked
     };
 
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1595,11 +1644,47 @@ app.on('window-all-closed', () => {
 });
 
 async function joinVoiceChannelAction() {
+    if (isSoftLocked) {
+        logToRenderer("Join cancelled: Bot is soft-locked by another instance.");
+        return;
+    }
+
     const voiceChannel = client.channels.cache.get(discordConfig.voiceChannel);
     if (voiceChannel && voiceChannel.isVoiceBased()) {
         try {
             voiceStatus = 'connecting';
             broadcastBotStatus();
+
+            // Perform a quick check to see if another instance is currently in voice
+            if (discordConfig.textChannel) {
+                const channel = client.channels.cache.get(discordConfig.textChannel);
+                if (channel) {
+                    logToRenderer("Checking for other active instances before joining voice...");
+                    const checkMsg = await channel.send(`<@${client.user.id}> TT_VOICE_CHECK:${sessionId}`);
+
+                    const collision = await new Promise(resolve => {
+                        const filter = m => m.author.id === client.user.id && m.content.includes('TT_VOICE_BUSY:');
+                        const collector = channel.createMessageCollector({ filter, time: 5000, max: 1 });
+                        collector.on('collect', m => {
+                            const receivedId = m.content.split('TT_VOICE_BUSY:')[1];
+                            if (receivedId !== sessionId) resolve(receivedId);
+                        });
+                        collector.on('end', collected => {
+                            if (collected.size === 0) resolve(null);
+                        });
+                    });
+
+                    checkMsg.delete().catch(() => {});
+
+                    if (collision) {
+                        isSoftLocked = true;
+                        otherInstanceSessionId = collision;
+                        logToRenderer(`Join cancelled: Bot is already active in another instance (Session: ${collision}).`);
+                        broadcastBotStatus();
+                        return;
+                    }
+                }
+            }
 
             const existingConnection = getVoiceConnection(voiceChannel.guild.id);
             if (existingConnection) {
@@ -1663,14 +1748,58 @@ function leaveVoiceChannelAction() {
 
 client.once(Events.ClientReady, async () => {
     logToRenderer('TavernTones is online!');
-    broadcastBotStatus();
 
+    // Handshake for collision detection
+    if (discordConfig.textChannel) {
+        const channel = client.channels.cache.get(discordConfig.textChannel);
+        if (channel) {
+            channel.send(`<@${client.user.id}> TT_HANDSHAKE:${sessionId}`).then(msg => {
+                setTimeout(() => msg.delete().catch(() => {}), 5000);
+            });
+        }
+    }
+
+    broadcastBotStatus();
     updateDiscordMediaControl();
 
 
-    logToRenderer(`Logged in as ${client.user.tag}`);
+    logToRenderer(`Logged in as ${client.user.tag} (Session: ${sessionId})`);
 
-    client.on('messageCreate', message => {
+    client.on('messageCreate', async message => {
+        // Internal handshake/collision detection
+        if (message.author.id === client.user.id && message.mentions.has(client.user)) {
+            const content = message.content;
+            if (content.includes('TT_HANDSHAKE:')) {
+                const receivedId = content.split('TT_HANDSHAKE:')[1];
+                if (receivedId !== sessionId) {
+                    message.reply(`<@${client.user.id}> TT_COLLISION:${sessionId}`).then(m => {
+                        setTimeout(() => m.delete().catch(() => {}), 5000);
+                    });
+                    logToRenderer(`[Anti-Collision] Another instance detected (ID: ${receivedId}). Notifying it.`);
+                }
+                return;
+            }
+            if (content.includes('TT_COLLISION:')) {
+                const receivedId = content.split('TT_COLLISION:')[1].split(' ')[0]; // Handle reply wrap
+                if (receivedId !== sessionId) {
+                    isSoftLocked = true;
+                    otherInstanceSessionId = receivedId;
+                    logToRenderer(`[Anti-Collision] Soft-lock active: Instance ${receivedId} is already running.`);
+                    broadcastBotStatus();
+                }
+                return;
+            }
+            if (content.includes('TT_VOICE_CHECK:')) {
+                const receivedId = content.split('TT_VOICE_CHECK:')[1];
+                if (receivedId !== sessionId && voiceStatus === 'connected') {
+                    message.reply(`<@${client.user.id}> TT_VOICE_BUSY:${sessionId}`).then(m => {
+                        setTimeout(() => m.delete().catch(() => {}), 5000);
+                    });
+                }
+                return;
+            }
+        }
+
         if (client.commandHandler) client.commandHandler.handleMessage(message);
     });
 
@@ -1741,10 +1870,25 @@ client.once(Events.ClientReady, async () => {
             shuffleMode: musicPlayer.shuffleMode,
             currentTrack: musicPlayer.stack[musicPlayer.currentIndex],
             stackSize: musicPlayer.stack.length,
-            currentIndex: musicPlayer.currentIndex
+            currentIndex: musicPlayer.currentIndex,
+            currentTime: musicPlayer.currentTime,
+            duration: musicPlayer.duration
         };
 
         const loopIcons = ['➡️', '🔁', '🔂'];
+
+        function createProgressString(current, total) {
+            const size = 10;
+            if (total <= 0) return '⬛'.repeat(size);
+            const progress = Math.round((current / total) * size);
+            return '🟩'.repeat(Math.min(size, progress)) + '⬛'.repeat(Math.max(0, size - progress));
+        }
+
+        const formatTime = (s) => {
+            const mins = Math.floor(s / 60);
+            const secs = Math.floor(s % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        };
 
         const embed = new EmbedBuilder()
             .setTitle('🎵 Music Player Control')
@@ -1754,7 +1898,8 @@ client.once(Events.ClientReady, async () => {
                 { name: 'Loop', value: loopIcons[status.loopMode], inline: true },
                 { name: 'Shuffle', value: status.shuffleMode ? '🔀 On' : '🔀 Off', inline: true },
                 { name: 'Track', value: status.currentTrack ? path.basename(status.currentTrack) : 'None' },
-                { name: 'Stack', value: `${status.currentIndex + 1} / ${status.stackSize}` }
+                { name: 'Progress', value: `${createProgressString(status.currentTime, status.duration)} \`[${formatTime(status.currentTime)} / ${formatTime(status.duration)}]\`` },
+                { name: 'Playlist', value: `${status.currentIndex + 1} / ${status.stackSize}` }
             )
             .setTimestamp();
 

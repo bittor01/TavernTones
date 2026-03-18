@@ -132,6 +132,10 @@ class CommandHandler {
 
                     case content.startsWith('!su'):
                         const surgeFilePath = path.join(this.randomTablesPath, 'surge.json');
+                        if (!fs.existsSync(surgeFilePath)) {
+                            await message.reply("❌ **Surge table not found.** Please ensure 'surge.json' exists in your random tables folder.");
+                            break;
+                        }
                         const surgeData = JSON.parse(fs.readFileSync(surgeFilePath, 'utf8'));
                         const surgeEffect = getRandomEffect(surgeData, message.author.id);
                         if (surgeEffect) {
@@ -149,6 +153,10 @@ class CommandHandler {
 
                     case content.includes('!sh'):
                         const shieldFilePath = path.join(this.randomTablesPath, 'shield.json');
+                        if (!fs.existsSync(shieldFilePath)) {
+                            await message.reply("❌ **Shield table not found.** Please ensure 'shield.json' exists in your random tables folder.");
+                            break;
+                        }
                         const shieldData = JSON.parse(fs.readFileSync(shieldFilePath, 'utf8'));
                         const shieldEffect = getRandomEffect(shieldData, message.author.id);
                         if (shieldEffect) {
@@ -177,7 +185,8 @@ class CommandHandler {
                         const tableArgs = roArgs.slice(2);
                         const validFolders = this.getValidTableFolders();
                         if (!validFolders.includes(folderName)) {
-                            await message.reply(`Folder '${folderName}' not found.`);
+                            const suggestion = validFolders.length > 0 ? `Available folders: ${validFolders.join(', ')}` : "No random table folders found in configuration.";
+                            await message.reply(`❌ **Folder '${folderName}' not found.**\n${suggestion}`);
                             break;
                         }
                         if (isNaN(iterationCount) || iterationCount <= 0 || iterationCount > 999) {
@@ -185,9 +194,30 @@ class CommandHandler {
                             break;
                         }
                         const roTableEntries = [];
+                        const missingTables = [];
+                        const encounterTablesFolder = path.join(this.randomTablesPath, folderName);
+
                         for (let i = 0; i < tableArgs.length; i += 2) {
-                            roTableEntries.push({ weight: parseInt(tableArgs[i], 10), tableName: tableArgs[i + 1] });
+                            const weight = parseInt(tableArgs[i], 10);
+                            const tableName = tableArgs[i + 1];
+                            if (!tableName) continue;
+
+                            const filePath = path.join(encounterTablesFolder, `${tableName}.json`);
+                            if (!fs.existsSync(filePath)) {
+                                missingTables.push(tableName);
+                            } else {
+                                roTableEntries.push({ weight, tableName });
+                            }
                         }
+
+                        if (missingTables.length > 0) {
+                            const available = fs.readdirSync(encounterTablesFolder)
+                                .filter(f => f.endsWith('.json'))
+                                .map(f => f.replace('.json', ''));
+                            await message.reply(`❌ **Missing tables in '${folderName}':** ${missingTables.join(', ')}\nAvailable: ${available.join(', ')}`);
+                            if (roTableEntries.length === 0) break;
+                        }
+
                         await message.reply(`Rolling ${iterationCount} times from '${folderName}'...`);
                         const thread = await message.startThread({ name: `Rolls from ${folderName}` });
                         for (let i = 0; i < iterationCount; i++) {

@@ -168,6 +168,27 @@ document.addEventListener('DOMContentLoaded', () => {
         unregisterSlashBtn.disabled = false;
     });
 
+    // --- Help Button ---
+    const helpButton = document.getElementById('help-button');
+    const helpDialog = document.getElementById('help-dialog');
+    const helpContent = document.getElementById('help-content');
+
+    helpButton.addEventListener('click', async () => {
+        const content = await window.settings.getHelpContent();
+        // Basic Markdown-ish parsing for better display
+        const parsed = content
+            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/^- (.*$)/gm, '<li>$1</li>')
+            .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="#" onclick="window.open(\'$2\')">$1</a>')
+            .replace(/\n\n/g, '<br><br>');
+
+        helpContent.innerHTML = parsed;
+        helpDialog.showModal();
+    });
+
     window.settings.onBotStatus(updateBotStatusUI);
 
     // Request existing config from main process when window loads

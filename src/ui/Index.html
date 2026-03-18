@@ -48,10 +48,15 @@
           <button id="loop-mode-btn">🔁</button>
           <button id="shuffle-btn">🔀</button>
           <button id="selectFileButton" title="Add File(s)">➕</button>
-          <button id="clear-stack-btn" title="Clear Stack">🗑️</button>
+          <button id="selectFolderButton" title="Add Folder">📁</button>
+          <button id="clear-stack-btn" title="Clear Playlist">🗑️</button>
+        </div>
+        <div class="progress-container">
+          <div id="music-progress-bar" class="progress-bar"></div>
+          <span id="music-time-display">0:00 / 0:00</span>
         </div>
         <div id="music-stack-list" style="max-height: 150px; overflow-y: auto; margin-top: 5px; border: 1px solid #444; background: #1a1a1a;">
-          <!-- Stack items will be rendered here -->
+          <!-- Playlist items will be rendered here -->
         </div>
       </div>
     </div>
