@@ -1127,15 +1127,20 @@ async function ipcloader() {
     });
 
     ipcMain.handle('get-help-content', async () => {
-        const helpPath = path.join(__dirname, '../../../docs/HELP.md');
-        try {
-            if (fs.existsSync(helpPath)) {
-                return await fs.promises.readFile(helpPath, 'utf-8');
-            }
-            return "Help file not found.";
-        } catch (e) {
-            return `Error reading help file: ${e.message}`;
+        const paths = [
+            path.join(__dirname, '../../../docs/HELP.md'),
+            path.join(app.getAppPath(), 'docs/HELP.md'),
+            path.join(process.resourcesPath, 'docs/HELP.md')
+        ];
+
+        for (const helpPath of paths) {
+            try {
+                if (fs.existsSync(helpPath)) {
+                    return await fs.promises.readFile(helpPath, 'utf-8');
+                }
+            } catch (e) {}
         }
+        return "Help file not found. Checked: " + paths.join(', ');
     });
 
     ipcMain.handle('load-soundboard-preset', async () => {
@@ -1593,6 +1598,17 @@ const shutdown = async () => {
     isShuttingDown = true;
     try {
         console.log('Cleaning up and exiting.');
+
+        // Delete media control message gracefully
+        if (client && client.lastMediaMessage) {
+            try {
+                await client.lastMediaMessage.delete().catch(() => {});
+                client.lastMediaMessage = null;
+            } catch (e) {
+                console.error("Error deleting media control on shutdown:", e);
+            }
+        }
+
         // Remove all event listeners
         if (client) {
             client.removeAllListeners();
@@ -1655,35 +1671,38 @@ async function joinVoiceChannelAction() {
             voiceStatus = 'connecting';
             broadcastBotStatus();
 
-            // Perform a quick check to see if another instance is currently in voice
-            if (discordConfig.textChannel) {
-                const channel = client.channels.cache.get(discordConfig.textChannel);
-                if (channel) {
-                    logToRenderer("Checking for other active instances before joining voice...");
-                    const checkMsg = await channel.send(`<@${client.user.id}> TT_VOICE_CHECK:${sessionId}`);
+            // Perform a quick check to see if another instance is currently in voice via self-DM
+            logToRenderer("Checking for other active instances before joining voice...");
+            let checkMsg;
+            try {
+                checkMsg = await client.users.send(client.user.id, `<@${client.user.id}> TT_VOICE_CHECK:${sessionId}`);
+            } catch (e) {
+                logToRenderer("Failed to send voice check DM: " + e.message);
+            }
 
-                    const collision = await new Promise(resolve => {
-                        const filter = m => m.author.id === client.user.id && m.content.includes('TT_VOICE_BUSY:');
-                        const collector = channel.createMessageCollector({ filter, time: 5000, max: 1 });
-                        collector.on('collect', m => {
-                            const receivedId = m.content.split('TT_VOICE_BUSY:')[1];
-                            if (receivedId !== sessionId) resolve(receivedId);
-                        });
-                        collector.on('end', collected => {
-                            if (collected.size === 0) resolve(null);
-                        });
+            const collision = await new Promise(resolve => {
+                const filter = m => m.author.id === client.user.id && m.content.includes('TT_VOICE_BUSY:');
+                // Use a dm channel collector
+                client.users.createDM(client.user.id).then(dmChannel => {
+                    const collector = dmChannel.createMessageCollector({ filter, time: 5000, max: 1 });
+                    collector.on('collect', m => {
+                        const receivedId = m.content.split('TT_VOICE_BUSY:')[1];
+                        if (receivedId !== sessionId) resolve(receivedId);
                     });
+                    collector.on('end', collected => {
+                        if (collected.size === 0) resolve(null);
+                    });
+                }).catch(() => resolve(null));
+            });
 
-                    checkMsg.delete().catch(() => {});
+            if (checkMsg) checkMsg.delete().catch(() => {});
 
-                    if (collision) {
-                        isSoftLocked = true;
-                        otherInstanceSessionId = collision;
-                        logToRenderer(`Join cancelled: Bot is already active in another instance (Session: ${collision}).`);
-                        broadcastBotStatus();
-                        return;
-                    }
-                }
+            if (collision) {
+                isSoftLocked = true;
+                otherInstanceSessionId = collision;
+                logToRenderer(`Join cancelled: Bot is already active in another instance (Session: ${collision}).`);
+                broadcastBotStatus();
+                return;
             }
 
             const existingConnection = getVoiceConnection(voiceChannel.guild.id);
@@ -1748,15 +1767,17 @@ function leaveVoiceChannelAction() {
 
 client.once(Events.ClientReady, async () => {
     logToRenderer('TavernTones is online!');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('switch-panel', 'diceLog');
+    }
 
-    // Handshake for collision detection
-    if (discordConfig.textChannel) {
-        const channel = client.channels.cache.get(discordConfig.textChannel);
-        if (channel) {
-            channel.send(`<@${client.user.id}> TT_HANDSHAKE:${sessionId}`).then(msg => {
-                setTimeout(() => msg.delete().catch(() => {}), 5000);
-            });
-        }
+    // Handshake for collision detection via DM to self
+    try {
+        client.users.send(client.user.id, `<@${client.user.id}> TT_HANDSHAKE:${sessionId}`).then(msg => {
+            setTimeout(() => msg.delete().catch(() => {}), 5000);
+        });
+    } catch (e) {
+        logToRenderer("Failed to send handshake DM: " + e.message);
     }
 
     broadcastBotStatus();
@@ -1766,13 +1787,13 @@ client.once(Events.ClientReady, async () => {
     logToRenderer(`Logged in as ${client.user.tag} (Session: ${sessionId})`);
 
     client.on('messageCreate', async message => {
-        // Internal handshake/collision detection
-        if (message.author.id === client.user.id && message.mentions.has(client.user)) {
+        // Internal handshake/collision detection via DM
+        if (message.author.id === client.user.id && message.channel.isDMBased()) {
             const content = message.content;
             if (content.includes('TT_HANDSHAKE:')) {
                 const receivedId = content.split('TT_HANDSHAKE:')[1];
                 if (receivedId !== sessionId) {
-                    message.reply(`<@${client.user.id}> TT_COLLISION:${sessionId}`).then(m => {
+                    client.users.send(client.user.id, `<@${client.user.id}> TT_COLLISION:${sessionId}`).then(m => {
                         setTimeout(() => m.delete().catch(() => {}), 5000);
                     });
                     logToRenderer(`[Anti-Collision] Another instance detected (ID: ${receivedId}). Notifying it.`);
@@ -1780,7 +1801,7 @@ client.once(Events.ClientReady, async () => {
                 return;
             }
             if (content.includes('TT_COLLISION:')) {
-                const receivedId = content.split('TT_COLLISION:')[1].split(' ')[0]; // Handle reply wrap
+                const receivedId = content.split('TT_COLLISION:')[1].replace(/[^\w\s]/gi, '').trim().split(' ')[0];
                 if (receivedId !== sessionId) {
                     isSoftLocked = true;
                     otherInstanceSessionId = receivedId;
@@ -1792,7 +1813,7 @@ client.once(Events.ClientReady, async () => {
             if (content.includes('TT_VOICE_CHECK:')) {
                 const receivedId = content.split('TT_VOICE_CHECK:')[1];
                 if (receivedId !== sessionId && voiceStatus === 'connected') {
-                    message.reply(`<@${client.user.id}> TT_VOICE_BUSY:${sessionId}`).then(m => {
+                    client.users.send(client.user.id, `<@${client.user.id}> TT_VOICE_BUSY:${sessionId}`).then(m => {
                         setTimeout(() => m.delete().catch(() => {}), 5000);
                     });
                 }
@@ -1817,7 +1838,7 @@ client.once(Events.ClientReady, async () => {
     const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, extendedConfig, fiveEToolsParser);
     client.commandHandler = commandHandler;
 
-    let lastMediaMessage = null;
+    client.lastMediaMessage = null;
     let isUpdatingMediaControl = false;
     let pendingMediaUpdate = false;
     let selectedSongInDropdown = null;
@@ -1846,6 +1867,7 @@ client.once(Events.ClientReady, async () => {
             pendingMediaUpdate = true;
             return;
         }
+        if (isShuttingDown) return;
 
         let targetChannel = client.channels.cache.get(discordConfig.textChannel);
         if (!targetChannel) {
@@ -1961,16 +1983,16 @@ client.once(Events.ClientReady, async () => {
         const components = [songSelector, selectionActions, playbackControls];
 
         try {
-            if (lastMediaMessage) {
+            if (client.lastMediaMessage) {
                 // Check if message still exists by fetching or just trying to edit
-                await lastMediaMessage.edit({ embeds: [embed], components });
+                await client.lastMediaMessage.edit({ embeds: [embed], components });
             } else {
-                lastMediaMessage = await targetChannel.send({ embeds: [embed], components });
+                client.lastMediaMessage = await targetChannel.send({ embeds: [embed], components });
             }
         } catch (e) {
             try {
                 // If edit fails, it might be deleted. Send new one.
-                lastMediaMessage = await targetChannel.send({ embeds: [embed], components });
+                client.lastMediaMessage = await targetChannel.send({ embeds: [embed], components });
             } catch (err) {
                 logToRenderer(`Failed to send Discord media control: ${err.message}`);
             }

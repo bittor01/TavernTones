@@ -299,6 +299,19 @@ class BackendAudioPlayer extends EventEmitter {
     _getDuration(filePath) {
         return new Promise((resolve) => {
             if (!this.ffmpegPath) return resolve(0);
+
+            // Resolve shortcut if needed
+            if (path.extname(filePath).toLowerCase() === '.lnk' && this.shell) {
+                try {
+                    const shortcut = this.shell.readShortcutLink(filePath);
+                    if (shortcut.target && fs.existsSync(shortcut.target)) {
+                        filePath = shortcut.target;
+                    }
+                } catch (e) {
+                    this.log(`Failed to resolve shortcut for duration: ${filePath}`);
+                }
+            }
+
             const ffprobePath = this.ffmpegPath.replace('ffmpeg', 'ffprobe');
             const args = ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', filePath];
             const proc = spawn(ffprobePath, args);

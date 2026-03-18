@@ -1,5 +1,5 @@
 // Performance and security update
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, shell } = require('electron');
 
 contextBridge.exposeInMainWorld('settings', {
     // Existing functions
@@ -17,5 +17,6 @@ contextBridge.exposeInMainWorld('settings', {
     unregisterSlashCommands: () => ipcRenderer.invoke('unregister-slash-commands'),
     requestBotStatus: () => ipcRenderer.send('request-bot-status'),
     onBotStatus: (callback) => ipcRenderer.on('discord-bot-status', (event, status) => callback(status)),
-    getHelpContent: () => ipcRenderer.invoke('get-help-content')
+    getHelpContent: () => ipcRenderer.invoke('get-help-content'),
+    openExternal: (url) => shell.openExternal(url)
 });

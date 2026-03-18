@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/^### (.*$)/gm, '<h3>$1</h3>')
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/^- (.*$)/gm, '<li>$1</li>')
-            .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="#" onclick="window.open(\'$2\')">$1</a>')
+            .replace(/\[(.*?)\]\((.*?)\)/g, (m, text, url) => `<a href="#" onclick="window.settings.openExternal('${url}')">${text}</a>`)
             .replace(/\n\n/g, '<br><br>');
 
         helpContent.innerHTML = parsed;
