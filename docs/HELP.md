@@ -1,7 +1,5 @@
 # Tavern Tones Help Guide
 
-Welcome to Tavern Tones, your ultimate companion for ambient soundscapes and combat tracking in TTRPGs.
-
 ## 🎵 Music Player
 - **Playlist Management**: Add files with ➕ or entire folders with 📁.
 - **Controls**: Standard Play, Pause, Prev, and Next buttons.
@@ -36,5 +34,3 @@ Welcome to Tavern Tones, your ultimate companion for ambient soundscapes and com
 - **Paths**: Configure where your bestiary, music, and random tables are stored.
 - **GitHub Sync**: Fetch the latest bestiary data directly from official repositories.
 - **FFmpeg**: Ensure the folder containing both `ffmpeg` and `ffprobe` is correctly selected in settings for audio streaming and duration detection.
-
-Need more help? Contact the application administrator for updates and support.
