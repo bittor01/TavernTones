@@ -37,4 +37,4 @@ Welcome to Tavern Tones, your ultimate companion for ambient soundscapes and com
 - **GitHub Sync**: Fetch the latest bestiary data directly from official repositories.
 - **FFmpeg**: Ensure FFmpeg is correctly detected for audio streaming.
 
-Need more help? Visit our [GitHub repository](https://github.com/CrispyChestnuts/TavernTones) for updates and issue reporting.
+Need more help? Contact the application administrator for updates and support.
