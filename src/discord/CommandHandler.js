@@ -241,6 +241,7 @@ class CommandHandler {
                             await message.reply(`Playing: **${path.parse(songFilePath).name}**`);
                             musicPlayer.clearStack();
                             await musicPlayer.addToStack(songFilePath);
+                            if (this.config.joinVoiceCallback) await this.config.joinVoiceCallback();
                             musicPlayer.play();
                         } else {
                             await message.reply("Could not find that music.");
