@@ -1558,6 +1558,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
         grid.innerHTML = '';
+        grid.style.setProperty('--sb-rows', soundboardRowCount);
 
         soundboardState.forEach(slot => {
             const slotDiv = document.createElement('div');

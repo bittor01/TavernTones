@@ -856,7 +856,8 @@ input:disabled {
 
 body.audio-only .soundboard-stack-slot {
     padding: 2px;
-    gap: 2px;
+    gap: 1px;
+    min-height: 0;
 }
 
 body.audio-only .soundboard-stack-slot .stack-btn {
@@ -943,7 +944,7 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     overflow: hidden;
     text-overflow: ellipsis;
     text-align: center;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
 /* --- Music Library Styles --- */
@@ -1163,13 +1164,13 @@ body.audio-only .audio-only-right-column #soundboard-container {
     background-color: #252526;
     border: 1px solid #333;
     border-radius: 8px;
-    padding: 8px; /* Tighter padding for audio mode */
+    padding: 4px; /* Even tighter padding */
 }
 
 /* Music Player at the top, max 200px */
 body.audio-only .audio-only-right-column #music-controls-container {
-    height: 200px;
-    max-height: 200px;
+    height: 180px; /* Slightly shorter to give more room to soundboard */
+    max-height: 180px;
     flex-shrink: 0;
     flex-direction: column;
     overflow: hidden;
@@ -1187,7 +1188,7 @@ body.audio-only .audio-only-right-column #soundboard-container {
     flex-grow: 1;
     min-height: 0;
     flex-direction: column;
-    padding-bottom: 5px;
+    padding-bottom: 2px;
 }
 
 body.audio-only #soundboard-container .panel-header {
@@ -1197,11 +1198,17 @@ body.audio-only #soundboard-container .panel-header {
 
 body.audio-only .audio-only-right-column #soundboard-grid {
     grid-template-columns: repeat(6, 1fr);
-    gap: 2px; /* Even tighter gap */
+    grid-template-rows: repeat(var(--sb-rows, 1), 1fr);
+    gap: 2px;
     flex-grow: 1;
     min-height: 0;
-    align-content: start; /* Prevents vertical stretching of buttons */
-    overflow-y: auto;
+    height: 100%;
+    align-content: stretch; /* Stretch to fit exactly */
+    overflow: hidden; /* Prefer no scroll if we are stretching to fit */
+}
+
+body.audio-only .audio-only-right-column #soundboard-grid:hover {
+    overflow-y: auto; /* Allow scroll if it still overflows despite stretch */
 }
 
 body.audio-only .soundboard-stack-slot .stack-track-display {
