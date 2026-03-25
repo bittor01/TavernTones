@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
     let DND_CONDITIONS = {};
     let MOB_RULES_DATA = {};
+    let lastScrolledIndex = -1;
 
     // --- Form State ---
     let isMobMode = false;
@@ -666,6 +667,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentLoopMode = status.loopMode;
         currentShuffleMode = status.shuffleMode;
 
+        if (status.currentIndex === -1) {
+            lastScrolledIndex = -1;
+        }
+
         // Update Progress Bar
         const progressBar = document.getElementById('music-progress-bar');
         const timeDisplay = document.getElementById('music-time-display');
@@ -726,9 +731,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             musicStackList.appendChild(div);
 
             // Auto-scroll to active track
-            if (index === status.currentIndex) {
+            if (index === status.currentIndex && index !== lastScrolledIndex) {
                 setTimeout(() => {
                     div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    lastScrolledIndex = index;
                 }, 100);
             }
         });
