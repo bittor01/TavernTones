@@ -651,6 +651,7 @@ input[type="number"] {
 
 body.audio-only #soundboard-grid {
     grid-template-columns: repeat(6, 1fr);
+    align-content: start;
 }
 
 .resize-handle {
@@ -679,6 +680,7 @@ body.audio-only .resize-handle {
     padding: 8px;
     overflow: hidden;
     /* Contain text */
+    height: fit-content;
 }
 
 .soundboard-play-btn {
@@ -832,16 +834,17 @@ input:disabled {
     background-color: #2b3035;
     border: 1px solid #444;
     border-radius: 8px;
-    padding: 2px;
+    padding: 4px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     min-width: 0;
+    height: fit-content;
 }
 
 body.audio-only .soundboard-stack-slot {
-    padding: 1px;
-    gap: 1px;
+    padding: 4px;
+    gap: 4px;
 }
 
 .stack-header {
@@ -1066,6 +1069,19 @@ body.audio-only .soundboard-stack-slot {
     opacity: 1;
 }
 
+#music-stack-list {
+    max-height: 150px;
+    overflow-y: auto;
+    margin-top: 5px;
+    border: 1px solid #444;
+    background: #1a1a1a;
+    flex-grow: 1;
+}
+
+body.audio-only #music-stack-list {
+    max-height: 400px;
+}
+
 .music-controls {
     display: flex;
     flex-wrap: wrap;
@@ -1073,7 +1089,7 @@ body.audio-only .soundboard-stack-slot {
 }
 
 .music-controls button {
-    flex: 1 1 auto;
+    flex: 1 0 30px;
     padding: 6px 2px;
     font-size: 0.85em;
     min-width: 0;
@@ -1130,7 +1146,7 @@ body.audio-only .audio-only-right-column > * {
 
 body.audio-only .audio-only-right-column #music-controls-container,
 body.audio-only .audio-only-right-column #soundboard-container {
-    display: block !important;
+    display: flex !important;
 }
 
 body.audio-only .audio-only-left-column .music-controls-container {

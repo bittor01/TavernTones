@@ -48,24 +48,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Initial Load (Non-blocking) ---
     // Fetch initial data without blocking the UI rendering.
-    window.electron.ipcRenderer.invoke('get-dnd-conditions').then(conditions => {
-        DND_CONDITIONS = conditions;
-    });
-    window.electron.ipcRenderer.invoke('get-mob-rules-data').then(rules => {
-        MOB_RULES_DATA = rules;
-    });
+    if (window.electron && window.electron.ipcRenderer) {
+        window.electron.ipcRenderer.invoke('get-dnd-conditions').then(conditions => {
+            DND_CONDITIONS = conditions;
+        });
+        window.electron.ipcRenderer.invoke('get-mob-rules-data').then(rules => {
+            MOB_RULES_DATA = rules;
+        });
+    }
 
     // Send a signal to the main process that the window is ready for data.
-    window.electron.ipcRenderer.send('window-ready');
-    // Specifically request the initial load after a short delay to ensure the main process is ready.
-    setTimeout(() => {
-        window.electron.ipcRenderer.send('request-initial-load');
-        window.electron.ipcRenderer.send('get-discord-config');
-        window.electron.ipcRenderer.invoke('get-music-library').then(library => {
-            musicLibrary = library;
-            renderMusicLibrary();
-        });
-    }, 100);
+    if (window.electron && window.electron.ipcRenderer) {
+        window.electron.ipcRenderer.send('window-ready');
+        // Specifically request the initial load after a short delay to ensure the main process is ready.
+        setTimeout(() => {
+            window.electron.ipcRenderer.send('request-initial-load');
+            window.electron.ipcRenderer.send('get-discord-config');
+            window.electron.ipcRenderer.invoke('get-music-library').then(library => {
+                musicLibrary = library;
+                renderMusicLibrary();
+            });
+        }, 100);
+    }
 
     // --- Soundboard Resizing Logic ---
     const resizeHandle = document.getElementById('soundboard-resize-handle');
@@ -472,9 +476,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             case 'selectFileButton':
                 showPanel('musicLibraryArea');
                 break;
-            case 'selectFolderButton':
-                showPanel('musicLibraryArea');
-                break;
             case 'playPauseButton':
                 if (!isBotEnabled) {
                     showBotNag();
@@ -754,12 +755,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderMusicLibrary();
 
         if (diff) {
-            const msg = `Library updated: ${diff.added} songs added, ${diff.removed} songs removed.`;
+            const msg = `Library Update: ${diff.added} songs added, ${diff.removed} songs removed.`;
             logMessage(msg);
-            // Non-obtrusive notification could be a toast or just the log.
-            // The user suggested a modal or something unobtrusive.
-            // Using a simple alert for now if there's a significant change,
-            // but log is better.
+            // Inform the user as requested
+            if (diff.added > 0 || diff.removed > 0) {
+                alert(msg);
+            }
         }
     });
 
@@ -767,7 +768,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const container = document.getElementById('library-tree-container');
         container.innerHTML = '';
         if (musicLibrary && musicLibrary.children) {
-            container.appendChild(createTreeNode(musicLibrary, true));
+            // Flatten: Add each child of the root directly to the container
+            musicLibrary.children.forEach(child => {
+                container.appendChild(createTreeNode(child, true));
+            });
         }
     }
 
@@ -1363,7 +1367,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let saveSoundboardStateTimeout;
     function saveSoundboardState() {
-        const volume = parseFloat(document.getElementById('soundboard-volume').value);
+        const volumeEl = document.getElementById('soundboard-volume');
+        const volume = volumeEl ? parseFloat(volumeEl.value) : 0.5;
         const stateToSave = {
             volume: volume,
             slots: soundboardState.map(slot => ({
@@ -1372,7 +1377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }))
         };
 
-        clearTimeout(saveSoundboardStateTimeout);
+        if (saveSoundboardStateTimeout) clearTimeout(saveSoundboardStateTimeout);
         saveSoundboardStateTimeout = setTimeout(() => {
             window.electron.ipcRenderer.send('save-soundboard-state', stateToSave);
         }, 1000);
@@ -1431,10 +1436,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             emojiInput.value = soundboardState[slotId].emoji;
             emojiDialog.showModal();
         }
-    }
-
-    function saveSoundboardState() {
-        window.electron.ipcRenderer.send('save-soundboard-state', soundboardState);
     }
 
     // --- Global Event Delegation for Combatant Details ---

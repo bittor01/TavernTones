@@ -418,8 +418,8 @@ class BackendAudioPlayer extends EventEmitter {
             } while (this.playedIndices.includes(nextIndex) && this.stack.length > 1);
             this.currentIndex = nextIndex;
         } else {
-            if (this.loopMode === 1) {
-                // If skipping/finishing the top track in Loop All, move it to the bottom
+            if (this.loopMode === 1 || this.loopMode === 2) {
+                // If skipping/finishing the top track and looping is on (any mode), move it to the bottom
                 const finishedTrack = this.stack.shift();
                 this.stack.push(finishedTrack);
                 this.currentIndex = 0;
@@ -455,7 +455,7 @@ class BackendAudioPlayer extends EventEmitter {
 
     jumpTo(index) {
         if (index >= 0 && index < this.stack.length) {
-            if (this.loopMode === 1) {
+            if (this.loopMode === 1 || this.loopMode === 2) {
                 // "Bumping off" tracks before the selected one to the bottom
                 const preceding = this.stack.splice(0, index);
                 this.stack.push(...preceding);
@@ -473,7 +473,7 @@ class BackendAudioPlayer extends EventEmitter {
         if (this.stack.length === 0) return;
         this.currentIndex--;
         if (this.currentIndex < 0) {
-            this.currentIndex = this.loopMode === 1 ? this.stack.length - 1 : 0;
+            this.currentIndex = (this.loopMode === 1 || this.loopMode === 2) ? this.stack.length - 1 : 0;
         }
         this._play();
     }

@@ -49,6 +49,19 @@ let sessionId = Math.random().toString(36).substring(7);
 let isSoftLocked = false;
 let otherInstanceSessionId = null;
 
+// Local Instance Lock
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+    app.quit();
+} else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        // Someone tried to run a second instance, we should focus our window.
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
+}
 
 // --- JSDoc Comments ---
 
@@ -977,8 +990,25 @@ async function ipcloader() {
         return { success: true };
     });
 
+    const resolveLibraryPaths = (paths) => {
+        return paths.map(p => {
+            if (path.extname(p).toLowerCase() === '.lnk') {
+                try {
+                    const shortcut = shell.readShortcutLink(p);
+                    if (shortcut.target && fs.existsSync(shortcut.target)) {
+                        return shortcut.target;
+                    }
+                } catch (e) {
+                    console.error(`Failed to resolve shortcut: ${p}`, e);
+                }
+            }
+            return p;
+        });
+    };
+
     ipcMain.on('library-action', async (event, { action, paths }) => {
         if (!musicPlayer) return;
+        const resolvedPaths = resolveLibraryPaths(paths);
 
         switch (action) {
             case 'play-now':
@@ -986,7 +1016,7 @@ async function ipcloader() {
                 // If loop mode 1 is on, BackendAudioPlayer.jumpTo will handle moving existing tracks to bottom if we jumped to a new top.
                 // But we need to actually add them first.
                 const currentStack = [...musicPlayer.stack];
-                musicPlayer.stack = [...paths, ...currentStack];
+                musicPlayer.stack = [...resolvedPaths, ...currentStack];
                 musicPlayer.currentIndex = 0;
                 musicPlayer.play();
                 break;
@@ -995,14 +1025,14 @@ async function ipcloader() {
                 // Insert after the current track if playing, or at top if not?
                 // User said "add to top of list" ⬆️.
                 // Usually this means index 0.
-                musicPlayer.stack = [...paths, ...stackAfterTop];
+                musicPlayer.stack = [...resolvedPaths, ...stackAfterTop];
                 if (musicPlayer.currentIndex !== -1) {
-                    musicPlayer.currentIndex += paths.length;
+                    musicPlayer.currentIndex += resolvedPaths.length;
                 }
                 musicPlayer._emitStatusUpdate();
                 break;
             case 'add-bottom':
-                musicPlayer.addToStack(paths);
+                musicPlayer.addToStack(resolvedPaths);
                 break;
             case 'add-loose':
                 if (!discordConfig.looseFiles) discordConfig.looseFiles = [];
@@ -1815,58 +1845,62 @@ client.once(Events.ClientReady, async () => {
         mainWindow.webContents.send('switch-panel', 'diceLog');
     }
 
-    // Robust collision detection using a heartbeat in the bot's own DMs
-    try {
-        const dmChannel = await client.user.createDM();
-        if (dmChannel) {
-            logToRenderer("[Anti-Collision] Checking for active instances via DMs...");
-            const messages = await dmChannel.messages.fetch({ limit: 50 });
-            const activeHeartbeat = messages.find(m =>
-                m.author.id === client.user.id &&
-                m.content.includes('TT_HEARTBEAT:') &&
-                (Date.now() - m.createdTimestamp < 90000) // Less than 90s old
-            );
+    // Robust collision detection using a probe/response handshake
+    if (discordConfig.textChannel) {
+        try {
+            let channel = client.channels.cache.get(discordConfig.textChannel);
+            if (!channel) channel = await client.channels.fetch(discordConfig.textChannel);
 
-            if (activeHeartbeat) {
-                const otherId = activeHeartbeat.content.split('TT_HEARTBEAT:')[1].split(' ')[0];
-                if (otherId !== sessionId) {
-                    isSoftLocked = true;
-                    otherInstanceSessionId = otherId;
-                    logToRenderer(`[Anti-Collision] Soft-lock active: Instance ${otherId} is already running.`);
-                }
-            }
+            if (channel && channel.isTextBased()) {
+                logToRenderer("[Anti-Collision] Probing for other instances...");
 
-            if (!isSoftLocked) {
-                // Start heartbeat
-                const sendHeartbeat = async () => {
-                    if (isShuttingDown) return;
+                // Helper to send and immediately delete a message
+                const sendEphemeral = async (content) => {
                     try {
-                        const content = `TT_HEARTBEAT:${sessionId} (Active instance)`;
-                        if (client.heartbeatMessage) {
-                            // Instead of editing, we send and then delete the old one to ensure it's "fresh"
-                            // and triggers a real-time message event if needed (though here we use history).
-                            // Actually the user said "it should never be there for long".
-                            // Sending a new one and deleting the old one is better for "never there for long".
-                            const oldMsg = client.heartbeatMessage;
-                            client.heartbeatMessage = await dmChannel.send(content);
-                            try { await oldMsg.delete(); } catch(e) {}
-                        } else {
-                            client.heartbeatMessage = await dmChannel.send(content);
-                        }
-                    } catch (e) {
-                        console.error("Heartbeat error:", e);
-                    }
+                        const m = await channel.send(content);
+                        setTimeout(() => m.delete().catch(() => {}), 500); // Delete very quickly
+                    } catch (e) {}
                 };
-                await sendHeartbeat();
-                client.heartbeatInterval = setInterval(sendHeartbeat, 60000);
+
+                // Listen for handshakes
+                client.on('messageCreate', async (m) => {
+                    if (m.author.id !== client.user.id) return;
+
+                    if (m.content.includes('TT_PROBE:')) {
+                        const otherId = m.content.split('TT_PROBE:')[1].split(' ')[0];
+                        if (otherId !== sessionId) {
+                            logToRenderer(`[Anti-Collision] Responding to probe from ${otherId}`);
+                            sendEphemeral(`TT_HEARTBEAT:${sessionId} (Responding to probe)`);
+                        }
+                    } else if (m.content.includes('TT_HEARTBEAT:')) {
+                        const otherId = m.content.split('TT_HEARTBEAT:')[1].split(' ')[0];
+                        if (otherId !== sessionId && !isSoftLocked) {
+                            isSoftLocked = true;
+                            otherInstanceSessionId = otherId;
+                            logToRenderer(`[Anti-Collision] Soft-lock active: Instance ${otherId} detected.`);
+                            broadcastBotStatus();
+                        }
+                    }
+                });
+
+                // Send initial probe
+                await sendEphemeral(`TT_PROBE:${sessionId} (Checking for other instances)`);
+
+                // Also maintain a periodic heartbeat that is immediately deleted
+                // This handles cases where instances start very close together or a probe is missed.
+                const heartLoop = async () => {
+                    if (isShuttingDown || isSoftLocked) return;
+                    sendEphemeral(`TT_HEARTBEAT:${sessionId} (Periodic check)`);
+                };
+                client.heartbeatInterval = setInterval(heartLoop, 60000);
             }
+        } catch (e) {
+            logToRenderer("[Anti-Collision] Error during probe: " + e.message);
         }
-    } catch (e) {
-        logToRenderer("[Anti-Collision] Error during DM check: " + e.message);
     }
 
     broadcastBotStatus();
-    updateDiscordMediaControl();
+    // updateDiscordMediaControl(); // MOVED DOWN
 
 
     logToRenderer(`Logged in as ${client.user.tag} (Session: ${sessionId})`);
@@ -1908,6 +1942,9 @@ client.once(Events.ClientReady, async () => {
         idToSongPathMap.set(id, filePath);
         return id;
     }
+
+    // Now call it once defined
+    updateDiscordMediaControl();
 
     async function updateDiscordMediaControl(disabled = false) {
         if (!discordConfig.textChannel) {
