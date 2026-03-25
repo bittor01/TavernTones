@@ -116,6 +116,8 @@
         <div class="panel-header">
           <h2>Soundboard</h2>
           <div class="panel-header-controls">
+            <button id="remove-row-btn" class="small-btn" title="Remove Row">🔽</button>
+            <button id="add-row-btn" class="small-btn" title="Add Row">🔼</button>
             <button id="save-preset-btn" class="small-btn" title="Save Preset">💾</button>
             <button id="load-preset-btn" class="small-btn" title="Load Preset">📂</button>
             <label for="soundboard-volume">Vol:</label>
@@ -175,6 +177,7 @@
     </form>
   </dialog>
 
+  <div id="library-notification" class="notification-toast"></div>
   <div id="global-tooltip"></div>
   <script src="renderer.js"></script>
 </body>

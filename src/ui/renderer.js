@@ -750,16 +750,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         showPanel(map[panelId] || panelId);
     });
 
+    function showNotification(message) {
+        const toast = document.getElementById('library-notification');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.style.display = 'block';
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 5000);
+    }
+
     window.electron.ipcRenderer.on('music-library-update', (event, { library, diff }) => {
         musicLibrary = library;
         renderMusicLibrary();
 
         if (diff) {
-            const msg = `Library Update: ${diff.added} songs added, ${diff.removed} songs removed.`;
+            let msg = "Library Update: ";
+            const parts = [];
+            if (diff.added > 0) parts.push(`${diff.added} songs added`);
+            if (diff.addedFolders > 0) parts.push(`${diff.addedFolders} folders added`);
+            if (diff.removed > 0) parts.push(`${diff.removed} songs removed`);
+            if (diff.removedFolders > 0) parts.push(`${diff.removedFolders} folders removed`);
+
+            msg += parts.join(", ") + ".";
             logMessage(msg);
+
             // Inform the user as requested
-            if (diff.added > 0 || diff.removed > 0) {
-                alert(msg);
+            if (parts.length > 0) {
+                showNotification(msg);
             }
         }
     });
@@ -1313,33 +1331,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     let soundboardState = [];
-    const SOUNDBOARD_SIZE = 48; // 6x8
-
-    // Load state from backend
+    let soundboardRowCount = 1; // Default to 1 row (3 slots)
+    const SLOTS_PER_ROW = 3;
 
     // Load state from backend
     window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
         let slotsToLoad = [];
         let volumeToLoad = 0.5; // Default slider value (which is ~0.75 effective volume)
+        let rowsToLoad = 1;
 
         if (savedState) {
             if (Array.isArray(savedState)) {
                 // Legacy format: just an array of slots
                 slotsToLoad = savedState;
+                rowsToLoad = Math.max(4, Math.ceil(slotsToLoad.length / SLOTS_PER_ROW));
             } else if (typeof savedState === 'object') {
-                // New format: { volume, slots }
+                // New format: { volume, slots, rows }
                 if (savedState.slots) slotsToLoad = savedState.slots;
                 if (savedState.volume !== undefined) volumeToLoad = savedState.volume;
+                if (savedState.rows !== undefined) rowsToLoad = savedState.rows;
             }
         }
 
-        // Apply Logic
-        if (slotsToLoad && slotsToLoad.length === SOUNDBOARD_SIZE) {
-            soundboardState = migrateSoundboardState(slotsToLoad);
-        } else {
-            // Initialize defaults
-            soundboardState = [];
-            for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
+        soundboardRowCount = rowsToLoad;
+        const totalSlotsNeeded = soundboardRowCount * SLOTS_PER_ROW;
+
+        // Initialize state
+        soundboardState = migrateSoundboardState(slotsToLoad);
+
+        // Pad or trim to match row count
+        if (soundboardState.length < totalSlotsNeeded) {
+            for (let i = soundboardState.length; i < totalSlotsNeeded; i++) {
                 soundboardState.push({
                     id: i,
                     tracks: [],
@@ -1350,6 +1372,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     isPlaying: false
                 });
             }
+        } else if (soundboardState.length > totalSlotsNeeded) {
+            soundboardState = soundboardState.slice(0, totalSlotsNeeded);
         }
 
         // Set Volume UI and Backend
@@ -1371,6 +1395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const volume = volumeEl ? parseFloat(volumeEl.value) : 0.5;
         const stateToSave = {
             volume: volume,
+            rows: soundboardRowCount,
             slots: soundboardState.map(slot => ({
                 ...slot,
                 isPlaying: false // Don't save playing state
@@ -1403,13 +1428,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadPresetBtn.addEventListener('click', () => {
             window.electron.ipcRenderer.invoke('load-soundboard-preset').then(result => {
                 if (result.success && result.state) {
-                    soundboardState = migrateSoundboardState(result.state);
+                    const loadedState = migrateSoundboardState(result.state);
+                    soundboardState = loadedState;
+                    soundboardRowCount = Math.max(1, Math.ceil(loadedState.length / SLOTS_PER_ROW));
                     saveSoundboardState();
                     renderSoundboard();
                 }
             });
         });
     }
+
+    document.getElementById('add-row-btn').addEventListener('click', () => {
+        soundboardRowCount++;
+        for (let i = 0; i < SLOTS_PER_ROW; i++) {
+            soundboardState.push({
+                id: soundboardState.length,
+                tracks: [],
+                currentTrackIndex: 0,
+                emoji: '🎨',
+                loop: 'none',
+                playMode: 'sequential',
+                isPlaying: false
+            });
+        }
+        saveSoundboardState();
+        renderSoundboard();
+    });
+
+    document.getElementById('remove-row-btn').addEventListener('click', () => {
+        if (soundboardRowCount > 1) {
+            soundboardRowCount--;
+            soundboardState = soundboardState.slice(0, soundboardRowCount * SLOTS_PER_ROW);
+            saveSoundboardState();
+            renderSoundboard();
+        }
+    });
 
     // --- Emoji Picker Logic ---
     const emojiDialog = document.getElementById('emoji-picker-dialog');

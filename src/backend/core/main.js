@@ -967,8 +967,8 @@ async function ipcloader() {
         broadcastBotStatus();
     });
 
-    ipcMain.handle('get-music-library', async () => {
-        const library = discordConfig.musicLibrary || { children: [] };
+    const getMusicLibrary = () => {
+        const library = JSON.parse(JSON.stringify(discordConfig.musicLibrary || { children: [] }));
         const looseFiles = discordConfig.looseFiles || [];
         if (looseFiles.length > 0) {
             let looseFolder = library.children.find(c => c.name === 'Loose Files');
@@ -983,6 +983,10 @@ async function ipcloader() {
             }));
         }
         return library;
+    };
+
+    ipcMain.handle('get-music-library', async () => {
+        return getMusicLibrary();
     });
 
     ipcMain.handle('rescan-music-library', async () => {
@@ -1042,7 +1046,7 @@ async function ipcloader() {
                     }
                 }
                 await setDiscordConfig(discordConfig);
-                const updatedLibrary = await ipcMain._itemHandlers['get-music-library']();
+                const updatedLibrary = getMusicLibrary();
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('music-library-update', { library: updatedLibrary, diff: null });
                 }
@@ -2334,24 +2338,31 @@ function scanMusicLibrary() {
             // --- Diff logic for modal ---
             const oldFiles = new Set();
             const newFiles = new Set();
+            const oldFolders = new Set();
+            const newFolders = new Set();
 
-            const collectFiles = (node, set) => {
-                if (node.type === 'file') set.add(node.path);
-                if (node.children) node.children.forEach(c => collectFiles(c, set));
+            const collectMetadata = (node, fileSet, folderSet) => {
+                if (node.type === 'file') fileSet.add(node.path);
+                else {
+                    folderSet.add(node.path);
+                    if (node.children) node.children.forEach(c => collectMetadata(c, fileSet, folderSet));
+                }
             };
 
-            collectFiles(oldLibrary, oldFiles);
-            collectFiles(newLibrary, newFiles);
+            collectMetadata(oldLibrary, oldFiles, oldFolders);
+            collectMetadata(newLibrary, newFiles, newFolders);
 
-            const added = [...newFiles].filter(f => !oldFiles.has(f));
-            const removed = [...oldFiles].filter(f => !newFiles.has(f));
+            const addedSongs = [...newFiles].filter(f => !oldFiles.has(f)).length;
+            const removedSongs = [...oldFiles].filter(f => !newFiles.has(f)).length;
+            const addedFolders = [...newFolders].filter(f => !oldFolders.has(f)).length;
+            const removedFolders = [...oldFolders].filter(f => !newFolders.has(f)).length;
 
-            if (added.length > 0 || removed.length > 0) {
-                logToRenderer(`[Library] Scan complete: ${added.length} added, ${removed.length} removed.`);
+            if (addedSongs > 0 || removedSongs > 0 || addedFolders > 0 || removedFolders > 0) {
+                logToRenderer(`[Library] Scan complete: ${addedSongs} songs, ${addedFolders} folders added; ${removedSongs} songs, ${removedFolders} folders removed.`);
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('music-library-update', {
                         library: newLibrary,
-                        diff: { added: added.length, removed: removed.length }
+                        diff: { added: addedSongs, removed: removedSongs, addedFolders, removedFolders }
                     });
                 }
             } else {

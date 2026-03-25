@@ -105,6 +105,14 @@ button:disabled {
 
 #music-controls-container {
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+#music-controls-container .panel-header,
+#music-controls-container .music-controls,
+#music-controls-container .progress-container {
+    flex-shrink: 0;
 }
 
 /* --- Middle Column --- */
@@ -639,6 +647,7 @@ input[type="number"] {
     /* Prevent it from shrinking */
     min-height: 140px;
     /* Ensure sufficient space for buttons and text */
+    height: fit-content;
 }
 
 #soundboard-grid {
@@ -650,8 +659,11 @@ input[type="number"] {
 }
 
 body.audio-only #soundboard-grid {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     align-content: start;
+    overflow-y: auto;
+    flex-grow: 1;
+    min-height: 0;
 }
 
 .resize-handle {
@@ -1098,63 +1110,119 @@ body.audio-only #music-stack-list {
 /* --- Audio Only Mode --- */
 body.audio-only .column-middle,
 body.audio-only #creature-entry-container,
-body.audio-only .column-right {
-    display: none;
+body.audio-only #combatant-wrapper {
+    display: none !important;
 }
 
 body.audio-only .main-grid {
-    grid-template-columns: 25% 75%;
+    grid-template-columns: 350px 1fr;
 }
 
 body.audio-only .column-left {
     grid-column: 1;
+    overflow: hidden;
+    width: 350px;
 }
 
-body.audio-only #log-wrapper {
-    flex-grow: 1;
-}
-
-/* Move player to top-right, soundboard below */
-body.audio-only .audio-only-right-column {
+body.audio-only .column-right {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-body.audio-only #music-controls-container {
-    order: -1;
-    display: flex !important; /* Force show if it was hidden or something */
-}
-
-body.audio-only #soundboard-container {
-    flex-grow: 1;
-    display: block !important;
-}
-
-body.audio-only #musicLibraryArea {
-    display: block !important;
-    height: 100%;
+    grid-column: 2;
+    overflow: hidden;
 }
 
 body.audio-only .audio-only-left-column #log-wrapper {
     height: 100%;
 }
 
-body.audio-only .audio-only-right-column > * {
-    display: none !important;
+body.audio-only .audio-only-left-column #musicLibraryArea {
+    height: 100%;
 }
 
+/* Audio Only Right Column Layout */
+body.audio-only .audio-only-right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Clear display:none for relevant children inside the right column */
 body.audio-only .audio-only-right-column #music-controls-container,
 body.audio-only .audio-only-right-column #soundboard-container {
     display: flex !important;
+    background-color: #252526;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 15px;
 }
 
-body.audio-only .audio-only-left-column .music-controls-container {
-    display: none !important;
+/* Music Player at the top, max 200px */
+body.audio-only .audio-only-right-column #music-controls-container {
+    height: 200px;
+    max-height: 200px;
+    flex-shrink: 0;
+    flex-direction: column;
+    overflow: hidden;
 }
 
-body.audio-only .audio-only-middle-column .soundboard-container {
-    display: none !important;
+body.audio-only .audio-only-right-column #music-stack-list {
+    flex-grow: 1;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+}
+
+/* Soundboard takes the rest */
+body.audio-only .audio-only-right-column #soundboard-container {
+    flex-grow: 1;
+    min-height: 0;
+    flex-direction: column;
+}
+
+body.audio-only .audio-only-right-column #soundboard-grid {
+    grid-template-columns: repeat(6, 1fr);
+    flex-grow: 1;
+    min-height: 0;
+    align-content: start; /* Prevents vertical stretching of buttons */
+    overflow-y: auto;
+}
+
+/* Compact tweaks */
+#music-stack-list {
+    background-color: #1e1e1e;
+    border-radius: 4px;
+}
+
+.music-stack-item {
+    padding: 2px 8px;
+    border-bottom: 1px solid #2d2d2d;
+}
+
+.tree-node-content {
+    padding: 1px 5px;
+}
+
+/* --- Notification Toasts --- */
+.notification-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: #333;
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+    display: none;
+    font-size: 0.9em;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
 /* --- Import Selection Dialog --- */
