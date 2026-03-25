@@ -855,8 +855,17 @@ input:disabled {
 }
 
 body.audio-only .soundboard-stack-slot {
-    padding: 4px;
-    gap: 4px;
+    padding: 2px;
+    gap: 2px;
+}
+
+body.audio-only .soundboard-stack-slot .stack-btn {
+    padding: 1px 0;
+    font-size: 0.8rem;
+}
+
+body.audio-only .soundboard-stack-slot .stack-emoji-btn {
+    font-size: 1rem;
 }
 
 .stack-header {
@@ -1154,7 +1163,7 @@ body.audio-only .audio-only-right-column #soundboard-container {
     background-color: #252526;
     border: 1px solid #333;
     border-radius: 8px;
-    padding: 15px;
+    padding: 8px; /* Tighter padding for audio mode */
 }
 
 /* Music Player at the top, max 200px */
@@ -1178,14 +1187,36 @@ body.audio-only .audio-only-right-column #soundboard-container {
     flex-grow: 1;
     min-height: 0;
     flex-direction: column;
+    padding-bottom: 5px;
+}
+
+body.audio-only #soundboard-container .panel-header {
+    margin-bottom: 5px;
+    padding-bottom: 4px;
 }
 
 body.audio-only .audio-only-right-column #soundboard-grid {
     grid-template-columns: repeat(6, 1fr);
+    gap: 2px; /* Even tighter gap */
     flex-grow: 1;
     min-height: 0;
     align-content: start; /* Prevents vertical stretching of buttons */
     overflow-y: auto;
+}
+
+body.audio-only .soundboard-stack-slot .stack-track-display {
+    padding: 1px 2px;
+    font-size: 0.75rem;
+    margin-top: 1px;
+}
+
+body.audio-only #soundboard-container .panel-header {
+    margin-bottom: 2px;
+    padding-bottom: 2px;
+}
+
+body.audio-only #soundboard-container .panel-header h2 {
+    font-size: 1rem;
 }
 
 /* Compact tweaks */
