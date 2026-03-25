@@ -86,9 +86,14 @@
                         <h2>Discord Bot</h2>
                         <span id="bot-status-indicator" class="status-indicator" title="Bot Status: Unknown">🟥</span>
                     </div>
-                    <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
-                        <input type="checkbox" id="enableDiscordBot" style="margin-right: 5px; width: auto;"> Enable
-                    </label>
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
+                            <input type="checkbox" id="enableDiscordBot" style="margin-right: 5px; width: auto;"> Enable Bot
+                        </label>
+                        <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
+                            <input type="checkbox" id="audioModeToggle" style="margin-right: 5px; width: auto;"> Audio-Only Layout
+                        </label>
+                    </div>
                 </div>
                 <div id="discord-fields">
                     <div class="form-group">
@@ -172,13 +177,6 @@
                 </div>
                 <button id="fetch-bestiary-btn" style="width: 100%;">Fetch/Update Bestiary</button>
 
-                <hr>
-                <h2>Application Mode</h2>
-                <div class="form-group">
-                    <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
-                        <input type="checkbox" id="audioModeToggle" style="margin-right: 5px; width: auto;"> Audio-Only Layout (Hides Initiative)
-                    </label>
-                </div>
             </div>
         </div>
 

@@ -386,6 +386,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.invoke('load-encounter-dialog');
                 break;
             case 'settings-button':
+            case 'settings-button-library':
                 window.electron.ipcRenderer.send('open-settings-window');
                 break;
             case 'next-turn-button':
@@ -643,6 +644,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     window.electron.ipcRenderer.on('discord-config', (event, config) => {
+        const settingsBtnLibrary = document.getElementById('settings-button-library');
         if (config.audioMode) {
             document.body.classList.add('audio-only');
             // Move containers to columns
@@ -653,6 +655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 rightCol.appendChild(musicControls);
                 rightCol.appendChild(soundboard);
             }
+            if (settingsBtnLibrary) settingsBtnLibrary.style.display = 'inline-block';
             showPanel('musicLibraryArea');
         } else {
             document.body.classList.remove('audio-only');
@@ -663,6 +666,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const soundboard = document.getElementById('soundboard-container');
             if (leftCol && musicControls) leftCol.appendChild(musicControls);
             if (midCol && soundboard) midCol.appendChild(soundboard);
+            if (settingsBtnLibrary) settingsBtnLibrary.style.display = 'none';
         }
     });
 
@@ -1225,7 +1229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     let soundboardState = [];
-    const SOUNDBOARD_SIZE = 3;
+    const SOUNDBOARD_SIZE = 6;
 
     // Load state from backend
 

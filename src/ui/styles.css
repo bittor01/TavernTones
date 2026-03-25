@@ -645,6 +645,7 @@ input[type="number"] {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
+    overflow-y: auto;
 }
 
 .soundboard-slot {
@@ -1057,7 +1058,7 @@ body.audio-only .column-right {
 }
 
 body.audio-only .main-grid {
-    grid-template-columns: 50% 50%;
+    grid-template-columns: 25% 75%;
 }
 
 body.audio-only .column-left {
