@@ -67,9 +67,65 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }, 100);
 
+    // --- Soundboard Resizing Logic ---
+    const resizeHandle = document.getElementById('soundboard-resize-handle');
+    const soundboardContainer = document.getElementById('soundboard-container');
+    const initiativeListContainer = document.getElementById('initiative-list-container');
+
+    if (resizeHandle && soundboardContainer && initiativeListContainer) {
+        let isResizing = false;
+
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'row-resize';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            const parent = initiativeListContainer.parentElement;
+            const containerRect = parent.getBoundingClientRect();
+            const mouseRelativeY = e.clientY - containerRect.top;
+
+            // Minimum heights for both panels
+            const minInitHeight = 100;
+            const minSoundboardHeight = 100;
+
+            let newInitHeight = mouseRelativeY;
+            let newSoundboardHeight = containerRect.height - mouseRelativeY;
+
+            if (newInitHeight < minInitHeight) {
+                newInitHeight = minInitHeight;
+                newSoundboardHeight = containerRect.height - minInitHeight;
+            }
+            if (newSoundboardHeight < minSoundboardHeight) {
+                newSoundboardHeight = minSoundboardHeight;
+                newInitHeight = containerRect.height - minSoundboardHeight;
+            }
+
+            initiativeListContainer.style.flex = `0 0 ${newInitHeight}px`;
+            soundboardContainer.style.flex = `0 0 ${newSoundboardHeight}px`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+            }
+        });
+    }
+
     // --- Initial UI Setup ---
     addCreatureForm.innerHTML = `
-        <h2>Add Combatant <button id="import-from-file-btn" class="small-btn" title="Import from File" style="font-size: 0.8em; padding: 2px 6px; margin-left: 10px;">⬇️</button></h2>
+        <div class="panel-header" style="margin-bottom: 5px;">
+            <h2 style="margin-bottom: 0; border-bottom: none;">Add Combatant</h2>
+            <div class="panel-header-controls">
+                <button type="button" id="import-from-file-btn" class="small-btn" title="Import from File">📁</button>
+                <button type="button" id="toggle-add-form-btn" class="small-btn" title="Toggle Form">➕</button>
+            </div>
+        </div>
+        <div id="add-creature-form-content" style="display: none;">
         <div class="form-row">
             <div class="form-group name-group">
                 <label for="creature-name">Combatant:</label>
@@ -123,6 +179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="submit" class="add-creature-button">Add Combatant</button>
             <button type="button" id="clear-form-btn">Clear</button>
         </div>
+        </div>
     `;
     // --- Mob Form Logic ---
     const convertToMobBtn = document.getElementById('convert-to-mob-btn');
@@ -168,6 +225,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Panel Switching Logic ---
     function showPanel(panelId, title) {
         const pushButton = document.getElementById('push-panel-btn');
+        const titleEl = document.getElementById('pane-mode-title');
         let foundPanel = false;
 
         logPanels.forEach((panel, index) => {
@@ -178,6 +236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentPanelIndex = index;
                 foundPanel = true;
                 if (modeBtn) modeBtn.classList.add('active');
+                if (titleEl) titleEl.textContent = title || panel.title;
             } else {
                 panelEl.style.display = 'none';
                 if (modeBtn) modeBtn.classList.remove('active');
@@ -306,6 +365,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Event Listeners ---
+    document.getElementById('toggle-add-form-btn').addEventListener('click', (e) => {
+        const content = document.getElementById('add-creature-form-content');
+        const btn = e.currentTarget;
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            btn.textContent = '➖';
+        } else {
+            content.style.display = 'none';
+            btn.textContent = '➕';
+        }
+    });
+
     document.addEventListener('click', (event) => {
         const target = event.target;
         const targetId = target.id;
@@ -386,7 +457,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.invoke('load-encounter-dialog');
                 break;
             case 'settings-button':
-            case 'settings-button-library':
+            case 'main-settings-btn':
                 window.electron.ipcRenderer.send('open-settings-window');
                 break;
             case 'next-turn-button':
@@ -644,7 +715,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     window.electron.ipcRenderer.on('discord-config', (event, config) => {
-        const settingsBtnLibrary = document.getElementById('settings-button-library');
         if (config.audioMode) {
             document.body.classList.add('audio-only');
             // Move containers to columns
@@ -655,7 +725,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 rightCol.appendChild(musicControls);
                 rightCol.appendChild(soundboard);
             }
-            if (settingsBtnLibrary) settingsBtnLibrary.style.display = 'inline-block';
             showPanel('musicLibraryArea');
         } else {
             document.body.classList.remove('audio-only');
@@ -666,7 +735,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const soundboard = document.getElementById('soundboard-container');
             if (leftCol && musicControls) leftCol.appendChild(musicControls);
             if (midCol && soundboard) midCol.appendChild(soundboard);
-            if (settingsBtnLibrary) settingsBtnLibrary.style.display = 'none';
         }
     });
 
@@ -999,6 +1067,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.electron.ipcRenderer.on('populate-edit-form', (event, creature) => {
         if (!creature) return;
 
+        // Auto-expand form
+        const content = document.getElementById('add-creature-form-content');
+        const btn = document.getElementById('toggle-add-form-btn');
+        if (content) content.style.display = 'block';
+        if (btn) btn.textContent = '➖';
+
         // --- Store the creature for submission ---
         creatureBeingEdited = creature;
         addCreatureForm.dataset.editingId = creature.id; // Store ID in dataset for robust state tracking
@@ -1061,6 +1135,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.electron.ipcRenderer.on('populate-add-form', (event, creature) => {
         if (!creature) return;
+
+        // Auto-expand form
+        const content = document.getElementById('add-creature-form-content');
+        const btn = document.getElementById('toggle-add-form-btn');
+        if (content) content.style.display = 'block';
+        if (btn) btn.textContent = '➖';
 
         // This is for "Copying" a creature. It populates the form but doesn't
         // put the form into "edit mode".
@@ -1229,7 +1309,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     let soundboardState = [];
-    const SOUNDBOARD_SIZE = 6;
+    const SOUNDBOARD_SIZE = 48; // 6x8
 
     // Load state from backend
 

@@ -2285,7 +2285,7 @@ function scanMusicLibrary() {
     const worker = new Worker(path.join(__dirname, 'MusicScannerWorker.js'), {
         workerData: {
             musicFolder: discordConfig.defaultMusicPath,
-            extensions: ['.mp3', '.wav', '.ogg']
+            extensions: ['.mp3', '.wav', '.ogg', '.lnk']
         }
     });
 

@@ -19,15 +19,19 @@
         </form>
       </div>
       <div id="log-wrapper" class="box">
-        <div class="panel-header">
-          <div class="panel-modes">
+        <div class="panel-header" style="flex-direction: column; align-items: stretch; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 id="pane-mode-title" style="margin: 0; border: none; padding: 0;">Log</h2>
+            <div class="panel-header-controls">
+              <button id="push-panel-btn" class="small-btn" title="Push to Chat" style="display: none;">🖨️</button>
+              <button id="main-settings-btn" class="small-btn" title="Settings">⚙️</button>
+            </div>
+          </div>
+          <div class="panel-modes" style="justify-content: space-around; border-top: 1px solid #333; padding-top: 5px;">
             <button id="mode-log" class="mode-btn active" title="Application Log">🪵</button>
             <button id="mode-dice" class="mode-btn" title="Dice Log">🎲</button>
             <button id="mode-stats" class="mode-btn" title="Stat Blocks">🪪</button>
             <button id="mode-library" class="mode-btn" title="Music Library">🎶</button>
-          </div>
-          <div class="panel-header-controls">
-            <button id="push-panel-btn" class="small-btn" title="Push to Chat" style="display: none;">🖨️</button>
           </div>
         </div>
         <div class="log-area" id="logArea"></div>
@@ -35,7 +39,6 @@
         <div class="log-area" id="statBlockArea" style="display: none;"></div>
         <div class="log-area" id="musicLibraryArea" style="display: none;">
           <div class="library-toolbar">
-            <button id="settings-button-library" class="small-btn" title="Settings" style="display: none;">⚙️</button>
             <button id="rescan-library-btn" class="small-btn" title="Rescan Music Folder">🔄</button>
             <button id="add-loose-btn" class="small-btn" title="Add Loose Files/Folders">➕</button>
             <div class="bulk-actions" style="margin-left: auto; display: flex; gap: 5px;">
@@ -109,6 +112,7 @@
           <!-- Simple initiative list will be rendered here -->
         </div>
       </div>
+      <div id="soundboard-resize-handle" class="resize-handle"></div>
       <div id="soundboard-container" class="box soundboard-container">
         <div class="panel-header">
           <h2>Soundboard</h2>
