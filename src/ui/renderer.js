@@ -6,11 +6,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     let combatantPanelOrder = []; // For custom sorting of the right-hand panel
     let currentTurnIndex = 0;
     const logPanels = [
-        { id: 'logArea', title: 'Log' },
-        { id: 'diceLog', title: 'Dice Log' },
-        { id: 'statBlockArea', title: 'Stat Block' }
+        { id: 'logArea', title: 'Log', mode: 'log' },
+        { id: 'diceLog', title: 'Dice Log', mode: 'dice' },
+        { id: 'statBlockArea', title: 'Stat Block', mode: 'stats' },
+        { id: 'musicLibraryArea', title: 'Music Library', mode: 'library' }
     ];
     let currentPanelIndex = 0; // Default to 'Log'
+    let musicLibrary = { children: [] };
+    let selectedLibraryPaths = new Set();
     let botStatus = { status: 'offline', message: 'Unknown' };
     let isBotEnabled = false;
     let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
@@ -57,6 +60,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Specifically request the initial load after a short delay to ensure the main process is ready.
     setTimeout(() => {
         window.electron.ipcRenderer.send('request-initial-load');
+        window.electron.ipcRenderer.send('get-discord-config');
+        window.electron.ipcRenderer.invoke('get-music-library').then(library => {
+            musicLibrary = library;
+            renderMusicLibrary();
+        });
     }, 100);
 
     // --- Initial UI Setup ---
@@ -159,19 +167,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Panel Switching Logic ---
     function showPanel(panelId, title) {
-        const logTitle = document.getElementById('log-title');
         const pushButton = document.getElementById('push-panel-btn');
         let foundPanel = false;
 
         logPanels.forEach((panel, index) => {
             const panelEl = document.getElementById(panel.id);
+            const modeBtn = document.getElementById(`mode-${panel.mode}`);
             if (panel.id === panelId) {
                 panelEl.style.display = 'block';
-                logTitle.textContent = title || panel.title;
                 currentPanelIndex = index;
                 foundPanel = true;
+                if (modeBtn) modeBtn.classList.add('active');
             } else {
                 panelEl.style.display = 'none';
+                if (modeBtn) modeBtn.classList.remove('active');
             }
         });
 
@@ -184,6 +193,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!foundPanel) showPanel('logArea', 'Log'); // Fallback
     }
+
+    // Mode button listeners
+    document.getElementById('mode-log').addEventListener('click', () => showPanel('logArea'));
+    document.getElementById('mode-dice').addEventListener('click', () => showPanel('diceLog'));
+    document.getElementById('mode-stats').addEventListener('click', () => {
+        if (document.getElementById('statBlockArea').innerHTML) {
+            showPanel('statBlockArea');
+        } else {
+            logMessage("No stat block currently loaded.");
+        }
+    });
+    document.getElementById('mode-library').addEventListener('click', () => showPanel('musicLibraryArea'));
 
     function displayStatBlock(rawDataString) {
         const statBlockArea = document.getElementById('statBlockArea');
@@ -377,18 +398,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('push-initiative');
                 break;
             case 'selectFileButton':
-                window.electron.ipcRenderer.invoke('open-file-dialog', { multi: true, folders: false }).then(filePaths => {
-                    if (filePaths && filePaths.length > 0) {
-                        window.electron.ipcRenderer.send('load-music-file', filePaths);
-                    }
-                });
+                showPanel('musicLibraryArea');
                 break;
             case 'selectFolderButton':
-                window.electron.ipcRenderer.invoke('open-file-dialog', { multi: true, folders: true }).then(filePaths => {
-                    if (filePaths && filePaths.length > 0) {
-                        window.electron.ipcRenderer.send('load-music-file', filePaths);
-                    }
-                });
+                showPanel('musicLibraryArea');
                 break;
             case 'playPauseButton':
                 if (!isBotEnabled) {
@@ -629,9 +642,230 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    window.electron.ipcRenderer.on('switch-panel', (event, panelId) => {
-        showPanel(panelId);
+    window.electron.ipcRenderer.on('discord-config', (event, config) => {
+        if (config.audioMode) {
+            document.body.classList.add('audio-only');
+            // Move containers to columns
+            const rightCol = document.querySelector('.audio-only-right-column');
+            const musicControls = document.getElementById('music-controls-container');
+            const soundboard = document.getElementById('soundboard-container');
+            if (rightCol && musicControls && soundboard) {
+                rightCol.appendChild(musicControls);
+                rightCol.appendChild(soundboard);
+            }
+            showPanel('musicLibraryArea');
+        } else {
+            document.body.classList.remove('audio-only');
+            // Move containers back
+            const leftCol = document.querySelector('.column-left');
+            const midCol = document.querySelector('.column-middle');
+            const musicControls = document.getElementById('music-controls-container');
+            const soundboard = document.getElementById('soundboard-container');
+            if (leftCol && musicControls) leftCol.appendChild(musicControls);
+            if (midCol && soundboard) midCol.appendChild(soundboard);
+        }
     });
+
+    window.electron.ipcRenderer.on('switch-panel', (event, panelId) => {
+        // Map old panel IDs to new ones if necessary
+        const map = {
+            'diceLog': 'diceLog',
+            'logArea': 'logArea',
+            'statBlockArea': 'statBlockArea',
+            'musicLibraryArea': 'musicLibraryArea'
+        };
+        showPanel(map[panelId] || panelId);
+    });
+
+    window.electron.ipcRenderer.on('music-library-update', (event, { library, diff }) => {
+        musicLibrary = library;
+        renderMusicLibrary();
+
+        if (diff) {
+            const msg = `Library updated: ${diff.added} songs added, ${diff.removed} songs removed.`;
+            logMessage(msg);
+            // Non-obtrusive notification could be a toast or just the log.
+            // The user suggested a modal or something unobtrusive.
+            // Using a simple alert for now if there's a significant change,
+            // but log is better.
+        }
+    });
+
+    function renderMusicLibrary() {
+        const container = document.getElementById('library-tree-container');
+        container.innerHTML = '';
+        if (musicLibrary && musicLibrary.children) {
+            container.appendChild(createTreeNode(musicLibrary, true));
+        }
+    }
+
+    function createTreeNode(node, isRoot = false) {
+        const div = document.createElement('div');
+        div.className = 'tree-node';
+        if (isRoot) div.style.marginLeft = '0';
+
+        const content = document.createElement('div');
+        content.className = 'tree-node-content';
+        if (selectedLibraryPaths.has(node.path)) content.classList.add('selected');
+
+        const toggle = document.createElement('span');
+        toggle.className = 'folder-toggle';
+        toggle.textContent = node.type === 'directory' ? '📁' : '📄';
+
+        const name = document.createElement('span');
+        name.className = 'node-name';
+        name.textContent = node.name;
+
+        content.appendChild(toggle);
+        content.appendChild(name);
+
+        // Actions
+        const actions = document.createElement('div');
+        actions.className = 'tree-node-actions';
+
+        const playNow = document.createElement('button');
+        playNow.className = 'small-btn';
+        playNow.innerHTML = '▶️';
+        playNow.title = 'Add to top and play';
+        playNow.onclick = (e) => {
+            e.stopPropagation();
+            const files = getAllFiles(node);
+            if (files.length > 0) {
+                // In Loop All, adding to top and playing means we put them at index 0 and jumpTo(0)
+                // Backend jumpTo in Loop All moves preceding to bottom.
+                // But here we want to INSERT at top.
+                // Let's use a new IPC or existing load-music-file.
+                // Actually, let's add a specialized "play-now-library" IPC.
+                window.electron.ipcRenderer.send('library-action', { action: 'play-now', paths: files });
+            }
+        };
+
+        const addTop = document.createElement('button');
+        addTop.className = 'small-btn';
+        addTop.innerHTML = '⬆️';
+        addTop.title = 'Add to top';
+        addTop.onclick = (e) => {
+            e.stopPropagation();
+            const files = getAllFiles(node);
+            window.electron.ipcRenderer.send('library-action', { action: 'add-top', paths: files });
+        };
+
+        const addBottom = document.createElement('button');
+        addBottom.className = 'small-btn';
+        addBottom.innerHTML = '⬇️';
+        addBottom.title = 'Add to bottom';
+        addBottom.onclick = (e) => {
+            e.stopPropagation();
+            const files = getAllFiles(node);
+            window.electron.ipcRenderer.send('library-action', { action: 'add-bottom', paths: files });
+        };
+
+        actions.appendChild(playNow);
+        actions.appendChild(addTop);
+        actions.appendChild(addBottom);
+        content.appendChild(actions);
+
+        div.appendChild(content);
+
+        if (node.type === 'directory' && node.children) {
+            const childrenContainer = document.createElement('div');
+            childrenContainer.className = 'node-children';
+            childrenContainer.style.display = 'none'; // Collapsed by default
+            node.children.forEach(child => {
+                childrenContainer.appendChild(createTreeNode(child));
+            });
+            div.appendChild(childrenContainer);
+
+            content.onclick = (e) => {
+                if (e.ctrlKey) {
+                    toggleSelection(node.path);
+                } else {
+                    childrenContainer.style.display = childrenContainer.style.display === 'none' ? 'block' : 'none';
+                    toggle.textContent = childrenContainer.style.display === 'none' ? '📁' : '📂';
+                }
+            };
+        } else {
+            content.onclick = (e) => {
+                if (e.ctrlKey) {
+                    toggleSelection(node.path);
+                } else {
+                    // Just select if single click?
+                    selectedLibraryPaths.clear();
+                    selectedLibraryPaths.add(node.path);
+                    renderMusicLibrary();
+                }
+            };
+        }
+
+        return div;
+    }
+
+    function toggleSelection(path) {
+        if (selectedLibraryPaths.has(path)) {
+            selectedLibraryPaths.delete(path);
+        } else {
+            selectedLibraryPaths.add(path);
+        }
+        renderMusicLibrary();
+    }
+
+    function getAllFiles(node) {
+        if (node.type === 'file') return [node.path];
+        let files = [];
+        if (node.children) {
+            node.children.forEach(c => {
+                files = files.concat(getAllFiles(c));
+            });
+        }
+        return files;
+    }
+
+    document.getElementById('rescan-library-btn').onclick = () => {
+        window.electron.ipcRenderer.invoke('rescan-music-library');
+    };
+
+    document.getElementById('add-loose-btn').onclick = () => {
+        window.electron.ipcRenderer.invoke('open-file-dialog', { multi: true, folders: true }).then(filePaths => {
+            if (filePaths && filePaths.length > 0) {
+                window.electron.ipcRenderer.send('library-action', { action: 'add-loose', paths: filePaths });
+            }
+        });
+    };
+
+    function getSelectedFiles() {
+        const files = new Set();
+        // Traverse the musicLibrary tree to find nodes whose path is in selectedLibraryPaths
+        const traverse = (node) => {
+            if (selectedLibraryPaths.has(node.path)) {
+                getAllFiles(node).forEach(f => files.add(f));
+            } else if (node.children) {
+                node.children.forEach(traverse);
+            }
+        };
+        traverse(musicLibrary);
+        return [...files];
+    }
+
+    document.getElementById('bulk-play-now').onclick = () => {
+        const files = getSelectedFiles();
+        if (files.length > 0) {
+            window.electron.ipcRenderer.send('library-action', { action: 'play-now', paths: files });
+        }
+    };
+
+    document.getElementById('bulk-add-top').onclick = () => {
+        const files = getSelectedFiles();
+        if (files.length > 0) {
+            window.electron.ipcRenderer.send('library-action', { action: 'add-top', paths: files });
+        }
+    };
+
+    document.getElementById('bulk-add-bottom').onclick = () => {
+        const files = getSelectedFiles();
+        if (files.length > 0) {
+            window.electron.ipcRenderer.send('library-action', { action: 'add-bottom', paths: files });
+        }
+    };
 
     let currentLoopMode = 1;
     let currentShuffleMode = false;

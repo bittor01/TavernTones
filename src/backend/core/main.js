@@ -7,12 +7,19 @@ protocol.registerSchemesAsPrivileged([
 
 const path = require('path');
 const { pathToFileURL } = require('url');
-const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder, Events } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder, Events, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const { joinVoiceChannel, entersState, VoiceConnectionStatus, getVoiceConnection } = require('@discordjs/voice');
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.DirectMessages] });
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.DirectMessages
+    ],
+    partials: [Partials.Channel, Partials.Message]
+});
 client.npcDropdownHandlers = new Map();
-    const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 console.log('Discord client instantiated.');
 const axios = require('axios');
 console.log('Axios loaded.');
@@ -26,6 +33,7 @@ const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 const GitHubSync = require('./GitHubSync.js');
+const { Worker } = require('worker_threads');
 
 let discordConfig;
 
@@ -223,6 +231,15 @@ async function apploader() {
         // Initialize components
         musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, discordConfig.ffmpegPath);
         setupFilesystemWatchers(discordConfig);
+
+        // --- Start Music Library Scan ---
+        if (discordConfig.defaultMusicPath) {
+            // Load from cache immediately for speed
+            if (discordConfig.musicLibrary) {
+                ipcMain.handleOnce('get-music-library-ready', () => true); // Signal that initial data is there
+            }
+            scanMusicLibrary();
+        }
         ipcloader(); // Load all IPC handlers BEFORE creating window
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
@@ -640,7 +657,10 @@ async function ipcloader() {
 
     // Settings window IPC
     ipcMain.on('get-discord-config', async (event) => {
-        event.sender.send('discord-config', await getDiscordConfig());
+        const config = await getDiscordConfig();
+        if (event.sender && !event.sender.isDestroyed()) {
+            event.sender.send('discord-config', config);
+        }
     });
 
     ipcMain.on('set-discord-config', async (event, config) => {
@@ -932,6 +952,72 @@ async function ipcloader() {
 
     ipcMain.on('request-bot-status', () => {
         broadcastBotStatus();
+    });
+
+    ipcMain.handle('get-music-library', async () => {
+        const library = discordConfig.musicLibrary || { children: [] };
+        const looseFiles = discordConfig.looseFiles || [];
+        if (looseFiles.length > 0) {
+            let looseFolder = library.children.find(c => c.name === 'Loose Files');
+            if (!looseFolder) {
+                looseFolder = { name: 'Loose Files', type: 'directory', children: [], path: 'loose' };
+                library.children.push(looseFolder);
+            }
+            looseFolder.children = looseFiles.map(p => ({
+                name: path.basename(p),
+                path: p,
+                type: 'file'
+            }));
+        }
+        return library;
+    });
+
+    ipcMain.handle('rescan-music-library', async () => {
+        scanMusicLibrary();
+        return { success: true };
+    });
+
+    ipcMain.on('library-action', async (event, { action, paths }) => {
+        if (!musicPlayer) return;
+
+        switch (action) {
+            case 'play-now':
+                // For 'play now' from library, we insert at the very top (index 0) and play.
+                // If loop mode 1 is on, BackendAudioPlayer.jumpTo will handle moving existing tracks to bottom if we jumped to a new top.
+                // But we need to actually add them first.
+                const currentStack = [...musicPlayer.stack];
+                musicPlayer.stack = [...paths, ...currentStack];
+                musicPlayer.currentIndex = 0;
+                musicPlayer.play();
+                break;
+            case 'add-top':
+                const stackAfterTop = [...musicPlayer.stack];
+                // Insert after the current track if playing, or at top if not?
+                // User said "add to top of list" ⬆️.
+                // Usually this means index 0.
+                musicPlayer.stack = [...paths, ...stackAfterTop];
+                if (musicPlayer.currentIndex !== -1) {
+                    musicPlayer.currentIndex += paths.length;
+                }
+                musicPlayer._emitStatusUpdate();
+                break;
+            case 'add-bottom':
+                musicPlayer.addToStack(paths);
+                break;
+            case 'add-loose':
+                if (!discordConfig.looseFiles) discordConfig.looseFiles = [];
+                for (const p of paths) {
+                    if (!discordConfig.looseFiles.includes(p)) {
+                        discordConfig.looseFiles.push(p);
+                    }
+                }
+                await setDiscordConfig(discordConfig);
+                const updatedLibrary = await ipcMain._itemHandlers['get-music-library']();
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('music-library-update', { library: updatedLibrary, diff: null });
+                }
+                break;
+        }
     });
 
     ipcMain.handle('read-combat-file', async () => {
@@ -1729,50 +1815,54 @@ client.once(Events.ClientReady, async () => {
         mainWindow.webContents.send('switch-panel', 'diceLog');
     }
 
-    // Robust collision detection using a heartbeat in the text channel
-    if (discordConfig.textChannel) {
-        const channel = client.channels.cache.get(discordConfig.textChannel);
-        if (channel) {
-            logToRenderer("[Anti-Collision] Checking for active instances...");
-            try {
-                const messages = await channel.messages.fetch({ limit: 50 });
-                const activeHeartbeat = messages.find(m =>
-                    m.author.id === client.user.id &&
-                    m.content.includes('TT_HEARTBEAT:') &&
-                    (Date.now() - m.createdTimestamp < 90000) // Less than 90s old
-                );
+    // Robust collision detection using a heartbeat in the bot's own DMs
+    try {
+        const dmChannel = await client.user.createDM();
+        if (dmChannel) {
+            logToRenderer("[Anti-Collision] Checking for active instances via DMs...");
+            const messages = await dmChannel.messages.fetch({ limit: 50 });
+            const activeHeartbeat = messages.find(m =>
+                m.author.id === client.user.id &&
+                m.content.includes('TT_HEARTBEAT:') &&
+                (Date.now() - m.createdTimestamp < 90000) // Less than 90s old
+            );
 
-                if (activeHeartbeat) {
-                    const otherId = activeHeartbeat.content.split('TT_HEARTBEAT:')[1].split(' ')[0];
-                    if (otherId !== sessionId) {
-                        isSoftLocked = true;
-                        otherInstanceSessionId = otherId;
-                        logToRenderer(`[Anti-Collision] Soft-lock active: Instance ${otherId} is already running.`);
-                    }
+            if (activeHeartbeat) {
+                const otherId = activeHeartbeat.content.split('TT_HEARTBEAT:')[1].split(' ')[0];
+                if (otherId !== sessionId) {
+                    isSoftLocked = true;
+                    otherInstanceSessionId = otherId;
+                    logToRenderer(`[Anti-Collision] Soft-lock active: Instance ${otherId} is already running.`);
                 }
+            }
 
-                if (!isSoftLocked) {
-                    // Start heartbeat
-                    const sendHeartbeat = async () => {
-                        if (isShuttingDown) return;
-                        try {
-                            const content = `TT_HEARTBEAT:${sessionId} (Active instance)`;
-                            if (client.heartbeatMessage) {
-                                await client.heartbeatMessage.edit(content);
-                            } else {
-                                client.heartbeatMessage = await channel.send(content);
-                            }
-                        } catch (e) {
-                            console.error("Heartbeat error:", e);
+            if (!isSoftLocked) {
+                // Start heartbeat
+                const sendHeartbeat = async () => {
+                    if (isShuttingDown) return;
+                    try {
+                        const content = `TT_HEARTBEAT:${sessionId} (Active instance)`;
+                        if (client.heartbeatMessage) {
+                            // Instead of editing, we send and then delete the old one to ensure it's "fresh"
+                            // and triggers a real-time message event if needed (though here we use history).
+                            // Actually the user said "it should never be there for long".
+                            // Sending a new one and deleting the old one is better for "never there for long".
+                            const oldMsg = client.heartbeatMessage;
+                            client.heartbeatMessage = await dmChannel.send(content);
+                            try { await oldMsg.delete(); } catch(e) {}
+                        } else {
+                            client.heartbeatMessage = await dmChannel.send(content);
                         }
-                    };
-                    await sendHeartbeat();
-                    client.heartbeatInterval = setInterval(sendHeartbeat, 60000);
-                }
-            } catch (e) {
-                logToRenderer("[Anti-Collision] Error during check: " + e.message);
+                    } catch (e) {
+                        console.error("Heartbeat error:", e);
+                    }
+                };
+                await sendHeartbeat();
+                client.heartbeatInterval = setInterval(sendHeartbeat, 60000);
             }
         }
+    } catch (e) {
+        logToRenderer("[Anti-Collision] Error during DM check: " + e.message);
     }
 
     broadcastBotStatus();
@@ -2183,4 +2273,66 @@ function getHpColor(current, max) {
     if (percentage >= 50) return '#28a745'; // Green
     if (percentage >= 25) return '#ffc107'; // Yellow
     return '#dc3545'; // Red (< 25%)
+}
+
+function scanMusicLibrary() {
+    if (!discordConfig.defaultMusicPath || !fs.existsSync(discordConfig.defaultMusicPath)) {
+        logToRenderer("[Library] No music folder configured or path invalid.");
+        return;
+    }
+
+    logToRenderer("[Library] Scanning music folder...");
+    const worker = new Worker(path.join(__dirname, 'MusicScannerWorker.js'), {
+        workerData: {
+            musicFolder: discordConfig.defaultMusicPath,
+            extensions: ['.mp3', '.wav', '.ogg']
+        }
+    });
+
+    worker.on('message', async (result) => {
+        if (result.success) {
+            const oldLibrary = discordConfig.musicLibrary || { children: [] };
+            const newLibrary = result.library;
+
+            // --- Diff logic for modal ---
+            const oldFiles = new Set();
+            const newFiles = new Set();
+
+            const collectFiles = (node, set) => {
+                if (node.type === 'file') set.add(node.path);
+                if (node.children) node.children.forEach(c => collectFiles(c, set));
+            };
+
+            collectFiles(oldLibrary, oldFiles);
+            collectFiles(newLibrary, newFiles);
+
+            const added = [...newFiles].filter(f => !oldFiles.has(f));
+            const removed = [...oldFiles].filter(f => !newFiles.has(f));
+
+            if (added.length > 0 || removed.length > 0) {
+                logToRenderer(`[Library] Scan complete: ${added.length} added, ${removed.length} removed.`);
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('music-library-update', {
+                        library: newLibrary,
+                        diff: { added: added.length, removed: removed.length }
+                    });
+                }
+            } else {
+                logToRenderer("[Library] Scan complete: No changes.");
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('music-library-update', { library: newLibrary, diff: null });
+                }
+            }
+
+            discordConfig.musicLibrary = newLibrary;
+            await setDiscordConfig(discordConfig);
+
+        } else {
+            logToRenderer(`[Library] Scan failed: ${result.error}`);
+        }
+    });
+
+    worker.on('error', (err) => {
+        logToRenderer(`[Library] Worker error: ${err.message}`);
+    });
 }

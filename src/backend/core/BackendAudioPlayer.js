@@ -392,7 +392,15 @@ class BackendAudioPlayer extends EventEmitter {
                 setTimeout(() => this._play(), 100);
             }
         } else {
-            this.next();
+            // When a song finishes, if Loop All is on, move it to the bottom
+            if (this.loopMode === 1 && this.currentIndex === 0) {
+                const finishedTrack = this.stack.shift();
+                this.stack.push(finishedTrack);
+                this.currentIndex = 0; // The next track is now at index 0
+                this._play();
+            } else {
+                this.next();
+            }
         }
     }
 
@@ -410,17 +418,35 @@ class BackendAudioPlayer extends EventEmitter {
             } while (this.playedIndices.includes(nextIndex) && this.stack.length > 1);
             this.currentIndex = nextIndex;
         } else {
-            this.currentIndex++;
-            if (this.currentIndex >= this.stack.length) {
-                if (this.loopMode === 1) { // Loop All
+            if (this.loopMode === 1) {
+                // If skipping/finishing the top track in Loop All, move it to the bottom
+                const finishedTrack = this.stack.shift();
+                this.stack.push(finishedTrack);
+                this.currentIndex = 0;
+            } else {
+                // If skipping/finishing the top track and NOT looping, remove it (roll off)
+                if (this.currentIndex === 0) {
+                    this.stack.shift();
+                    if (this.stack.length === 0) {
+                        this.currentIndex = -1;
+                        this.isPlaying = false;
+                        this.playerStatus = AudioPlayerStatus.Idle;
+                        this._stopMusicStream();
+                        this._emitStatusUpdate();
+                        return;
+                    }
                     this.currentIndex = 0;
                 } else {
-                    this.currentIndex = this.stack.length - 1;
-                    this.isPlaying = false;
-                    this.playerStatus = AudioPlayerStatus.Idle;
-                    this._stopMusicStream();
-                    this._emitStatusUpdate();
-                    return;
+                    // This handles cases where we might have manually set currentIndex > 0
+                    this.currentIndex++;
+                    if (this.currentIndex >= this.stack.length) {
+                        this.currentIndex = this.stack.length - 1;
+                        this.isPlaying = false;
+                        this.playerStatus = AudioPlayerStatus.Idle;
+                        this._stopMusicStream();
+                        this._emitStatusUpdate();
+                        return;
+                    }
                 }
             }
         }
@@ -429,7 +455,16 @@ class BackendAudioPlayer extends EventEmitter {
 
     jumpTo(index) {
         if (index >= 0 && index < this.stack.length) {
-            this.currentIndex = index;
+            if (this.loopMode === 1) {
+                // "Bumping off" tracks before the selected one to the bottom
+                const preceding = this.stack.splice(0, index);
+                this.stack.push(...preceding);
+                this.currentIndex = 0;
+            } else {
+                // If loop is off, remove tracks before the selected one (bumping off)
+                this.stack.splice(0, index);
+                this.currentIndex = 0;
+            }
             this._play();
         }
     }

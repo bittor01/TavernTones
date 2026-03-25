@@ -215,6 +215,32 @@ button:disabled {
     padding: 0;
 }
 
+.panel-modes {
+    display: flex;
+    gap: 5px;
+}
+
+.mode-btn {
+    background: none;
+    border: 1px solid transparent;
+    padding: 4px 8px;
+    font-size: 1.2em;
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: all 0.2s;
+}
+
+.mode-btn:hover {
+    background-color: #333;
+    opacity: 1;
+}
+
+.mode-btn.active {
+    background-color: #444;
+    border-color: #666;
+    opacity: 1;
+}
+
 .status-indicator {
     cursor: help;
     font-size: 1.1em;
@@ -866,6 +892,75 @@ input:disabled {
     margin-top: 4px;
 }
 
+/* --- Music Library Styles --- */
+.library-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #333;
+}
+
+#library-tree-container {
+    overflow-y: auto;
+    font-size: 0.9em;
+}
+
+.tree-node {
+    margin-left: 15px;
+}
+
+.tree-node-content {
+    display: flex;
+    align-items: center;
+    padding: 3px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    gap: 5px;
+    user-select: none;
+}
+
+.tree-node-content:hover {
+    background-color: #333;
+}
+
+.tree-node-content.selected {
+    background-color: #004d99;
+}
+
+.tree-node-content .node-name {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tree-node-actions {
+    display: none;
+    gap: 2px;
+}
+
+.tree-node-content:hover .tree-node-actions {
+    display: flex;
+}
+
+.tree-node-actions .small-btn {
+    font-size: 0.9em;
+    padding: 0 2px;
+    opacity: 0.7;
+}
+
+.tree-node-actions .small-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.folder-toggle {
+    width: 16px;
+    text-align: center;
+    font-family: monospace;
+}
+
 /* --- Music Stack Styles --- */
 .music-stack-item {
     display: flex;
@@ -952,6 +1047,68 @@ input:disabled {
     padding: 6px 2px;
     font-size: 0.85em;
     min-width: 0;
+}
+
+/* --- Audio Only Mode --- */
+body.audio-only .column-middle,
+body.audio-only #creature-entry-container,
+body.audio-only .column-right {
+    display: none;
+}
+
+body.audio-only .main-grid {
+    grid-template-columns: 50% 50%;
+}
+
+body.audio-only .column-left {
+    grid-column: 1;
+}
+
+body.audio-only #log-wrapper {
+    flex-grow: 1;
+}
+
+/* Move player to top-right, soundboard below */
+body.audio-only .audio-only-right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+body.audio-only #music-controls-container {
+    order: -1;
+    display: flex !important; /* Force show if it was hidden or something */
+}
+
+body.audio-only #soundboard-container {
+    flex-grow: 1;
+    display: block !important;
+}
+
+body.audio-only #musicLibraryArea {
+    display: block !important;
+    height: 100%;
+}
+
+body.audio-only .audio-only-left-column #log-wrapper {
+    height: 100%;
+}
+
+body.audio-only .audio-only-right-column > * {
+    display: none !important;
+}
+
+body.audio-only .audio-only-right-column #music-controls-container,
+body.audio-only .audio-only-right-column #soundboard-container {
+    display: block !important;
+}
+
+body.audio-only .audio-only-left-column .music-controls-container {
+    display: none !important;
+}
+
+body.audio-only .audio-only-middle-column .soundboard-container {
+    display: none !important;
 }
 
 /* --- Import Selection Dialog --- */

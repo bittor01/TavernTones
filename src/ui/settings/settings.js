@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const githubTokenInput = document.getElementById('githubToken');
     const randomTablesPathInput = document.getElementById('randomTablesPath');
     const defaultMusicPathInput = document.getElementById('defaultMusicPath');
+    const audioModeToggle = document.getElementById('audioModeToggle');
 
     // Buttons
     const browseFfmpegBtn = document.getElementById('browse-ffmpeg');
@@ -41,7 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
             gitRepoUrl: gitRepoUrlInput.value,
             githubToken: githubTokenInput.value,
             randomTablesPath: randomTablesPathInput.value,
-            defaultMusicPath: defaultMusicPathInput.value
+            defaultMusicPath: defaultMusicPathInput.value,
+            audioMode: audioModeToggle.checked
         };
 
         const isDirty = Object.keys(currentConfig).some(key => {
@@ -76,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     [tokenInput, voiceChannelInput, textChannelInput, botRoleIdInput, ffmpegPathInput, bestiaryPathInput, gitRepoUrlInput, githubTokenInput, randomTablesPathInput, defaultMusicPathInput].forEach(el => {
         el.addEventListener('input', checkDirty);
     });
+    audioModeToggle.addEventListener('change', checkDirty);
 
     // Function to handle browsing for a folder
     const handleBrowse = async (ipcChannel, inputElement) => {
@@ -213,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
             githubTokenInput.value = config.githubToken || '';
             randomTablesPathInput.value = config.randomTablesPath || '';
             defaultMusicPathInput.value = config.defaultMusicPath || '';
+            audioModeToggle.checked = !!config.audioMode;
 
             // Auto-detect FFmpeg if not set
             if (!config.ffmpegPath) {
@@ -246,7 +250,8 @@ document.addEventListener('DOMContentLoaded', () => {
             gitRepoUrl: gitRepoUrlInput.value,
             githubToken: githubTokenInput.value,
             randomTablesPath: randomTablesPathInput.value,
-            defaultMusicPath: defaultMusicPathInput.value
+            defaultMusicPath: defaultMusicPathInput.value,
+            audioMode: audioModeToggle.checked
         };
         window.settings.setDiscordConfig(newConfig);
         originalConfig = newConfig;
