@@ -1429,7 +1429,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (result.success && result.state) {
                     const loadedState = migrateSoundboardState(result.state);
                     soundboardState = loadedState;
-                    soundboardRowCount = Math.max(1, Math.ceil(loadedState.length / SLOTS_PER_ROW));
+                    soundboardRowCount = Math.max(1, Math.ceil(loadedState.length / NORMAL_SLOTS_PER_ROW));
                     saveSoundboardState();
                     renderSoundboard();
                 }
@@ -1439,7 +1439,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('add-row-btn').addEventListener('click', () => {
         soundboardRowCount++;
-        for (let i = 0; i < SLOTS_PER_ROW; i++) {
+        for (let i = 0; i < NORMAL_SLOTS_PER_ROW; i++) {
             soundboardState.push({
                 id: soundboardState.length,
                 tracks: [],
@@ -1457,7 +1457,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('remove-row-btn').addEventListener('click', () => {
         if (soundboardRowCount > 1) {
             soundboardRowCount--;
-            soundboardState = soundboardState.slice(0, soundboardRowCount * SLOTS_PER_ROW);
+            soundboardState = soundboardState.slice(0, soundboardRowCount * NORMAL_SLOTS_PER_ROW);
             saveSoundboardState();
             renderSoundboard();
         }
@@ -1609,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
             grid.appendChild(slotDiv);
-        });
+        }
 
         attachSoundboardListeners();
     }
