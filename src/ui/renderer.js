@@ -1288,7 +1288,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let soundboardRowCount = 1; // Resizable rows in Normal mode
     const NORMAL_SLOTS_PER_ROW = 3;
     const AUDIO_ONLY_COLS = 6;
-    const AUDIO_ONLY_ROWS = 12;
+    const AUDIO_ONLY_ROWS = 8;
     const AUDIO_ONLY_TOTAL_SLOTS = AUDIO_ONLY_COLS * AUDIO_ONLY_ROWS;
 
     // --- Load Soundboard State ---
@@ -1312,8 +1312,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         soundboardState = migrateSoundboardState(slotsToLoad);
 
         const normalTotal = soundboardRowCount * NORMAL_SLOTS_PER_ROW;
-        // Ensure we always have enough for the largest layout (72 slots)
-        const totalNeeded = 72;
+        // Ensure we always have enough for the largest layout (48 slots)
+        const totalNeeded = 48;
 
         if (soundboardState.length < totalNeeded) {
             for (let i = soundboardState.length; i < totalNeeded; i++) {
@@ -1383,7 +1383,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (result.success && result.state) {
                     const loadedState = migrateSoundboardState(result.state);
                     soundboardState = loadedState;
-                    soundboardRowCount = Math.max(1, Math.ceil(loadedState.length / NORMAL_SLOTS_PER_ROW));
+                    // Ensure we always have 48 slots
+                    for (let i = soundboardState.length; i < 48; i++) {
+                        soundboardState.push({
+                            id: i, tracks: [], currentTrackIndex: 0, emoji: '🎨', loop: 'none', playMode: 'sequential', isPlaying: false
+                        });
+                    }
+                    soundboardRowCount = Math.min(16, Math.max(1, Math.ceil(loadedState.length / NORMAL_SLOTS_PER_ROW)));
                     saveSoundboardState();
                     renderSoundboard();
                 }
@@ -1392,26 +1398,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     document.getElementById('add-row-btn').addEventListener('click', () => {
-        soundboardRowCount++;
-        for (let i = 0; i < NORMAL_SLOTS_PER_ROW; i++) {
-            soundboardState.push({
-                id: soundboardState.length,
-                tracks: [],
-                currentTrackIndex: 0,
-                emoji: '🎨',
-                loop: 'none',
-                playMode: 'sequential',
-                isPlaying: false
-            });
+        const MAX_ROWS = 48 / NORMAL_SLOTS_PER_ROW;
+        if (soundboardRowCount < MAX_ROWS) {
+            soundboardRowCount++;
+            saveSoundboardState();
+            renderSoundboard();
         }
-        saveSoundboardState();
-        renderSoundboard();
     });
 
     document.getElementById('remove-row-btn').addEventListener('click', () => {
         if (soundboardRowCount > 1) {
             soundboardRowCount--;
-            soundboardState = soundboardState.slice(0, soundboardRowCount * NORMAL_SLOTS_PER_ROW);
             saveSoundboardState();
             renderSoundboard();
         }
@@ -1563,7 +1560,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isAudioOnly = document.body.classList.contains('audio-only');
         const rows = isAudioOnly ? AUDIO_ONLY_ROWS : soundboardRowCount;
         const cols = isAudioOnly ? AUDIO_ONLY_COLS : NORMAL_SLOTS_PER_ROW;
-        const totalSlotsToRender = rows * cols;
+        const totalSlotsToRender = isAudioOnly ? AUDIO_ONLY_TOTAL_SLOTS : (soundboardRowCount * NORMAL_SLOTS_PER_ROW);
 
         grid.style.setProperty('--sb-rows', rows);
         grid.style.setProperty('--sb-cols', cols);
