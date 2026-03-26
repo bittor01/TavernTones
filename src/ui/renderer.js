@@ -1311,8 +1311,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         soundboardRowCount = rowsToLoad;
         soundboardState = migrateSoundboardState(slotsToLoad);
 
-        const normalTotal = soundboardRowCount * NORMAL_SLOTS_PER_ROW;
-        // Ensure we always have enough for the largest layout (48 slots)
+        // Ensure we always have enough for the largest layout (48 slots for 8 rows of 6)
         const totalNeeded = 48;
 
         if (soundboardState.length < totalNeeded) {
@@ -1553,7 +1552,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderSoundboard() {
-        updateSoundboardContainerHeight();
         const grid = document.getElementById('soundboard-grid');
         grid.innerHTML = '';
 
@@ -1613,6 +1611,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         attachSoundboardListeners();
+        updateSoundboardContainerHeight();
     }
 
     function attachSoundboardListeners() {

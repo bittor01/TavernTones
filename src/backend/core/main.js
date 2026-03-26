@@ -45,9 +45,7 @@ let initiativeTracker;
 let fiveEToolsParser;
 
 // Anti-collision state
-let sessionId = Math.random().toString(36).substring(7);
 let isSoftLocked = false;
-let otherInstanceSessionId = null;
 
 // Local Instance Lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -1674,7 +1672,7 @@ function initializeDiscordBot() {
 
 function broadcastBotStatus() {
     const status = client.isReady() ? (isSoftLocked ? 'soft-locked' : 'online') : 'offline';
-    const message = isSoftLocked ? `Busy (ID: ${otherInstanceSessionId})` : (client.isReady() ? 'Connected' : (discordConfig.token ? 'Connecting...' : 'Not Configured'));
+    const message = isSoftLocked ? 'Busy (Occupied)' : (client.isReady() ? 'Connected' : (discordConfig.token ? 'Connecting...' : 'Not Configured'));
 
     const payload = {
         status,
@@ -1698,11 +1696,6 @@ const shutdown = async () => {
     try {
         console.log('Cleaning up and exiting.');
 
-        // Cleanup heartbeat
-        if (client.heartbeatInterval) clearInterval(client.heartbeatInterval);
-        if (client.heartbeatMessage) {
-            try { await client.heartbeatMessage.delete().catch(() => {}); } catch(e) {}
-        }
 
         // Delete media control message gracefully
         if (client && client.lastMediaMessage) {
@@ -1765,10 +1758,8 @@ app.on('window-all-closed', () => {
 });
 
 async function joinVoiceChannelAction() {
-    if (isSoftLocked) {
-        logToRenderer("Join cancelled: Bot is soft-locked by another instance.");
-        return;
-    }
+    // Reset soft-lock on every manual/auto attempt to allow retrying
+    isSoftLocked = false;
 
     const voiceChannelId = discordConfig.voiceChannel;
     if (voiceChannelId && discordConfig.textChannel) {
@@ -1877,27 +1868,18 @@ function leaveVoiceChannelAction() {
 client.once(Events.ClientReady, async () => {
     logToRenderer('TavernTones is online!');
 
-    // Robust collision detection using a probe/response handshake
+    // Robust collision detection for Voice Channels using a "Knock" protocol
     if (discordConfig.textChannel) {
         try {
             let channel = client.channels.cache.get(discordConfig.textChannel);
             if (!channel) channel = await client.channels.fetch(discordConfig.textChannel);
 
             if (channel && channel.isTextBased()) {
-                logToRenderer("[Anti-Collision] Probing for other instances...");
-
-                // Helper to send and immediately delete a message
-                const sendEphemeral = async (content) => {
-                    try {
-                        const m = await channel.send(content);
-                        setTimeout(() => m.delete().catch(() => {}), 500); // Delete very quickly
-                    } catch (e) {}
-                };
-
-                // Listen for handshakes
+                // Listen for knocks from other instances
                 client.on('messageCreate', async (m) => {
                     if (m.author.id !== client.user.id) return;
 
+                    // Response to a "knock" if we are currently in that voice channel
                     if (m.content.includes('TT_KNOCK:')) {
                         const targetId = m.content.split('TT_KNOCK:')[1].split('~')[0];
                         const me = m.guild.members.me;
@@ -1907,37 +1889,10 @@ client.once(Events.ClientReady, async () => {
                             setTimeout(() => occMsg.delete().catch(() => {}), 500);
                         }
                     }
-
-                    if (m.content.includes('TT_PROBE:')) {
-                        const otherId = m.content.split('TT_PROBE:')[1].split(' ')[0];
-                        if (otherId !== sessionId) {
-                            logToRenderer(`[Anti-Collision] Responding to probe from ${otherId}`);
-                            sendEphemeral(`TT_HEARTBEAT:${sessionId} (Responding to probe)`);
-                        }
-                    } else if (m.content.includes('TT_HEARTBEAT:')) {
-                        const otherId = m.content.split('TT_HEARTBEAT:')[1].split(' ')[0];
-                        if (otherId !== sessionId && !isSoftLocked) {
-                            isSoftLocked = true;
-                            otherInstanceSessionId = otherId;
-                            logToRenderer(`[Anti-Collision] Soft-lock active: Instance ${otherId} detected.`);
-                            broadcastBotStatus();
-                        }
-                    }
                 });
-
-                // Send initial probe
-                await sendEphemeral(`TT_PROBE:${sessionId} (Checking for other instances)`);
-
-                // Also maintain a periodic heartbeat that is immediately deleted
-                // This handles cases where instances start very close together or a probe is missed.
-                const heartLoop = async () => {
-                    if (isShuttingDown || isSoftLocked) return;
-                    sendEphemeral(`TT_HEARTBEAT:${sessionId} (Periodic check)`);
-                };
-                client.heartbeatInterval = setInterval(heartLoop, 60000);
             }
         } catch (e) {
-            logToRenderer("[Anti-Collision] Error during probe: " + e.message);
+            logToRenderer("[Anti-Collision] Error setting up listener: " + e.message);
         }
     }
 
@@ -1945,7 +1900,7 @@ client.once(Events.ClientReady, async () => {
     // updateDiscordMediaControl(); // MOVED DOWN
 
 
-    logToRenderer(`Logged in as ${client.user.tag} (Session: ${sessionId})`);
+    logToRenderer(`Logged in as ${client.user.tag}`);
 
     client.on('messageCreate', async message => {
         if (client.commandHandler) client.commandHandler.handleMessage(message);
