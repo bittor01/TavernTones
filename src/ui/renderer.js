@@ -72,54 +72,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 100);
     }
 
-    // --- Soundboard Resizing Logic ---
-    const resizeHandle = document.getElementById('soundboard-resize-handle');
-    const soundboardContainer = document.getElementById('soundboard-container');
-    const initiativeListContainer = document.getElementById('initiative-list-container');
-
-    if (resizeHandle && soundboardContainer && initiativeListContainer) {
-        let isResizing = false;
-
-        resizeHandle.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            document.body.style.cursor = 'row-resize';
-            e.preventDefault();
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-
-            const parent = initiativeListContainer.parentElement;
-            const containerRect = parent.getBoundingClientRect();
-            const mouseRelativeY = e.clientY - containerRect.top;
-
-            // Minimum heights for both panels
-            const minInitHeight = 100;
-            const minSoundboardHeight = 100;
-
-            let newInitHeight = mouseRelativeY;
-            let newSoundboardHeight = containerRect.height - mouseRelativeY;
-
-            if (newInitHeight < minInitHeight) {
-                newInitHeight = minInitHeight;
-                newSoundboardHeight = containerRect.height - minInitHeight;
-            }
-            if (newSoundboardHeight < minSoundboardHeight) {
-                newSoundboardHeight = minSoundboardHeight;
-                newInitHeight = containerRect.height - minSoundboardHeight;
-            }
-
-            initiativeListContainer.style.flex = `0 0 ${newInitHeight}px`;
-            soundboardContainer.style.flex = `0 0 ${newSoundboardHeight}px`;
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isResizing) {
-                isResizing = false;
-                document.body.style.cursor = 'default';
-            }
-        });
-    }
 
     // --- Initial UI Setup ---
     addCreatureForm.innerHTML = `
@@ -1360,7 +1312,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         soundboardState = migrateSoundboardState(slotsToLoad);
 
         const normalTotal = soundboardRowCount * NORMAL_SLOTS_PER_ROW;
-        const totalNeeded = Math.max(normalTotal, AUDIO_ONLY_TOTAL_SLOTS);
+        // Ensure we always have enough for the largest layout (72 slots)
+        const totalNeeded = 72;
 
         if (soundboardState.length < totalNeeded) {
             for (let i = soundboardState.length; i < totalNeeded; i++) {
@@ -1564,23 +1517,42 @@ document.addEventListener('DOMContentLoaded', async () => {
             soundboardContainer.style.height = '';
             return;
         }
-        const rowHeight = 110;
-        const headerAndPadding = 60;
-        const newHeight = (soundboardRowCount * rowHeight) + headerAndPadding;
 
-        // Respect parent height constraints
-        const parent = soundboardContainer.parentElement;
-        if (parent) {
-            const parentHeight = parent.getBoundingClientRect().height;
-            if (newHeight > parentHeight * 0.8) {
-                soundboardContainer.style.flex = `1 1 auto`;
-                soundboardContainer.style.height = ``;
-                return;
+        const grid = document.getElementById('soundboard-grid');
+        const header = soundboardContainer.querySelector('.panel-header');
+
+        if (grid && grid.firstElementChild) {
+            const slotHeight = grid.firstElementChild.getBoundingClientRect().height;
+            const style = window.getComputedStyle(grid);
+            const gap = parseInt(style.gap) || 5;
+            const containerStyle = window.getComputedStyle(soundboardContainer);
+            const padding = (parseInt(containerStyle.paddingTop) || 0) + (parseInt(containerStyle.paddingBottom) || 0);
+            const headerHeight = header ? header.getBoundingClientRect().height : 0;
+            const headerMargin = header ? (parseInt(window.getComputedStyle(header).marginBottom) || 0) : 0;
+
+            const newHeight = (soundboardRowCount * slotHeight) + ((soundboardRowCount - 1) * gap) + padding + headerHeight + headerMargin + 4;
+
+            // Respect parent height constraints
+            const parent = soundboardContainer.parentElement;
+            if (parent) {
+                const parentHeight = parent.getBoundingClientRect().height;
+                if (newHeight > parentHeight * 0.8) {
+                    soundboardContainer.style.flex = `1 1 auto`;
+                    soundboardContainer.style.height = ``;
+                    return;
+                }
             }
-        }
 
-        soundboardContainer.style.flex = `0 0 ${newHeight}px`;
-        soundboardContainer.style.height = `${newHeight}px`;
+            soundboardContainer.style.flex = `0 0 ${newHeight}px`;
+            soundboardContainer.style.height = `${newHeight}px`;
+        } else {
+            // Fallback if not rendered yet
+            const rowHeight = 110;
+            const headerAndPadding = 60;
+            const newHeight = (soundboardRowCount * rowHeight) + headerAndPadding;
+            soundboardContainer.style.flex = `0 0 ${newHeight}px`;
+            soundboardContainer.style.height = `${newHeight}px`;
+        }
     }
 
     function renderSoundboard() {
