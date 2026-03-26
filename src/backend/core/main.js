@@ -1835,9 +1835,6 @@ async function joinVoiceChannelAction() {
                 broadcastBotStatus();
                 logToRenderer('The bot has connected to the channel!');
                 musicPlayer.setConnection(connection);
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.send('switch-panel', 'diceLog');
-                }
             });
 
             connection.on(VoiceConnectionStatus.Disconnected, async () => {
@@ -1879,9 +1876,6 @@ function leaveVoiceChannelAction() {
 
 client.once(Events.ClientReady, async () => {
     logToRenderer('TavernTones is online!');
-    if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('switch-panel', 'diceLog');
-    }
 
     // Robust collision detection using a probe/response handshake
     if (discordConfig.textChannel) {
@@ -2057,7 +2051,7 @@ client.once(Events.ClientReady, async () => {
                 { name: 'Shuffle', value: status.shuffleMode ? '🔀 On' : '🔀 Off', inline: true },
                 { name: 'Track', value: status.currentTrack ? path.basename(status.currentTrack) : 'None' },
                 { name: 'Progress', value: `${createProgressString(status.currentTime, status.duration)} \`[${formatTime(status.currentTime)} / ${formatTime(status.duration)}]\`` },
-                { name: 'Playlist', value: `${status.currentIndex + 1} / ${status.stackSize}` }
+                { name: 'Playlist', value: `${status.stackSize} tracks` }
             )
             .setTimestamp();
 

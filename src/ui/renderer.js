@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         { id: 'statBlockArea', title: 'Stat Block', mode: 'stats' },
         { id: 'musicLibraryArea', title: 'Music Library', mode: 'library' }
     ];
-    let currentPanelIndex = 0; // Default to 'Log'
+    let currentPanelIndex = 3; // Default to 'Music Library'
     let musicLibrary = { children: [] };
     let selectedLibraryPaths = new Set();
     let botStatus = { status: 'offline', message: 'Unknown' };
@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 musicLibrary = library;
                 renderMusicLibrary();
             });
+            showPanel('musicLibraryArea');
         }, 100);
     }
 
@@ -1566,9 +1567,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         const rowHeight = 110;
         const headerAndPadding = 60;
         const newHeight = (soundboardRowCount * rowHeight) + headerAndPadding;
+
+        // Respect parent height constraints
+        const parent = soundboardContainer.parentElement;
+        if (parent) {
+            const parentHeight = parent.getBoundingClientRect().height;
+            if (newHeight > parentHeight * 0.8) {
+                soundboardContainer.style.flex = `1 1 auto`;
+                soundboardContainer.style.height = ``;
+                return;
+            }
+        }
+
         soundboardContainer.style.flex = `0 0 ${newHeight}px`;
         soundboardContainer.style.height = `${newHeight}px`;
-        console.log(`[UI] Updated soundboard height to ${newHeight}px (Rows: ${soundboardRowCount})`);
     }
 
     function renderSoundboard() {
@@ -1613,6 +1625,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
 
+            const currentTrackName = slot.tracks[slot.currentTrackIndex]?.name || (trackCount > 0 ? '---' : 'Empty');
             slotDiv.innerHTML = `
                 <div class="stack-header">
                     <button class="stack-emoji-btn" data-id="${slot.id}" title="Edit Emoji">${slot.emoji}</button>
@@ -1625,6 +1638,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button class="stack-btn stack-loop-btn ${loopClass}" data-id="${slot.id}" title="Toggle Loop (Stack)">${loopIcon}</button>
                     <button class="stack-btn stack-shuffle-btn ${shuffleClass}" data-id="${slot.id}" title="Toggle Shuffle">${shuffleIcon}</button>
                 </div>
+                <div class="stack-track-display" title="${currentTrackName}">${currentTrackName}</div>
             `;
             grid.appendChild(slotDiv);
         }
