@@ -887,6 +887,8 @@ async function ipcloader() {
 
     ipcMain.on('jump-to-track', async (event, { index }) => {
         if (musicPlayer) {
+            // Ensure the new track starts from the beginning
+            musicPlayer.stop();
             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
             musicPlayer.jumpTo(index);
         }
@@ -1015,9 +1017,10 @@ async function ipcloader() {
 
         switch (action) {
             case 'play-now':
+                // Ensure the new track starts from the beginning
+                musicPlayer.stop();
+
                 // For 'play now' from library, we insert at the very top (index 0) and play.
-                // If loop mode 1 is on, BackendAudioPlayer.jumpTo will handle moving existing tracks to bottom if we jumped to a new top.
-                // But we need to actually add them first.
                 const currentStack = [...musicPlayer.stack];
                 musicPlayer.stack = [...resolvedPaths, ...currentStack];
                 musicPlayer.currentIndex = 0;
@@ -1025,13 +1028,12 @@ async function ipcloader() {
                 musicPlayer.play();
                 break;
             case 'add-top':
-                const stackAfterTop = [...musicPlayer.stack];
-                // Insert after the current track if playing, or at top if not?
-                // User said "add to top of list" ⬆️.
-                // Usually this means index 0.
-                musicPlayer.stack = [...resolvedPaths, ...stackAfterTop];
-                if (musicPlayer.currentIndex !== -1) {
-                    musicPlayer.currentIndex += resolvedPaths.length;
+                if (musicPlayer.currentIndex === -1) {
+                    // Nothing playing, add to the very top
+                    musicPlayer.stack = [...resolvedPaths, ...musicPlayer.stack];
+                } else {
+                    // Add below the currently playing track
+                    musicPlayer.stack.splice(musicPlayer.currentIndex + 1, 0, ...resolvedPaths);
                 }
                 musicPlayer._emitStatusUpdate();
                 break;
@@ -1758,6 +1760,16 @@ app.on('window-all-closed', () => {
 });
 
 async function joinVoiceChannelAction() {
+    // If we have an active connection in any non-terminal state, skip knocking
+    const isActive = connection && (
+        connection.state.status !== VoiceConnectionStatus.Disconnected &&
+        connection.state.status !== VoiceConnectionStatus.Destroyed
+    );
+    if (isActive) {
+        logToRenderer(`[Anti-Collision] Active connection exists (${connection.state.status}). Skipping knock.`);
+        return;
+    }
+
     // Reset soft-lock on every manual/auto attempt to allow retrying
     isSoftLocked = false;
 
@@ -1798,15 +1810,6 @@ async function joinVoiceChannelAction() {
         try {
             voiceStatus = 'connecting';
             broadcastBotStatus();
-
-            // Final check: Is anyone else in voice?
-            const me = voiceChannel.guild.members.me;
-            if (me && me.voice.channelId) {
-                logToRenderer(`[Anti-Collision] Bot is already in voice channel ${me.voice.channelId}. Entering soft-lock.`);
-                isSoftLocked = true;
-                broadcastBotStatus();
-                return;
-            }
 
             const existingConnection = getVoiceConnection(voiceChannel.guild.id);
             if (existingConnection) {
@@ -1880,10 +1883,17 @@ client.once(Events.ClientReady, async () => {
                     if (m.author.id !== client.user.id) return;
 
                     // Response to a "knock" if we are currently in that voice channel
+                    // AND we have an active connection (we don't respond if we are just a ghost/zombie)
                     if (m.content.includes('TT_KNOCK:')) {
                         const targetId = m.content.split('TT_KNOCK:')[1].split('~')[0];
                         const me = m.guild.members.me;
-                        if (me && me.voice.channelId === targetId) {
+                        const isActivelyConnected = connection && (
+                            connection.state.status === VoiceConnectionStatus.Ready ||
+                            connection.state.status === VoiceConnectionStatus.Connecting ||
+                            connection.state.status === VoiceConnectionStatus.Signalling
+                        );
+
+                        if (me && me.voice.channelId === targetId && isActivelyConnected) {
                             logToRenderer(`[Anti-Collision] Responding to knock for channel ${targetId}`);
                             const occMsg = await m.channel.send(`||~~TT_OCCUPIED:${targetId}~~||`);
                             setTimeout(() => occMsg.delete().catch(() => {}), 500);

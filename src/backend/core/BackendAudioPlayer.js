@@ -168,9 +168,12 @@ class BackendAudioPlayer extends EventEmitter {
 
     clearStack() {
         this._stopMusicStream();
+        this._stopTimer();
         this.stack = [];
         this.currentIndex = -1;
         this.isPlaying = false;
+        this.currentTime = 0;
+        this.duration = 0;
         this.cachedAudio.clear();
         this._emitStatusUpdate();
     }
@@ -501,7 +504,11 @@ class BackendAudioPlayer extends EventEmitter {
 
     stop() {
         this._stopMusicStream();
+        this._stopTimer();
         this.isPlaying = false;
+        this.currentIndex = -1;
+        this.currentTime = 0;
+        this.duration = 0;
         this.playerStatus = AudioPlayerStatus.Idle;
         this._emitStatusUpdate();
     }

@@ -1288,7 +1288,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let soundboardRowCount = 1; // Resizable rows in Normal mode
     const NORMAL_SLOTS_PER_ROW = 3;
     const AUDIO_ONLY_COLS = 6;
-    const AUDIO_ONLY_ROWS = 8;
+    const AUDIO_ONLY_ROWS = 12;
     const AUDIO_ONLY_TOTAL_SLOTS = AUDIO_ONLY_COLS * AUDIO_ONLY_ROWS;
 
     // --- Load Soundboard State ---
@@ -1311,8 +1311,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         soundboardRowCount = rowsToLoad;
         soundboardState = migrateSoundboardState(slotsToLoad);
 
-        // Ensure we always have enough for the largest layout (48 slots for 8 rows of 6)
-        const totalNeeded = 48;
+        // Ensure we always have enough for the largest layout (72 slots for 12 rows of 6)
+        const totalNeeded = 72;
 
         if (soundboardState.length < totalNeeded) {
             for (let i = soundboardState.length; i < totalNeeded; i++) {
@@ -1382,8 +1382,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (result.success && result.state) {
                     const loadedState = migrateSoundboardState(result.state);
                     soundboardState = loadedState;
-                    // Ensure we always have 48 slots
-                    for (let i = soundboardState.length; i < 48; i++) {
+                    // Ensure we always have enough for the largest layout (72 slots for 12 rows of 6)
+                    const totalNeeded = 72;
+                    for (let i = soundboardState.length; i < totalNeeded; i++) {
                         soundboardState.push({
                             id: i, tracks: [], currentTrackIndex: 0, emoji: '🎨', loop: 'none', playMode: 'sequential', isPlaying: false
                         });
@@ -1397,7 +1398,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     document.getElementById('add-row-btn').addEventListener('click', () => {
-        const MAX_ROWS = 48 / NORMAL_SLOTS_PER_ROW;
+        const MAX_ROWS = 72 / NORMAL_SLOTS_PER_ROW;
         if (soundboardRowCount < MAX_ROWS) {
             soundboardRowCount++;
             saveSoundboardState();
