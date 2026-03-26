@@ -1768,7 +1768,47 @@ async function joinVoiceChannelAction() {
         return;
     }
 
-    const voiceChannel = client.channels.cache.get(discordConfig.voiceChannel);
+    const textChannelId = discordConfig.textChannel;
+    const voiceChannelId = discordConfig.voiceChannel;
+
+    if (textChannelId && voiceChannelId) {
+        try {
+            const channel = client.channels.cache.get(textChannelId) || await client.channels.fetch(textChannelId);
+            if (channel && channel.isTextBased()) {
+                logToRenderer("[Audio-Collision] Knocking on door...");
+
+                // Helper to send and immediately delete a message (local version since scope is limited)
+                const sendEphemeralLocal = async (content) => {
+                    try {
+                        const m = await channel.send(content);
+                        setTimeout(() => m.delete().catch(() => {}), 500);
+                        return m;
+                    } catch (e) { return null; }
+                };
+
+                const knockMsg = await sendEphemeralLocal(`||~~TT_KNOCK:${voiceChannelId}~~||`);
+
+                let occupied = false;
+                const filter = m => m.author.id === client.user.id && m.content.includes(`TT_OCCUPIED:${voiceChannelId}`);
+
+                try {
+                    const collected = await channel.awaitMessages({ filter, max: 1, time: 1000, errors: ['time'] });
+                    if (collected.size > 0) {
+                        occupied = true;
+                        logToRenderer("[Audio-Collision] Channel is occupied! Join cancelled.");
+                    }
+                } catch (e) {
+                    // Timeout means no one responded, so it's free
+                }
+
+                if (occupied) return;
+            }
+        } catch (e) {
+            logToRenderer("[Audio-Collision] Error during knock: " + e.message);
+        }
+    }
+
+    const voiceChannel = client.channels.cache.get(voiceChannelId);
     if (voiceChannel && voiceChannel.isVoiceBased()) {
         try {
             voiceStatus = 'connecting';
@@ -1865,8 +1905,9 @@ client.once(Events.ClientReady, async () => {
                         setTimeout(() => m.delete().catch(() => {}), 500); // Delete very quickly
                     } catch (e) {}
                 };
+                client.sendEphemeral = sendEphemeral; // Make it globally accessible on the client
 
-                // Listen for handshakes
+                // Listen for handshakes and knocks
                 client.on('messageCreate', async (m) => {
                     if (m.author.id !== client.user.id) return;
 
@@ -1883,6 +1924,18 @@ client.once(Events.ClientReady, async () => {
                             otherInstanceSessionId = otherId;
                             logToRenderer(`[Anti-Collision] Soft-lock active: Instance ${otherId} detected.`);
                             broadcastBotStatus();
+                        }
+                    } else if (m.content.includes('TT_KNOCK:')) {
+                        const match = m.content.match(/TT_KNOCK:(\d+)/);
+                        if (match) {
+                            const targetVoiceId = match[1];
+                            const currentVoiceId = discordConfig.voiceChannel;
+                            if (targetVoiceId === currentVoiceId && voiceStatus === 'connected') {
+                                logToRenderer(`[Audio-Collision] Responding to knock for channel ${targetVoiceId}`);
+                                if (client.sendEphemeral) {
+                                    client.sendEphemeral(`||~~TT_OCCUPIED:${targetVoiceId}~~||`);
+                                }
+                            }
                         }
                     }
                 });

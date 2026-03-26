@@ -1335,8 +1335,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     let soundboardRowCount = 1; // Resizable rows in Normal mode
     const NORMAL_SLOTS_PER_ROW = 3;
     const AUDIO_ONLY_COLS = 6;
-    const AUDIO_ONLY_ROWS = 8;
+    const AUDIO_ONLY_ROWS = 12;
     const AUDIO_ONLY_TOTAL_SLOTS = AUDIO_ONLY_COLS * AUDIO_ONLY_ROWS;
+
+    function updateSoundboardContainerHeight() {
+        if (!document.body.classList.contains('audio-only') && soundboardContainer && initiativeListContainer) {
+            const parentHeight = initiativeListContainer.parentElement.getBoundingClientRect().height;
+            if (parentHeight > 0) {
+                // Approximate height: 1 row = 150px min-height? Actually, 1 row is about 110px.
+                // Let's use 110px per row + padding/header.
+                const newHeight = 60 + (soundboardRowCount * 110);
+                const maxSoundboardHeight = parentHeight - 100;
+                const finalHeight = Math.min(newHeight, maxSoundboardHeight);
+                const finalInitHeight = parentHeight - finalHeight;
+
+                initiativeListContainer.style.flex = `0 0 ${finalInitHeight}px`;
+                soundboardContainer.style.flex = `0 0 ${finalHeight}px`;
+            }
+        }
+    }
 
     // --- Load Soundboard State ---
     window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
@@ -1356,6 +1373,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         soundboardRowCount = rowsToLoad;
+        updateSoundboardContainerHeight();
         soundboardState = migrateSoundboardState(slotsToLoad);
 
         const normalTotal = soundboardRowCount * NORMAL_SLOTS_PER_ROW;
@@ -1439,6 +1457,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('add-row-btn').addEventListener('click', () => {
         soundboardRowCount++;
+        updateSoundboardContainerHeight();
+
         for (let i = 0; i < NORMAL_SLOTS_PER_ROW; i++) {
             soundboardState.push({
                 id: soundboardState.length,
@@ -1457,6 +1477,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('remove-row-btn').addEventListener('click', () => {
         if (soundboardRowCount > 1) {
             soundboardRowCount--;
+            updateSoundboardContainerHeight();
+
             soundboardState = soundboardState.slice(0, soundboardRowCount * NORMAL_SLOTS_PER_ROW);
             saveSoundboardState();
             renderSoundboard();

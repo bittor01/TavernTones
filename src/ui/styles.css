@@ -653,11 +653,11 @@ input[type="number"] {
 #soundboard-grid {
     display: grid;
     grid-template-columns: repeat(var(--sb-cols, 3), 1fr);
-    grid-template-rows: repeat(var(--sb-rows, 1), 1fr);
+    grid-template-rows: repeat(var(--sb-rows, 1), auto);
     gap: 5px;
     overflow-y: auto;
     height: 100%;
-    align-content: stretch;
+    align-content: start;
 }
 
 body.audio-only #soundboard-grid {
@@ -1150,6 +1150,16 @@ body.audio-only .audio-only-left-column #log-wrapper {
 
 body.audio-only .audio-only-left-column #musicLibraryArea {
     height: 100%;
+    padding-top: 2px;
+}
+
+body.audio-only .audio-only-left-column #log-wrapper.box {
+    padding-top: 5px;
+}
+
+body.audio-only .audio-only-left-column #log-wrapper .panel-header {
+    margin-bottom: 5px;
+    padding-bottom: 4px;
 }
 
 /* Audio Only Right Column Layout */
@@ -1171,10 +1181,10 @@ body.audio-only .audio-only-right-column #soundboard-container {
     padding: 4px; /* Even tighter padding */
 }
 
-/* Music Player at the top, max 200px */
+/* Music Player at the top, max 300px */
 body.audio-only .audio-only-right-column #music-controls-container {
-    height: 180px; /* Slightly shorter to give more room to soundboard */
-    max-height: 180px;
+    height: 280px; /* Increased by 100px */
+    max-height: 280px;
     flex-shrink: 0;
     flex-direction: column;
     overflow: hidden;
