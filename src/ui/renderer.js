@@ -1335,7 +1335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let soundboardRowCount = 1; // Resizable rows in Normal mode
     const NORMAL_SLOTS_PER_ROW = 3;
     const AUDIO_ONLY_COLS = 6;
-    const AUDIO_ONLY_ROWS = 8;
+    const AUDIO_ONLY_ROWS = 12;
     const AUDIO_ONLY_TOTAL_SLOTS = AUDIO_ONLY_COLS * AUDIO_ONLY_ROWS;
 
     // --- Load Soundboard State ---
@@ -1554,7 +1554,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // --- Render Functions ---
+    function updateSoundboardContainerHeight() {
+        const soundboardContainer = document.getElementById('soundboard-container');
+        if (!soundboardContainer) return;
+
+        if (document.body.classList.contains('audio-only')) {
+            soundboardContainer.style.flex = '1 1 0';
+            soundboardContainer.style.height = '';
+            return;
+        }
+        const rowHeight = 110;
+        const headerAndPadding = 60;
+        const newHeight = (soundboardRowCount * rowHeight) + headerAndPadding;
+        soundboardContainer.style.flex = `0 0 ${newHeight}px`;
+        soundboardContainer.style.height = `${newHeight}px`;
+        console.log(`[UI] Updated soundboard height to ${newHeight}px (Rows: ${soundboardRowCount})`);
+    }
+
     function renderSoundboard() {
+        updateSoundboardContainerHeight();
         const grid = document.getElementById('soundboard-grid');
         grid.innerHTML = '';
 

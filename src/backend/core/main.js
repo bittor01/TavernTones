@@ -887,8 +887,9 @@ async function ipcloader() {
         if (musicPlayer) musicPlayer.clearStack();
     });
 
-    ipcMain.on('jump-to-track', (event, { index }) => {
+    ipcMain.on('jump-to-track', async (event, { index }) => {
         if (musicPlayer) {
+            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
             musicPlayer.jumpTo(index);
         }
     });
@@ -1022,6 +1023,7 @@ async function ipcloader() {
                 const currentStack = [...musicPlayer.stack];
                 musicPlayer.stack = [...resolvedPaths, ...currentStack];
                 musicPlayer.currentIndex = 0;
+                if (voiceStatus !== 'connected') await joinVoiceChannelAction();
                 musicPlayer.play();
                 break;
             case 'add-top':
@@ -1768,7 +1770,39 @@ async function joinVoiceChannelAction() {
         return;
     }
 
-    const voiceChannel = client.channels.cache.get(discordConfig.voiceChannel);
+    const voiceChannelId = discordConfig.voiceChannel;
+    if (voiceChannelId && discordConfig.textChannel) {
+        const textChannel = client.channels.cache.get(discordConfig.textChannel);
+        if (textChannel) {
+            logToRenderer(`[Anti-Collision] Knocking on voice channel ${voiceChannelId}...`);
+            const knockMsg = await textChannel.send(`||~~TT_KNOCK:${voiceChannelId}~~||`);
+            setTimeout(() => knockMsg.delete().catch(() => {}), 500);
+
+            // Wait 1 second for occupancy response
+            let isOccupied = false;
+            const collector = textChannel.createMessageCollector({
+                filter: m => m.content.includes(`TT_OCCUPIED:${voiceChannelId}`) && m.author.id === client.user.id,
+                time: 1000
+            });
+
+            await new Promise(resolve => {
+                collector.on('collect', () => {
+                    isOccupied = true;
+                    collector.stop();
+                });
+                collector.on('end', resolve);
+            });
+
+            if (isOccupied) {
+                logToRenderer(`[Anti-Collision] Voice channel ${voiceChannelId} is occupied. Join cancelled.`);
+                isSoftLocked = true;
+                broadcastBotStatus();
+                return;
+            }
+        }
+    }
+
+    const voiceChannel = client.channels.cache.get(voiceChannelId);
     if (voiceChannel && voiceChannel.isVoiceBased()) {
         try {
             voiceStatus = 'connecting';
@@ -1869,6 +1903,16 @@ client.once(Events.ClientReady, async () => {
                 // Listen for handshakes
                 client.on('messageCreate', async (m) => {
                     if (m.author.id !== client.user.id) return;
+
+                    if (m.content.includes('TT_KNOCK:')) {
+                        const targetId = m.content.split('TT_KNOCK:')[1].split('~')[0];
+                        const me = m.guild.members.me;
+                        if (me && me.voice.channelId === targetId) {
+                            logToRenderer(`[Anti-Collision] Responding to knock for channel ${targetId}`);
+                            const occMsg = await m.channel.send(`||~~TT_OCCUPIED:${targetId}~~||`);
+                            setTimeout(() => occMsg.delete().catch(() => {}), 500);
+                        }
+                    }
 
                     if (m.content.includes('TT_PROBE:')) {
                         const otherId = m.content.split('TT_PROBE:')[1].split(' ')[0];
