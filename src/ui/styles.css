@@ -652,10 +652,12 @@ input[type="number"] {
 
 #soundboard-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(var(--sb-cols, 3), 1fr);
+    grid-template-rows: repeat(var(--sb-rows, 1), 1fr);
     gap: 5px;
     overflow-y: auto;
     height: 100%;
+    align-content: stretch;
 }
 
 body.audio-only #soundboard-grid {
@@ -679,8 +681,10 @@ body.audio-only #soundboard-grid {
     background: #007bff;
 }
 
-body.audio-only .resize-handle {
-    display: none;
+body.audio-only .resize-handle,
+body.audio-only #add-row-btn,
+body.audio-only #remove-row-btn {
+    display: none !important;
 }
 
 .soundboard-slot {
@@ -1197,8 +1201,8 @@ body.audio-only #soundboard-container .panel-header {
 }
 
 body.audio-only .audio-only-right-column #soundboard-grid {
-    grid-template-columns: repeat(6, 1fr);
-    grid-template-rows: repeat(var(--sb-rows, 1), 1fr);
+    grid-template-columns: repeat(var(--sb-cols, 6), 1fr);
+    grid-template-rows: repeat(var(--sb-rows, 8), 1fr);
     gap: 2px;
     flex-grow: 1;
     min-height: 0;

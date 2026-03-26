@@ -737,6 +737,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (leftCol && musicControls) leftCol.appendChild(musicControls);
             if (midCol && soundboard) midCol.appendChild(soundboard);
         }
+        renderSoundboard(); // Ensure soundboard layout updates when mode changes
     });
 
     window.electron.ipcRenderer.on('switch-panel', (event, panelId) => {
@@ -1331,22 +1332,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     let soundboardState = [];
-    let soundboardRowCount = 1; // Default to 1 row (3 slots)
-    const SLOTS_PER_ROW = 3;
+    let soundboardRowCount = 1; // Resizable rows in Normal mode
+    const NORMAL_SLOTS_PER_ROW = 3;
+    const AUDIO_ONLY_COLS = 6;
+    const AUDIO_ONLY_ROWS = 8;
+    const AUDIO_ONLY_TOTAL_SLOTS = AUDIO_ONLY_COLS * AUDIO_ONLY_ROWS;
 
-    // Load state from backend
+    // --- Load Soundboard State ---
     window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
         let slotsToLoad = [];
-        let volumeToLoad = 0.5; // Default slider value (which is ~0.75 effective volume)
+        let volumeToLoad = 0.5;
         let rowsToLoad = 1;
 
         if (savedState) {
             if (Array.isArray(savedState)) {
-                // Legacy format: just an array of slots
                 slotsToLoad = savedState;
-                rowsToLoad = Math.max(4, Math.ceil(slotsToLoad.length / SLOTS_PER_ROW));
+                rowsToLoad = Math.max(1, Math.ceil(slotsToLoad.length / NORMAL_SLOTS_PER_ROW));
             } else if (typeof savedState === 'object') {
-                // New format: { volume, slots, rows }
                 if (savedState.slots) slotsToLoad = savedState.slots;
                 if (savedState.volume !== undefined) volumeToLoad = savedState.volume;
                 if (savedState.rows !== undefined) rowsToLoad = savedState.rows;
@@ -1354,14 +1356,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         soundboardRowCount = rowsToLoad;
-        const totalSlotsNeeded = soundboardRowCount * SLOTS_PER_ROW;
-
-        // Initialize state
         soundboardState = migrateSoundboardState(slotsToLoad);
 
-        // Pad or trim to match row count
-        if (soundboardState.length < totalSlotsNeeded) {
-            for (let i = soundboardState.length; i < totalSlotsNeeded; i++) {
+        const normalTotal = soundboardRowCount * NORMAL_SLOTS_PER_ROW;
+        const totalNeeded = Math.max(normalTotal, AUDIO_ONLY_TOTAL_SLOTS);
+
+        if (soundboardState.length < totalNeeded) {
+            for (let i = soundboardState.length; i < totalNeeded; i++) {
                 soundboardState.push({
                     id: i,
                     tracks: [],
@@ -1372,22 +1373,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     isPlaying: false
                 });
             }
-        } else if (soundboardState.length > totalSlotsNeeded) {
-            soundboardState = soundboardState.slice(0, totalSlotsNeeded);
         }
 
-        // Set Volume UI and Backend
         const soundboardVolumeSlider = document.getElementById('soundboard-volume');
         if (soundboardVolumeSlider) {
             soundboardVolumeSlider.value = volumeToLoad;
-            // Trigger 1.5x scaling logic immediately
             const effectiveVolume = volumeToLoad * 1.5;
             window.electron.ipcRenderer.send('set-soundboard-volume', { volume: effectiveVolume });
         }
 
-        // Force a render
         renderSoundboard();
     });
+
+    // Expose for verification/IPC
+    window.renderSoundboard = renderSoundboard;
 
     let saveSoundboardStateTimeout;
     function saveSoundboardState() {
@@ -1558,9 +1557,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
         grid.innerHTML = '';
-        grid.style.setProperty('--sb-rows', soundboardRowCount);
 
-        soundboardState.forEach(slot => {
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        const rows = isAudioOnly ? AUDIO_ONLY_ROWS : soundboardRowCount;
+        const cols = isAudioOnly ? AUDIO_ONLY_COLS : NORMAL_SLOTS_PER_ROW;
+        const totalSlotsToRender = rows * cols;
+
+        grid.style.setProperty('--sb-rows', rows);
+        grid.style.setProperty('--sb-cols', cols);
+
+        // Render subset of state based on current layout
+        for (let i = 0; i < totalSlotsToRender; i++) {
+            let slot = soundboardState[i];
+            if (!slot) {
+                // Should not happen if padded correctly
+                slot = { id: i, tracks: [], currentTrackIndex: 0, emoji: '🎨', isPlaying: false, loop: 'none', playMode: 'sequential' };
+            }
             const slotDiv = document.createElement('div');
             slotDiv.className = 'soundboard-stack-slot';
 
