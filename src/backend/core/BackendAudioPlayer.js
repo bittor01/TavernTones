@@ -180,33 +180,41 @@ class BackendAudioPlayer extends EventEmitter {
 
     async _play(startTime = 0) {
         if (this.currentIndex < 0 || this.currentIndex >= this.stack.length) {
-            this.isPlaying = false;
-            this.playerStatus = AudioPlayerStatus.Idle;
-            this.currentTime = 0;
-            this.duration = 0;
-            this._stopTimer();
-            this._emitStatusUpdate();
+            this.stop();
             return;
         }
 
         const filePath = this.stack[this.currentIndex];
-        this.log(`Playing: ${filePath} from ${startTime}s`);
-        this.lastPlayStartTime = Date.now() - (startTime * 1000);
-        this.currentTime = startTime;
+        this.log(`[AudioPlayer] Playing: ${path.basename(filePath)} from ${startTime}s`);
 
         this._stopMusicStream();
         this._stopTimer();
 
-        try {
-            // Get duration if not already known
-            if (startTime === 0) {
-                this.duration = await this._getDuration(filePath);
-            }
+        // Immediate feedback for UI
+        this.currentTime = startTime;
+        if (startTime === 0) this.duration = 0;
+        this.isPlaying = true;
+        this.playerStatus = AudioPlayerStatus.Playing;
+        this._emitStatusUpdate();
 
+        // Start duration fetch in background so it doesn't block playback start
+        if (startTime === 0) {
+            this._getDuration(filePath).then(duration => {
+                // Only update if we are still on the same track and haven't finished yet
+                if (this.isPlaying && this.stack[this.currentIndex] === filePath) {
+                    this.duration = duration;
+                    this._emitStatusUpdate();
+                }
+            }).catch(err => this.log(`[Duration] Error fetching for ${path.basename(filePath)}: ${err.message}`));
+        }
+
+        this.lastPlayStartTime = Date.now() - (startTime * 1000);
+
+        try {
             const cachedBuffer = this.cachedAudio.get(filePath);
 
             if (cachedBuffer && startTime === 0) {
-                this.log(`Using cached buffer for: ${filePath}`);
+                this.log(`[AudioPlayer] Using cached buffer for: ${path.basename(filePath)}`);
                 const stream = Readable.from(cachedBuffer);
 
                 stream.once('end', () => {
@@ -223,10 +231,21 @@ class BackendAudioPlayer extends EventEmitter {
                 this._startTimer();
             } else {
                 // Stream using FFmpeg and cache in parallel if possible
-                this.log(`Starting FFmpeg stream for: ${filePath} at offset ${startTime}`);
+                this.log(`[AudioPlayer] Starting FFmpeg stream for: ${path.basename(filePath)} at offset ${startTime}`);
                 const ffmpegProcess = this._createFfmpegStream(filePath, startTime);
-                const ffmpegOutput = ffmpegProcess.stdout;
 
+                ffmpegProcess.stderr.on('data', (data) => {
+                    const msg = data.toString();
+                    if (msg.toLowerCase().includes('error') || msg.toLowerCase().includes('failed')) {
+                        this.log(`[FFmpeg Error] ${path.basename(filePath)}: ${msg.trim()}`);
+                    }
+                });
+
+                ffmpegProcess.on('error', (err) => {
+                    this.log(`[FFmpeg Process Error] ${path.basename(filePath)}: ${err.message}`);
+                });
+
+                const ffmpegOutput = ffmpegProcess.stdout;
                 const mixerStream = new PassThrough();
                 ffmpegOutput.pipe(mixerStream);
 
@@ -242,7 +261,7 @@ class BackendAudioPlayer extends EventEmitter {
                             pcmBuffer = Buffer.concat([pcmBuffer, chunk]);
                         } else {
                             tooBig = true;
-                            this.log(`File too large for cache: ${filePath}`);
+                            this.log(`[AudioPlayer] File too large for cache: ${path.basename(filePath)}`);
                             this.isCaching = false;
                             this._emitStatusUpdate();
                         }
@@ -257,7 +276,7 @@ class BackendAudioPlayer extends EventEmitter {
 
                         if (!tooBig && pcmBuffer.length > 0 && startTime === 0) {
                             this.cachedAudio.set(filePath, pcmBuffer);
-                            this.log(`Cached ${filePath} (${(pcmBuffer.length / 1024 / 1024).toFixed(2)} MB)`);
+                            this.log(`[AudioPlayer] Cached ${path.basename(filePath)} (${(pcmBuffer.length / 1024 / 1024).toFixed(2)} MB)`);
                         }
                         this.isCaching = false;
                         this._stopTimer();
@@ -270,9 +289,6 @@ class BackendAudioPlayer extends EventEmitter {
                 this.activeStreams.set('music', { process: ffmpegProcess, stream: mixerStream });
                 this._startTimer();
             }
-
-            this.isPlaying = true;
-            this.playerStatus = AudioPlayerStatus.Playing;
 
             // Set volume immediately
             const currentVolume = this.activeSfxCount > 0 ? this.playbackVolume * this.duckingVolume : this.playbackVolume;
@@ -291,16 +307,33 @@ class BackendAudioPlayer extends EventEmitter {
 
     _getFfmpegPath() {
         if (!this.ffmpegBinFolder) return 'ffmpeg';
-        const exeName = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
-        const fullPath = path.join(this.ffmpegBinFolder, exeName);
-        return fs.existsSync(fullPath) ? fullPath : 'ffmpeg';
+        try {
+            if (fs.existsSync(this.ffmpegBinFolder) && fs.lstatSync(this.ffmpegBinFolder).isFile()) {
+                return this.ffmpegBinFolder;
+            }
+            const exeName = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+            const fullPath = path.join(this.ffmpegBinFolder, exeName);
+            if (fs.existsSync(fullPath)) return fullPath;
+        } catch (e) {}
+        return 'ffmpeg';
     }
 
     _getFfprobePath() {
         if (!this.ffmpegBinFolder) return 'ffprobe';
-        const exeName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
-        const fullPath = path.join(this.ffmpegBinFolder, exeName);
-        return fs.existsSync(fullPath) ? fullPath : 'ffprobe';
+        try {
+            if (fs.existsSync(this.ffmpegBinFolder) && fs.lstatSync(this.ffmpegBinFolder).isFile()) {
+                // If they pointed to ffmpeg.exe, try to find ffprobe.exe in the same dir
+                const dir = path.dirname(this.ffmpegBinFolder);
+                const exeName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+                const siblingPath = path.join(dir, exeName);
+                if (fs.existsSync(siblingPath)) return siblingPath;
+                return 'ffprobe';
+            }
+            const exeName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+            const fullPath = path.join(this.ffmpegBinFolder, exeName);
+            if (fs.existsSync(fullPath)) return fullPath;
+        } catch (e) {}
+        return 'ffprobe';
     }
 
     _createFfmpegStream(filePath, startTime = 0) {
@@ -380,9 +413,10 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     _handleMusicFinish() {
-        const duration = Date.now() - (this.lastPlayStartTime || 0);
-        if (duration < 1000) {
-            this.log("Track finished too quickly, stopping to prevent loop thrashing.");
+        const elapsed = Date.now() - (this.lastPlayStartTime || 0);
+        // Allow short tracks to loop/finish naturally if they are actually short (duration < 2s)
+        if (elapsed < 500 && (this.duration === 0 || this.duration > 2)) {
+            this.log(`[AudioPlayer] Track finished too quickly (${elapsed}ms), stopping to prevent loop thrashing.`);
             this.isPlaying = false;
             this.playerStatus = AudioPlayerStatus.Idle;
             this._emitStatusUpdate();

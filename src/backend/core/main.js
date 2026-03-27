@@ -39,6 +39,7 @@ let discordConfig;
 
 let connection;
 let voiceStatus = 'disconnected'; // disconnected, connecting, connected
+let isJoiningVoice = false; // Prevents race conditions during knocking/joining
 let musicPlayer;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
@@ -887,8 +888,6 @@ async function ipcloader() {
 
     ipcMain.on('jump-to-track', async (event, { index }) => {
         if (musicPlayer) {
-            // Ensure the new track starts from the beginning
-            musicPlayer.stop();
             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
             musicPlayer.jumpTo(index);
         }
@@ -1017,9 +1016,6 @@ async function ipcloader() {
 
         switch (action) {
             case 'play-now':
-                // Ensure the new track starts from the beginning
-                musicPlayer.stop();
-
                 // For 'play now' from library, we insert at the very top (index 0) and play.
                 const currentStack = [...musicPlayer.stack];
                 musicPlayer.stack = [...resolvedPaths, ...currentStack];
@@ -1760,6 +1756,9 @@ app.on('window-all-closed', () => {
 });
 
 async function joinVoiceChannelAction() {
+    // Prevent multiple simultaneous join attempts
+    if (isJoiningVoice) return;
+
     // If we have an active connection in any non-terminal state, skip knocking
     const isActive = connection && (
         connection.state.status !== VoiceConnectionStatus.Disconnected &&
@@ -1769,6 +1768,8 @@ async function joinVoiceChannelAction() {
         logToRenderer(`[Anti-Collision] Active connection exists (${connection.state.status}). Skipping knock.`);
         return;
     }
+
+    isJoiningVoice = true;
 
     // Reset soft-lock on every manual/auto attempt to allow retrying
     isSoftLocked = false;
@@ -1799,6 +1800,7 @@ async function joinVoiceChannelAction() {
             if (isOccupied) {
                 logToRenderer(`[Anti-Collision] Voice channel ${voiceChannelId} is occupied. Join cancelled.`);
                 isSoftLocked = true;
+                isJoiningVoice = false;
                 broadcastBotStatus();
                 return;
             }
@@ -1853,9 +1855,12 @@ async function joinVoiceChannelAction() {
         } catch (error) {
             logToRenderer('Error joining voice channel: ', error.message || error);
             leaveVoiceChannelAction();
+        } finally {
+            isJoiningVoice = false;
         }
     } else {
         logToRenderer('Voice channel not found or is not a voice channel!');
+        isJoiningVoice = false;
     }
 }
 
