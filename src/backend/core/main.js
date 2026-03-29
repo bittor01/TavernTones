@@ -893,6 +893,12 @@ async function ipcloader() {
         }
     });
 
+    ipcMain.on('seek-music', (event, { time }) => {
+        if (musicPlayer) {
+            musicPlayer.seek(time);
+        }
+    });
+
     ipcMain.handle('save-music-preset', async (event, stack) => {
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
             title: 'Save Music Stack Preset',

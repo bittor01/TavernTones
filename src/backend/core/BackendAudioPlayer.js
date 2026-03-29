@@ -523,6 +523,13 @@ class BackendAudioPlayer extends EventEmitter {
         if (this.currentIndex >= 0) this._play();
     }
 
+    seek(time) {
+        if (this.currentIndex >= 0 && this.stack.length > 0) {
+            this.log(`[AudioPlayer] Seeking to ${time}s`);
+            this._play(time);
+        }
+    }
+
     pause() {
         this._stopMusicStream();
         this._stopTimer();

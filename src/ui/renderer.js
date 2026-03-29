@@ -845,6 +845,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
         }
 
+        content.ondblclick = (e) => {
+            e.stopPropagation();
+            const files = getAllFiles(node);
+            if (files.length > 0) {
+                window.electron.ipcRenderer.send('library-action', { action: 'play-now', paths: files });
+            }
+        };
+
         return div;
     }
 
@@ -971,6 +979,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         playPauseButton.textContent = isPlaying ? '⏸️' : '▶️';
         playPauseButton.disabled = status.stack.length === 0;
 
+        // Handle Progress Bar Seeking
+        const progressContainer = document.querySelector('.progress-container');
+        if (progressContainer && !progressContainer.dataset.seekingListener) {
+            progressContainer.dataset.seekingListener = 'true';
+            progressContainer.addEventListener('click', (e) => {
+                if (lastMusicStatus && lastMusicStatus.duration > 0) {
+                    const rect = progressContainer.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const percent = x / rect.width;
+                    const seekTime = percent * lastMusicStatus.duration;
+                    window.electron.ipcRenderer.send('seek-music', { time: seekTime });
+                }
+            });
+        }
+
         // Update Loop Button
         const loopEmojis = ['➡️', '🔁', '🔂'];
         const loopTitles = ['No Loop', 'Loop All', 'Loop Single'];
@@ -1008,6 +1031,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('remove-from-stack', { index });
             });
             div.addEventListener('click', () => {
+                // Focus track on click (maybe highlight?), but don't jump yet if we want double click
+            });
+            div.addEventListener('dblclick', () => {
                 window.electron.ipcRenderer.send('jump-to-track', { index });
             });
             musicStackList.appendChild(div);
