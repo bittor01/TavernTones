@@ -1,9 +1,24 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
-const path = require('path');
-const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
-const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
+// Performance and security update
+const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } = require('electron');
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
+protocol.registerSchemesAsPrivileged([
+    { scheme: 'safe-media', privileges: { secure: true, standard: true, supportFetchAPI: true, bypassCSP: true, stream: true } }
+]);
+
+const path = require('path');
+const { pathToFileURL } = require('url');
+const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder, Events, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+const { joinVoiceChannel, entersState, VoiceConnectionStatus, getVoiceConnection } = require('@discordjs/voice');
+
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.DirectMessages
+    ],
+    partials: [Partials.Channel, Partials.Message]
+});
 client.npcDropdownHandlers = new Map();
 console.log('Discord client instantiated.');
 const axios = require('axios');
@@ -17,15 +32,35 @@ const { mobRules } = require('../data/mobRules.js');
 const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
+const GitHubSync = require('./GitHubSync.js');
+const { Worker } = require('worker_threads');
 
 let discordConfig;
 
 let connection;
+let voiceStatus = 'disconnected'; // disconnected, connecting, connected
+let isJoiningVoice = false; // Prevents race conditions during knocking/joining
 let musicPlayer;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
 
+// Anti-collision state
+let isSoftLocked = false;
+
+// Local Instance Lock
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+    app.quit();
+} else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        // Someone tried to run a second instance, we should focus our window.
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
+}
 
 // --- JSDoc Comments ---
 
@@ -72,13 +107,13 @@ const DND_CONDITIONS = {
 };
 
 const hpBarEmojiMap = {
-    '#007bff': ':blue_square:',      // Blue
-    '#28a745': ':green_square:',     // Green
-    '#ffc107': ':yellow_square:',    // Yellow
-    '#dc3545': ':red_square:',       // Red
-    '#8a2be2': ':purple_square:',    // Purple
-    '#6c757d': ':x:',               // Grey (Dead)
-    'empty': ':black_large_square:'
+    '#007bff': '🟦',      // Blue (100%)
+    '#28a745': '🟩',     // Green (50-99%)
+    '#ffc107': '🟨',    // Yellow (25-49%)
+    '#dc3545': '🟥',       // Red (<25%)
+    '#8a2be2': '🟪',    // Purple (Temp HP)
+    '#6c757d': '💀',     // Dead
+    'empty': '⬛'
 };
 
 async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
@@ -102,7 +137,8 @@ async function logDiceRollToRenderer(message) {
 }
 
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    const safeMs = Math.max(0, Number(ms) || 0);
+    return new Promise(resolve => setTimeout(resolve, safeMs));
 }
 
 //Begin UI
@@ -147,8 +183,8 @@ function createSettingsWindow() {
     }
 
     settingsWindow = new BrowserWindow({
-        width: 500,
-        height: 800,
+        width: 900,
+        height: 700,
         webPreferences: {
             preload: path.join(__dirname, '../../ui/settings/settings-preload.js'),
             contextIsolation: true,
@@ -170,39 +206,62 @@ function createSettingsWindow() {
  * backend services and IPC handlers. It runs once the Electron app is ready.
  */
 async function apploader() {
-    discordConfig = await getDiscordConfig();
-
     await app.whenReady().then(async () => {
-        protocol.registerFileProtocol('safe-media', (request, callback) => {
-            const url = request.url.substr(13); // 'safe-media://'.length
-            const decodedPath = decodeURI(url);
+        discordConfig = await getDiscordConfig();
+        protocol.handle('safe-media', async (request) => {
             try {
-                return callback(decodedPath);
-            }
-            catch (error) {
-                console.error('Failed to register protocol', error);
-                return callback('404');
+                const url = new URL(request.url);
+                const absolutePath = url.searchParams.get('path');
+
+                if (!absolutePath || !fs.existsSync(absolutePath)) {
+                    console.error(`[safe-media] File not found or invalid: ${absolutePath}`);
+                    return new Response('File not found', { status: 404 });
+                }
+
+                const ext = path.extname(absolutePath).toLowerCase();
+                const mimeTypes = {
+                    '.mp3': 'audio/mpeg',
+                    '.wav': 'audio/wav',
+                    '.ogg': 'audio/ogg'
+                };
+                const contentType = mimeTypes[ext] || 'audio/mpeg';
+
+                // Reading file into memory for the Response.
+                // This is less efficient but avoids many issues with custom protocols and Range requests.
+                const buffer = await fs.promises.readFile(absolutePath);
+                return new Response(buffer, {
+                    headers: { 'Content-Type': contentType }
+                });
+
+            } catch (error) {
+                console.error('[safe-media] Protocol error:', error);
+                return new Response('Error: ' + error.message, { status: 500 });
             }
         });
         console.log('App is ready.');
 
         // Initialize components
-        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath);
+        musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, discordConfig.ffmpegPath);
+        setupFilesystemWatchers(discordConfig);
+
+        // --- Start Music Library Scan ---
+        if (discordConfig.defaultMusicPath) {
+            // Load from cache immediately for speed
+            if (discordConfig.musicLibrary) {
+                ipcMain.handleOnce('get-music-library-ready', () => true); // Signal that initial data is there
+            }
+            scanMusicLibrary();
+        }
         ipcloader(); // Load all IPC handlers BEFORE creating window
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
-        // Create the main window first, so we can show dialogs.
-        // Don't show it yet if we might need to show the settings window first.
-        await createWindow(false);
-        isAppReady = true;
-
-        // Now, check for folder configuration.
-        const { resourcesPath, randomTablesPath, tasksPath } = discordConfig;
-        const pathsConfigured = resourcesPath && randomTablesPath && tasksPath;
+        // Check for folder configuration first
+        const { bestiaryPath, randomTablesPath } = discordConfig;
+        const pathsConfigured = bestiaryPath && randomTablesPath;
 
         if (!pathsConfigured) {
             logToRenderer("Essential data folders are not configured.");
-            await dialog.showMessageBox(mainWindow, {
+            await dialog.showMessageBox(null, {
                 type: 'warning',
                 title: 'Configuration Required',
                 message: 'One or more essential data folders have not been set up. Please configure them in the settings.',
@@ -213,15 +272,20 @@ async function apploader() {
         }
 
         // If we've reached here, paths are configured, so we can show the main window.
-        mainWindow.maximize();
-        mainWindow.show();
+        await createWindow(true);
+        isAppReady = true;
 
         // Handle Discord Bot setup.
-        if (!discordConfig || !discordConfig.token) {
-            logToRenderer("Discord credentials not found. Bot functionality will be disabled.");
-            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+        if (discordConfig && discordConfig.enabled) {
+            if (!discordConfig.token) {
+                logToRenderer("Discord token not found despite bot being enabled. Bot functionality will be disabled.");
+                mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+            } else {
+                initializeDiscordBot();
+            }
         } else {
-            initializeDiscordBot();
+            logToRenderer("Discord bot is disabled in settings.");
+            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Disabled' });
         }
 
         app.on('activate', () => {
@@ -271,6 +335,16 @@ ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
 // This prevents crashes related to GPU initialization.
 app.disableHardwareAcceleration();
 
+// Handle uncaught exceptions to prevent the app from crashing on non-critical stream errors
+process.on('uncaughtException', (error) => {
+    if (error.code === 'ERR_STREAM_PREMATURE_CLOSE') {
+        // This error is a known side effect of destroying audio streams during track changes or shutdown.
+        // It is harmless in this context and can be safely ignored.
+        return;
+    }
+    console.error('Uncaught Exception in Main Process:', error);
+});
+
 apploader();
 
 
@@ -289,7 +363,7 @@ function createEmojiHpBar(creature) {
     const tempHpBlocks = Math.min(BAR_LENGTH, Math.round((tempHp / maxHp) * BAR_LENGTH)); // Cap at bar length
 
     const hpColorEmoji = hpBarEmojiMap[getHpColor(hp, maxHp)] || hpBarEmojiMap['#007bff'];
-    const tempHpEmoji = '⭐';
+    const tempHpEmoji = hpBarEmojiMap['#8a2be2'];
     const emptyEmoji = hpBarEmojiMap['empty'];
 
     let bar = '';
@@ -434,6 +508,30 @@ async function checkAndShowReminders(creature, turnEvent) {
 
 const InitiativeTracker = require('../features/InitiativeTracker.js');
 
+function setupFilesystemWatchers(config) {
+    const { defaultMusicPath, randomTablesPath, bestiaryPath } = config;
+
+    const watchers = [
+        { name: 'Music', path: defaultMusicPath, callback: () => musicPlayer && musicPlayer._emitStatusUpdate() },
+        { name: 'Random Tables', path: randomTablesPath, callback: () => logToRenderer("Random tables folder changed. Refreshing...") },
+        { name: 'Bestiary', path: bestiaryPath, callback: () => logToRenderer("Bestiary folder changed. Refreshing...") }
+    ];
+
+    watchers.forEach(w => {
+        if (w.path && fs.existsSync(w.path)) {
+            try {
+                fs.watch(w.path, { recursive: true }, (eventType, filename) => {
+                    logToRenderer(`[Watcher] ${w.name} change detected: ${eventType} ${filename || ''}`);
+                    w.callback();
+                });
+                logToRenderer(`[Watcher] Started watching ${w.name}: ${w.path}`);
+            } catch (err) {
+                logToRenderer(`[Watcher] Failed to watch ${w.name}: ${err.message}`);
+            }
+        }
+    });
+}
+
 /**
  * Registers all IPC (Inter-Process Communication) handlers for the application.
  * This function sets up listeners for events from the renderer process, allowing
@@ -451,15 +549,16 @@ async function ipcloader() {
     };
 
     // IPC Handlers for individual folder browsing
-    ipcMain.handle('select-resources-folder', () => selectDirectory('Select Resources Folder'));
+    ipcMain.handle('select-bestiary-folder', () => selectDirectory('Select Bestiary Data Folder'));
     ipcMain.handle('select-random-tables-folder', () => selectDirectory('Select Random Tables Folder'));
-    ipcMain.handle('select-tasks-folder', () => selectDirectory('Select Tasks Folder'));
     ipcMain.handle('select-music-folder', () => selectDirectory('Select Default Music Folder'));
+    ipcMain.handle('select-ffmpeg-bin-folder', () => selectDirectory('Select Folder Containing FFmpeg and ffprobe'));
 
-    // IPC Handler for setting up all default folders
+    // IPC Handler for setting up all default folders with improved error handling and OneDrive support
     ipcMain.handle('setup-default-folders', async () => {
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: 'Select a Parent Directory for TavernTones Data',
+            title: 'Select a Parent Directory for Tavern Tones Data',
+            defaultPath: app.getPath('documents'),
             properties: ['openDirectory']
         });
 
@@ -468,48 +567,112 @@ async function ipcloader() {
         }
 
         const parentDir = filePaths[0];
-        const dataDir = path.join(parentDir, 'TavernTones_Data');
+        const dataDir = path.join(parentDir, 'Tavern Tones');
 
         try {
-            await fs.mkdir(dataDir, { recursive: true });
+            // Ensure the main data directory exists
+            if (!fs.existsSync(dataDir)) {
+                await fs.promises.mkdir(dataDir, { recursive: true });
+            }
 
             const paths = {
-                resourcesPath: path.join(dataDir, 'resources'),
+                bestiaryPath: path.join(dataDir, 'bestiary'),
                 randomTablesPath: path.join(dataDir, 'randomtables'),
-                tasksPath: path.join(dataDir, 'tasks'),
                 defaultMusicPath: path.join(dataDir, 'music')
             };
 
             // Create all subdirectories
             for (const p of Object.values(paths)) {
-                await fs.mkdir(p, { recursive: true });
+                if (!fs.existsSync(p)) {
+                    await fs.promises.mkdir(p, { recursive: true });
+                }
             }
 
-            // Copy default data
-            const sourcePath = app.isPackaged ? path.join(process.resourcesPath, 'app') : app.getAppPath();
-            await fs.cp(path.join(sourcePath, 'resources'), paths.resourcesPath, { recursive: true });
-            await fs.cp(path.join(sourcePath, 'randomtables'), paths.randomTablesPath, { recursive: true });
-            // For tasks, we'll just create the directory for now, user can place tasks there.
+            // Copy default data (random tables) from the application package
+            const sourcePath = app.getAppPath();
+            const sourceTables = path.join(sourcePath, 'randomtables');
+
+            if (fs.existsSync(sourceTables)) {
+                // Use a more compatible copy approach if cp is missing or fails
+                if (fs.promises.cp) {
+                    await fs.promises.cp(sourceTables, paths.randomTablesPath, { recursive: true, force: true });
+                } else {
+                    // Fallback for older Node versions (shouldn't happen in recent Electron)
+                    const ncp = require('util').promisify(require('fs').copyFile); // simplistic
+                    // Actually, let's assume cp is available in modern Electron.
+                    throw new Error("fs.promises.cp is required for folder copying.");
+                }
+            }
 
             await dialog.showMessageBox(mainWindow, {
                 type: 'info',
                 title: 'Success',
-                message: `Default folders created inside:\n${dataDir}\n\nPlease place your task files in the 'tasks' folder.`,
+                message: `Default folders created inside:\n${dataDir}\n\nYou can now fetch bestiary data from the settings.`,
                 buttons: ['OK']
             });
 
             return paths;
         } catch (error) {
             console.error('Failed to create default folders:', error);
-            await dialog.showErrorBox('Error', 'Failed to create default data folders. Please check permissions and try again.');
+            await dialog.showMessageBox(mainWindow, {
+                type: 'error',
+                title: 'Folder Creation Failed',
+                message: 'Tavern Tones was unable to create the data folders automatically.',
+                detail: `This often happens if the location (like Program Files) has restricted permissions.\n\nError: ${error.message}\n\nSuggested Fix: Try creating the "Tavern Tones" folder manually in your Documents folder first, or choose a different location.`,
+                buttons: ['OK']
+            });
             return null;
         }
+    });
+
+    ipcMain.handle('fetch-bestiary-data', async (event, { repoUrl, localPath, githubToken }) => {
+        const sync = new GitHubSync(logToRenderer, dialog, mainWindow, githubToken);
+        return await sync.syncBestiary(repoUrl, localPath);
+    });
+
+    ipcMain.handle('detect-ffmpeg', async () => {
+        const { exec } = require('child_process');
+        const isWin = process.platform === 'win32';
+        const cmd = isWin ? 'where ffmpeg' : 'which ffmpeg';
+
+        const foundPath = await new Promise(resolve => {
+            exec(cmd, (error, stdout) => {
+                if (!error && stdout) {
+                    const lines = stdout.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+                    resolve(lines[0] || null);
+                } else {
+                    resolve(null);
+                }
+            });
+        });
+
+        if (foundPath && fs.existsSync(foundPath)) return path.dirname(foundPath);
+
+        // Check for bundled ffmpeg
+        const exeName = isWin ? 'ffmpeg.exe' : 'ffmpeg';
+        const bundledPath = path.join(process.resourcesPath, 'ffmpeg', exeName);
+        if (fs.existsSync(bundledPath)) return path.dirname(bundledPath);
+
+        const appDirFfmpeg = path.join(path.dirname(process.execPath), 'ffmpeg', exeName);
+        if (fs.existsSync(appDirFfmpeg)) return path.dirname(appDirFfmpeg);
+
+        // Check same directory as executable
+        const sameDirFfmpeg = path.join(path.dirname(process.execPath), exeName);
+        if (fs.existsSync(sameDirFfmpeg)) return path.dirname(sameDirFfmpeg);
+
+        const localFfmpeg = path.join(app.getAppPath(), 'ffmpeg', exeName);
+        if (fs.existsSync(localFfmpeg)) return path.dirname(localFfmpeg);
+
+        return null;
     });
 
 
     // Settings window IPC
     ipcMain.on('get-discord-config', async (event) => {
-        event.sender.send('discord-config', await getDiscordConfig());
+        const config = await getDiscordConfig();
+        if (event.sender && !event.sender.isDestroyed()) {
+            event.sender.send('discord-config', config);
+        }
     });
 
     ipcMain.on('set-discord-config', async (event, config) => {
@@ -521,6 +684,7 @@ async function ipcloader() {
         // The music player instance also needs to be told about the new path.
         if (musicPlayer) {
             musicPlayer.musicFolder = config.defaultMusicPath;
+            musicPlayer.ffmpegBinFolder = config.ffmpegPath; // Note: config key remains ffmpegPath for compatibility
             logToRenderer(`[IPC] Updated music player's default folder to: ${musicPlayer.musicFolder}`);
         }
         // --- End of update ---
@@ -539,7 +703,118 @@ async function ipcloader() {
 
     ipcMain.on('open-settings-window', createSettingsWindow);
 
-    logToRenderer('ipcloader() called.');
+    ipcMain.handle('register-slash-commands', async () => {
+        if (!discordConfig.token) return { success: false, error: 'No bot token' };
+        try {
+            const rest = new REST({ version: '10' }).setToken(discordConfig.token);
+            const commands = [
+                {
+                    name: 'roll',
+                    description: 'Roll arbitrary dice using RPG notation',
+                    options: [{
+                        name: 'notation',
+                        type: 3, // STRING
+                        description: 'e.g. 2d20kh1 + 5',
+                        required: true
+                    }]
+                },
+                {
+                    name: 'dice-help',
+                    description: 'Get help with RPG dice notation'
+                },
+                {
+                    name: 'play',
+                    description: 'Play music by folder or song name',
+                    options: [
+                        { name: 'folder', type: 3, description: 'Folder name', required: false },
+                        { name: 'song', type: 3, description: 'Song name', required: false }
+                    ]
+                },
+                {
+                    name: 'play-song',
+                    description: 'Search and play a song',
+                    options: [{ name: 'query', type: 3, description: 'Song name', required: true }]
+                },
+                {
+                    name: 'add-song',
+                    description: 'Search and add a song to stack',
+                    options: [{ name: 'query', type: 3, description: 'Song name', required: true }]
+                },
+                {
+                    name: 'play-folder',
+                    description: 'Play all songs in a folder',
+                    options: [{ name: 'query', type: 3, description: 'Folder name', required: true }]
+                },
+                {
+                    name: 'add-folder',
+                    description: 'Add all songs in a folder to stack',
+                    options: [{ name: 'query', type: 3, description: 'Folder name', required: true }]
+                },
+                { name: 'pause', description: 'Pause current audio' },
+                { name: 'stop', description: 'Stop audio and clear stack' },
+                { name: 'ping', description: 'Test bot connectivity' },
+                { name: 'surge', description: 'Roll on the Wild Magic Surge table' },
+                { name: 'shield', description: 'Roll on the Wild Magic Shield table' },
+                {
+                    name: 'roll-table',
+                    description: 'Roll on random tables',
+                    options: [
+                        { name: 'folder', type: 3, description: 'Folder name', required: true },
+                        { name: 'count', type: 4, description: 'Number of rolls', required: true },
+                        { name: 'args', type: 3, description: 'Weights and tables (e.g. "8 lvl1 4 lvl2")', required: true }
+                    ]
+                }
+            ];
+
+            const guildIds = new Set();
+            const channelsToTry = [discordConfig.textChannel, discordConfig.voiceChannel].filter(id => !!id);
+            for (const id of channelsToTry) {
+                let chan = client.channels.cache.get(id);
+                if (!chan) {
+                    try { chan = await client.channels.fetch(id); } catch(e) {}
+                }
+                if (chan && chan.guild) guildIds.add(chan.guild.id);
+            }
+
+            if (guildIds.size === 0) {
+                // Fallback to global if no channels configured
+                await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+            } else {
+                for (const guildId of guildIds) {
+                    await rest.put(Routes.applicationGuildCommands(client.user.id, guildId), { body: commands });
+                }
+            }
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    });
+
+    ipcMain.handle('unregister-slash-commands', async () => {
+        if (!discordConfig.token) return { success: false, error: 'No bot token' };
+        try {
+            const rest = new REST({ version: '10' }).setToken(discordConfig.token);
+            const guildIds = new Set();
+            const channelsToTry = [discordConfig.textChannel, discordConfig.voiceChannel].filter(id => !!id);
+            for (const id of channelsToTry) {
+                let chan = client.channels.cache.get(id);
+                if (!chan) {
+                    try { chan = await client.channels.fetch(id); } catch(e) {}
+                }
+                if (chan && chan.guild) guildIds.add(chan.guild.id);
+            }
+
+            await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+            for (const guildId of guildIds) {
+                await rest.put(Routes.applicationGuildCommands(client.user.id, guildId), { body: [] });
+            }
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    });
+
+    // logToRenderer('ipcloader() called.');
     musicPlayer.on('status-change', (status) => {
         if (mainWindow && mainWindow.webContents) {
             mainWindow.webContents.send('music-player-status', status);
@@ -556,18 +831,29 @@ async function ipcloader() {
         if (initiativeTracker) {
             initiativeTracker.sendFullState();
         }
-    });
-
-    // Music Player IPC Handlers
-    ipcMain.on('load-music-file', (event, filePath) => {
-        logToRenderer(`IPC 'load-music-file' received for: ${filePath}`);
-        if (filePath) {
-            musicPlayer.loadFile(filePath);
+        if (discordConfig && discordConfig.enabled) {
+            if (client && client.isReady()) {
+                mainWindow.webContents.send('discord-bot-status', { status: 'online', message: 'Connected' });
+            } else if (!discordConfig.token) {
+                mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Not Configured' });
+            } else {
+                mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Connecting...' });
+            }
+        } else {
+            mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Disabled' });
         }
     });
 
-    ipcMain.on('play-music', () => {
+    // Music Player IPC Handlers
+    ipcMain.on('load-music-file', (event, filePaths) => {
+        if (filePaths) {
+            musicPlayer.addToStack(filePaths);
+        }
+    });
+
+    ipcMain.on('play-music', async () => {
         logToRenderer(`IPC 'play-music' (command) received.`);
+        if (voiceStatus !== 'connected') await joinVoiceChannelAction();
         musicPlayer.play();
     });
 
@@ -576,13 +862,96 @@ async function ipcloader() {
         musicPlayer.pause();
     });
 
-    ipcMain.handle('get-preview-audio-data', async () => {
-        const filePath = musicPlayer.getPreviewFilePath();
+    ipcMain.on('play-next', (event) => {
+        if (musicPlayer) musicPlayer.next();
+    });
+
+    ipcMain.on('play-prev', (event) => {
+        if (musicPlayer) musicPlayer.prev();
+    });
+
+    ipcMain.on('set-loop-mode', (event, { mode }) => {
+        if (musicPlayer) musicPlayer.setLoopMode(mode);
+    });
+
+    ipcMain.on('set-shuffle', (event, { enabled }) => {
+        if (musicPlayer) musicPlayer.setShuffle(enabled);
+    });
+
+    ipcMain.on('remove-from-stack', (event, { index }) => {
+        if (musicPlayer) musicPlayer.removeFromStack(index);
+    });
+
+    ipcMain.on('clear-stack', (event) => {
+        if (musicPlayer) musicPlayer.clearStack();
+    });
+
+    ipcMain.on('jump-to-track', async (event, { index }) => {
+        if (musicPlayer) {
+            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+            musicPlayer.jumpTo(index);
+        }
+    });
+
+    ipcMain.on('seek-music', (event, { time }) => {
+        if (musicPlayer) {
+            musicPlayer.seek(time);
+        }
+    });
+
+    ipcMain.handle('save-music-preset', async (event, stack) => {
+        const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+            title: 'Save Music Stack Preset',
+            defaultPath: 'music-preset.json',
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+        if (!canceled && filePath) {
+            try {
+                await fs.promises.writeFile(filePath, JSON.stringify(stack, null, 2));
+                return { success: true };
+            } catch (e) {
+                return { success: false, error: e.message };
+            }
+        }
+        return { canceled: true };
+    });
+
+    ipcMain.handle('load-music-preset', async () => {
+        const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: 'Load Music Stack Preset',
+            filters: [{ name: 'JSON', extensions: ['json'] }],
+            properties: ['openFile']
+        });
+        if (!canceled && filePaths.length > 0) {
+            try {
+                const data = await fs.promises.readFile(filePaths[0], 'utf-8');
+                const stack = JSON.parse(data);
+                if (Array.isArray(stack)) {
+                    musicPlayer.clearStack();
+                    await musicPlayer.addToStack(stack);
+                    return { success: true };
+                }
+                throw new Error("Invalid preset format.");
+            } catch (e) {
+                return { success: false, error: e.message };
+            }
+        }
+        return { canceled: true };
+    });
+
+    ipcMain.handle('get-preview-audio-data', async (event, { index = -1 } = {}) => {
+        let filePath;
+        if (index >= 0 && index < musicPlayer.stack.length) {
+            filePath = musicPlayer.stack[index];
+        } else {
+            filePath = musicPlayer.getPreviewFilePath();
+        }
+
         if (!filePath) {
             return { success: false, error: 'No file available for preview.' };
         }
-        // Encode the file path to handle special characters and create a URL
-        const safeUrl = `safe-media://${encodeURI(filePath.replace(/\\/g, '/'))}`;
+        // Use a more standard URL format with search params for better parsing
+        const safeUrl = `safe-media://local/?path=${encodeURIComponent(filePath)}`;
         return { success: true, url: safeUrl };
     });
 
@@ -592,37 +961,183 @@ async function ipcloader() {
         return await dialog.showMessageBox(focusedWindow, options);
     });
 
-    ipcMain.handle('open-file-dialog', async () => {
-        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: 'Select Music File',
-            defaultPath: discordConfig.defaultMusicPath,
+    ipcMain.on('voice-toggle', async () => {
+        if (voiceStatus === 'connected') {
+            leaveVoiceChannelAction();
+        } else {
+            joinVoiceChannelAction();
+        }
+    });
+
+    ipcMain.on('request-bot-status', () => {
+        broadcastBotStatus();
+    });
+
+    const getMusicLibrary = () => {
+        const library = JSON.parse(JSON.stringify(discordConfig.musicLibrary || { children: [] }));
+        const looseFiles = discordConfig.looseFiles || [];
+        if (looseFiles.length > 0) {
+            let looseFolder = library.children.find(c => c.name === 'Loose Files');
+            if (!looseFolder) {
+                looseFolder = { name: 'Loose Files', type: 'directory', children: [], path: 'loose' };
+                library.children.push(looseFolder);
+            }
+            looseFolder.children = looseFiles.map(p => ({
+                name: path.basename(p),
+                path: p,
+                type: 'file'
+            }));
+        }
+        return library;
+    };
+
+    ipcMain.handle('get-music-library', async () => {
+        return getMusicLibrary();
+    });
+
+    ipcMain.handle('rescan-music-library', async () => {
+        scanMusicLibrary();
+        return { success: true };
+    });
+
+    const resolveLibraryPaths = (paths) => {
+        return paths.map(p => {
+            if (path.extname(p).toLowerCase() === '.lnk') {
+                try {
+                    const shortcut = shell.readShortcutLink(p);
+                    if (shortcut.target && fs.existsSync(shortcut.target)) {
+                        return shortcut.target;
+                    }
+                } catch (e) {
+                    console.error(`Failed to resolve shortcut: ${p}`, e);
+                }
+            }
+            return p;
+        });
+    };
+
+    ipcMain.on('library-action', async (event, { action, paths }) => {
+        if (!musicPlayer) return;
+        const resolvedPaths = resolveLibraryPaths(paths);
+
+        switch (action) {
+            case 'play-now':
+                // For 'play now' from library, we insert at the very top (index 0) and play.
+                const currentStack = [...musicPlayer.stack];
+                musicPlayer.stack = [...resolvedPaths, ...currentStack];
+                musicPlayer.currentIndex = 0;
+                if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+                musicPlayer.play();
+                break;
+            case 'add-top':
+                if (musicPlayer.currentIndex === -1) {
+                    // Nothing playing, add to the very top
+                    musicPlayer.stack = [...resolvedPaths, ...musicPlayer.stack];
+                } else {
+                    // Add below the currently playing track
+                    musicPlayer.stack.splice(musicPlayer.currentIndex + 1, 0, ...resolvedPaths);
+                }
+                musicPlayer._emitStatusUpdate();
+                break;
+            case 'add-bottom':
+                musicPlayer.addToStack(resolvedPaths);
+                break;
+            case 'add-loose':
+                if (!discordConfig.looseFiles) discordConfig.looseFiles = [];
+                for (const p of paths) {
+                    if (!discordConfig.looseFiles.includes(p)) {
+                        discordConfig.looseFiles.push(p);
+                    }
+                }
+                await setDiscordConfig(discordConfig);
+                const updatedLibrary = getMusicLibrary();
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('music-library-update', { library: updatedLibrary, diff: null });
+                }
+                break;
+        }
+    });
+
+    ipcMain.handle('read-combat-file', async () => {
+        const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
             properties: ['openFile'],
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+        if (canceled || filePaths.length === 0) {
+            return null;
+        }
+        try {
+            const content = fs.readFileSync(filePaths[0], 'utf8');
+            const data = JSON.parse(content);
+            // Support both full save state (with initiativeOrder) or simple array
+            const combatants = Array.isArray(data) ? data : (data.initiativeOrder || []);
+            return combatants;
+        } catch (e) {
+            logToRenderer(`Error reading combat file: ${e.message}`);
+            return null;
+        }
+    });
+
+    const getAudioFilesRecursive = async (paths) => {
+        let results = [];
+        const extensions = ['.mp3', '.wav', '.ogg', '.lnk'];
+        for (const p of paths) {
+            try {
+                const stats = await fs.promises.stat(p);
+                if (stats.isDirectory()) {
+                    const files = await fs.promises.readdir(p);
+                    const subResults = await getAudioFilesRecursive(files.map(f => path.join(p, f)));
+                    results = results.concat(subResults);
+                } else {
+                    if (extensions.includes(path.extname(p).toLowerCase())) {
+                        results.push(p);
+                    }
+                }
+            } catch (e) {
+                console.error(`Error processing path ${p}:`, e);
+            }
+        }
+        return results;
+    };
+
+    ipcMain.handle('open-file-dialog', async (event, options = {}) => {
+        const properties = options.folders ? ['openDirectory'] : ['openFile'];
+        if (options.multi) properties.push('multiSelections');
+
+        const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+            title: options.folders ? 'Select Music Folder(s)' : 'Select Music File(s)',
+            defaultPath: discordConfig.defaultMusicPath,
+            properties,
             filters: [
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
             ]
         });
 
         if (filePaths && filePaths.length > 0) {
-            return filePaths[0];
+            return await getAudioFilesRecursive(filePaths);
         }
-        return null;
+        return [];
     });
 
     // --- Soundboard IPC ---
-    ipcMain.handle('load-sound', async (event, { slotId }) => {
+    ipcMain.handle('load-sound', async (event, { slotId, multi = false, folders = false } = {}) => {
+        const properties = folders ? ['openDirectory'] : ['openFile'];
+        if (multi) properties.push('multiSelections');
+
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-            title: `Select Sound for Slot ${slotId + 1}`,
+            title: folders ? `Select Folder(s) for Slot ${slotId + 1}` : `Select Sound(s) for Slot ${slotId + 1}`,
             defaultPath: discordConfig.defaultMusicPath,
-            properties: ['openFile'],
+            properties,
             filters: [
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
             ]
         });
 
         if (filePaths && filePaths.length > 0) {
-            return { path: filePaths[0], name: path.basename(filePaths[0]) };
+            const allFiles = await getAudioFilesRecursive(filePaths);
+            return allFiles.map(p => ({ path: p, name: path.basename(p) }));
         }
-        return null;
+        return [];
     });
 
     ipcMain.on('play-sound', (event, { slotId }) => {
@@ -643,9 +1158,10 @@ async function ipcloader() {
     });
 
     // Redoing the above block properly:
-    ipcMain.on('play-sound', (event, { slotId, filePath }) => {
+    ipcMain.on('play-sound', async (event, { slotId, filePath }) => {
         logToRenderer(`IPC 'play-sound' slot ${slotId}, file: ${filePath}`);
         if (filePath && musicPlayer) {
+            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
             musicPlayer.playSound(filePath, slotId);
             // Notify renderer of state change? 
             // The renderer usually updates its own UI state, but if we want valid feedback:
@@ -709,6 +1225,23 @@ async function ipcloader() {
             }
         }
         return { canceled: true };
+    });
+
+    ipcMain.handle('get-help-content', async () => {
+        const paths = [
+            path.join(__dirname, '../../../docs/HELP.md'),
+            path.join(app.getAppPath(), 'docs/HELP.md'),
+            path.join(process.resourcesPath, 'docs/HELP.md')
+        ];
+
+        for (const helpPath of paths) {
+            try {
+                if (fs.existsSync(helpPath)) {
+                    return await fs.promises.readFile(helpPath, 'utf-8');
+                }
+            } catch (e) {}
+        }
+        return "Help file not found. Checked: " + paths.join(', ');
     });
 
     ipcMain.handle('load-soundboard-preset', async () => {
@@ -861,10 +1394,7 @@ async function ipcloader() {
     });
 
     ipcMain.on('add-creature', (event, creature) => {
-        const rollLogMessage = initiativeTracker.addCreature(creature);
-        if (rollLogMessage) {
-            mainWindow.webContents.send('dice-log', rollLogMessage);
-        }
+        initiativeTracker.addCreature(creature);
     });
 
     ipcMain.on('update-creature', (event, creature) => {
@@ -931,6 +1461,13 @@ async function ipcloader() {
 
     ipcMain.on('remove-creature', (event, { creatureId }) => {
         initiativeTracker.removeCreature(creatureId);
+    });
+
+    ipcMain.on('copy-creature', (event, { creatureId }) => {
+        const creature = initiativeTracker.getCreature(creatureId);
+        if (creature) {
+            mainWindow.webContents.send('populate-add-form', creature);
+        }
     });
 
     ipcMain.on('previous-turn', async () => {
@@ -1105,10 +1642,10 @@ async function logToRenderer(...args) {
         return arg;
     }).join(' ');
 
-    if (isAppReady) {
+    if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send('log-message', message);
     }
-    else {
+    else if (!isAppReady) {
         await sleep(100);
         logToRenderer(message);
     }
@@ -1133,137 +1670,734 @@ function initializeDiscordBot() {
     client.login(discordConfig.token).catch(error => {
         logToRenderer(`Discord login failed: ${error.message}`);
         dialog.showErrorBox('Discord Login Failed', `Could not log in to Discord. Please check your token in the settings.\n\n${error.message}`);
+        broadcastBotStatus();
     });
 }
 
-client.once('clientReady', async () => {
-    const shutdown = async () => {
-        try {
-            console.log('Cleaning up and exiting.');
-            // Remove all event listeners
-            client.removeAllListeners();
-            if (musicPlayer && musicPlayer.player) {
-                musicPlayer.player.removeAllListeners();
-            }
-            if (connection) {
-                connection.removeAllListeners();
-            }
-            app.removeAllListeners();
-            ipcMain.removeAllListeners();
+function broadcastBotStatus() {
+    const status = client.isReady() ? (isSoftLocked ? 'soft-locked' : 'online') : 'offline';
+    const message = isSoftLocked ? 'Busy (Occupied)' : (client.isReady() ? 'Connected' : (discordConfig.token ? 'Connecting...' : 'Not Configured'));
 
-            // Close any other resources, e.g., voice connections
-            if (connection) {
-                connection.destroy();
-            }
-
-            // Optionally logout
-            await client.destroy();
-
-            app.quit();
-        }
-        catch (error) {
-            console.log('Error during shutdown:', error);
-        }
+    const payload = {
+        status,
+        message,
+        voiceStatus,
+        isSoftLocked
     };
-    app.on('before-quit', shutdown);
 
-    logToRenderer('TavernTones is online!');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('discord-bot-status', payload);
+    }
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+        settingsWindow.webContents.send('discord-bot-status', payload);
+    }
+}
 
-    //Connect to the voice channel
-    const voiceChannel = client.channels.cache.get(discordConfig.voiceChannel);
+let isShuttingDown = false;
+const shutdown = async () => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    try {
+        console.log('Cleaning up and exiting.');
+
+
+        // Delete media control message gracefully
+        if (client && client.lastMediaMessage) {
+            try {
+                await client.lastMediaMessage.delete().catch(() => {});
+                client.lastMediaMessage = null;
+            } catch (e) {
+                console.error("Error deleting media control on shutdown:", e);
+            }
+        }
+
+        // Remove all event listeners
+        if (client) {
+            client.removeAllListeners();
+        }
+        if (musicPlayer) {
+            if (musicPlayer.player) musicPlayer.player.removeAllListeners();
+            musicPlayer.destroy();
+        }
+        if (connection) {
+            connection.removeAllListeners();
+            connection.destroy();
+        }
+
+        // Optionally logout with a timeout to prevent hanging the shutdown
+        if (client) {
+            try {
+                const destroyPromise = client.destroy();
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Discord client destroy timed out')), 5000)
+                );
+                await Promise.race([destroyPromise, timeoutPromise]);
+            } catch (e) {
+                console.error("Error destroying discord client:", e);
+            }
+        }
+
+        console.log('Final exit.');
+        app.exit(0);
+    }
+    catch (error) {
+        console.log('Error during shutdown:', error);
+        process.exit(1);
+    }
+};
+
+app.on('before-quit', (e) => {
+    if (!isShuttingDown) {
+        e.preventDefault();
+        shutdown();
+    }
+});
+
+app.on('window-all-closed', () => {
+    // Standard behavior: quit when all windows are closed,
+    // unless on macOS where apps typically stay active.
+    if (process.platform !== 'darwin') {
+        app.quit();
+    }
+});
+
+async function joinVoiceChannelAction() {
+    if (isJoiningVoice) return;
+
+    // Wait for client readiness if necessary
+    if (!client.isReady()) {
+        logToRenderer("[Discord] Client not ready for voice join.");
+        return;
+    }
+
+    const isActive = connection && (
+        connection.state.status !== VoiceConnectionStatus.Disconnected &&
+        connection.state.status !== VoiceConnectionStatus.Destroyed
+    );
+    if (isActive) return;
+
+    isJoiningVoice = true;
+    isSoftLocked = false;
+
+    const voiceChannelId = discordConfig.voiceChannel;
+    if (voiceChannelId && discordConfig.textChannel) {
+        let textChannel = client.channels.cache.get(discordConfig.textChannel);
+        if (!textChannel) {
+            try { textChannel = await client.channels.fetch(discordConfig.textChannel); } catch (e) {}
+        }
+
+        if (textChannel && textChannel.isTextBased()) {
+            logToRenderer(`[Anti-Collision] Knocking on voice channel ${voiceChannelId}...`);
+            const knockMsg = await textChannel.send(`||~~TT_KNOCK:${voiceChannelId}~~||`);
+            setTimeout(() => knockMsg.delete().catch(() => {}), 500);
+
+            // Wait 1 second for occupancy response
+            let isOccupied = false;
+            const collector = textChannel.createMessageCollector({
+                filter: m => m.content.includes(`TT_OCCUPIED:${voiceChannelId}`) && m.author.id === client.user.id,
+                time: 1000
+            });
+
+            await new Promise(resolve => {
+                collector.on('collect', () => {
+                    isOccupied = true;
+                    collector.stop();
+                });
+                collector.on('end', resolve);
+            });
+
+            if (isOccupied) {
+                logToRenderer(`[Anti-Collision] Voice channel ${voiceChannelId} is occupied. Join cancelled.`);
+                isSoftLocked = true;
+                isJoiningVoice = false;
+                broadcastBotStatus();
+                return;
+            }
+        }
+    }
+
+    const voiceChannel = client.channels.cache.get(voiceChannelId);
     if (voiceChannel && voiceChannel.isVoiceBased()) {
         try {
+            voiceStatus = 'connecting';
+            broadcastBotStatus();
+
+            const existingConnection = getVoiceConnection(voiceChannel.guild.id);
+            if (existingConnection) {
+                existingConnection.destroy();
+            }
+
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
                 adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+                selfDeaf: false,
+                selfMute: false
             });
 
-            // Listen for connection status changes
             connection.on(VoiceConnectionStatus.Ready, () => {
+                voiceStatus = 'connected';
+                broadcastBotStatus();
                 logToRenderer('The bot has connected to the channel!');
-                musicPlayer.setConnection(connection); // Pass connection to the player
+                musicPlayer.setConnection(connection);
             });
 
-            connection.on(VoiceConnectionStatus.Disconnected, () => {
-                logToRenderer('The bot has been disconnected. Attempting to reconnect...');
-                setTimeout(() => {
-                    joinVoiceChannel({
-                        channelId: voiceChannel.id,
-                        guildId: voiceChannel.guild.id,
-                        adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-                    });
-                }, 5000);
-            });
-
-            connection.on(VoiceConnectionStatus.Signalling, () => {
-                logToRenderer('The bot is attempting to establish a connection.');
+            connection.on(VoiceConnectionStatus.Disconnected, async () => {
+                voiceStatus = 'connecting';
+                broadcastBotStatus();
+                try {
+                    await Promise.race([
+                        entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+                        entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+                    ]);
+                } catch (error) {
+                    leaveVoiceChannelAction();
+                }
             });
 
             connection.on(VoiceConnectionStatus.Destroyed, () => {
-                logToRenderer('The connection has been destroyed.');
+                voiceStatus = 'disconnected';
+                broadcastBotStatus();
             });
 
-            logToRenderer(`Joined voice channel: ${voiceChannel.name}: ${connection.state.status}`);
-
-            await entersState(connection, VoiceConnectionStatus.Ready, 60000);
-            logToRenderer('Connection is ready!');
+            await entersState(connection, VoiceConnectionStatus.Ready, 30000);
+        } catch (error) {
+            logToRenderer('Error joining voice channel: ', error.message || error);
+            leaveVoiceChannelAction();
+        } finally {
+            isJoiningVoice = false;
         }
-        catch (error) {
-            logToRenderer('Error joining voice channel: ', error);
-        }
-    }
-    else {
+    } else {
         logToRenderer('Voice channel not found or is not a voice channel!');
+        isJoiningVoice = false;
     }
+}
+
+function leaveVoiceChannelAction() {
+    if (connection) {
+        connection.destroy();
+        connection = null;
+    }
+    voiceStatus = 'disconnected';
+    broadcastBotStatus();
+}
+
+client.once(Events.ClientReady, async () => {
+    logToRenderer('TavernTones is online!');
+
+    // Robust collision detection for Voice Channels using a "Knock" protocol
+    if (discordConfig.textChannel) {
+        try {
+            let channel = client.channels.cache.get(discordConfig.textChannel);
+            if (!channel) channel = await client.channels.fetch(discordConfig.textChannel);
+
+            if (channel && channel.isTextBased()) {
+                // Listen for knocks from other instances
+                client.on('messageCreate', async (m) => {
+                    if (m.author.id !== client.user.id) return;
+
+                    // Response to a "knock" if we are currently in that voice channel
+                    // AND we have an active connection (we don't respond if we are just a ghost/zombie)
+                    if (m.content.includes('TT_KNOCK:')) {
+                        const targetId = m.content.split('TT_KNOCK:')[1].split('~')[0];
+                        const me = m.guild.members.me;
+                        const isActivelyConnected = connection && (
+                            connection.state.status === VoiceConnectionStatus.Ready ||
+                            connection.state.status === VoiceConnectionStatus.Connecting ||
+                            connection.state.status === VoiceConnectionStatus.Signalling
+                        );
+
+                        if (me && me.voice.channelId === targetId && isActivelyConnected) {
+                            logToRenderer(`[Anti-Collision] Responding to knock for channel ${targetId}`);
+                            const occMsg = await m.channel.send(`||~~TT_OCCUPIED:${targetId}~~||`);
+                            setTimeout(() => occMsg.delete().catch(() => {}), 500);
+                        }
+                    }
+                });
+            }
+        } catch (e) {
+            logToRenderer("[Anti-Collision] Error setting up listener: " + e.message);
+        }
+    }
+
+    broadcastBotStatus();
+    // updateDiscordMediaControl(); // MOVED DOWN
 
 
     logToRenderer(`Logged in as ${client.user.tag}`);
 
+    client.on('messageCreate', async message => {
+        if (client.commandHandler) client.commandHandler.handleMessage(message);
+    });
+
     const basePath = app.isPackaged
         ? path.dirname(app.getPath('exe'))
         : app.getAppPath();
-    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, discordConfig, fiveEToolsParser);
-    client.commandHandler = commandHandler; // Attach commandHandler to the client object
-    client.on('messageCreate', message => commandHandler.handleMessage(message));
+
+    const extendedConfig = {
+        ...discordConfig,
+        joinVoiceCallback: async () => {
+            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+        }
+    };
+
+    const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, extendedConfig, fiveEToolsParser);
+    client.commandHandler = commandHandler;
+
+    client.lastMediaMessage = null;
+    let isUpdatingMediaControl = false;
+    let pendingMediaUpdate = false;
+    let selectedSongInDropdown = null;
+    let currentDropdownPage = 0;
+    const PAGE_SIZE = 23;
+
+    // Map to handle long file paths in Discord select menus (100 char limit)
+    const songPathToIdMap = new Map();
+    const idToSongPathMap = new Map();
+    let songIdCounter = 0;
+
+    function getSongId(filePath) {
+        if (songPathToIdMap.has(filePath)) return songPathToIdMap.get(filePath);
+        const id = `s_${songIdCounter++}`;
+        songPathToIdMap.set(filePath, id);
+        idToSongPathMap.set(id, filePath);
+        return id;
+    }
+
+    // Now call it once defined
+    updateDiscordMediaControl();
+
+    async function updateDiscordMediaControl(disabled = false) {
+        if (!discordConfig.textChannel) {
+            logToRenderer('[Discord] No text channel configured for media controls.');
+            return;
+        }
+        if (isUpdatingMediaControl) {
+            pendingMediaUpdate = true;
+            return;
+        }
+        if (isShuttingDown) return;
+
+        let targetChannel = client.channels.cache.get(discordConfig.textChannel);
+        if (!targetChannel) {
+            try {
+                targetChannel = await client.channels.fetch(discordConfig.textChannel);
+            } catch (err) {
+                logToRenderer(`[Discord] Failed to fetch channel ${discordConfig.textChannel}: ${err.message}`);
+                return;
+            }
+        }
+
+        if (!targetChannel) {
+            logToRenderer(`[Discord] Channel ${discordConfig.textChannel} not found.`);
+            return;
+        }
+
+        isUpdatingMediaControl = true;
+
+        const status = {
+            isPlaying: musicPlayer.isPlaying,
+            loopMode: musicPlayer.loopMode,
+            shuffleMode: musicPlayer.shuffleMode,
+            currentTrack: musicPlayer.stack[musicPlayer.currentIndex],
+            stackSize: musicPlayer.stack.length,
+            currentIndex: musicPlayer.currentIndex,
+            currentTime: musicPlayer.currentTime,
+            duration: musicPlayer.duration
+        };
+
+        const loopIcons = ['➡️', '🔁', '🔂'];
+
+        function createProgressString(current, total) {
+            const size = 10;
+            if (total <= 0) return '⬛'.repeat(size);
+            const progress = Math.round((current / total) * size);
+            return '🟩'.repeat(Math.min(size, progress)) + '⬛'.repeat(Math.max(0, size - progress));
+        }
+
+        const formatTime = (s) => {
+            const mins = Math.floor(s / 60);
+            const secs = Math.floor(s % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        };
+
+        const embed = new EmbedBuilder()
+            .setTitle('🎵 Music Player Control')
+            .setColor(status.isPlaying ? 0x00FF00 : 0xFF0000)
+            .addFields(
+                { name: 'Status', value: status.isPlaying ? '▶️ Playing' : '⏸️ Paused', inline: true },
+                { name: 'Loop', value: loopIcons[status.loopMode], inline: true },
+                { name: 'Shuffle', value: status.shuffleMode ? '🔀 On' : '🔀 Off', inline: true },
+                { name: 'Track', value: status.currentTrack ? path.basename(status.currentTrack) : 'None' },
+                { name: 'Progress', value: `${createProgressString(status.currentTime, status.duration)} \`[${formatTime(status.currentTime)} / ${formatTime(status.duration)}]\`` },
+                { name: 'Playlist', value: `${status.stackSize} tracks` }
+            )
+            .setTimestamp();
+
+        // --- Row 1: Song Selector Dropdown ---
+        const songs = musicPlayer.getMusicFiles().map(p => ({
+            label: path.basename(p).substring(0, 100),
+            value: getSongId(p)
+        }));
+
+        const totalPages = Math.ceil(songs.length / PAGE_SIZE);
+        const start = currentDropdownPage * PAGE_SIZE;
+        const end = start + PAGE_SIZE;
+        const pageSongs = songs.slice(start, end);
+
+        const songOptions = pageSongs.map(s => ({
+            label: s.label,
+            value: s.value,
+            default: selectedSongInDropdown === idToSongPathMap.get(s.value)
+        }));
+
+        // Add pagination options if needed
+        if (totalPages > 1) {
+            if (currentDropdownPage > 0) {
+                songOptions.unshift({ label: '⬅️ Previous Page', value: 'prev_page' });
+            }
+            if (currentDropdownPage < totalPages - 1) {
+                songOptions.push({ label: '➡️ Next Page', value: 'next_page' });
+            }
+        }
+
+        if (songOptions.length === 0) {
+            songOptions.push({ label: 'No music found', value: 'none' });
+        }
+
+        const songSelector = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('media-song-select')
+                .setPlaceholder('Select a song...')
+                .addOptions(songOptions)
+                .setDisabled(disabled || songs.length === 0)
+        );
+
+        // --- Row 2: Selection Actions ---
+        const selectionActions = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('media-play-next').setLabel('Play Next').setStyle(ButtonStyle.Primary).setDisabled(disabled || !selectedSongInDropdown),
+            new ButtonBuilder().setCustomId('media-play-now').setLabel('Play Now').setStyle(ButtonStyle.Success).setDisabled(disabled || !selectedSongInDropdown),
+            new ButtonBuilder().setCustomId('media-remove-stack').setLabel('Remove').setStyle(ButtonStyle.Danger).setDisabled(disabled || status.stackSize === 0)
+        );
+
+        // --- Row 3: Playback Controls ---
+        const playbackControls = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('media-prev').setLabel('⏮️').setStyle(ButtonStyle.Secondary).setDisabled(disabled),
+            new ButtonBuilder().setCustomId('media-play-pause').setLabel(status.isPlaying ? '⏸️' : '▶️').setStyle(ButtonStyle.Secondary).setDisabled(disabled),
+            new ButtonBuilder().setCustomId('media-next').setLabel('⏭️').setStyle(ButtonStyle.Secondary).setDisabled(disabled),
+            new ButtonBuilder().setCustomId('media-loop').setLabel(loopIcons[status.loopMode]).setStyle(ButtonStyle.Secondary).setDisabled(disabled),
+            new ButtonBuilder().setCustomId('media-shuffle').setLabel('🔀').setStyle(status.shuffleMode ? ButtonStyle.Success : ButtonStyle.Secondary).setDisabled(disabled)
+        );
+
+        const components = [songSelector, selectionActions, playbackControls];
+
+        try {
+            if (client.lastMediaMessage) {
+                // Check if message still exists by fetching or just trying to edit
+                await client.lastMediaMessage.edit({ embeds: [embed], components });
+            } else {
+                client.lastMediaMessage = await targetChannel.send({ embeds: [embed], components });
+            }
+        } catch (e) {
+            try {
+                // If edit fails, it might be deleted. Send new one.
+                client.lastMediaMessage = await targetChannel.send({ embeds: [embed], components });
+            } catch (err) {
+                logToRenderer(`Failed to send Discord media control: ${err.message}`);
+            }
+        } finally {
+            isUpdatingMediaControl = false;
+            if (pendingMediaUpdate) {
+                pendingMediaUpdate = false;
+                updateDiscordMediaControl(disabled);
+            }
+        }
+    }
+
+    musicPlayer.on('status-change', () => {
+        updateDiscordMediaControl();
+    });
 
     client.on('interactionCreate', async interaction => {
+        if (interaction.isChatInputCommand()) {
+            const { commandName, options } = interaction;
+
+            if (commandName === 'roll') {
+                const notation = options.getString('notation');
+                try {
+                    const roller = new DiceRoller();
+                    const roll = roller.roll(notation);
+                    await interaction.reply(`🎲 **Roll Result:** ${roll.total}\n\`${roll.toString()}\``);
+                } catch (e) {
+                    await interaction.reply({ content: 'Invalid notation.', ephemeral: true });
+                }
+            } else if (commandName === 'play-song') {
+                const query = options.getString('query');
+                const song = client.commandHandler.findSong(query);
+                if (song) {
+                    await musicPlayer.addToStack(song);
+                    if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+                    musicPlayer.play();
+                    await interaction.reply(`Playing: **${path.basename(song)}**`);
+                } else {
+                    await interaction.reply({ content: "Could not find that song.", ephemeral: true });
+                }
+            } else if (commandName === 'add-song') {
+                const query = options.getString('query');
+                const song = client.commandHandler.findSong(query);
+                if (song) {
+                    await musicPlayer.addToStack(song);
+                    await interaction.reply(`Added to stack: **${path.basename(song)}**`);
+                } else {
+                    await interaction.reply({ content: "Could not find that song.", ephemeral: true });
+                }
+            } else if (commandName === 'play-folder') {
+                await interaction.deferReply();
+                const query = options.getString('query');
+                const folder = client.commandHandler.findFolder(query);
+                if (folder) {
+                    const songs = client.commandHandler.getFolderSongs(folder);
+                    if (songs.length > 0) {
+                        musicPlayer.clearStack();
+                        await musicPlayer.addToStack(songs);
+                        if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+                        musicPlayer.play();
+                        await interaction.editReply({ content: `Playing folder: **${path.basename(folder)}** (${songs.length} songs)` });
+                    } else {
+                        await interaction.editReply({ content: "Folder is empty." });
+                    }
+                } else {
+                    await interaction.editReply({ content: "Could not find that folder." });
+                }
+            } else if (commandName === 'add-folder') {
+                await interaction.deferReply();
+                const query = options.getString('query');
+                const folder = client.commandHandler.findFolder(query);
+                if (folder) {
+                    const songs = client.commandHandler.getFolderSongs(folder);
+                    if (songs.length > 0) {
+                        await musicPlayer.addToStack(songs);
+                        await interaction.editReply({ content: `Added folder to stack: **${path.basename(folder)}** (${songs.length} songs)` });
+                    } else {
+                        await interaction.editReply({ content: "Folder is empty." });
+                    }
+                } else {
+                    await interaction.editReply({ content: "Could not find that folder." });
+                }
+            } else if (commandName === 'dice-help') {
+                const embed = new EmbedBuilder()
+                    .setTitle("RPG Dice Notation Help")
+                    .setColor(0x00FF00)
+                    .setDescription("TavernTones uses the `@dice-roller/rpg-dice-roller` library.")
+                    .addFields(
+                        { name: "Basic", value: "`2d20`, `1d12 + 4`, `3d6 - 2`" },
+                        { name: "Keep/Drop", value: "`4d6kh3` (Keep Highest 3), `2d20kl1` (Keep Lowest 1), `4d6dl1` (Drop Lowest 1)" },
+                        { name: "Exploding", value: "`4d10!` (Explode on max), `4d10!>8` (Explode on 8 or higher)" },
+                        { name: "Reroll", value: "`1d20r1` (Reroll 1s), `1d20r<3` (Reroll 3 or less)" },
+                        { name: "Success/Failure", value: "`10d6>4` (Count dice > 4)" }
+                    );
+                await interaction.reply({ embeds: [embed] });
+            } else if (commandName === 'play') {
+                const f = options.getString('folder') || 'chill';
+                const s = options.getString('song');
+                const songFilePath = await client.commandHandler.findMusic(f, s);
+                if (songFilePath) {
+                    await interaction.reply(`Playing: **${path.parse(songFilePath).name}**`);
+                    musicPlayer.clearStack();
+                    await musicPlayer.addToStack(songFilePath);
+                    if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+                    musicPlayer.play();
+                } else {
+                    await interaction.reply({ content: "Could not find that music.", ephemeral: true });
+                }
+            } else if (commandName === 'pause') {
+                musicPlayer.pause();
+                await interaction.reply('Paused.');
+            } else if (commandName === 'stop') {
+                musicPlayer.stop();
+                musicPlayer.clearStack();
+                await interaction.reply('Stopped and cleared stack.');
+            } else if (commandName === 'ping') {
+                await interaction.reply('Pong!');
+            } else if (commandName === 'surge') {
+                // Emulate surge command
+                const msg = { author: interaction.user, reply: (c) => interaction.reply(c), content: '!su', mentions: { has: () => true, roles: { has: () => false } } };
+                await client.commandHandler.handleMessage(msg);
+            } else if (commandName === 'shield') {
+                const msg = { author: interaction.user, reply: (c) => interaction.reply(c), content: '!sh', mentions: { has: () => true, roles: { has: () => false } } };
+                await client.commandHandler.handleMessage(msg);
+            } else if (commandName === 'roll-table') {
+                const folder = interaction.options.getString('folder');
+                const count = interaction.options.getInteger('count');
+                const args = interaction.options.getString('args');
+                const msg = {
+                    author: interaction.user,
+                    reply: (c) => interaction.reply(c),
+                    content: `!ro ${folder} ${count} ${args}`,
+                    mentions: { has: () => true, roles: { has: () => false } },
+                    channel: interaction.channel,
+                    startThread: (o) => interaction.channel.threads.create(o)
+                };
+                // Interaction needs to be deferred if it takes long
+                await interaction.deferReply();
+                msg.reply = (c) => interaction.editReply(c);
+                await client.commandHandler.handleMessage(msg);
+            }
+        }
+
         if (interaction.isStringSelectMenu()) {
             const { customId, values } = interaction;
 
             if (customId === '5e-result-select') {
                 await interaction.deferUpdate();
                 const [category, source, name] = values[0].split('__');
-
                 const item = await fiveEToolsParser.getExact(category, name, source);
-
                 if (item) {
                     const embed = format5eResult(item);
-                    await interaction.editReply({ embeds: [embed], components: [] }); // Remove the dropdown
+                    await interaction.editReply({ embeds: [embed], components: [] });
                 } else {
-                    await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details for that item.', components: [] });
+                    await interaction.editReply({ content: 'Sorry, I couldn\'t retrieve the details.', components: [] });
                 }
-                return; // Stop further processing for this interaction
+            } else if (customId === 'media-song-select') {
+                const val = values[0];
+                if (val === 'next_page') {
+                    currentDropdownPage++;
+                } else if (val === 'prev_page') {
+                    currentDropdownPage--;
+                } else {
+                    selectedSongInDropdown = idToSongPathMap.get(val);
+                }
+                await interaction.deferUpdate();
+                updateDiscordMediaControl();
+            }
+        }
+
+        if (interaction.isButton()) {
+            const { customId } = interaction;
+            if (customId.startsWith('media-')) {
+                await interaction.deferUpdate();
+                switch (customId) {
+                    case 'media-prev': musicPlayer.prev(); break;
+                    case 'media-next': musicPlayer.next(); break;
+                    case 'media-play-pause':
+                        if (musicPlayer.isPlaying) {
+                            musicPlayer.pause();
+                        } else {
+                            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+                            musicPlayer.play();
+                        }
+                        break;
+                    case 'media-loop': musicPlayer.setLoopMode((musicPlayer.loopMode + 1) % 3); break;
+                    case 'media-shuffle': musicPlayer.setShuffle(!musicPlayer.shuffleMode); break;
+                    case 'media-play-next':
+                        if (selectedSongInDropdown) {
+                            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+                            musicPlayer.stack.splice(musicPlayer.currentIndex + 1, 0, selectedSongInDropdown);
+                            selectedSongInDropdown = null;
+                        }
+                        break;
+                    case 'media-play-now':
+                        if (selectedSongInDropdown) {
+                            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+                            musicPlayer.stack.splice(musicPlayer.currentIndex + 1, 0, selectedSongInDropdown);
+                            musicPlayer.next();
+                            selectedSongInDropdown = null;
+                        }
+                        break;
+                    case 'media-remove-stack':
+                        musicPlayer.removeFromStack(musicPlayer.currentIndex);
+                        break;
+                }
+                updateDiscordMediaControl();
             }
         }
     });
 });
 
-let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
-const startingMemUse = memoryUsage;
-setInterval(() => {
-    memoryUsage = process.memoryUsage().rss;
-    logToRenderer(`Memory usage is ${((memoryUsage - startingMemUse) / 1024 / 1024).toFixed(2)} MB higher than at launch (${(memoryUsage / 1024 / 1024).toFixed(2)} MB total)`);
-}, 60000);
+// let memoryUsage = process.memoryUsage().rss; // Get the initial memory usage
+// const startingMemUse = memoryUsage;
+// setInterval(() => {
+//     memoryUsage = process.memoryUsage().rss;
+//     logToRenderer(`Memory usage is ${((memoryUsage - startingMemUse) / 1024 / 1024).toFixed(2)} MB higher than at launch (${(memoryUsage / 1024 / 1024).toFixed(2)} MB total)`);
+// }, 60000);
 
 
 function getHpColor(current, max) {
-    if (current <= 0) return '#6c757d'; // Grey
-    if (current > max) return '#8a2be2'; // Purple
+    if (current <= 0) return '#6c757d'; // Dead
+    if (current > max) return '#007bff'; // Overhealed? Treat as blue/100% or purple? Sticking to blue for base HP.
 
     const percentage = (current / max) * 100;
-    if (percentage <= 25) return '#dc3545'; // Red
-    if (percentage <= 50) return '#ffc107'; // Yellow
-    if (percentage <= 75) return '#28a745'; // Green
-    return '#007bff'; // Blue
+    if (percentage >= 100) return '#007bff'; // Blue
+    if (percentage >= 50) return '#28a745'; // Green
+    if (percentage >= 25) return '#ffc107'; // Yellow
+    return '#dc3545'; // Red (< 25%)
+}
+
+function scanMusicLibrary() {
+    if (!discordConfig.defaultMusicPath || !fs.existsSync(discordConfig.defaultMusicPath)) {
+        logToRenderer("[Library] No music folder configured or path invalid.");
+        return;
+    }
+
+    logToRenderer("[Library] Scanning music folder...");
+    const worker = new Worker(path.join(__dirname, 'MusicScannerWorker.js'), {
+        workerData: {
+            musicFolder: discordConfig.defaultMusicPath,
+            extensions: ['.mp3', '.wav', '.ogg', '.lnk']
+        }
+    });
+
+    worker.on('message', async (result) => {
+        if (result.success) {
+            const oldLibrary = discordConfig.musicLibrary || { children: [] };
+            const newLibrary = result.library;
+
+            // --- Diff logic for modal ---
+            const oldFiles = new Set();
+            const newFiles = new Set();
+            const oldFolders = new Set();
+            const newFolders = new Set();
+
+            const collectMetadata = (node, fileSet, folderSet) => {
+                if (node.type === 'file') fileSet.add(node.path);
+                else {
+                    folderSet.add(node.path);
+                    if (node.children) node.children.forEach(c => collectMetadata(c, fileSet, folderSet));
+                }
+            };
+
+            collectMetadata(oldLibrary, oldFiles, oldFolders);
+            collectMetadata(newLibrary, newFiles, newFolders);
+
+            const addedSongs = [...newFiles].filter(f => !oldFiles.has(f)).length;
+            const removedSongs = [...oldFiles].filter(f => !newFiles.has(f)).length;
+            const addedFolders = [...newFolders].filter(f => !oldFolders.has(f)).length;
+            const removedFolders = [...oldFolders].filter(f => !newFolders.has(f)).length;
+
+            if (addedSongs > 0 || removedSongs > 0 || addedFolders > 0 || removedFolders > 0) {
+                logToRenderer(`[Library] Scan complete: ${addedSongs} songs, ${addedFolders} folders added; ${removedSongs} songs, ${removedFolders} folders removed.`);
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('music-library-update', {
+                        library: newLibrary,
+                        diff: { added: addedSongs, removed: removedSongs, addedFolders, removedFolders }
+                    });
+                }
+            } else {
+                logToRenderer("[Library] Scan complete: No changes.");
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('music-library-update', { library: newLibrary, diff: null });
+                }
+            }
+
+            discordConfig.musicLibrary = newLibrary;
+            await setDiscordConfig(discordConfig);
+
+        } else {
+            logToRenderer(`[Library] Scan failed: ${result.error}`);
+        }
+    });
+
+    worker.on('error', (err) => {
+        logToRenderer(`[Library] Worker error: ${err.message}`);
+    });
 }

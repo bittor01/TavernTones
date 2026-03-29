@@ -1,92 +1,108 @@
+// Performance and security update
 const { createAudioPlayer, AudioPlayerStatus, entersState, VoiceConnectionStatus, createAudioResource, StreamType } = require('@discordjs/voice');
 const fs = require('fs');
 const fsp = require('fs').promises;
 const path = require('path');
-const { Readable } = require('stream');
+const { Readable, PassThrough } = require('stream');
 const { EventEmitter } = require('events');
 const { spawn } = require('child_process');
 const ThreadedAudioMixer = require('./ThreadedAudioMixer');
 
 class BackendAudioPlayer extends EventEmitter {
-    constructor(logCallback, shell, musicFolder) {
+    constructor(logCallback, shell, musicFolder, ffmpegBinFolder) {
         super();
         // Dependencies
         this.log = logCallback || console.log;
         this.shell = shell;
         this.musicFolder = musicFolder;
+        this.ffmpegBinFolder = ffmpegBinFolder;
 
         // State
         this.playerStatus = AudioPlayerStatus.Idle;
         this.isPlaying = false;
+        this.playLock = false;
+
+        // Music Stack System
+        this.stack = [];
+        this.currentIndex = -1;
+        this.loopMode = 1; // 0: None, 1: Loop All, 2: Loop 1
+        this.shuffleMode = false;
+        this.playedIndices = []; // For shuffle history
+
+        this.currentTime = 0; // Current playback time in seconds
+        this.duration = 0; // Total duration of current track in seconds
+        this.timer = null;
+        this.consecutiveErrors = 0;
+
+        // Caching
+        this.cachedAudio = new Map(); // filePath -> Buffer
         this.isCaching = false;
-        this.activeFilePath = null;
-        this.pendingFilePath = null; // New state for the pending file path
-        this.promoteAndPause = false; // Flag to promote a track without playing it
-        this.isStoppingIntentionally = false; // Flag to help the Idle handler know why it was called
-        this.loopToggle = true;
+        this.MAX_CACHE_SIZE = 126720000; // ~11 minutes of 48kHz 16-bit stereo PCM
+
         this.playbackVolume = 1.0;
         this.soundboardVolume = 0.5;
+        this.duckingVolume = 0.3;
+        this.activeSfxCount = 0;
 
         // Audio Pipelines
         this.mixer = new ThreadedAudioMixer();
-        // We play the mixer stream continuously.
-        this.mixedResource = createAudioResource(this.mixer, {
-            inputType: StreamType.Raw,
-            inlineVolume: false // Volume handled at mixer input level or globally? 
-            // construct AudioMixer produces 48kHz 16bit Stereo Signed Little Endian PCM
+        this.mixer.on('error', (err) => {
+            if (err.code === 'ERR_STREAM_PREMATURE_CLOSE') return;
+            this.log(`[AudioPlayer] Mixer Error: ${err.message}`);
         });
 
-        // Discord.js Voice components
+        this.mixedResource = createAudioResource(this.mixer, {
+            inputType: StreamType.Raw,
+            inlineVolume: false
+        });
+
         this.player = createAudioPlayer();
         this.connection = null;
 
-        // Start playing the mixer immediately (it outputs silence when empty)
         this.player.play(this.mixedResource);
-
         this.setupPlayerEvents();
-        this._emitStatusUpdate(); // Emit initial state
+        this._emitStatusUpdate();
 
-        // Keep track of sound processes to kill them if needed
         this.activeStreams = new Map(); // id -> { process, stream }
     }
-
-    // --- Status and Event Setup ---
 
     _emitStatusUpdate() {
         const getRelativePath = (filePath) => {
             if (!filePath || !this.musicFolder) return filePath;
-            return path.relative(this.musicFolder, filePath);
+            try {
+                return path.relative(this.musicFolder, filePath);
+            } catch (e) {
+                return filePath;
+            }
         };
 
         const status = {
             isPlaying: this.isPlaying,
             isCaching: this.isCaching,
-            activeFilePath: getRelativePath(this.activeFilePath),
-            pendingFilePath: getRelativePath(this.pendingFilePath),
+            stack: this.stack.map(p => ({
+                path: p,
+                name: path.basename(p),
+                relativePath: getRelativePath(p)
+            })),
+            currentIndex: this.currentIndex,
+            loopMode: this.loopMode,
+            shuffleMode: this.shuffleMode,
+            playerStatus: this.playerStatus,
+            currentTime: this.currentTime,
+            duration: this.duration
         };
         this.emit('status-change', status);
     }
 
     setupPlayerEvents() {
-        // The player shouldn't really go idle unless the mixer itself ends (which it shouldn't) or errors.
-        // Or if we pause the whole player. 
-        // But for our "Audio Player" logic (music track logic), we need to emulate the "Idle" 
-        // behavior when the *music* track finishes.
-
         this.player.on(AudioPlayerStatus.Idle, () => {
-            this.log('Mixer player went IDLE. This implies the mixer stream ended.');
-            // Restart mixer if it died?
+            this.log('[AudioPlayer] Mixer player went IDLE.');
         });
 
         this.player.on('error', error => {
-            this.log(`Error in audio player (Mixer): ${error.message}`);
+            this.log(`[AudioPlayer] Error in audio player (Mixer): ${error.message}`);
         });
-
-        // We need to listen to the *music stream* end event to handle looping/next track.
-        // This logic is now moved to _playMusicStream
     }
-
-    // --- Configuration ---
 
     setConnection(connection) {
         if (!connection) return;
@@ -97,197 +113,474 @@ class BackendAudioPlayer extends EventEmitter {
     setVolume(volume) {
         if (volume >= 0 && volume <= 2) {
             this.playbackVolume = volume;
-            this.log(`Playback volume set to ${volume * 100}%`);
-            // Set volume on the mixer line for music? Or global?
-            // For now, let's say this volume only affects the music track, not SFX?
-            // Or we can implement volume scaling in the mixer.
-            // TODO: Pass volume to mixer input. 
+            if (this.activeStreams.has('music')) {
+                const currentVolume = this.activeSfxCount > 0 ? this.playbackVolume * this.duckingVolume : this.playbackVolume;
+                this.mixer.setInputVolume('music', currentVolume);
+            }
         }
     }
 
-    toggleLoop() {
-        this.loopToggle = !this.loopToggle;
-        this.log(`Looping is now ${this.loopToggle ? 'ON' : 'OFF'}`);
-    }
-
-    // --- Internal File Handling ---
-
-    _movePendingToActive() {
-        if (!this.pendingFilePath) {
-            this.log('Attempted to move pending to active, but no pending file exists.');
-            return;
-        }
-        this.activeFilePath = this.pendingFilePath;
-        this.pendingFilePath = null;
-        this.log(`Moved pending file to active: ${this.activeFilePath}`);
-    }
-
-    async _cacheFileToPending(filePath) {
-        this.isCaching = true; // Still use this flag for UI feedback
-        this.pendingFilePath = filePath;
+    setLoopMode(mode) {
+        this.loopMode = mode; // 0, 1, 2
+        this.log(`[AudioPlayer] Loop mode set to: ${mode}`);
         this._emitStatusUpdate();
-        this.log(`"Caching" (Prepared) file: ${filePath}`);
+    }
 
-        try {
-            let resolvedPath = filePath;
-            if (this.shell && path.extname(resolvedPath).toLowerCase() === '.lnk') {
+    setShuffle(enabled) {
+        this.shuffleMode = enabled;
+        this.playedIndices = [];
+        this.log(`[AudioPlayer] Shuffle mode: ${enabled}`);
+        this._emitStatusUpdate();
+    }
+
+    async addToStack(filePaths) {
+        const paths = Array.isArray(filePaths) ? filePaths : [filePaths];
+        for (let filePath of paths) {
+            if (path.extname(filePath).toLowerCase() === '.lnk' && this.shell) {
                 try {
-                    const shortcutDetails = this.shell.readShortcutLink(resolvedPath);
-                    if (shortcutDetails.target && fs.existsSync(shortcutDetails.target)) {
-                        this.log(`Resolved .lnk shortcut from ${resolvedPath} to ${shortcutDetails.target}`);
-                        resolvedPath = shortcutDetails.target;
-                    } else {
-                        throw new Error('Shortcut target does not exist or is invalid.');
+                    const shortcut = this.shell.readShortcutLink(filePath);
+                    if (shortcut.target && fs.existsSync(shortcut.target)) {
+                        filePath = shortcut.target;
                     }
-                } catch (error) {
-                    this.log(`Failed to resolve .lnk shortcut at ${resolvedPath}: ${error.message}`);
-                    this.pendingFilePath = null;
-                    this.isCaching = false;
-                    this._emitStatusUpdate();
-                    return false;
+                } catch (e) {
+                    this.log(`[AudioPlayer] Failed to resolve shortcut: ${filePath}`);
                 }
             }
+            if (!this.stack.includes(filePath)) {
+                this.stack.push(filePath);
+            }
+        }
+        if (this.currentIndex === -1 && this.stack.length > 0) {
+            this.currentIndex = 0;
+        }
+        this._emitStatusUpdate();
+    }
 
-            // We no longer read the file into memory. We just verified it exists.
-            this.pendingFilePath = resolvedPath;
-            return true;
-
-        } catch (error) {
-            this.log(`Error checking file ${filePath}: ${error.message}`);
-            this.pendingFilePath = null;
-            return false;
-        } finally {
-            this.isCaching = false;
+    removeFromStack(index) {
+        if (index >= 0 && index < this.stack.length) {
+            const removedPath = this.stack.splice(index, 1)[0];
+            this.cachedAudio.delete(removedPath);
+            if (this.currentIndex === index) {
+                this._stopMusicStream();
+                if (this.stack.length > 0) {
+                    this.currentIndex = 0;
+                    if (this.isPlaying) this._play();
+                } else {
+                    this.stop();
+                }
+            } else if (this.currentIndex > index) {
+                this.currentIndex--;
+            }
             this._emitStatusUpdate();
         }
     }
 
-    // --- Internal Playback ---
-
-    _createFfmpegStream(filePath) {
-        const args = [
-            '-re',
-            '-i', filePath,
-            '-f', 's16le',
-            '-ar', '48000',
-            '-ac', '2',
-            'pipe:1'
-        ];
-
-        const ffmpeg = spawn('ffmpeg', args);
-
-        ffmpeg.stderr.on('data', (data) => {
-            console.error(`ffmpeg stderr: ${data}`);
-        });
-
-        return ffmpeg;
+    clearStack() {
+        this._stopMusicStream();
+        this._stopTimer();
+        this.stack = [];
+        this.currentIndex = -1;
+        this.isPlaying = false;
+        this.currentTime = 0;
+        this.duration = 0;
+        this.cachedAudio.clear();
+        this.consecutiveErrors = 0;
+        this._emitStatusUpdate();
     }
 
-    async _play() {
-        if (!this.activeFilePath) {
-            this.log("Play called but no active file path.");
-            return;
-        }
-
-        this.log(`Starting playback pipeline for: ${this.activeFilePath}`);
-        this.lastPlayStartTime = Date.now(); // Track start time
-
-        // Stop existing music stream if any
-        this._stopMusicStream();
+    async _play(startTime = 0) {
+        if (this.isDestroyed) return;
+        if (this.playLock) return;
+        this.playLock = true;
 
         try {
-            const ffmpegProcess = this._createFfmpegStream(this.activeFilePath);
-            const stream = ffmpegProcess.stdout;
+            if (this.currentIndex < 0 || this.currentIndex >= this.stack.length) {
+                if (this.stack.length > 0) {
+                    this.currentIndex = 0;
+                } else {
+                    this.stop();
+                    return;
+                }
+            }
 
-            // Handle stream events
-            stream.once('close', () => {
-                this.log(`Music stream for ${this.activeFilePath} closed.`);
-                this._handleMusicFinish();
-            });
+            const filePath = this.stack[this.currentIndex];
+            this.log(`[AudioPlayer] Playing: ${path.basename(filePath)} from ${startTime}s`);
 
-            // Add to mixer with ID 'music'
-            this.mixer.addInput(stream, 'music');
-            this.activeStreams.set('music', { process: ffmpegProcess, stream });
+            this._stopMusicStream();
+            this._stopTimer();
 
+            // Immediate feedback for UI
+            this.currentTime = startTime;
+            if (startTime === 0) this.duration = 0;
             this.isPlaying = true;
             this.playerStatus = AudioPlayerStatus.Playing;
             this._emitStatusUpdate();
 
+            // Start duration fetch in background
+            if (startTime === 0) {
+                this._getDuration(filePath).then(duration => {
+                    if (this.isPlaying && this.stack[this.currentIndex] === filePath) {
+                        this.duration = duration;
+                        this._emitStatusUpdate();
+                    }
+                }).catch(err => this.log(`[AudioPlayer] Error fetching duration: ${err.message}`));
+            }
+
+            this.lastPlayStartTime = Date.now() - (startTime * 1000);
+
+            const cachedBuffer = this.cachedAudio.get(filePath);
+
+            if (cachedBuffer && startTime === 0) {
+                this.log(`[AudioPlayer] Using cached buffer for: ${path.basename(filePath)}`);
+                const stream = Readable.from(cachedBuffer);
+
+                stream.once('end', () => {
+                    const currentMusic = this.activeStreams.get('music');
+                    if (currentMusic && currentMusic.stream === stream) {
+                        this.activeStreams.delete('music');
+                        this.mixer.removeInput('music');
+                        this._handleMusicFinish();
+                    }
+                });
+
+                this.mixer.addInput(stream, 'music');
+                this.activeStreams.set('music', { stream });
+                this._startTimer();
+                this.consecutiveErrors = 0;
+            } else {
+                this.log(`[AudioPlayer] Starting FFmpeg stream for: ${path.basename(filePath)} at offset ${startTime}`);
+                const ffmpegProcess = this._createFfmpegStream(filePath, startTime);
+
+                ffmpegProcess.on('error', (err) => {
+                    this.log(`[AudioPlayer] FFmpeg spawn error: ${err.message}`);
+                    this._handlePlaybackError(filePath);
+                });
+
+                ffmpegProcess.stderr.on('data', (data) => {
+                    const msg = data.toString();
+                    if (msg.toLowerCase().includes('error') || msg.toLowerCase().includes('failed')) {
+                        this.log(`[AudioPlayer] FFmpeg Error: ${msg.trim()}`);
+                    }
+                });
+
+                const ffmpegOutput = ffmpegProcess.stdout;
+                const mixerStream = new PassThrough();
+                ffmpegOutput.pipe(mixerStream);
+
+                let pcmBuffer = Buffer.alloc(0);
+                let tooBig = false;
+                this.isCaching = (startTime === 0);
+                if (this.isCaching) this._emitStatusUpdate();
+
+                ffmpegOutput.on('data', (chunk) => {
+                    if (this.isCaching && !tooBig) {
+                        if (pcmBuffer.length + chunk.length <= this.MAX_CACHE_SIZE) {
+                            pcmBuffer = Buffer.concat([pcmBuffer, chunk]);
+                        } else {
+                            tooBig = true;
+                            this.log(`[AudioPlayer] File too large for cache: ${path.basename(filePath)}`);
+                            this.isCaching = false;
+                            this._emitStatusUpdate();
+                        }
+                    }
+                });
+
+                mixerStream.once('end', () => {
+                    const currentMusic = this.activeStreams.get('music');
+                    if (currentMusic && currentMusic.stream === mixerStream) {
+                        this.activeStreams.delete('music');
+                        this.mixer.removeInput('music');
+
+                        if (!tooBig && pcmBuffer.length > 1024 && startTime === 0) {
+                            this.cachedAudio.set(filePath, pcmBuffer);
+                            this.log(`[AudioPlayer] Cached ${path.basename(filePath)} (${(pcmBuffer.length / 1024 / 1024).toFixed(2)} MB)`);
+                        }
+                        this.isCaching = false;
+                        this._stopTimer();
+                        this._emitStatusUpdate();
+                        this._handleMusicFinish();
+                    }
+                });
+
+                this.mixer.addInput(mixerStream, 'music');
+                this.activeStreams.set('music', { process: ffmpegProcess, stream: mixerStream });
+                this._startTimer();
+                this.consecutiveErrors = 0;
+            }
+
+            const currentVolume = this.activeSfxCount > 0 ? this.playbackVolume * this.duckingVolume : this.playbackVolume;
+            this.mixer.setInputVolume('music', currentVolume);
+
         } catch (error) {
-            this.log(`Error starting FFmpeg playback for ${this.activeFilePath}: ${error.message}`);
-            this.isPlaying = false;
-            this.playerStatus = AudioPlayerStatus.Idle;
-            this._emitStatusUpdate();
+            this.log(`[AudioPlayer] Error in _play: ${error.message}`);
+            this._handlePlaybackError(this.stack[this.currentIndex]);
+        } finally {
+            this.playLock = false;
+        }
+    }
+
+    _handlePlaybackError(filePath) {
+        this.consecutiveErrors++;
+        this.isPlaying = false;
+        this.playerStatus = AudioPlayerStatus.Idle;
+        this._stopTimer();
+        this._emitStatusUpdate();
+
+        if (this.consecutiveErrors >= this.stack.length || this.consecutiveErrors > 5) {
+            this.log("[AudioPlayer] Multiple playback errors, stopping.");
+            this.stop();
+        } else {
+            this.log("[AudioPlayer] Playback error, skipping to next track.");
+            setTimeout(() => this.next(), 1000);
+        }
+    }
+
+    _getFfmpegPath() {
+        if (!this.ffmpegBinFolder) return 'ffmpeg';
+        try {
+            if (fs.existsSync(this.ffmpegBinFolder) && fs.lstatSync(this.ffmpegBinFolder).isFile()) {
+                return this.ffmpegBinFolder;
+            }
+            const exeName = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+            const fullPath = path.join(this.ffmpegBinFolder, exeName);
+            if (fs.existsSync(fullPath)) return fullPath;
+        } catch (e) {}
+        return 'ffmpeg';
+    }
+
+    _getFfprobePath() {
+        if (!this.ffmpegBinFolder) return 'ffprobe';
+        try {
+            if (fs.existsSync(this.ffmpegBinFolder) && fs.lstatSync(this.ffmpegBinFolder).isFile()) {
+                const dir = path.dirname(this.ffmpegBinFolder);
+                const exeName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+                const siblingPath = path.join(dir, exeName);
+                if (fs.existsSync(siblingPath)) return siblingPath;
+            } else {
+                const exeName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+                const fullPath = path.join(this.ffmpegBinFolder, exeName);
+                if (fs.existsSync(fullPath)) return fullPath;
+            }
+        } catch (e) {}
+        return 'ffprobe';
+    }
+
+    _createFfmpegStream(filePath, startTime = 0) {
+        const ffmpegPath = this._getFfmpegPath();
+        const args = [];
+        if (startTime > 0) {
+            args.push('-ss', startTime.toString());
+        }
+        args.push('-re', '-i', filePath, '-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1');
+        return spawn(ffmpegPath, args);
+    }
+
+    _getDuration(filePath) {
+        return new Promise((resolve, reject) => {
+            let targetPath = filePath;
+            if (path.extname(filePath).toLowerCase() === '.lnk' && this.shell) {
+                try {
+                    const shortcut = this.shell.readShortcutLink(filePath);
+                    if (shortcut.target && fs.existsSync(shortcut.target)) targetPath = shortcut.target;
+                } catch (e) {}
+            }
+
+            const ffprobePath = this._getFfprobePath();
+            const { exec } = require('child_process');
+            const cmd = `"${ffprobePath}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${targetPath}"`;
+
+            exec(cmd, (error, stdout) => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
+                const duration = parseFloat(stdout.trim());
+                resolve(isNaN(duration) ? 0 : duration);
+            });
+        });
+    }
+
+    _startTimer() {
+        this._stopTimer();
+        this.timer = setInterval(() => {
+            if (this.isPlaying) {
+                this.currentTime = (Date.now() - (this.lastPlayStartTime || 0)) / 1000;
+                if (this.duration > 0 && this.currentTime > this.duration) {
+                    this.currentTime = this.duration;
+                }
+                this._emitStatusUpdate();
+            }
+        }, 1000);
+    }
+
+    _stopTimer() {
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
         }
     }
 
     _stopMusicStream() {
         if (this.activeStreams.has('music')) {
-            const { process, stream } = this.activeStreams.get('music');
-            this.mixer.removeInput('music'); // Remove from mixer
-            process.kill(); // Kill ffmpeg process
+            const entry = this.activeStreams.get('music');
+            this.mixer.removeInput('music');
+            if (entry.process) entry.process.kill();
             this.activeStreams.delete('music');
         }
     }
 
     _handleMusicFinish() {
-        // Logic similar to the old Idle event
-        if (this.isStoppingIntentionally) {
-            this.isStoppingIntentionally = false;
-            // Handled in the stop/play methods usually
+        const elapsed = Date.now() - (this.lastPlayStartTime || 0);
+        // Avoid stopping on very short tracks unless it's a thrash scenario
+        if (elapsed < 500 && (this.duration === 0 || this.duration > 2)) {
+            this.log(`[AudioPlayer] Track finished too quickly (${elapsed}ms), considering it an error.`);
+            this._handlePlaybackError(this.stack[this.currentIndex]);
             return;
         }
 
-        const duration = Date.now() - (this.lastPlayStartTime || 0);
-
-        if (this.loopToggle && this.activeFilePath) {
-            if (duration < 2000) {
-                this.log(`ERR: File ${this.activeFilePath} finished too quickly (${duration}ms). Disabling loop to prevent thrashing.`);
-                this.isPlaying = false;
-                this.playerStatus = AudioPlayerStatus.Idle;
-                this._emitStatusUpdate();
-                return;
+        if (this.loopMode === 2) { // Loop 1
+            this.log("[AudioPlayer] Loop 1: Restarting track.");
+            this._play();
+        } else if (this.loopMode === 1) { // Loop All
+            this.log("[AudioPlayer] Loop All: Rolling to bottom.");
+            const finished = this.stack.shift();
+            this.stack.push(finished);
+            this.currentIndex = 0;
+            this._play();
+        } else { // None
+            this.log("[AudioPlayer] Loop None: Rolling off.");
+            this.stack.shift();
+            if (this.stack.length > 0) {
+                this.currentIndex = 0;
+                this._play();
+            } else {
+                this.stop();
             }
-
-            this.log(`Looping active file: ${this.activeFilePath}`);
-            // Small delay to prevent tight loops on errors
-            setTimeout(() => this._play(), 100);
-        } else {
-            this.log('Music finished. Remaining idle.');
-            this.isPlaying = false;
-            this.playerStatus = AudioPlayerStatus.Idle;
-            this._emitStatusUpdate();
         }
     }
 
+    next() {
+        if (this.stack.length === 0) return;
+
+        if (this.shuffleMode) {
+            this.playedIndices.push(this.currentIndex);
+            if (this.playedIndices.length >= this.stack.length) this.playedIndices = [];
+            let nextIndex;
+            do {
+                nextIndex = Math.floor(Math.random() * this.stack.length);
+            } while (this.playedIndices.includes(nextIndex) && this.stack.length > 1);
+            this.currentIndex = nextIndex;
+        } else {
+            // Skips always move current track to bottom if looping is on
+            if (this.loopMode === 1 || this.loopMode === 2) {
+                const current = this.stack.shift();
+                this.stack.push(current);
+                this.currentIndex = 0;
+            } else {
+                this.stack.shift();
+                if (this.stack.length === 0) {
+                    this.stop();
+                    return;
+                }
+                this.currentIndex = 0;
+            }
+        }
+        this._play();
+    }
+
+    jumpTo(index) {
+        if (index >= 0 && index < this.stack.length) {
+            // In the roll-off system, jumping to index X means bumping everything BEFORE X to the bottom
+            const preceding = this.stack.splice(0, index);
+            if (this.loopMode === 1 || this.loopMode === 2) {
+                this.stack.push(...preceding);
+            }
+            this.currentIndex = 0;
+            this._play();
+        }
+    }
+
+    prev() {
+        if (this.stack.length === 0) return;
+        // In roll-off system, prev means taking the LAST track and putting it at the TOP
+        if (this.loopMode === 1 || this.loopMode === 2) {
+            const last = this.stack.pop();
+            this.stack.unshift(last);
+            this.currentIndex = 0;
+        } else {
+            this.currentIndex = 0; // Restart if no loop
+        }
+        this._play();
+    }
+
+    play() {
+        if (this.isPlaying) return;
+        if (this.playerStatus === AudioPlayerStatus.Paused && this.currentIndex >= 0) {
+            this._play(this.currentTime);
+            return;
+        }
+        if (this.currentIndex < 0 && this.stack.length > 0) this.currentIndex = 0;
+        if (this.currentIndex >= 0) this._play();
+    }
+
+    seek(time) {
+        if (this.currentIndex >= 0 && this.stack.length > 0) {
+            this.log(`[AudioPlayer] Seeking to ${time}s`);
+            this._play(time);
+        }
+    }
+
+    pause() {
+        this._stopMusicStream();
+        this._stopTimer();
+        this.isPlaying = false;
+        this.playerStatus = AudioPlayerStatus.Paused;
+        this._emitStatusUpdate();
+    }
+
+    stop() {
+        this._stopMusicStream();
+        this._stopTimer();
+        this.isPlaying = false;
+        this.currentIndex = -1;
+        this.currentTime = 0;
+        this.duration = 0;
+        this.consecutiveErrors = 0;
+        this.playerStatus = AudioPlayerStatus.Idle;
+        this._emitStatusUpdate();
+    }
+
     // --- Soundboard API ---
-
     playSound(filePath, slotId) {
-        this.log(`Soundboard: Playing ${filePath} on slot ${slotId}`);
+        this.log(`[AudioPlayer] Soundboard: Playing slot ${slotId}`);
         const id = `sfx_${slotId}`;
-
-        // Stop existing if any
         this.stopSound(slotId);
 
         try {
             const ffmpegProcess = this._createFfmpegStream(filePath);
             const stream = ffmpegProcess.stdout;
 
+            if (this.activeSfxCount === 0 && this.activeStreams.has('music')) {
+                this.mixer.setInputVolume('music', this.playbackVolume * this.duckingVolume);
+            }
+            this.activeSfxCount++;
+
             stream.once('close', () => {
-                // If the stream is still in activeStreams, it finished naturally (not stopped manually)
                 if (this.activeStreams.has(id)) {
-                    this.log(`Soundboard: Stream ${id} finished naturally.`);
                     this.activeStreams.delete(id);
                     this.mixer.removeInput(id);
                     this.emit('sound-finished', slotId);
+                    this.activeSfxCount = Math.max(0, this.activeSfxCount - 1);
+                    if (this.activeSfxCount === 0 && this.activeStreams.has('music')) {
+                        this.mixer.setInputVolume('music', this.playbackVolume);
+                    }
                 }
             });
 
             this.mixer.addInput(stream, id, this.soundboardVolume);
             this.activeStreams.set(id, { process: ffmpegProcess, stream });
-
         } catch (error) {
-            this.log(`Error playing SFX ${filePath}: ${error.message}`);
+            this.log(`[AudioPlayer] SFX Error: ${error.message}`);
         }
     }
 
@@ -296,109 +589,62 @@ class BackendAudioPlayer extends EventEmitter {
         if (this.activeStreams.has(id)) {
             const { process } = this.activeStreams.get(id);
             this.mixer.removeInput(id);
-            process.kill();
+            if (process) process.kill();
             this.activeStreams.delete(id);
-            this.log(`Soundboard: Stopped slot ${slotId}`);
+            this.activeSfxCount = Math.max(0, this.activeSfxCount - 1);
+            if (this.activeSfxCount === 0 && this.activeStreams.has('music')) {
+                this.mixer.setInputVolume('music', this.playbackVolume);
+            }
         }
     }
 
     setSoundboardVolume(volume) {
         this.soundboardVolume = volume;
         this.activeStreams.forEach((value, id) => {
-            if (id.startsWith('sfx_')) {
-                this.mixer.setInputVolume(id, volume);
-            }
+            if (id.startsWith('sfx_')) this.mixer.setInputVolume(id, volume);
         });
     }
 
+    getMusicFiles() {
+        if (!this.musicFolder || !fs.existsSync(this.musicFolder)) return [];
 
-    // --- Public API ---
+        const getAllFiles = (dir, results = []) => {
+            const list = fs.readdirSync(dir);
+            list.forEach(file => {
+                const fullPath = path.join(dir, file);
+                const stat = fs.statSync(fullPath);
+                if (stat && stat.isDirectory()) {
+                    getAllFiles(fullPath, results);
+                } else {
+                    const ext = path.extname(fullPath).toLowerCase();
+                    if (['.mp3', '.wav', '.ogg', '.lnk'].includes(ext)) {
+                        results.push(fullPath);
+                    }
+                }
+            });
+            return results;
+        };
 
-    async loadFile(filePath) {
-        await this._cacheFileToPending(filePath);
-
-        // If a file is loaded while paused (or rather, playing but paused logic), 
-        // we want to promote it immediately but not play it.
-        if (this.playerStatus === AudioPlayerStatus.Paused && this.pendingFilePath) {
-            this.log('File loaded while paused. Promoting to active and remaining paused.');
-            this.promoteAndPause = true;
-            this.isStoppingIntentionally = true;
-            this._stopMusicStream();
-            // We need to manually trigger the "idle" logic? 
-            // Or just do the swap manually here since we are controlling the stream directly now.
-            this._movePendingToActive();
-            // Don't play yet
-        }
-
-        this._emitStatusUpdate(); // Ensure UI is updated with new pending file
-    }
-
-    play() {
-        // Scenario 1: Paused with pending track -> swap and play
-        if (this.playerStatus === AudioPlayerStatus.Paused && this.pendingFilePath) {
-            this.log('Play command received while paused with a pending track. Swapping and playing.');
-            this.isStoppingIntentionally = true;
-            this._stopMusicStream();
-            this._movePendingToActive();
-            this._play();
-            return;
-        }
-
-        // Scenario 2: Paused, no new track -> resume
-        if (this.playerStatus === AudioPlayerStatus.Paused) {
-            // For the mixer, "Paused" is tricky. We are streaming silence if "Paused".
-            // But emulating the state: behavior is just starting the music stream again?
-            // Or did we actually pause the discord player?
-            // Since we share the player with SFX, we can't pause the player.
-            // We must stop the music INPUT to the mixer to pause music, technically?
-            // But if we stopped it, we lost position. 
-            // FFmpeg doesn't support seeking easily without re-decoding.
-            // For now, "Pause" will likely act as "Stop" for the music stream unless we keep the process alive but buffer?
-            // Emulating full pause with shared mixer is hard without complex buffering.
-            // **Simplification**: Pause = Stop Music (Save position? No, just restart for now, or use ffmpeg -ss if we tracked time).
-            // Let's implement Pause as "Suspend Music Input".
-            // Actually, the previous implementation Emulated pause by pausing the player.
-
-            // If we pause the Discord Player, we pause ALL mixing outcomes (SFX too).
-            // If the goal is premixing, maybe we WANT to pause music but let SFX play?
-            // The user request said "premixing audio" for soundboard.
-            // If I pause the music, I probably still want Soundboard to work?
-            // If so, I cannot use `player.pause()`.
-            // I have to stop reading from the music stream or mute it.
-
-            // Let's assume for MVP: Play/Pause controls the MUSIC track.
-            if (this.activeFilePath) {
-                this._play(); // Restarting from beginning for now implies "Stop/Start" behavior more than Pause/Resume
-                // Ideally we track timestamp.
-            }
-            return;
-        }
-
-        // Scenario 3: Idle
-        if (this.playerStatus === AudioPlayerStatus.Idle) {
-            if (this.pendingFilePath) {
-                this.log('No active file, promoting pending file.');
-                this._movePendingToActive();
-            }
-            if (this.activeFilePath) {
-                this.log('Playback starting from idle state.');
-                this._play();
-            }
-            return;
-        }
-    }
-
-    pause() {
-        this.log("Pause requested. Stopping music stream (Resume not fully implemented, restarts track).");
-        this.isStoppingIntentionally = true;
-        this._stopMusicStream();
-        this.isPlaying = false;
-        this.playerStatus = AudioPlayerStatus.Paused;
-        this._emitStatusUpdate();
+        return getAllFiles(this.musicFolder);
     }
 
     getPreviewFilePath() {
-        return this.pendingFilePath || this.activeFilePath;
+        if (this.currentIndex >= 0 && this.currentIndex < this.stack.length) {
+            return this.stack[this.currentIndex];
+        } else if (this.stack.length > 0) {
+            return this.stack[0];
+        }
+        return null;
+    }
+
+    destroy() {
+        this.isDestroyed = true;
+        if (this.player) this.player.stop();
+        this.activeStreams.forEach(({ process }) => {
+            try { if (process) process.kill(); } catch (e) {}
+        });
+        this.activeStreams.clear();
+        if (this.mixer) this.mixer.destroy();
     }
 }
 

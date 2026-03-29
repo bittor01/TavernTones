@@ -1,3 +1,4 @@
+// Performance and security update
 const fs = require('fs');
 const path = require('path');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
@@ -35,20 +36,38 @@ class InitiativeTracker {
         this.autosavePath = autosavePath;
         this.initiativeOrder = [];
         this.currentTurnIndex = 0;
+
+        // Debounced methods to optimize performance during rapid updates
+        this._debouncedSave = this._debounce(this._performSave.bind(this), 1000);
+        this._debouncedUpdate = this._debounce(this._performUpdate.bind(this), 100);
+
         this.loadState();
     }
 
+    _debounce(fn, delay) {
+        let timeoutId;
+        return (...args) => {
+            if (timeoutId) clearTimeout(timeoutId);
+            const safeDelay = Math.max(0, Number(delay) || 0);
+            timeoutId = setTimeout(() => {
+                fn.apply(this, args);
+            }, safeDelay);
+        };
+    }
+
     _saveState() {
-        try {
-            const state = {
-                initiativeOrder: this.initiativeOrder,
-                currentTurnIndex: this.currentTurnIndex
-            };
-            fs.writeFileSync(this.autosavePath, JSON.stringify(state, null, 2));
-            this.logToRenderer(`Encounter state autosaved with ${this.initiativeOrder.length} creatures.`);
-        } catch (error) {
-            this.logToRenderer(`Error autosaving state: ${error.message}`);
-        }
+        this._debouncedSave();
+    }
+
+    _performSave() {
+        const state = {
+            initiativeOrder: this.initiativeOrder,
+            currentTurnIndex: this.currentTurnIndex
+        };
+        fs.promises.writeFile(this.autosavePath, JSON.stringify(state, null, 2))
+            .catch(error => {
+                this.logToRenderer(`Error autosaving state: ${error.message}`);
+            });
     }
 
     loadState() {
@@ -57,6 +76,10 @@ class InitiativeTracker {
                 const savedState = JSON.parse(fs.readFileSync(this.autosavePath, 'utf8'));
                 this.initiativeOrder = savedState.initiativeOrder || [];
                 this.currentTurnIndex = savedState.currentTurnIndex || 0;
+
+                // Reset hidden state on load, in case app crashed during edit
+                this.initiativeOrder.forEach(c => delete c.hidden);
+
                 this.logToRenderer('Autosaved encounter state loaded.');
             }
         } catch (error) {
@@ -69,10 +92,15 @@ class InitiativeTracker {
     }
 
     sendFullState() {
-        this._updateFrontend();
+        // Immediate update for explicit requests
+        this.sendInitiativeUpdate(this.initiativeOrder, this.currentTurnIndex);
     }
 
     _updateFrontend() {
+        this._debouncedUpdate();
+    }
+
+    _performUpdate() {
         this.sendInitiativeUpdate(this.initiativeOrder, this.currentTurnIndex);
     }
 
@@ -171,6 +199,7 @@ class InitiativeTracker {
         });
 
         const initiativeInput = creature.initiative.toString().trim().toLowerCase();
+        creature.initiativeFormula = creature.initiative.toString(); // Save the original formula/input
         let rollLogMessage = null;
 
         let rollType = 'flat';
@@ -265,12 +294,13 @@ class InitiativeTracker {
     }
 
     editCreature(creatureId) {
-        const creatureIndex = this.initiativeOrder.findIndex(c => c.id === creatureId);
-        if (creatureIndex !== -1) {
-            const [creature] = this.initiativeOrder.splice(creatureIndex, 1);
+        const creature = this.initiativeOrder.find(c => c.id === creatureId);
+        if (creature) {
+            // Mark as hidden instead of removing
+            creature.hidden = true;
             this._updateFrontend();
             this._saveState();
-            return creature;
+            return { ...creature }; // Return a copy to be safe
         }
         return null;
     }
@@ -278,6 +308,9 @@ class InitiativeTracker {
     updateCreature(updatedCreature) {
         const index = this.initiativeOrder.findIndex(c => c.id === updatedCreature.id);
         if (index !== -1) {
+            // Unhide the creature upon update
+            updatedCreature.hidden = false;
+
             this.initiativeOrder[index] = updatedCreature;
             this.initiativeOrder.sort((a, b) => b.initiative - a.initiative);
             this._updateFrontend();

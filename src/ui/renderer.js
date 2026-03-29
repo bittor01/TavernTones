@@ -1,3 +1,4 @@
+// Performance and security update
 document.addEventListener('DOMContentLoaded', async () => {
     // --- State ---
     let isPlaying = false;
@@ -5,14 +6,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     let combatantPanelOrder = []; // For custom sorting of the right-hand panel
     let currentTurnIndex = 0;
     const logPanels = [
-        { id: 'logArea', title: 'Log' },
-        { id: 'diceLog', title: 'Dice Log' },
-        { id: 'statBlockArea', title: 'Stat Block' }
+        { id: 'logArea', title: 'Log', mode: 'log' },
+        { id: 'diceLog', title: 'Dice Log', mode: 'dice' },
+        { id: 'statBlockArea', title: 'Stat Block', mode: 'stats' },
+        { id: 'musicLibraryArea', title: 'Music Library', mode: 'library' }
     ];
-    let currentPanelIndex = 0; // Default to 'Log'
+    let currentPanelIndex = 3; // Default to 'Music Library'
+    let musicLibrary = { children: [] };
+    let selectedLibraryPaths = new Set();
+    let botStatus = { status: 'offline', message: 'Unknown' };
+    let isBotEnabled = false;
     let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
     let DND_CONDITIONS = {};
     let MOB_RULES_DATA = {};
+    let lastScrolledIndex = -1;
 
     // --- Form State ---
     let isMobMode = false;
@@ -25,10 +32,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
     const diceLog = document.getElementById('diceLog');
     const playPauseButton = document.getElementById('playPauseButton');
-    const activeFileLabel = document.getElementById('activeFileLabel');
-    const pendingFileLabel = document.getElementById('pendingFileLabel');
-    const pendingFileLabelContainer = document.getElementById('pendingFileLabelContainer');
-    const previewButton = document.getElementById('previewButton');
+    const playPrevButton = document.getElementById('playPrevButton');
+    const playNextButton = document.getElementById('playNextButton');
+    const loopModeBtn = document.getElementById('loop-mode-btn');
+    const shuffleBtn = document.getElementById('shuffle-btn');
+    const clearStackBtn = document.getElementById('clear-stack-btn');
+    const saveMusicPresetBtn = document.getElementById('save-music-preset-btn');
+    const loadMusicPresetBtn = document.getElementById('load-music-preset-btn');
+    const musicStackList = document.getElementById('music-stack-list');
     const previewAudioPlayer = document.getElementById('preview-audio-player');
     const addCreatureForm = document.getElementById('add-creature-form');
     const initiativeListDiv = document.getElementById('initiative-list');
@@ -37,23 +48,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Initial Load (Non-blocking) ---
     // Fetch initial data without blocking the UI rendering.
-    window.electron.ipcRenderer.invoke('get-dnd-conditions').then(conditions => {
-        DND_CONDITIONS = conditions;
-    });
-    window.electron.ipcRenderer.invoke('get-mob-rules-data').then(rules => {
-        MOB_RULES_DATA = rules;
-    });
+    if (window.electron && window.electron.ipcRenderer) {
+        window.electron.ipcRenderer.invoke('get-dnd-conditions').then(conditions => {
+            DND_CONDITIONS = conditions;
+        });
+        window.electron.ipcRenderer.invoke('get-mob-rules-data').then(rules => {
+            MOB_RULES_DATA = rules;
+        });
+    }
 
     // Send a signal to the main process that the window is ready for data.
-    window.electron.ipcRenderer.send('window-ready');
-    // Specifically request the initial load after a short delay to ensure the main process is ready.
-    setTimeout(() => {
-        window.electron.ipcRenderer.send('request-initial-load');
-    }, 100);
+    if (window.electron && window.electron.ipcRenderer) {
+        window.electron.ipcRenderer.send('window-ready');
+        // Specifically request the initial load after a short delay to ensure the main process is ready.
+        setTimeout(() => {
+            window.electron.ipcRenderer.send('request-initial-load');
+            window.electron.ipcRenderer.send('get-discord-config');
+            window.electron.ipcRenderer.invoke('get-music-library').then(library => {
+                musicLibrary = library;
+                renderMusicLibrary();
+            });
+            showPanel('musicLibraryArea');
+        }, 100);
+    }
+
 
     // --- Initial UI Setup ---
     addCreatureForm.innerHTML = `
-        <h2>Add Combatant</h2>
+        <div class="panel-header" style="margin-bottom: 5px;">
+            <h2 style="margin-bottom: 0; border-bottom: none;">Add Combatant</h2>
+            <div class="panel-header-controls">
+                <button type="button" id="import-from-file-btn" class="small-btn" title="Import from File">📁</button>
+                <button type="button" id="toggle-add-form-btn" class="small-btn" title="Toggle Form">➕</button>
+            </div>
+        </div>
+        <div id="add-creature-form-content" style="display: none;">
         <div class="form-row">
             <div class="form-group name-group">
                 <label for="creature-name">Combatant:</label>
@@ -107,6 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="submit" class="add-creature-button">Add Combatant</button>
             <button type="button" id="clear-form-btn">Clear</button>
         </div>
+        </div>
     `;
     // --- Mob Form Logic ---
     const convertToMobBtn = document.getElementById('convert-to-mob-btn');
@@ -151,19 +181,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Panel Switching Logic ---
     function showPanel(panelId, title) {
-        const logTitle = document.getElementById('log-title');
         const pushButton = document.getElementById('push-panel-btn');
+        const titleEl = document.getElementById('pane-mode-title');
         let foundPanel = false;
 
+        // Panels that need flex layout instead of block
+        const flexPanels = new Set(['musicLibraryArea']);
         logPanels.forEach((panel, index) => {
             const panelEl = document.getElementById(panel.id);
+            const modeBtn = document.getElementById(`mode-${panel.mode}`);
             if (panel.id === panelId) {
-                panelEl.style.display = 'block';
-                logTitle.textContent = title || panel.title;
+                panelEl.style.display = flexPanels.has(panel.id) ? 'flex' : 'block';
                 currentPanelIndex = index;
                 foundPanel = true;
+                if (modeBtn) modeBtn.classList.add('active');
+                if (titleEl) titleEl.textContent = title || panel.title;
             } else {
                 panelEl.style.display = 'none';
+                if (modeBtn) modeBtn.classList.remove('active');
             }
         });
 
@@ -176,6 +211,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!foundPanel) showPanel('logArea', 'Log'); // Fallback
     }
+
+    // Mode button listeners
+    document.getElementById('mode-log').addEventListener('click', () => showPanel('logArea'));
+    document.getElementById('mode-dice').addEventListener('click', () => showPanel('diceLog'));
+    document.getElementById('mode-stats').addEventListener('click', () => {
+        if (document.getElementById('statBlockArea').innerHTML) {
+            showPanel('statBlockArea');
+        } else {
+            logMessage("No stat block currently loaded.");
+        }
+    });
+    document.getElementById('mode-library').addEventListener('click', () => showPanel('musicLibraryArea'));
 
     function displayStatBlock(rawDataString) {
         const statBlockArea = document.getElementById('statBlockArea');
@@ -277,6 +324,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Event Listeners ---
+    document.getElementById('toggle-add-form-btn').addEventListener('click', (e) => {
+        const content = document.getElementById('add-creature-form-content');
+        const btn = e.currentTarget;
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            btn.textContent = '➖';
+        } else {
+            content.style.display = 'none';
+            btn.textContent = '➕';
+        }
+    });
+
     document.addEventListener('click', (event) => {
         const target = event.target;
         const targetId = target.id;
@@ -306,7 +365,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 addCreatureForm.reset();
                 document.getElementById('imported-monster-info-btn').style.display = 'none';
                 delete addCreatureForm.dataset.monsterRawData;
-                // Reset mob state
+                // Reset edit/mob state
+                delete addCreatureForm.dataset.editingId;
                 creatureBeingEdited = null;
                 isMobMode = false;
                 document.getElementById('mob-controls').style.display = 'none';
@@ -355,10 +415,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             case 'load-button':
                 window.electron.ipcRenderer.invoke('load-encounter-dialog');
                 break;
-            case 'gamify-tool-button':
-                window.electron.ipcRenderer.send('open-gamify-tool');
-                break;
             case 'settings-button':
+            case 'main-settings-btn':
                 window.electron.ipcRenderer.send('open-settings-window');
                 break;
             case 'next-turn-button':
@@ -371,13 +429,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('push-initiative');
                 break;
             case 'selectFileButton':
-                window.electron.ipcRenderer.invoke('open-file-dialog').then(filePath => {
-                    if (filePath) {
-                        window.electron.ipcRenderer.send('load-music-file', filePath);
-                    }
-                });
+                showPanel('musicLibraryArea');
                 break;
             case 'playPauseButton':
+                if (!isBotEnabled) {
+                    showBotNag();
+                    return;
+                }
                 previewAudioPlayer.pause();
                 if (isPlaying) {
                     window.electron.ipcRenderer.send('pause-music');
@@ -385,113 +443,185 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.electron.ipcRenderer.send('play-music');
                 }
                 break;
-            case 'previewButton':
-                if (!previewAudioPlayer.paused) {
-                    previewAudioPlayer.pause();
-                } else {
-                    window.electron.ipcRenderer.invoke('get-preview-audio-data').then(result => {
-                        if (result.success) {
-                            previewAudioPlayer.src = result.url; // Use the custom protocol URL
-                            previewAudioPlayer.play();
-                        } else {
-                            logMessage(`Preview Error: ${result.error}`);
-                        }
-                    });
+            case 'playPrevButton':
+                window.electron.ipcRenderer.send('play-prev');
+                break;
+            case 'playNextButton':
+                window.electron.ipcRenderer.send('play-next');
+                break;
+            case 'loop-mode-btn': {
+                // Cycle loop mode: 0 -> 1 -> 2 -> 0
+                // We'll let the backend handle the state but we can optimistically cycle or just wait for update
+                // Actually BackendAudioPlayer has loopMode 0, 1, 2.
+                // Let's assume we want to send the command to cycle or set specifically.
+                // For simplicity, let's just cycle here.
+                const nextMode = (currentLoopMode + 1) % 3;
+                window.electron.ipcRenderer.send('set-loop-mode', { mode: nextMode });
+                break;
+            }
+            case 'shuffle-btn':
+                window.electron.ipcRenderer.send('set-shuffle', { enabled: !currentShuffleMode });
+                break;
+            case 'clear-stack-btn':
+                window.electron.ipcRenderer.send('clear-stack');
+                break;
+            case 'bot-status-indicator':
+                window.electron.ipcRenderer.send('voice-toggle');
+                break;
+            case 'save-music-preset-btn':
+                // We need the current stack from the UI state or ask backend
+                // The renderer doesn't have a local 'stack' variable, it relies on status updates.
+                // We'll use the latest initiativeOrder as a proxy for 'has data',
+                // but actually we need the music stack.
+                // Let's store the last received stack.
+                if (lastMusicStatus && lastMusicStatus.stack) {
+                    window.electron.ipcRenderer.invoke('save-music-preset', lastMusicStatus.stack.map(t => t.path));
                 }
+                break;
+            case 'load-music-preset-btn':
+                window.electron.ipcRenderer.invoke('load-music-preset');
                 break;
         }
     });
 
     // --- Soundboard Listeners (placeholders for now) ---
-    document.getElementById('soundboard-volume').addEventListener('input', (e) => {
-        console.log("Soundboard volume changed to:", e.target.value);
-        // This will later send an IPC message, e.g., window.electron.ipcRenderer.send('set-soundboard-volume', e.target.value);
+    // --- Soundboard Listeners ---
+    const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+
+    soundboardVolumeSlider.addEventListener('input', (e) => {
+        const sliderValue = parseFloat(e.target.value);
+        // Scale: 0-1 slider maps to 0-1.5 actual volume (150%)
+        const effectiveVolume = sliderValue * 1.5;
+
+        // Update backend
+        window.electron.ipcRenderer.send('set-soundboard-volume', { volume: effectiveVolume });
+
+        // Save state (debounced ideally, but on input for now is fine for local app)
+        saveSoundboardState();
     });
 
     addCreatureForm.addEventListener('submit', (event) => {
         event.preventDefault();
-        const getVal = (id) => document.getElementById(id).value;
-        const getInt = (id) => getVal(id) ? parseInt(getVal(id), 10) : null;
+        try {
+            const getVal = (id) => document.getElementById(id).value;
+            const getInt = (id) => getVal(id) ? parseInt(getVal(id), 10) : null;
 
-        const isEditing = !!creatureBeingEdited;
-        let creature;
+            // Use dataset ID as primary source of truth, fallback to global variable if needed
+            const editingId = addCreatureForm.dataset.editingId ? parseInt(addCreatureForm.dataset.editingId, 10) : null;
+            const isEditing = !!editingId || !!creatureBeingEdited;
 
-        if (isEditing) {
-            // Start with a copy of the creature being edited to preserve existing state
-            creature = { ...creatureBeingEdited };
+            // console.log('[Form Submit] Editing ID:', editingId, 'Is Editing:', isEditing);
 
-            // Overwrite properties from the form
-            creature.name = getVal('creature-name');
-            creature.initiative = getVal('creature-initiative');
-            creature.ac = getInt('creature-ac');
-            creature.speed = getVal('creature-speed');
-            creature.attackMod = getVal('attack-modifier');
-            creature.saveDc = getInt('save-dc');
-            creature.scores = { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), };
-            creature.saves = { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), };
-            creature.isMob = isMobMode;
-            creature.hp = getInt('creature-hp'); // Always take current HP from form for edits
+            let creature;
 
-            if (isMobMode) {
-                const newMobSize = getInt('mob-size');
-                // Preserve the original hpFormula if converting, otherwise it's already there.
-                if (!creatureBeingEdited.isMob) {
-                    creature.hpFormula = singleCreatureHPForMob;
+            if (isEditing) {
+                // alert(`[DEBUG] Entering Edit Mode Logic`);
+                // If we have an ID but lost the object (due to reload/race condition),
+                // we reconstruct a partial object with the ID. 
+                // Ideally we have the full object in creatureBeingEdited.
+                if (creatureBeingEdited && creatureBeingEdited.id === editingId) {
+                    creature = { ...creatureBeingEdited };
+                } else if (editingId) {
+                    // Fallback: create object with just ID so backend can find it
+                    creature = { id: editingId };
+                    // We might miss some hidden fields here (like reminders), 
+                    // but backend merge logic usually replaces the whole object.
+                    // IMPORTANT: To avoid data loss, we should try to fetch it from the initiativeOrder if possible,
+                    // but renderer doesn't have direct access.
+                    // However, since we populate from initiativeOrder, we can find it in the local global var.
+                    const existing = initiativeOrder.find(c => c.id === editingId);
+                    if (existing) {
+                        creature = { ...existing };
+                    } else if (creatureBeingEdited) {
+                        creature = { ...creatureBeingEdited };
+                    }
+                } else {
+                    creature = { ...creatureBeingEdited };
                 }
-                creature.singleCreatureHP = calculatedSingleCreatureHP;
-                creature.maxHp = newMobSize * calculatedSingleCreatureHP;
-                creature.mobInitialCount = creatureBeingEdited.isMob ? creatureBeingEdited.mobInitialCount : newMobSize;
-            } else {
-                // If converting from a mob, the hpFormula is still correct on the object.
-                creature.hpFormula = singleCreatureHPForMob;
-                creature.maxHp = creatureBeingEdited.isMob ? calculatedSingleCreatureHP : creatureBeingEdited.maxHp;
-                delete creature.mobInitialCount;
-                delete creature.singleCreatureHP;
+
+                // Overwrite properties from the form
+                creature.name = getVal('creature-name');
+                creature.ac = getInt('creature-ac');
+                creature.speed = getVal('creature-speed');
+                creature.attackMod = getVal('attack-modifier');
+                creature.saveDc = getInt('save-dc');
+                creature.scores = { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), };
+                creature.saves = { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), };
+                creature.isMob = isMobMode;
+                creature.hp = getInt('creature-hp'); // Always take current HP from form for edits
+                creature.hidden = false; // Ensure creature is visible after update
+
+                // Parse initiative as a number for updates (it's already been rolled)
+                const initVal = getVal('creature-initiative');
+                creature.initiative = parseFloat(initVal) || creature.initiative;
+
+                if (isMobMode) {
+                    const newMobSize = getInt('mob-size');
+                    // Preserve the original hpFormula if converting, otherwise it's already there.
+                    if (creatureBeingEdited && !creatureBeingEdited.isMob) {
+                        creature.hpFormula = singleCreatureHPForMob;
+                    }
+                    creature.singleCreatureHP = calculatedSingleCreatureHP;
+                    creature.maxHp = newMobSize * calculatedSingleCreatureHP;
+                    creature.mobInitialCount = (creatureBeingEdited && creatureBeingEdited.isMob) ? creatureBeingEdited.mobInitialCount : newMobSize;
+                } else {
+                    // If converting from a mob, the hpFormula is still correct on the object.
+                    creature.hpFormula = singleCreatureHPForMob;
+                    creature.maxHp = (creatureBeingEdited && creatureBeingEdited.isMob) ? calculatedSingleCreatureHP : (creature.maxHp || getInt('creature-hp'));
+                    delete creature.mobInitialCount;
+                    delete creature.singleCreatureHP;
+                }
+
+                // console.log('[Form Submit] Sending update-creature', creature);
+                window.electron.ipcRenderer.send('update-creature', creature);
+
+            } else { // This is a new creature
+                creature = {
+                    id: Date.now(),
+                    name: getVal('creature-name'),
+                    initiative: getVal('creature-initiative'),
+                    hp: getVal('creature-hp') || '10', // Keep as string for dice notation in backend
+                    ac: getInt('creature-ac'),
+                    speed: getVal('creature-speed'),
+                    attackMod: getVal('attack-modifier'),
+                    saveDc: getInt('save-dc'),
+                    scores: { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), },
+                    saves: { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), },
+                    tempHp: 0, conditions: [], isConcentrating: false, isFriendly: false, reminders: { start: '', end: '' },
+                    isMob: isMobMode,
+                };
+
+                if (isMobMode) {
+                    // The 'hp' field now contains the dice formula for a single creature.
+                    // The backend will handle the calculation.
+                    creature.hp = getVal('creature-hp') || '10'; // Send the formula string
+                    creature.mobInitialCount = getInt('mob-size');
+                    // No need to set maxHp, singleCreatureHP, or hpFormula here.
+                    // The backend will derive everything from the .hp formula and mobInitialCount.
+                }
+
+                if (addCreatureForm.dataset.monsterRawData) {
+                    creature.rawData = addCreatureForm.dataset.monsterRawData;
+                }
+
+                // console.log('[Form Submit] Sending add-creature', creature);
+                window.electron.ipcRenderer.send('add-creature', creature);
             }
 
-            window.electron.ipcRenderer.send('update-creature', creature);
-
-        } else { // This is a new creature
-            creature = {
-                id: Date.now(),
-                name: getVal('creature-name'),
-                initiative: getVal('creature-initiative'),
-                hp: getVal('creature-hp') || '10', // Keep as string for dice notation in backend
-                ac: getInt('creature-ac'),
-                speed: getVal('creature-speed'),
-                attackMod: getVal('attack-modifier'),
-                saveDc: getInt('save-dc'),
-                scores: { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), },
-                saves: { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), },
-                tempHp: 0, conditions: [], isConcentrating: false, isFriendly: false, reminders: { start: '', end: '' },
-                isMob: isMobMode,
-            };
-
-            if (isMobMode) {
-                // The 'hp' field now contains the dice formula for a single creature.
-                // The backend will handle the calculation.
-                creature.hp = getVal('creature-hp') || '10'; // Send the formula string
-                creature.mobInitialCount = getInt('mob-size');
-                // No need to set maxHp, singleCreatureHP, or hpFormula here.
-                // The backend will derive everything from the .hp formula and mobInitialCount.
-            }
-
-            if (addCreatureForm.dataset.monsterRawData) {
-                creature.rawData = addCreatureForm.dataset.monsterRawData;
-            }
-
-            window.electron.ipcRenderer.send('add-creature', creature);
+            // --- Reset Form ---
+            addCreatureForm.reset();
+            document.getElementById('imported-monster-info-btn').style.display = 'none';
+            delete addCreatureForm.dataset.monsterRawData;
+            delete addCreatureForm.dataset.editingId;
+            creatureBeingEdited = null;
+            isMobMode = false;
+            document.getElementById('mob-controls').style.display = 'none';
+            document.getElementById('convert-to-mob-btn').textContent = 'Convert to Mob';
+            document.getElementById('creature-name').focus();
+        } catch (err) {
+            console.error('[Form Submit Error]', err);
+            alert('Error submitting form: ' + err.message);
         }
-
-        // --- Reset Form ---
-        addCreatureForm.reset();
-        document.getElementById('imported-monster-info-btn').style.display = 'none';
-        delete addCreatureForm.dataset.monsterRawData;
-        creatureBeingEdited = null;
-        isMobMode = false;
-        document.getElementById('mob-controls').style.display = 'none';
-        document.getElementById('convert-to-mob-btn').textContent = 'Convert to Mob';
-        document.getElementById('creature-name').focus();
     });
 
     // --- IPC Listeners ---
@@ -506,32 +636,418 @@ document.addEventListener('DOMContentLoaded', async () => {
         showPanel('diceLog');
     });
 
+    const showBotNag = () => {
+        let message = "The Discord bot is currently disabled. You need to enable and configure it in settings to use audio features on Discord. Open settings now?";
+
+        if (botStatus.message === 'Not Configured') {
+            message = "The Discord bot is enabled but not fully configured. Would you like to open settings to finish setup?";
+        }
+
+        if (confirm(message)) {
+            window.electron.ipcRenderer.send('open-settings-window');
+        }
+    };
+
+    window.electron.ipcRenderer.on('discord-bot-status', (event, status) => {
+        botStatus = status;
+        isBotEnabled = status.status !== 'offline';
+
+        const indicator = document.getElementById('bot-status-indicator');
+        if (indicator) {
+            if (status.voiceStatus === 'connected') {
+                indicator.textContent = '🟩';
+                indicator.title = `Bot: ${status.message} | Voice: Connected (Click to leave)`;
+            } else if (status.voiceStatus === 'connecting') {
+                indicator.textContent = '🟨';
+                indicator.title = `Bot: ${status.message} | Voice: Connecting... (Click to cancel)`;
+            } else if (status.isSoftLocked) {
+                indicator.textContent = '⚠️';
+                indicator.title = `Bot: ${status.message} | Voice: Locked by another instance`;
+            } else {
+                indicator.textContent = '🟥';
+                indicator.title = `Bot: ${status.message} | Voice: Disconnected (Click to join)`;
+            }
+        }
+    });
+
+    window.electron.ipcRenderer.on('discord-config', (event, config) => {
+        if (config.audioMode) {
+            document.body.classList.add('audio-only');
+            // Move containers to columns
+            const rightCol = document.querySelector('.audio-only-right-column');
+            const musicControls = document.getElementById('music-controls-container');
+            const soundboard = document.getElementById('soundboard-container');
+            if (rightCol && musicControls && soundboard) {
+                rightCol.appendChild(musicControls);
+                rightCol.appendChild(soundboard);
+            }
+            showPanel('musicLibraryArea');
+        } else {
+            document.body.classList.remove('audio-only');
+            // Move containers back
+            const leftCol = document.querySelector('.column-left');
+            const midCol = document.querySelector('.column-middle');
+            const musicControls = document.getElementById('music-controls-container');
+            const soundboard = document.getElementById('soundboard-container');
+            if (leftCol && musicControls) leftCol.appendChild(musicControls);
+            if (midCol && soundboard) midCol.appendChild(soundboard);
+        }
+        renderSoundboard(); // Ensure soundboard layout updates when mode changes
+    });
+
+    window.electron.ipcRenderer.on('switch-panel', (event, panelId) => {
+        // Map old panel IDs to new ones if necessary
+        const map = {
+            'diceLog': 'diceLog',
+            'logArea': 'logArea',
+            'statBlockArea': 'statBlockArea',
+            'musicLibraryArea': 'musicLibraryArea'
+        };
+        showPanel(map[panelId] || panelId);
+    });
+
+    function showNotification(message) {
+        const toast = document.getElementById('library-notification');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.style.display = 'block';
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 5000);
+    }
+
+    window.electron.ipcRenderer.on('music-library-update', (event, { library, diff }) => {
+        musicLibrary = library;
+        renderMusicLibrary();
+
+        if (diff) {
+            let msg = "Library Update: ";
+            const parts = [];
+            if (diff.added > 0) parts.push(`${diff.added} songs added`);
+            if (diff.addedFolders > 0) parts.push(`${diff.addedFolders} folders added`);
+            if (diff.removed > 0) parts.push(`${diff.removed} songs removed`);
+            if (diff.removedFolders > 0) parts.push(`${diff.removedFolders} folders removed`);
+
+            msg += parts.join(", ") + ".";
+            logMessage(msg);
+
+            // Inform the user as requested
+            if (parts.length > 0) {
+                showNotification(msg);
+            }
+        }
+    });
+
+    function renderMusicLibrary() {
+        const container = document.getElementById('library-tree-container');
+        container.innerHTML = '';
+        if (musicLibrary && musicLibrary.children) {
+            // Flatten: Add each child of the root directly to the container
+            musicLibrary.children.forEach(child => {
+                container.appendChild(createTreeNode(child, true));
+            });
+        }
+    }
+
+    function createTreeNode(node, isRoot = false) {
+        const div = document.createElement('div');
+        div.className = 'tree-node';
+        if (isRoot) div.style.marginLeft = '0';
+
+        const content = document.createElement('div');
+        content.className = 'tree-node-content';
+        if (selectedLibraryPaths.has(node.path)) content.classList.add('selected');
+
+        const toggle = document.createElement('span');
+        toggle.className = 'folder-toggle';
+        toggle.textContent = node.type === 'directory' ? '📁' : '📄';
+
+        const name = document.createElement('span');
+        name.className = 'node-name';
+        name.textContent = node.name;
+
+        content.appendChild(toggle);
+        content.appendChild(name);
+
+        // Actions
+        const actions = document.createElement('div');
+        actions.className = 'tree-node-actions';
+
+        const playNow = document.createElement('button');
+        playNow.className = 'small-btn';
+        playNow.innerHTML = '▶️';
+        playNow.title = 'Add to top and play';
+        playNow.onclick = (e) => {
+            e.stopPropagation();
+            const files = getAllFiles(node);
+            if (files.length > 0) {
+                // In Loop All, adding to top and playing means we put them at index 0 and jumpTo(0)
+                // Backend jumpTo in Loop All moves preceding to bottom.
+                // But here we want to INSERT at top.
+                // Let's use a new IPC or existing load-music-file.
+                // Actually, let's add a specialized "play-now-library" IPC.
+                window.electron.ipcRenderer.send('library-action', { action: 'play-now', paths: files });
+            }
+        };
+
+        const addTop = document.createElement('button');
+        addTop.className = 'small-btn';
+        addTop.innerHTML = '⬆️';
+        addTop.title = 'Add to top';
+        addTop.onclick = (e) => {
+            e.stopPropagation();
+            const files = getAllFiles(node);
+            window.electron.ipcRenderer.send('library-action', { action: 'add-top', paths: files });
+        };
+
+        const addBottom = document.createElement('button');
+        addBottom.className = 'small-btn';
+        addBottom.innerHTML = '⬇️';
+        addBottom.title = 'Add to bottom';
+        addBottom.onclick = (e) => {
+            e.stopPropagation();
+            const files = getAllFiles(node);
+            window.electron.ipcRenderer.send('library-action', { action: 'add-bottom', paths: files });
+        };
+
+        actions.appendChild(playNow);
+        actions.appendChild(addTop);
+        actions.appendChild(addBottom);
+        content.appendChild(actions);
+
+        div.appendChild(content);
+
+        if (node.type === 'directory' && node.children) {
+            const childrenContainer = document.createElement('div');
+            childrenContainer.className = 'node-children';
+            childrenContainer.style.display = 'none'; // Collapsed by default
+            node.children.forEach(child => {
+                childrenContainer.appendChild(createTreeNode(child));
+            });
+            div.appendChild(childrenContainer);
+
+            content.onclick = (e) => {
+                if (e.ctrlKey) {
+                    toggleSelection(node.path);
+                } else {
+                    childrenContainer.style.display = childrenContainer.style.display === 'none' ? 'block' : 'none';
+                    toggle.textContent = childrenContainer.style.display === 'none' ? '📁' : '📂';
+                }
+            };
+        } else {
+            content.onclick = (e) => {
+                if (e.ctrlKey) {
+                    toggleSelection(node.path);
+                } else {
+                    // Just select if single click?
+                    selectedLibraryPaths.clear();
+                    selectedLibraryPaths.add(node.path);
+                    renderMusicLibrary();
+                }
+            };
+        }
+
+        content.ondblclick = (e) => {
+            e.stopPropagation();
+            const files = getAllFiles(node);
+            if (files.length > 0) {
+                window.electron.ipcRenderer.send('library-action', { action: 'play-now', paths: files });
+            }
+        };
+
+        return div;
+    }
+
+    function toggleSelection(path) {
+        if (selectedLibraryPaths.has(path)) {
+            selectedLibraryPaths.delete(path);
+        } else {
+            selectedLibraryPaths.add(path);
+        }
+        renderMusicLibrary();
+    }
+
+    function getAllFiles(node) {
+        if (node.type === 'file') return [node.path];
+        let files = [];
+        if (node.children) {
+            node.children.forEach(c => {
+                files = files.concat(getAllFiles(c));
+            });
+        }
+        return files;
+    }
+
+    document.getElementById('rescan-library-btn').onclick = () => {
+        window.electron.ipcRenderer.invoke('rescan-music-library');
+    };
+
+    document.getElementById('add-loose-btn').onclick = () => {
+        window.electron.ipcRenderer.invoke('open-file-dialog', { multi: true, folders: true }).then(filePaths => {
+            if (filePaths && filePaths.length > 0) {
+                window.electron.ipcRenderer.send('library-action', { action: 'add-loose', paths: filePaths });
+            }
+        });
+    };
+
+    function getSelectedFiles() {
+        const files = new Set();
+        // Traverse the musicLibrary tree to find nodes whose path is in selectedLibraryPaths
+        const traverse = (node) => {
+            if (selectedLibraryPaths.has(node.path)) {
+                getAllFiles(node).forEach(f => files.add(f));
+            } else if (node.children) {
+                node.children.forEach(traverse);
+            }
+        };
+        traverse(musicLibrary);
+        return [...files];
+    }
+
+    document.getElementById('bulk-play-now').onclick = () => {
+        const files = getSelectedFiles();
+        if (files.length > 0) {
+            window.electron.ipcRenderer.send('library-action', { action: 'play-now', paths: files });
+        }
+    };
+
+    document.getElementById('bulk-add-top').onclick = () => {
+        const files = getSelectedFiles();
+        if (files.length > 0) {
+            window.electron.ipcRenderer.send('library-action', { action: 'add-top', paths: files });
+        }
+    };
+
+    document.getElementById('bulk-add-bottom').onclick = () => {
+        const files = getSelectedFiles();
+        if (files.length > 0) {
+            window.electron.ipcRenderer.send('library-action', { action: 'add-bottom', paths: files });
+        }
+    };
+
+    let currentLoopMode = 1;
+    let currentShuffleMode = false;
+    let lastMusicStatus = null;
+
+    function togglePreview(index = -1) {
+        if (!previewAudioPlayer.paused) {
+            previewAudioPlayer.pause();
+            // If we clicked preview on the SAME track that's already playing, just stop.
+            // If we clicked a DIFFERENT track, continue to play the new one.
+            if (index === -1 || previewAudioPlayer.dataset.currentIndex === index.toString()) {
+                return;
+            }
+        }
+
+        window.electron.ipcRenderer.invoke('get-preview-audio-data', { index }).then(result => {
+            if (result.success) {
+                previewAudioPlayer.src = result.url;
+                previewAudioPlayer.dataset.currentIndex = index.toString();
+                previewAudioPlayer.load(); // Explicitly reload the source
+                previewAudioPlayer.play().catch(e => {
+                    logMessage(`Playback Error: ${e.message}`);
+                });
+            } else {
+                logMessage(`Preview Error: ${result.error}`);
+            }
+        });
+    }
+
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
+        lastMusicStatus = status;
         isPlaying = status.isPlaying;
-        playPauseButton.textContent = isPlaying ? 'Pause' : 'Play';
-        previewButton.disabled = !status.activeFilePath && !status.pendingFilePath;
+        currentLoopMode = status.loopMode;
+        currentShuffleMode = status.shuffleMode;
 
-        // Handle Pending Track
-        if (status.isCaching && status.pendingFilePath) {
-            pendingFileLabel.textContent = `(Caching...) ${status.pendingFilePath}`;
-            pendingFileLabelContainer.style.display = 'block';
-        } else if (status.pendingFilePath) {
-            pendingFileLabel.textContent = status.pendingFilePath;
-            pendingFileLabelContainer.style.display = 'block';
-        } else {
-            pendingFileLabelContainer.style.display = 'none';
+        if (status.currentIndex === -1) {
+            lastScrolledIndex = -1;
         }
 
-        // Handle Active Track & Button State
-        if (status.activeFilePath) {
-            activeFileLabel.textContent = status.activeFilePath;
-        } else {
-            activeFileLabel.textContent = 'No track loaded';
+        // Update Progress Bar
+        const progressBar = document.getElementById('music-progress-bar');
+        const timeDisplay = document.getElementById('music-time-display');
+        if (progressBar && timeDisplay) {
+            const percent = status.duration > 0 ? (status.currentTime / status.duration) * 100 : 0;
+            progressBar.style.width = `${percent}%`;
+
+            const formatTime = (s) => {
+                const mins = Math.floor(s / 60);
+                const secs = Math.floor(s % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+            timeDisplay.textContent = `${formatTime(status.currentTime)} / ${formatTime(status.duration)}`;
         }
 
-        // The play button should be enabled if there's any track available to be played,
-        // either already active or pending.
-        playPauseButton.disabled = !status.activeFilePath && !status.pendingFilePath;
+        playPauseButton.textContent = isPlaying ? '⏸️' : '▶️';
+        playPauseButton.disabled = status.stack.length === 0;
+
+        // Handle Progress Bar Seeking
+        const progressContainer = document.querySelector('.progress-container');
+        if (progressContainer && !progressContainer.dataset.seekingListener) {
+            progressContainer.dataset.seekingListener = 'true';
+            progressContainer.addEventListener('click', (e) => {
+                if (lastMusicStatus && lastMusicStatus.duration > 0) {
+                    const rect = progressContainer.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const percent = x / rect.width;
+                    const seekTime = percent * lastMusicStatus.duration;
+                    window.electron.ipcRenderer.send('seek-music', { time: seekTime });
+                }
+            });
+        }
+
+        // Update Loop Button
+        const loopEmojis = ['➡️', '🔁', '🔂'];
+        const loopTitles = ['No Loop', 'Loop All', 'Loop Single'];
+        loopModeBtn.textContent = loopEmojis[currentLoopMode];
+        loopModeBtn.title = loopTitles[currentLoopMode];
+
+        // Update Shuffle Button
+        shuffleBtn.classList.toggle('active', currentShuffleMode);
+
+        // Render Playlist
+        musicStackList.innerHTML = '';
+        status.stack.forEach((track, index) => {
+            const div = document.createElement('div');
+            div.className = 'music-stack-item' + (index === status.currentIndex ? ' active' : '');
+            if (status.isCaching && index === status.currentIndex) div.classList.add('caching');
+
+            div.innerHTML = `
+                <span class="track-name">${track.name}</span>
+                <div class="item-actions">
+                    <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
+                    <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
+                    <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
+                </div>
+            `;
+            div.querySelector('.play-track-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.electron.ipcRenderer.send('jump-to-track', { index });
+            });
+            div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                togglePreview(index);
+            });
+            div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.electron.ipcRenderer.send('remove-from-stack', { index });
+            });
+            div.addEventListener('click', () => {
+                // Focus track on click (maybe highlight?), but don't jump yet if we want double click
+            });
+            div.addEventListener('dblclick', () => {
+                window.electron.ipcRenderer.send('jump-to-track', { index });
+            });
+            musicStackList.appendChild(div);
+
+            // Auto-scroll to active track
+            if (index === status.currentIndex && index !== lastScrolledIndex) {
+                setTimeout(() => {
+                    div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    lastScrolledIndex = index;
+                }, 100);
+            }
+        });
     });
 
     window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {
@@ -555,14 +1071,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.electron.ipcRenderer.on('populate-edit-form', (event, creature) => {
         if (!creature) return;
 
+        // Auto-expand form
+        const content = document.getElementById('add-creature-form-content');
+        const btn = document.getElementById('toggle-add-form-btn');
+        if (content) content.style.display = 'block';
+        if (btn) btn.textContent = '➖';
+
         // --- Store the creature for submission ---
         creatureBeingEdited = creature;
+        addCreatureForm.dataset.editingId = creature.id; // Store ID in dataset for robust state tracking
 
         // --- Populate basic fields ---
         document.getElementById('creature-name').value = creature.name || '';
         document.getElementById('creature-initiative').value = creature.initiative || '';
-        // When editing, show the formula for single creatures, or current HP for mobs
-        document.getElementById('creature-hp').value = (!creature.isMob && creature.hpFormula) ? creature.hpFormula : (creature.hp || '');
+        // When editing, show the CURRENT HP so the user can edit the value directly.
+        // We do store the formula separately if needed, but the user requested editing current values.
+        document.getElementById('creature-hp').value = creature.hp || '';
         document.getElementById('creature-ac').value = creature.ac || '';
         document.getElementById('creature-speed').value = creature.speed || '';
         document.getElementById('attack-modifier').value = creature.attackMod || '';
@@ -616,13 +1140,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.electron.ipcRenderer.on('populate-add-form', (event, creature) => {
         if (!creature) return;
 
+        // Auto-expand form
+        const content = document.getElementById('add-creature-form-content');
+        const btn = document.getElementById('toggle-add-form-btn');
+        if (content) content.style.display = 'block';
+        if (btn) btn.textContent = '➖';
+
         // This is for "Copying" a creature. It populates the form but doesn't
         // put the form into "edit mode".
         creatureBeingEdited = null; // Ensure we are not in edit mode
+        delete addCreatureForm.dataset.editingId;
 
         // Populate basic fields
         document.getElementById('creature-name').value = creature.name || '';
-        document.getElementById('creature-initiative').value = creature.initiative || '';
+        document.getElementById('creature-initiative').value = creature.initiativeFormula || creature.initiative || '';
         document.getElementById('creature-hp').value = creature.hpFormula || creature.hp || '';
         document.getElementById('creature-ac').value = creature.ac || '';
         document.getElementById('creature-speed').value = creature.speed || '';
@@ -782,16 +1313,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     let soundboardState = [];
-    const SOUNDBOARD_SIZE = 3;
+    let soundboardRowCount = 1; // Resizable rows in Normal mode
+    const NORMAL_SLOTS_PER_ROW = 3;
+    const AUDIO_ONLY_COLS = 6;
+    const AUDIO_ONLY_ROWS = 12;
+    const AUDIO_ONLY_TOTAL_SLOTS = AUDIO_ONLY_COLS * AUDIO_ONLY_ROWS;
 
-    // Load state from backend
+    // --- Load Soundboard State ---
     window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
-        if (savedState && Array.isArray(savedState) && savedState.length === SOUNDBOARD_SIZE) {
-            soundboardState = migrateSoundboardState(savedState);
-        } else {
-            // Initialize defaults
-            soundboardState = [];
-            for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
+        let slotsToLoad = [];
+        let volumeToLoad = 0.5;
+        let rowsToLoad = 1;
+
+        if (savedState) {
+            if (Array.isArray(savedState)) {
+                slotsToLoad = savedState;
+                rowsToLoad = Math.max(1, Math.ceil(slotsToLoad.length / NORMAL_SLOTS_PER_ROW));
+            } else if (typeof savedState === 'object') {
+                if (savedState.slots) slotsToLoad = savedState.slots;
+                if (savedState.volume !== undefined) volumeToLoad = savedState.volume;
+                if (savedState.rows !== undefined) rowsToLoad = savedState.rows;
+            }
+        }
+
+        soundboardRowCount = rowsToLoad;
+        soundboardState = migrateSoundboardState(slotsToLoad);
+
+        // Ensure we always have enough for the largest layout (72 slots for 12 rows of 6)
+        const totalNeeded = 72;
+
+        if (soundboardState.length < totalNeeded) {
+            for (let i = soundboardState.length; i < totalNeeded; i++) {
                 soundboardState.push({
                     id: i,
                     tracks: [],
@@ -803,8 +1355,40 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
         }
+
+        const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+        if (soundboardVolumeSlider) {
+            soundboardVolumeSlider.value = volumeToLoad;
+            const effectiveVolume = volumeToLoad * 1.5;
+            window.electron.ipcRenderer.send('set-soundboard-volume', { volume: effectiveVolume });
+        }
+
         renderSoundboard();
     });
+
+    // Expose for verification/IPC
+    window.renderSoundboard = renderSoundboard;
+
+    let saveSoundboardStateTimeout;
+    function saveSoundboardState() {
+        const volumeEl = document.getElementById('soundboard-volume');
+        const volume = volumeEl ? parseFloat(volumeEl.value) : 0.5;
+        const stateToSave = {
+            volume: volume,
+            rows: soundboardRowCount,
+            slots: soundboardState.map(slot => ({
+                ...slot,
+                isPlaying: false // Don't save playing state
+            }))
+        };
+
+        if (saveSoundboardStateTimeout) clearTimeout(saveSoundboardStateTimeout);
+        saveSoundboardStateTimeout = setTimeout(() => {
+            window.electron.ipcRenderer.send('save-soundboard-state', stateToSave);
+        }, 1000);
+    }
+
+
 
     // --- Preset Buttons ---
     const savePresetBtn = document.getElementById('save-preset-btn');
@@ -824,13 +1408,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadPresetBtn.addEventListener('click', () => {
             window.electron.ipcRenderer.invoke('load-soundboard-preset').then(result => {
                 if (result.success && result.state) {
-                    soundboardState = migrateSoundboardState(result.state);
+                    const loadedState = migrateSoundboardState(result.state);
+                    soundboardState = loadedState;
+                    // Ensure we always have enough for the largest layout (72 slots for 12 rows of 6)
+                    const totalNeeded = 72;
+                    for (let i = soundboardState.length; i < totalNeeded; i++) {
+                        soundboardState.push({
+                            id: i, tracks: [], currentTrackIndex: 0, emoji: '🎨', loop: 'none', playMode: 'sequential', isPlaying: false
+                        });
+                    }
+                    soundboardRowCount = Math.min(16, Math.max(1, Math.ceil(loadedState.length / NORMAL_SLOTS_PER_ROW)));
                     saveSoundboardState();
                     renderSoundboard();
                 }
             });
         });
     }
+
+    document.getElementById('add-row-btn').addEventListener('click', () => {
+        const MAX_ROWS = 72 / NORMAL_SLOTS_PER_ROW;
+        if (soundboardRowCount < MAX_ROWS) {
+            soundboardRowCount++;
+            saveSoundboardState();
+            renderSoundboard();
+        }
+    });
+
+    document.getElementById('remove-row-btn').addEventListener('click', () => {
+        if (soundboardRowCount > 1) {
+            soundboardRowCount--;
+            saveSoundboardState();
+            renderSoundboard();
+        }
+    });
 
     // --- Emoji Picker Logic ---
     const emojiDialog = document.getElementById('emoji-picker-dialog');
@@ -859,16 +1469,136 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function saveSoundboardState() {
-        window.electron.ipcRenderer.send('save-soundboard-state', soundboardState);
-    }
+    // --- Global Event Delegation for Combatant Details ---
+    combatantDetailsListDiv.addEventListener('click', (e) => {
+        const target = e.target;
+        const creatureId = parseInt(target.dataset.id, 10);
+        if (isNaN(creatureId)) return;
+
+        const creature = initiativeOrder.find(c => c.id === creatureId);
+
+        if (target.classList.contains('attack-btn')) {
+            if (creature) {
+                if (creature.isMob) {
+                    displayMobRules(creatureId);
+                } else {
+                    createPopup('attack-roll', creatureId, target);
+                }
+            }
+        } else if (target.classList.contains('stat-roll-btn')) {
+            const { type, stat } = target.dataset;
+            createPopup('stat-roll', creatureId, target, { type, stat });
+        } else if (target.classList.contains('hp-change-btn')) {
+            createPopup('hp', creatureId, target);
+        } else if (target.classList.contains('add-condition-btn')) {
+            createPopup('condition', creatureId, target);
+        } else if (target.classList.contains('temp-hp-btn')) {
+            createPopup('temp-hp', creatureId, target);
+        } else if (target.classList.contains('remove-condition-btn')) {
+            const { condition } = target.dataset;
+            window.electron.ipcRenderer.send('remove-condition', { creatureId, condition });
+            // Hide tooltip immediately when condition is removed
+            if (globalTooltip) {
+                globalTooltip.style.visibility = 'hidden';
+                globalTooltip.style.opacity = '0';
+            }
+        } else if (target.classList.contains('reminders-btn')) {
+            createPopup('reminders', creatureId, target);
+        } else if (target.classList.contains('copy-btn')) {
+            window.electron.ipcRenderer.send('copy-creature', { creatureId });
+        } else if (target.classList.contains('edit-btn')) {
+            window.electron.ipcRenderer.send('edit-creature', { creatureId });
+        } else if (target.classList.contains('remove-btn')) {
+            window.electron.ipcRenderer.send('remove-creature', { creatureId });
+        } else if (target.classList.contains('move-to-bottom-btn')) {
+            const creatureIndex = combatantPanelOrder.findIndex(c => c.id === creatureId);
+            if (creatureIndex > -1) {
+                const [creature] = combatantPanelOrder.splice(creatureIndex, 1);
+                combatantPanelOrder.push(creature);
+                renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
+            }
+        }
+    });
+
+    combatantDetailsListDiv.addEventListener('change', (e) => {
+        const target = e.target;
+        const creatureId = parseInt(target.dataset.id, 10);
+        if (isNaN(creatureId)) return;
+
+        if (target.classList.contains('concentration-cb')) {
+            window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isConcentrating', value: e.target.checked });
+        } else if (target.classList.contains('friendly-cb')) {
+            window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isFriendly', value: e.target.checked });
+        }
+    });
 
     // --- Render Functions ---
+    function updateSoundboardContainerHeight() {
+        const soundboardContainer = document.getElementById('soundboard-container');
+        if (!soundboardContainer) return;
+
+        if (document.body.classList.contains('audio-only')) {
+            soundboardContainer.style.flex = '1 1 0';
+            soundboardContainer.style.height = '';
+            return;
+        }
+
+        const grid = document.getElementById('soundboard-grid');
+        const header = soundboardContainer.querySelector('.panel-header');
+
+        if (grid && grid.firstElementChild) {
+            const slotHeight = grid.firstElementChild.getBoundingClientRect().height;
+            const style = window.getComputedStyle(grid);
+            const gap = parseInt(style.gap) || 5;
+            const containerStyle = window.getComputedStyle(soundboardContainer);
+            const padding = (parseInt(containerStyle.paddingTop) || 0) + (parseInt(containerStyle.paddingBottom) || 0);
+            const headerHeight = header ? header.getBoundingClientRect().height : 0;
+            const headerMargin = header ? (parseInt(window.getComputedStyle(header).marginBottom) || 0) : 0;
+
+            const newHeight = (soundboardRowCount * slotHeight) + ((soundboardRowCount - 1) * gap) + padding + headerHeight + headerMargin + 4;
+
+            // Respect parent height constraints
+            const parent = soundboardContainer.parentElement;
+            if (parent) {
+                const parentHeight = parent.getBoundingClientRect().height;
+                if (newHeight > parentHeight * 0.8) {
+                    soundboardContainer.style.flex = `1 1 auto`;
+                    soundboardContainer.style.height = ``;
+                    return;
+                }
+            }
+
+            soundboardContainer.style.flex = `0 0 ${newHeight}px`;
+            soundboardContainer.style.height = `${newHeight}px`;
+        } else {
+            // Fallback if not rendered yet
+            const rowHeight = 110;
+            const headerAndPadding = 60;
+            const newHeight = (soundboardRowCount * rowHeight) + headerAndPadding;
+            soundboardContainer.style.flex = `0 0 ${newHeight}px`;
+            soundboardContainer.style.height = `${newHeight}px`;
+        }
+    }
+
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
         grid.innerHTML = '';
 
-        soundboardState.forEach(slot => {
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        const rows = isAudioOnly ? AUDIO_ONLY_ROWS : soundboardRowCount;
+        const cols = isAudioOnly ? AUDIO_ONLY_COLS : NORMAL_SLOTS_PER_ROW;
+        const totalSlotsToRender = isAudioOnly ? AUDIO_ONLY_TOTAL_SLOTS : (soundboardRowCount * NORMAL_SLOTS_PER_ROW);
+
+        grid.style.setProperty('--sb-rows', rows);
+        grid.style.setProperty('--sb-cols', cols);
+
+        // Render subset of state based on current layout
+        for (let i = 0; i < totalSlotsToRender; i++) {
+            let slot = soundboardState[i];
+            if (!slot) {
+                // Should not happen if padded correctly
+                slot = { id: i, tracks: [], currentTrackIndex: 0, emoji: '🎨', isPlaying: false, loop: 'none', playMode: 'sequential' };
+            }
             const slotDiv = document.createElement('div');
             slotDiv.className = 'soundboard-stack-slot';
 
@@ -891,10 +1621,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
 
+            const currentTrackName = slot.tracks[slot.currentTrackIndex]?.name || (trackCount > 0 ? '---' : 'Empty');
             slotDiv.innerHTML = `
                 <div class="stack-header">
                     <button class="stack-emoji-btn" data-id="${slot.id}" title="Edit Emoji">${slot.emoji}</button>
-                    <button class="stack-btn stack-add-btn" data-id="${slot.id}" title="Add Sound">${addOrCountIcon}</button>
+                    <button class="stack-btn stack-add-btn" data-id="${slot.id}" title="Add Sound">➕</button>
+                    <button class="stack-btn stack-add-folder-btn" data-id="${slot.id}" title="Add Folder">📁</button>
                     <button class="stack-btn stack-clear-btn" data-id="${slot.id}" title="Clear Stack">🗑️</button>
                 </div>
                 <div class="stack-controls">
@@ -902,11 +1634,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button class="stack-btn stack-loop-btn ${loopClass}" data-id="${slot.id}" title="Toggle Loop (Stack)">${loopIcon}</button>
                     <button class="stack-btn stack-shuffle-btn ${shuffleClass}" data-id="${slot.id}" title="Toggle Shuffle">${shuffleIcon}</button>
                 </div>
+                <div class="stack-track-display" title="${currentTrackName}">${currentTrackName}</div>
             `;
             grid.appendChild(slotDiv);
-        });
+        }
 
         attachSoundboardListeners();
+        updateSoundboardContainerHeight();
     }
 
     function attachSoundboardListeners() {
@@ -952,16 +1686,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.stack-add-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
-                window.electron.ipcRenderer.invoke('open-file-dialog').then(filePath => {
-                    if (filePath) {
-                        // We need the name. We can guess from path or ask backend. 
-                        // open-file-dialog returns path. Path manipulation in renderer is possible if nodeIntegration true.
-                        // Or we can invoke 'load-sound' logic which returns object?
-                        // Let's use a helper invocation to get name or just parse str string split.
-                        // Since nodeIntegration is true (per warnings earlier), we might have path module?
-                        // Usually safer to just split string.
-                        const name = filePath.replace(/^.*[\\\/]/, '');
-                        soundboardState[slotId].tracks.push({ path: filePath, name: name });
+                window.electron.ipcRenderer.invoke('load-sound', { slotId, multi: true, folders: false }).then(tracks => {
+                    if (tracks && tracks.length > 0) {
+                        soundboardState[slotId].tracks.push(...tracks);
+                        saveSoundboardState();
+                        renderSoundboard();
+                    }
+                });
+            });
+        });
+
+        // Add Folder
+        document.querySelectorAll('.stack-add-folder-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const slotId = parseInt(e.target.dataset.id, 10);
+                window.electron.ipcRenderer.invoke('load-sound', { slotId, multi: true, folders: true }).then(tracks => {
+                    if (tracks && tracks.length > 0) {
+                        soundboardState[slotId].tracks.push(...tracks);
                         saveSoundboardState();
                         renderSoundboard();
                     }
@@ -984,6 +1725,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function togglePlay(slotId) {
+        if (!isBotEnabled) {
+            showBotNag();
+            return;
+        }
         const slot = soundboardState[slotId];
         if (slot.tracks.length === 0) return;
 
@@ -1037,7 +1782,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         initiativeListDiv.innerHTML = '';
         if (!initiativeOrder || initiativeOrder.length === 0) return;
 
+        const fragment = document.createDocumentFragment();
+
         initiativeOrder.forEach((creature, index) => {
+            if (creature.hidden) return; // Skip hidden creatures (e.g. being edited)
+
             const isActive = index === currentTurnIndex;
             const creatureDiv = document.createElement('div');
             creatureDiv.className = 'initiative-entry' + (isActive ? ' active-turn' : '');
@@ -1057,13 +1806,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
 
-            let conditionEmojis = (creature.conditions || []).map(c => DND_CONDITIONS[c]?.emoji || '');
-            let conditionStr;
-            if (conditionEmojis.length > 3) {
-                conditionStr = conditionEmojis.slice(0, 3).join('') + '♾️';
-            } else {
-                conditionStr = conditionEmojis.join('');
+            let conditionHTML = '';
+            const allConditionNames = creature.conditions || [];
+
+            // Render up to 3, plus an indicator if more
+            const visibleConditions = allConditionNames.slice(0, 3);
+
+            visibleConditions.forEach(name => {
+                const cond = DND_CONDITIONS[name];
+                if (cond) {
+                    conditionHTML += `
+                    <span class="has-tooltip" data-tooltip="${name}: ${cond.text}">
+                        ${cond.emoji}
+                    </span>`;
+                }
+            });
+
+            if (allConditionNames.length > 3) {
+                const tooltipText = allConditionNames.slice(3).map(name => {
+                    const c = DND_CONDITIONS[name];
+                    return c ? `${name}: ${c.text}` : name;
+                }).join('\n\n');
+                conditionHTML += `
+                 <span class="has-tooltip" data-tooltip="${tooltipText}">
+                    ♾️
+                 </span>`;
             }
+            let conditionStr = conditionHTML;
 
             let displayName = creature.name;
             if (creature.isMob) {
@@ -1094,28 +1863,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            initiativeListDiv.appendChild(creatureDiv);
+            fragment.appendChild(creatureDiv);
         });
+        initiativeListDiv.appendChild(fragment);
     }
 
     function getHpColor(current, max) {
-        if (current <= 0) return '#6c757d'; // Grey
-        if (current > max) return '#8a2be2'; // Purple
+        if (current <= 0) return '#6c757d'; // Grey (dead/0 HP)
+        if (current > max) return '#8a2be2'; // Purple (overhealed/temp HP)
 
         const percentage = (current / max) * 100;
-        if (percentage <= 25) return '#dc3545'; // Red
-        if (percentage <= 50) return '#ffc107'; // Yellow
-        if (percentage <= 75) return '#28a745'; // Green
-        return '#007bff'; // Blue
+        if (percentage >= 100) return '#007bff'; // Blue (full HP)
+        if (percentage >= 50) return '#28a745'; // Green (50-99%)
+        if (percentage >= 25) return '#ffc107'; // Yellow (25-49%)
+        return '#dc3545'; // Red (<25%)
     }
 
     function renderCombatantDetailsList(orderToRender, currentTurnIndex) {
         combatantDetailsListDiv.innerHTML = '';
         if (!orderToRender || orderToRender.length === 0) return;
 
+        const fragment = document.createDocumentFragment();
         const activeCreatureId = initiativeOrder.length > 0 ? initiativeOrder[currentTurnIndex]?.id : null;
 
         orderToRender.forEach((creature) => {
+            if (creature.hidden) return; // Skip hidden creatures (e.g. being edited)
+
             const creatureDiv = document.createElement('div');
             const isActive = activeCreatureId === creature.id;
             creatureDiv.className = 'combatant-details-entry' + (isActive ? ' active-turn' : '');
@@ -1195,7 +1968,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const condition = DND_CONDITIONS[conditionName];
                 if (!condition) return '';
                 return `
-                                <span class="condition-tag" style="background-color: ${condition.color};" title="${condition.text}">
+                                <span class="condition-tag has-tooltip" style="background-color: ${condition.color};" data-tooltip="${conditionName}: ${condition.text}">
                                     ${condition.emoji} ${conditionName}
                                     <button class="remove-condition-btn" data-id="${creature.id}" data-condition="${conditionName}">x</button>
                                 </span>`;
@@ -1207,67 +1980,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
             `;
-            combatantDetailsListDiv.appendChild(creatureDiv);
+            fragment.appendChild(creatureDiv);
         });
-
-        // Use event delegation for all buttons inside the combatant details list
-        combatantDetailsListDiv.addEventListener('click', (e) => {
-            const target = e.target;
-            const creatureId = parseInt(target.dataset.id, 10);
-            if (isNaN(creatureId)) return;
-
-            const creature = initiativeOrder.find(c => c.id === creatureId);
-
-            if (target.classList.contains('attack-btn')) {
-                if (creature) {
-                    if (creature.isMob) {
-                        displayMobRules(creatureId);
-                    } else {
-                        createPopup('attack-roll', creatureId, target);
-                    }
-                }
-            } else if (target.classList.contains('stat-roll-btn')) {
-                const { type, stat } = target.dataset;
-                createPopup('stat-roll', creatureId, target, { type, stat });
-            } else if (target.classList.contains('hp-change-btn')) {
-                createPopup('hp', creatureId, target);
-            } else if (target.classList.contains('add-condition-btn')) {
-                createPopup('condition', creatureId, target);
-            } else if (target.classList.contains('temp-hp-btn')) {
-                createPopup('temp-hp', creatureId, target);
-            } else if (target.classList.contains('remove-condition-btn')) {
-                const { condition } = target.dataset;
-                window.electron.ipcRenderer.send('remove-condition', { creatureId, condition });
-            } else if (target.classList.contains('reminders-btn')) {
-                createPopup('reminders', creatureId, target);
-            } else if (target.classList.contains('copy-btn')) {
-                window.electron.ipcRenderer.send('copy-creature', { creatureId });
-            } else if (target.classList.contains('edit-btn')) {
-                window.electron.ipcRenderer.send('edit-creature', { creatureId });
-            } else if (target.classList.contains('remove-btn')) {
-                window.electron.ipcRenderer.send('remove-creature', { creatureId });
-            } else if (target.classList.contains('move-to-bottom-btn')) {
-                const creatureIndex = combatantPanelOrder.findIndex(c => c.id === creatureId);
-                if (creatureIndex > -1) {
-                    const [creature] = combatantPanelOrder.splice(creatureIndex, 1);
-                    combatantPanelOrder.push(creature);
-                    renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
-                }
-            }
-        });
-
-        // Handle checkboxes separately as they use the 'change' event
-        combatantDetailsListDiv.addEventListener('change', (e) => {
-            const target = e.target;
-            const creatureId = parseInt(target.dataset.id, 10);
-            if (isNaN(creatureId)) return;
-
-            if (target.classList.contains('concentration-cb')) {
-                window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isConcentrating', value: e.target.checked });
-            } else if (target.classList.contains('friendly-cb')) {
-                window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isFriendly', value: e.target.checked });
-            }
-        });
+        combatantDetailsListDiv.appendChild(fragment);
     }
 
     function createPopup(type, creatureId, targetElement, data = {}) {
@@ -1284,12 +1999,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <button id="popup-hp-ok">Ok</button>
             `;
         } else if (type === 'condition') {
-            contentHTML = `
-                <select id="popup-condition-select">
-                    ${Object.keys(DND_CONDITIONS).map(c => `<option value="${c}">${c}</option>`).join('')}
-                </select>
-                <button id="popup-condition-add">Add</button>
-            `;
+            const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
+            const existingConditions = creature ? (creature.conditions || []) : [];
+            const availableConditions = Object.keys(DND_CONDITIONS).filter(c => !existingConditions.includes(c));
+
+            if (availableConditions.length === 0) {
+                contentHTML = `<p style="padding: 10px; margin: 0; font-size: 0.9em; color: #666;">All conditions applied.</p>`;
+            } else {
+                contentHTML = `
+                    <select id="popup-condition-select">
+                        ${availableConditions.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                    <button id="popup-condition-add">Add</button>
+                `;
+            }
         } else if (type === 'stat-roll' || type === 'attack-roll') {
             contentHTML = `
                 <button class="roll-type-btn" data-roll="adv">Advantage</button>
@@ -1365,11 +2088,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         } else if (type === 'condition') {
-            document.getElementById('popup-condition-add').addEventListener('click', () => {
-                const condition = document.getElementById('popup-condition-select').value;
-                window.electron.ipcRenderer.send('add-condition', { creatureId: parseInt(creatureId), condition });
-                popup.remove();
-            });
+            const addBtn = document.getElementById('popup-condition-add');
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    const condition = document.getElementById('popup-condition-select').value;
+                    window.electron.ipcRenderer.send('add-condition', { creatureId: parseInt(creatureId), condition });
+                    popup.remove();
+                });
+            }
         } else if (type === 'temp-hp') {
             const input = document.getElementById('popup-temp-hp-input');
             document.getElementById('popup-temp-hp-ok').addEventListener('click', () => {
@@ -1600,12 +2326,152 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Volume Control ---
-    const soundboardVolumeSlider = document.getElementById('soundboard-volume');
-    if (soundboardVolumeSlider) {
-        soundboardVolumeSlider.addEventListener('input', (e) => {
-            const volume = parseFloat(e.target.value);
-            window.electron.ipcRenderer.send('set-soundboard-volume', { volume });
+
+    // Ensure state is saved when closing the window
+    window.addEventListener('beforeunload', () => {
+        if (saveSoundboardStateTimeout) {
+            clearTimeout(saveSoundboardStateTimeout);
+        }
+        // Force immediate save
+        const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+        if (soundboardVolumeSlider) {
+            const volume = parseFloat(soundboardVolumeSlider.value);
+            const stateToSave = {
+                volume: volume,
+                slots: soundboardState.map(slot => ({
+                    ...slot,
+                    isPlaying: false
+                }))
+            };
+            window.electron.ipcRenderer.send('save-soundboard-state', stateToSave);
+        }
+    });
+
+    // --- Import Combatants Logic ---
+    const importDialog = document.getElementById('import-selection-dialog');
+    const importListContainer = document.getElementById('import-list-container');
+    const importBtn = document.getElementById('import-from-file-btn');
+    const confirmImportBtn = document.getElementById('confirm-import-btn');
+    const importSelectAllBtn = document.getElementById('import-select-all');
+    const importClearAllBtn = document.getElementById('import-clear-all');
+
+    if (importSelectAllBtn) {
+        importSelectAllBtn.addEventListener('click', () => {
+            const checkboxes = importListContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
         });
     }
+
+    if (importClearAllBtn) {
+        importClearAllBtn.addEventListener('click', () => {
+            const checkboxes = importListContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        });
+    }
+
+    if (importBtn) {
+        importBtn.addEventListener('click', async () => {
+            const combatants = await window.electron.ipcRenderer.invoke('read-combat-file');
+            if (combatants && combatants.length > 0) {
+                importListContainer.innerHTML = '';
+                combatants.forEach((c, index) => {
+                    const div = document.createElement('div');
+                    div.style.padding = '5px';
+                    div.style.borderBottom = '1px solid #ddd';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `import-check-${index}`;
+                    checkbox.value = index;
+                    checkbox.checked = false; // Default to UNCHECKED per user request
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `import-check-${index}`;
+                    label.textContent = ` ${c.name} (Init: ${c.initiativeFormula || c.initiative || '?'}, HP: ${c.hpFormula || c.hp || '?'})`;
+                    label.style.marginLeft = '10px';
+
+                    div.appendChild(checkbox);
+                    div.appendChild(label);
+                    importListContainer.appendChild(div);
+                });
+                // Store the combatants temporarily on the dialog
+                importDialog.dataset.combatants = JSON.stringify(combatants);
+                importDialog.showModal();
+            }
+        });
+    }
+
+    if (confirmImportBtn) {
+        confirmImportBtn.addEventListener('click', (e) => {
+            if (importDialog.returnValue === 'cancel') return;
+
+            const combatants = JSON.parse(importDialog.dataset.combatants || '[]');
+            const checkedBoxes = importListContainer.querySelectorAll('input[type="checkbox"]:checked');
+
+            // Use a base timestamp that is definitely unique for this batch
+            const baseTimestamp = Date.now();
+
+            checkedBoxes.forEach((box, i) => {
+                const index = parseInt(box.value);
+                const c = combatants[index];
+                if (c) {
+                    const newCreature = { ...c };
+                    // Ensure unique ID by adding loop index to timestamp.
+                    // This guarantees they are distinct and integers.
+                    newCreature.id = baseTimestamp + i;
+
+                    window.electron.ipcRenderer.send('add-creature', newCreature);
+                }
+            });
+            importDialog.close();
+        });
+    }
+
+    // --- Global Tooltip Logic ---
+    const globalTooltip = document.getElementById('global-tooltip');
+
+    if (globalTooltip) {
+        document.addEventListener('mouseover', (e) => {
+            const target = e.target.closest('.has-tooltip');
+            if (target && target.dataset.tooltip) {
+                globalTooltip.textContent = target.dataset.tooltip;
+                globalTooltip.style.visibility = 'visible';
+                globalTooltip.style.opacity = '1';
+                updateTooltipPosition(e);
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (globalTooltip.style.visibility === 'visible') {
+                updateTooltipPosition(e);
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const target = e.target.closest('.has-tooltip');
+            if (target) {
+                globalTooltip.style.visibility = 'hidden';
+                globalTooltip.style.opacity = '0';
+            }
+        });
+
+        function updateTooltipPosition(e) {
+            const offset = 15;
+            let x = e.clientX + offset;
+            let y = e.clientY + offset;
+
+            // Prevent going off screen (basic check)
+            const rect = globalTooltip.getBoundingClientRect();
+            if (x + rect.width > window.innerWidth) {
+                x = e.clientX - rect.width - offset;
+            }
+            if (y + rect.height > window.innerHeight) {
+                y = e.clientY - rect.height - offset;
+            }
+
+            globalTooltip.style.left = `${x}px`;
+            globalTooltip.style.top = `${y}px`;
+        }
+    }
+
 });

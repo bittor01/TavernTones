@@ -1,3 +1,4 @@
+<!-- Performance and security update -->
 # TavernTones Development Guide
 
 This document provides a high-level overview of the TavernTones application and its new documentation structure. For detailed information on specific parts of the application, please refer to the other documents in this folder.
@@ -34,3 +35,38 @@ The audio system has been refactored to ensure glitch-free playback during heavy
 
 ### Playback Flow
 `mp3/wav file` -> `ffmpeg (subprocess)` -> `stdout pipe` -> `ThreadedAudioMixer` -> `AudioMixerWorker` -> `Mixed PCM` -> `Discord Voice Connection`
+
+# Building and Packaging
+
+TavernTones uses `electron-builder` to package the application into a portable Windows executable.
+
+## Build Command
+To create a portable EXE, run:
+```bash
+npm run build
+```
+The output will be located in the `build/` directory.
+
+## Bundling FFmpeg
+To bundle FFmpeg with the application:
+1. Create a `ffmpeg` folder inside the `resources` directory of the project.
+2. Download a static FFmpeg build for Windows.
+3. Place `ffmpeg.exe` and `ffprobe.exe` into the `resources/ffmpeg/` directory. (**Note:** `ffprobe` is required for song duration and progress bar features).
+4. When you run `npm run build`, `electron-builder` is configured to include the `resources` folder in the build.
+5. On first launch, the app will detect the bundled FFmpeg and set the default path accordingly.
+
+## Licensing Compliance (FFmpeg)
+FFmpeg is licensed under LGPL/GPL. TavernTones bundles the FFmpeg binary without modification. According to LGPL requirements:
+- We do not link TavernTones code with FFmpeg libraries; we interact via subprocess pipes.
+- Users can replace the `ffmpeg.exe` in the application directory with their own build.
+- Source code for FFmpeg can be found at https://ffmpeg.org/download.html.
+
+## Discord Voice Connection Troubleshooting (DAVE Protocol)
+
+When updating dependencies or troubleshooting the `@discordjs/voice` library, a connection might fail with `AbortError: The operation was aborted` or get stuck in the `signalling` state (where the internal networking transitions directly from state `1` to `6`).
+
+This is generally caused by the new Discord Audio/Video Encryption (DAVE) protocol requirements:
+1. **Missing AES Ciphers**: Discord now requires `aes-256-gcm`. `@discordjs/voice` relies on `@noble/ciphers` to provide this if native bindings are not available.
+2. **Incompatible Native Modules in Electron**: Installing `sodium-native` to accelerate cryptography will silently crash the voice connection in an Electron environment due to Node C++ ABI differences. **Do not use `sodium-native` with this Electron app.** Instead, rely on Node's native WebCrypto or `@noble/ciphers` with `libsodium-wrappers`.
+3. **Missing DAVE Protocol Package**: The `@snazzah/davey` package is now required by `@discordjs/voice` to handle the new End-to-End Encryption handshake. If it is missing, the connection is instantly rejected by Discord.
+
