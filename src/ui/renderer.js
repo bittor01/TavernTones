@@ -185,11 +185,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const titleEl = document.getElementById('pane-mode-title');
         let foundPanel = false;
 
+        // Panels that need flex layout instead of block
+        const flexPanels = new Set(['musicLibraryArea']);
         logPanels.forEach((panel, index) => {
             const panelEl = document.getElementById(panel.id);
             const modeBtn = document.getElementById(`mode-${panel.mode}`);
             if (panel.id === panelId) {
-                panelEl.style.display = 'block';
+                panelEl.style.display = flexPanels.has(panel.id) ? 'flex' : 'block';
                 currentPanelIndex = index;
                 foundPanel = true;
                 if (modeBtn) modeBtn.classList.add('active');

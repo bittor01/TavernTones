@@ -951,17 +951,26 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
 }
 
 /* --- Music Library Styles --- */
+#musicLibraryArea {
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+}
+
 .library-toolbar {
     display: flex;
     gap: 10px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     padding-bottom: 4px;
     border-bottom: 1px solid #333;
+    flex-shrink: 0;
 }
 
 #library-tree-container {
+    flex-grow: 1;
     overflow-y: auto;
     font-size: 0.9em;
+    min-height: 0;
 }
 
 .tree-node {
