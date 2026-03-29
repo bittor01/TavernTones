@@ -1756,28 +1756,31 @@ app.on('window-all-closed', () => {
 });
 
 async function joinVoiceChannelAction() {
-    // Prevent multiple simultaneous join attempts
     if (isJoiningVoice) return;
 
-    // If we have an active connection in any non-terminal state, skip knocking
+    // Wait for client readiness if necessary
+    if (!client.isReady()) {
+        logToRenderer("[Discord] Client not ready for voice join.");
+        return;
+    }
+
     const isActive = connection && (
         connection.state.status !== VoiceConnectionStatus.Disconnected &&
         connection.state.status !== VoiceConnectionStatus.Destroyed
     );
-    if (isActive) {
-        logToRenderer(`[Anti-Collision] Active connection exists (${connection.state.status}). Skipping knock.`);
-        return;
-    }
+    if (isActive) return;
 
     isJoiningVoice = true;
-
-    // Reset soft-lock on every manual/auto attempt to allow retrying
     isSoftLocked = false;
 
     const voiceChannelId = discordConfig.voiceChannel;
     if (voiceChannelId && discordConfig.textChannel) {
-        const textChannel = client.channels.cache.get(discordConfig.textChannel);
-        if (textChannel) {
+        let textChannel = client.channels.cache.get(discordConfig.textChannel);
+        if (!textChannel) {
+            try { textChannel = await client.channels.fetch(discordConfig.textChannel); } catch (e) {}
+        }
+
+        if (textChannel && textChannel.isTextBased()) {
             logToRenderer(`[Anti-Collision] Knocking on voice channel ${voiceChannelId}...`);
             const knockMsg = await textChannel.send(`||~~TT_KNOCK:${voiceChannelId}~~||`);
             setTimeout(() => knockMsg.delete().catch(() => {}), 500);

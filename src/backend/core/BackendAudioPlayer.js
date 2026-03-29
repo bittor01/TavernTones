@@ -20,6 +20,7 @@ class BackendAudioPlayer extends EventEmitter {
         // State
         this.playerStatus = AudioPlayerStatus.Idle;
         this.isPlaying = false;
+        this.playLock = false;
 
         // Music Stack System
         this.stack = [];
@@ -31,6 +32,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.currentTime = 0; // Current playback time in seconds
         this.duration = 0; // Total duration of current track in seconds
         this.timer = null;
+        this.consecutiveErrors = 0;
 
         // Caching
         this.cachedAudio = new Map(); // filePath -> Buffer
@@ -46,7 +48,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.mixer = new ThreadedAudioMixer();
         this.mixer.on('error', (err) => {
             if (err.code === 'ERR_STREAM_PREMATURE_CLOSE') return;
-            this.log(`Mixer Error: ${err.message}`);
+            this.log(`[AudioPlayer] Mixer Error: ${err.message}`);
         });
 
         this.mixedResource = createAudioResource(this.mixer, {
@@ -94,11 +96,11 @@ class BackendAudioPlayer extends EventEmitter {
 
     setupPlayerEvents() {
         this.player.on(AudioPlayerStatus.Idle, () => {
-            this.log('Mixer player went IDLE.');
+            this.log('[AudioPlayer] Mixer player went IDLE.');
         });
 
         this.player.on('error', error => {
-            this.log(`Error in audio player (Mixer): ${error.message}`);
+            this.log(`[AudioPlayer] Error in audio player (Mixer): ${error.message}`);
         });
     }
 
@@ -120,14 +122,14 @@ class BackendAudioPlayer extends EventEmitter {
 
     setLoopMode(mode) {
         this.loopMode = mode; // 0, 1, 2
-        this.log(`Loop mode set to: ${mode}`);
+        this.log(`[AudioPlayer] Loop mode set to: ${mode}`);
         this._emitStatusUpdate();
     }
 
     setShuffle(enabled) {
         this.shuffleMode = enabled;
         this.playedIndices = [];
-        this.log(`Shuffle mode: ${enabled}`);
+        this.log(`[AudioPlayer] Shuffle mode: ${enabled}`);
         this._emitStatusUpdate();
     }
 
@@ -141,12 +143,15 @@ class BackendAudioPlayer extends EventEmitter {
                         filePath = shortcut.target;
                     }
                 } catch (e) {
-                    this.log(`Failed to resolve shortcut: ${filePath}`);
+                    this.log(`[AudioPlayer] Failed to resolve shortcut: ${filePath}`);
                 }
             }
             if (!this.stack.includes(filePath)) {
                 this.stack.push(filePath);
             }
+        }
+        if (this.currentIndex === -1 && this.stack.length > 0) {
+            this.currentIndex = 0;
         }
         this._emitStatusUpdate();
     }
@@ -157,8 +162,12 @@ class BackendAudioPlayer extends EventEmitter {
             this.cachedAudio.delete(removedPath);
             if (this.currentIndex === index) {
                 this._stopMusicStream();
-                this.currentIndex = -1;
-                this.isPlaying = false;
+                if (this.stack.length > 0) {
+                    this.currentIndex = 0;
+                    if (this.isPlaying) this._play();
+                } else {
+                    this.stop();
+                }
             } else if (this.currentIndex > index) {
                 this.currentIndex--;
             }
@@ -175,42 +184,50 @@ class BackendAudioPlayer extends EventEmitter {
         this.currentTime = 0;
         this.duration = 0;
         this.cachedAudio.clear();
+        this.consecutiveErrors = 0;
         this._emitStatusUpdate();
     }
 
     async _play(startTime = 0) {
-        if (this.currentIndex < 0 || this.currentIndex >= this.stack.length) {
-            this.stop();
-            return;
-        }
-
-        const filePath = this.stack[this.currentIndex];
-        this.log(`[AudioPlayer] Playing: ${path.basename(filePath)} from ${startTime}s`);
-
-        this._stopMusicStream();
-        this._stopTimer();
-
-        // Immediate feedback for UI
-        this.currentTime = startTime;
-        if (startTime === 0) this.duration = 0;
-        this.isPlaying = true;
-        this.playerStatus = AudioPlayerStatus.Playing;
-        this._emitStatusUpdate();
-
-        // Start duration fetch in background so it doesn't block playback start
-        if (startTime === 0) {
-            this._getDuration(filePath).then(duration => {
-                // Only update if we are still on the same track and haven't finished yet
-                if (this.isPlaying && this.stack[this.currentIndex] === filePath) {
-                    this.duration = duration;
-                    this._emitStatusUpdate();
-                }
-            }).catch(err => this.log(`[Duration] Error fetching for ${path.basename(filePath)}: ${err.message}`));
-        }
-
-        this.lastPlayStartTime = Date.now() - (startTime * 1000);
+        if (this.isDestroyed) return;
+        if (this.playLock) return;
+        this.playLock = true;
 
         try {
+            if (this.currentIndex < 0 || this.currentIndex >= this.stack.length) {
+                if (this.stack.length > 0) {
+                    this.currentIndex = 0;
+                } else {
+                    this.stop();
+                    return;
+                }
+            }
+
+            const filePath = this.stack[this.currentIndex];
+            this.log(`[AudioPlayer] Playing: ${path.basename(filePath)} from ${startTime}s`);
+
+            this._stopMusicStream();
+            this._stopTimer();
+
+            // Immediate feedback for UI
+            this.currentTime = startTime;
+            if (startTime === 0) this.duration = 0;
+            this.isPlaying = true;
+            this.playerStatus = AudioPlayerStatus.Playing;
+            this._emitStatusUpdate();
+
+            // Start duration fetch in background
+            if (startTime === 0) {
+                this._getDuration(filePath).then(duration => {
+                    if (this.isPlaying && this.stack[this.currentIndex] === filePath) {
+                        this.duration = duration;
+                        this._emitStatusUpdate();
+                    }
+                }).catch(err => this.log(`[AudioPlayer] Error fetching duration: ${err.message}`));
+            }
+
+            this.lastPlayStartTime = Date.now() - (startTime * 1000);
+
             const cachedBuffer = this.cachedAudio.get(filePath);
 
             if (cachedBuffer && startTime === 0) {
@@ -229,34 +246,34 @@ class BackendAudioPlayer extends EventEmitter {
                 this.mixer.addInput(stream, 'music');
                 this.activeStreams.set('music', { stream });
                 this._startTimer();
+                this.consecutiveErrors = 0;
             } else {
-                // Stream using FFmpeg and cache in parallel if possible
                 this.log(`[AudioPlayer] Starting FFmpeg stream for: ${path.basename(filePath)} at offset ${startTime}`);
                 const ffmpegProcess = this._createFfmpegStream(filePath, startTime);
+
+                ffmpegProcess.on('error', (err) => {
+                    this.log(`[AudioPlayer] FFmpeg spawn error: ${err.message}`);
+                    this._handlePlaybackError(filePath);
+                });
 
                 ffmpegProcess.stderr.on('data', (data) => {
                     const msg = data.toString();
                     if (msg.toLowerCase().includes('error') || msg.toLowerCase().includes('failed')) {
-                        this.log(`[FFmpeg Error] ${path.basename(filePath)}: ${msg.trim()}`);
+                        this.log(`[AudioPlayer] FFmpeg Error: ${msg.trim()}`);
                     }
-                });
-
-                ffmpegProcess.on('error', (err) => {
-                    this.log(`[FFmpeg Process Error] ${path.basename(filePath)}: ${err.message}`);
                 });
 
                 const ffmpegOutput = ffmpegProcess.stdout;
                 const mixerStream = new PassThrough();
                 ffmpegOutput.pipe(mixerStream);
 
-                // Caching logic
                 let pcmBuffer = Buffer.alloc(0);
                 let tooBig = false;
-                this.isCaching = true;
-                this._emitStatusUpdate();
+                this.isCaching = (startTime === 0);
+                if (this.isCaching) this._emitStatusUpdate();
 
                 ffmpegOutput.on('data', (chunk) => {
-                    if (!tooBig) {
+                    if (this.isCaching && !tooBig) {
                         if (pcmBuffer.length + chunk.length <= this.MAX_CACHE_SIZE) {
                             pcmBuffer = Buffer.concat([pcmBuffer, chunk]);
                         } else {
@@ -274,7 +291,7 @@ class BackendAudioPlayer extends EventEmitter {
                         this.activeStreams.delete('music');
                         this.mixer.removeInput('music');
 
-                        if (!tooBig && pcmBuffer.length > 0 && startTime === 0) {
+                        if (!tooBig && pcmBuffer.length > 1024 && startTime === 0) {
                             this.cachedAudio.set(filePath, pcmBuffer);
                             this.log(`[AudioPlayer] Cached ${path.basename(filePath)} (${(pcmBuffer.length / 1024 / 1024).toFixed(2)} MB)`);
                         }
@@ -288,20 +305,33 @@ class BackendAudioPlayer extends EventEmitter {
                 this.mixer.addInput(mixerStream, 'music');
                 this.activeStreams.set('music', { process: ffmpegProcess, stream: mixerStream });
                 this._startTimer();
+                this.consecutiveErrors = 0;
             }
 
-            // Set volume immediately
             const currentVolume = this.activeSfxCount > 0 ? this.playbackVolume * this.duckingVolume : this.playbackVolume;
             this.mixer.setInputVolume('music', currentVolume);
 
-            this._emitStatusUpdate();
-
         } catch (error) {
-            this.log(`Error starting playback for ${filePath}: ${error.message}`);
-            this.isPlaying = false;
-            this.playerStatus = AudioPlayerStatus.Idle;
-            this.isCaching = false;
-            this._emitStatusUpdate();
+            this.log(`[AudioPlayer] Error in _play: ${error.message}`);
+            this._handlePlaybackError(this.stack[this.currentIndex]);
+        } finally {
+            this.playLock = false;
+        }
+    }
+
+    _handlePlaybackError(filePath) {
+        this.consecutiveErrors++;
+        this.isPlaying = false;
+        this.playerStatus = AudioPlayerStatus.Idle;
+        this._stopTimer();
+        this._emitStatusUpdate();
+
+        if (this.consecutiveErrors >= this.stack.length || this.consecutiveErrors > 5) {
+            this.log("[AudioPlayer] Multiple playback errors, stopping.");
+            this.stop();
+        } else {
+            this.log("[AudioPlayer] Playback error, skipping to next track.");
+            setTimeout(() => this.next(), 1000);
         }
     }
 
@@ -322,16 +352,15 @@ class BackendAudioPlayer extends EventEmitter {
         if (!this.ffmpegBinFolder) return 'ffprobe';
         try {
             if (fs.existsSync(this.ffmpegBinFolder) && fs.lstatSync(this.ffmpegBinFolder).isFile()) {
-                // If they pointed to ffmpeg.exe, try to find ffprobe.exe in the same dir
                 const dir = path.dirname(this.ffmpegBinFolder);
                 const exeName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
                 const siblingPath = path.join(dir, exeName);
                 if (fs.existsSync(siblingPath)) return siblingPath;
-                return 'ffprobe';
+            } else {
+                const exeName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+                const fullPath = path.join(this.ffmpegBinFolder, exeName);
+                if (fs.existsSync(fullPath)) return fullPath;
             }
-            const exeName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
-            const fullPath = path.join(this.ffmpegBinFolder, exeName);
-            if (fs.existsSync(fullPath)) return fullPath;
         } catch (e) {}
         return 'ffprobe';
     }
@@ -347,38 +376,26 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     _getDuration(filePath) {
-        return new Promise((resolve) => {
-            // Resolve shortcut if needed
+        return new Promise((resolve, reject) => {
             let targetPath = filePath;
             if (path.extname(filePath).toLowerCase() === '.lnk' && this.shell) {
                 try {
                     const shortcut = this.shell.readShortcutLink(filePath);
-                    if (shortcut.target && fs.existsSync(shortcut.target)) {
-                        targetPath = shortcut.target;
-                    }
-                } catch (e) {
-                    this.log(`[Duration] Failed to resolve shortcut: ${filePath}`);
-                }
+                    if (shortcut.target && fs.existsSync(shortcut.target)) targetPath = shortcut.target;
+                } catch (e) {}
             }
 
             const ffprobePath = this._getFfprobePath();
             const { exec } = require('child_process');
-            // Use double quotes for path to handle spaces
             const cmd = `"${ffprobePath}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${targetPath}"`;
 
-            exec(cmd, (error, stdout, stderr) => {
+            exec(cmd, (error, stdout) => {
                 if (error) {
-                    this.log(`[Duration] Error executing ffprobe: ${error.message}`);
-                    resolve(0);
+                    reject(error);
                     return;
                 }
                 const duration = parseFloat(stdout.trim());
-                if (isNaN(duration)) {
-                    this.log(`[Duration] Invalid output for ${targetPath}: "${stdout.trim()}"`);
-                    resolve(0);
-                } else {
-                    resolve(duration);
-                }
+                resolve(isNaN(duration) ? 0 : duration);
             });
         });
     }
@@ -414,29 +431,30 @@ class BackendAudioPlayer extends EventEmitter {
 
     _handleMusicFinish() {
         const elapsed = Date.now() - (this.lastPlayStartTime || 0);
-        // Allow short tracks to loop/finish naturally if they are actually short (duration < 2s)
+        // Avoid stopping on very short tracks unless it's a thrash scenario
         if (elapsed < 500 && (this.duration === 0 || this.duration > 2)) {
-            this.log(`[AudioPlayer] Track finished too quickly (${elapsed}ms), stopping to prevent loop thrashing.`);
-            this.isPlaying = false;
-            this.playerStatus = AudioPlayerStatus.Idle;
-            this._emitStatusUpdate();
+            this.log(`[AudioPlayer] Track finished too quickly (${elapsed}ms), considering it an error.`);
+            this._handlePlaybackError(this.stack[this.currentIndex]);
             return;
         }
 
         if (this.loopMode === 2) { // Loop 1
-            this.log("Looping single track.");
-            if (!this.isDestroyed) {
-                setTimeout(() => this._play(), 100);
-            }
-        } else {
-            // When a song finishes, if Loop All is on, move it to the bottom
-            if (this.loopMode === 1 && this.currentIndex === 0) {
-                const finishedTrack = this.stack.shift();
-                this.stack.push(finishedTrack);
-                this.currentIndex = 0; // The next track is now at index 0
+            this.log("[AudioPlayer] Loop 1: Restarting track.");
+            this._play();
+        } else if (this.loopMode === 1) { // Loop All
+            this.log("[AudioPlayer] Loop All: Rolling to bottom.");
+            const finished = this.stack.shift();
+            this.stack.push(finished);
+            this.currentIndex = 0;
+            this._play();
+        } else { // None
+            this.log("[AudioPlayer] Loop None: Rolling off.");
+            this.stack.shift();
+            if (this.stack.length > 0) {
+                this.currentIndex = 0;
                 this._play();
             } else {
-                this.next();
+                this.stop();
             }
         }
     }
@@ -446,45 +464,25 @@ class BackendAudioPlayer extends EventEmitter {
 
         if (this.shuffleMode) {
             this.playedIndices.push(this.currentIndex);
-            if (this.playedIndices.length >= this.stack.length) {
-                this.playedIndices = [];
-            }
+            if (this.playedIndices.length >= this.stack.length) this.playedIndices = [];
             let nextIndex;
             do {
                 nextIndex = Math.floor(Math.random() * this.stack.length);
             } while (this.playedIndices.includes(nextIndex) && this.stack.length > 1);
             this.currentIndex = nextIndex;
         } else {
+            // Skips always move current track to bottom if looping is on
             if (this.loopMode === 1 || this.loopMode === 2) {
-                // If skipping/finishing the top track and looping is on (any mode), move it to the bottom
-                const finishedTrack = this.stack.shift();
-                this.stack.push(finishedTrack);
+                const current = this.stack.shift();
+                this.stack.push(current);
                 this.currentIndex = 0;
             } else {
-                // If skipping/finishing the top track and NOT looping, remove it (roll off)
-                if (this.currentIndex === 0) {
-                    this.stack.shift();
-                    if (this.stack.length === 0) {
-                        this.currentIndex = -1;
-                        this.isPlaying = false;
-                        this.playerStatus = AudioPlayerStatus.Idle;
-                        this._stopMusicStream();
-                        this._emitStatusUpdate();
-                        return;
-                    }
-                    this.currentIndex = 0;
-                } else {
-                    // This handles cases where we might have manually set currentIndex > 0
-                    this.currentIndex++;
-                    if (this.currentIndex >= this.stack.length) {
-                        this.currentIndex = this.stack.length - 1;
-                        this.isPlaying = false;
-                        this.playerStatus = AudioPlayerStatus.Idle;
-                        this._stopMusicStream();
-                        this._emitStatusUpdate();
-                        return;
-                    }
+                this.stack.shift();
+                if (this.stack.length === 0) {
+                    this.stop();
+                    return;
                 }
+                this.currentIndex = 0;
             }
         }
         this._play();
@@ -492,40 +490,37 @@ class BackendAudioPlayer extends EventEmitter {
 
     jumpTo(index) {
         if (index >= 0 && index < this.stack.length) {
+            // In the roll-off system, jumping to index X means bumping everything BEFORE X to the bottom
+            const preceding = this.stack.splice(0, index);
             if (this.loopMode === 1 || this.loopMode === 2) {
-                // "Bumping off" tracks before the selected one to the bottom
-                const preceding = this.stack.splice(0, index);
                 this.stack.push(...preceding);
-                this.currentIndex = 0;
-            } else {
-                // If loop is off, remove tracks before the selected one (bumping off)
-                this.stack.splice(0, index);
-                this.currentIndex = 0;
             }
+            this.currentIndex = 0;
             this._play();
         }
     }
 
     prev() {
         if (this.stack.length === 0) return;
-        this.currentIndex--;
-        if (this.currentIndex < 0) {
-            this.currentIndex = (this.loopMode === 1 || this.loopMode === 2) ? this.stack.length - 1 : 0;
+        // In roll-off system, prev means taking the LAST track and putting it at the TOP
+        if (this.loopMode === 1 || this.loopMode === 2) {
+            const last = this.stack.pop();
+            this.stack.unshift(last);
+            this.currentIndex = 0;
+        } else {
+            this.currentIndex = 0; // Restart if no loop
         }
         this._play();
     }
 
     play() {
+        if (this.isPlaying) return;
         if (this.playerStatus === AudioPlayerStatus.Paused && this.currentIndex >= 0) {
             this._play(this.currentTime);
             return;
         }
-        if (this.currentIndex < 0 && this.stack.length > 0) {
-            this.currentIndex = 0;
-        }
-        if (this.currentIndex >= 0) {
-            this._play();
-        }
+        if (this.currentIndex < 0 && this.stack.length > 0) this.currentIndex = 0;
+        if (this.currentIndex >= 0) this._play();
     }
 
     pause() {
@@ -543,13 +538,14 @@ class BackendAudioPlayer extends EventEmitter {
         this.currentIndex = -1;
         this.currentTime = 0;
         this.duration = 0;
+        this.consecutiveErrors = 0;
         this.playerStatus = AudioPlayerStatus.Idle;
         this._emitStatusUpdate();
     }
 
     // --- Soundboard API ---
     playSound(filePath, slotId) {
-        this.log(`Soundboard: Playing ${filePath} on slot ${slotId}`);
+        this.log(`[AudioPlayer] Soundboard: Playing slot ${slotId}`);
         const id = `sfx_${slotId}`;
         this.stopSound(slotId);
 
@@ -577,7 +573,7 @@ class BackendAudioPlayer extends EventEmitter {
             this.mixer.addInput(stream, id, this.soundboardVolume);
             this.activeStreams.set(id, { process: ffmpegProcess, stream });
         } catch (error) {
-            this.log(`Error playing SFX ${filePath}: ${error.message}`);
+            this.log(`[AudioPlayer] SFX Error: ${error.message}`);
         }
     }
 
