@@ -6,16 +6,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     let combatantPanelOrder = []; // For custom sorting of the right-hand panel
     let currentTurnIndex = 0;
     const logPanels = [
-        { id: 'logArea', title: 'Log' },
-        { id: 'diceLog', title: 'Dice Log' },
-        { id: 'statBlockArea', title: 'Stat Block' }
+        { id: 'logArea', title: 'Log', mode: 'log' },
+        { id: 'diceLog', title: 'Dice Log', mode: 'dice' },
+        { id: 'statBlockArea', title: 'Stat Block', mode: 'stats' },
+        { id: 'musicLibraryArea', title: 'Music Library', mode: 'library' }
     ];
-    let currentPanelIndex = 0; // Default to 'Log'
+    let currentPanelIndex = 3; // Default to 'Music Library'
+    let musicLibrary = { children: [] };
+    let selectedLibraryPaths = new Set();
     let botStatus = { status: 'offline', message: 'Unknown' };
     let isBotEnabled = false;
     let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
     let DND_CONDITIONS = {};
     let MOB_RULES_DATA = {};
+    let lastScrolledIndex = -1;
 
     // --- Form State ---
     let isMobMode = false;
@@ -44,23 +48,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Initial Load (Non-blocking) ---
     // Fetch initial data without blocking the UI rendering.
-    window.electron.ipcRenderer.invoke('get-dnd-conditions').then(conditions => {
-        DND_CONDITIONS = conditions;
-    });
-    window.electron.ipcRenderer.invoke('get-mob-rules-data').then(rules => {
-        MOB_RULES_DATA = rules;
-    });
+    if (window.electron && window.electron.ipcRenderer) {
+        window.electron.ipcRenderer.invoke('get-dnd-conditions').then(conditions => {
+            DND_CONDITIONS = conditions;
+        });
+        window.electron.ipcRenderer.invoke('get-mob-rules-data').then(rules => {
+            MOB_RULES_DATA = rules;
+        });
+    }
 
     // Send a signal to the main process that the window is ready for data.
-    window.electron.ipcRenderer.send('window-ready');
-    // Specifically request the initial load after a short delay to ensure the main process is ready.
-    setTimeout(() => {
-        window.electron.ipcRenderer.send('request-initial-load');
-    }, 100);
+    if (window.electron && window.electron.ipcRenderer) {
+        window.electron.ipcRenderer.send('window-ready');
+        // Specifically request the initial load after a short delay to ensure the main process is ready.
+        setTimeout(() => {
+            window.electron.ipcRenderer.send('request-initial-load');
+            window.electron.ipcRenderer.send('get-discord-config');
+            window.electron.ipcRenderer.invoke('get-music-library').then(library => {
+                musicLibrary = library;
+                renderMusicLibrary();
+            });
+            showPanel('musicLibraryArea');
+        }, 100);
+    }
+
 
     // --- Initial UI Setup ---
     addCreatureForm.innerHTML = `
-        <h2>Add Combatant <button id="import-from-file-btn" class="small-btn" title="Import from File" style="font-size: 0.8em; padding: 2px 6px; margin-left: 10px;">⬇️</button></h2>
+        <div class="panel-header" style="margin-bottom: 5px;">
+            <h2 style="margin-bottom: 0; border-bottom: none;">Add Combatant</h2>
+            <div class="panel-header-controls">
+                <button type="button" id="import-from-file-btn" class="small-btn" title="Import from File">📁</button>
+                <button type="button" id="toggle-add-form-btn" class="small-btn" title="Toggle Form">➕</button>
+            </div>
+        </div>
+        <div id="add-creature-form-content" style="display: none;">
         <div class="form-row">
             <div class="form-group name-group">
                 <label for="creature-name">Combatant:</label>
@@ -114,6 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="submit" class="add-creature-button">Add Combatant</button>
             <button type="button" id="clear-form-btn">Clear</button>
         </div>
+        </div>
     `;
     // --- Mob Form Logic ---
     const convertToMobBtn = document.getElementById('convert-to-mob-btn');
@@ -158,19 +181,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Panel Switching Logic ---
     function showPanel(panelId, title) {
-        const logTitle = document.getElementById('log-title');
         const pushButton = document.getElementById('push-panel-btn');
+        const titleEl = document.getElementById('pane-mode-title');
         let foundPanel = false;
 
+        // Panels that need flex layout instead of block
+        const flexPanels = new Set(['musicLibraryArea']);
         logPanels.forEach((panel, index) => {
             const panelEl = document.getElementById(panel.id);
+            const modeBtn = document.getElementById(`mode-${panel.mode}`);
             if (panel.id === panelId) {
-                panelEl.style.display = 'block';
-                logTitle.textContent = title || panel.title;
+                panelEl.style.display = flexPanels.has(panel.id) ? 'flex' : 'block';
                 currentPanelIndex = index;
                 foundPanel = true;
+                if (modeBtn) modeBtn.classList.add('active');
+                if (titleEl) titleEl.textContent = title || panel.title;
             } else {
                 panelEl.style.display = 'none';
+                if (modeBtn) modeBtn.classList.remove('active');
             }
         });
 
@@ -183,6 +211,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!foundPanel) showPanel('logArea', 'Log'); // Fallback
     }
+
+    // Mode button listeners
+    document.getElementById('mode-log').addEventListener('click', () => showPanel('logArea'));
+    document.getElementById('mode-dice').addEventListener('click', () => showPanel('diceLog'));
+    document.getElementById('mode-stats').addEventListener('click', () => {
+        if (document.getElementById('statBlockArea').innerHTML) {
+            showPanel('statBlockArea');
+        } else {
+            logMessage("No stat block currently loaded.");
+        }
+    });
+    document.getElementById('mode-library').addEventListener('click', () => showPanel('musicLibraryArea'));
 
     function displayStatBlock(rawDataString) {
         const statBlockArea = document.getElementById('statBlockArea');
@@ -284,6 +324,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Event Listeners ---
+    document.getElementById('toggle-add-form-btn').addEventListener('click', (e) => {
+        const content = document.getElementById('add-creature-form-content');
+        const btn = e.currentTarget;
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            btn.textContent = '➖';
+        } else {
+            content.style.display = 'none';
+            btn.textContent = '➕';
+        }
+    });
+
     document.addEventListener('click', (event) => {
         const target = event.target;
         const targetId = target.id;
@@ -364,6 +416,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.invoke('load-encounter-dialog');
                 break;
             case 'settings-button':
+            case 'main-settings-btn':
                 window.electron.ipcRenderer.send('open-settings-window');
                 break;
             case 'next-turn-button':
@@ -376,11 +429,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('push-initiative');
                 break;
             case 'selectFileButton':
-                window.electron.ipcRenderer.invoke('open-file-dialog', { multi: true }).then(filePaths => {
-                    if (filePaths && filePaths.length > 0) {
-                        window.electron.ipcRenderer.send('load-music-file', filePaths);
-                    }
-                });
+                showPanel('musicLibraryArea');
                 break;
             case 'playPauseButton':
                 if (!isBotEnabled) {
@@ -611,6 +660,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else if (status.voiceStatus === 'connecting') {
                 indicator.textContent = '🟨';
                 indicator.title = `Bot: ${status.message} | Voice: Connecting... (Click to cancel)`;
+            } else if (status.isSoftLocked) {
+                indicator.textContent = '⚠️';
+                indicator.title = `Bot: ${status.message} | Voice: Locked by another instance`;
             } else {
                 indicator.textContent = '🟥';
                 indicator.title = `Bot: ${status.message} | Voice: Disconnected (Click to join)`;
@@ -618,9 +670,260 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    window.electron.ipcRenderer.on('switch-panel', (event, panelId) => {
-        showPanel(panelId);
+    window.electron.ipcRenderer.on('discord-config', (event, config) => {
+        if (config.audioMode) {
+            document.body.classList.add('audio-only');
+            // Move containers to columns
+            const rightCol = document.querySelector('.audio-only-right-column');
+            const musicControls = document.getElementById('music-controls-container');
+            const soundboard = document.getElementById('soundboard-container');
+            if (rightCol && musicControls && soundboard) {
+                rightCol.appendChild(musicControls);
+                rightCol.appendChild(soundboard);
+            }
+            showPanel('musicLibraryArea');
+        } else {
+            document.body.classList.remove('audio-only');
+            // Move containers back
+            const leftCol = document.querySelector('.column-left');
+            const midCol = document.querySelector('.column-middle');
+            const musicControls = document.getElementById('music-controls-container');
+            const soundboard = document.getElementById('soundboard-container');
+            if (leftCol && musicControls) leftCol.appendChild(musicControls);
+            if (midCol && soundboard) midCol.appendChild(soundboard);
+        }
+        renderSoundboard(); // Ensure soundboard layout updates when mode changes
     });
+
+    window.electron.ipcRenderer.on('switch-panel', (event, panelId) => {
+        // Map old panel IDs to new ones if necessary
+        const map = {
+            'diceLog': 'diceLog',
+            'logArea': 'logArea',
+            'statBlockArea': 'statBlockArea',
+            'musicLibraryArea': 'musicLibraryArea'
+        };
+        showPanel(map[panelId] || panelId);
+    });
+
+    function showNotification(message) {
+        const toast = document.getElementById('library-notification');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.style.display = 'block';
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 5000);
+    }
+
+    window.electron.ipcRenderer.on('music-library-update', (event, { library, diff }) => {
+        musicLibrary = library;
+        renderMusicLibrary();
+
+        if (diff) {
+            let msg = "Library Update: ";
+            const parts = [];
+            if (diff.added > 0) parts.push(`${diff.added} songs added`);
+            if (diff.addedFolders > 0) parts.push(`${diff.addedFolders} folders added`);
+            if (diff.removed > 0) parts.push(`${diff.removed} songs removed`);
+            if (diff.removedFolders > 0) parts.push(`${diff.removedFolders} folders removed`);
+
+            msg += parts.join(", ") + ".";
+            logMessage(msg);
+
+            // Inform the user as requested
+            if (parts.length > 0) {
+                showNotification(msg);
+            }
+        }
+    });
+
+    function renderMusicLibrary() {
+        const container = document.getElementById('library-tree-container');
+        container.innerHTML = '';
+        if (musicLibrary && musicLibrary.children) {
+            // Flatten: Add each child of the root directly to the container
+            musicLibrary.children.forEach(child => {
+                container.appendChild(createTreeNode(child, true));
+            });
+        }
+    }
+
+    function createTreeNode(node, isRoot = false) {
+        const div = document.createElement('div');
+        div.className = 'tree-node';
+        if (isRoot) div.style.marginLeft = '0';
+
+        const content = document.createElement('div');
+        content.className = 'tree-node-content';
+        if (selectedLibraryPaths.has(node.path)) content.classList.add('selected');
+
+        const toggle = document.createElement('span');
+        toggle.className = 'folder-toggle';
+        toggle.textContent = node.type === 'directory' ? '📁' : '📄';
+
+        const name = document.createElement('span');
+        name.className = 'node-name';
+        name.textContent = node.name;
+
+        content.appendChild(toggle);
+        content.appendChild(name);
+
+        // Actions
+        const actions = document.createElement('div');
+        actions.className = 'tree-node-actions';
+
+        const playNow = document.createElement('button');
+        playNow.className = 'small-btn';
+        playNow.innerHTML = '▶️';
+        playNow.title = 'Add to top and play';
+        playNow.onclick = (e) => {
+            e.stopPropagation();
+            const files = getAllFiles(node);
+            if (files.length > 0) {
+                // In Loop All, adding to top and playing means we put them at index 0 and jumpTo(0)
+                // Backend jumpTo in Loop All moves preceding to bottom.
+                // But here we want to INSERT at top.
+                // Let's use a new IPC or existing load-music-file.
+                // Actually, let's add a specialized "play-now-library" IPC.
+                window.electron.ipcRenderer.send('library-action', { action: 'play-now', paths: files });
+            }
+        };
+
+        const addTop = document.createElement('button');
+        addTop.className = 'small-btn';
+        addTop.innerHTML = '⬆️';
+        addTop.title = 'Add to top';
+        addTop.onclick = (e) => {
+            e.stopPropagation();
+            const files = getAllFiles(node);
+            window.electron.ipcRenderer.send('library-action', { action: 'add-top', paths: files });
+        };
+
+        const addBottom = document.createElement('button');
+        addBottom.className = 'small-btn';
+        addBottom.innerHTML = '⬇️';
+        addBottom.title = 'Add to bottom';
+        addBottom.onclick = (e) => {
+            e.stopPropagation();
+            const files = getAllFiles(node);
+            window.electron.ipcRenderer.send('library-action', { action: 'add-bottom', paths: files });
+        };
+
+        actions.appendChild(playNow);
+        actions.appendChild(addTop);
+        actions.appendChild(addBottom);
+        content.appendChild(actions);
+
+        div.appendChild(content);
+
+        if (node.type === 'directory' && node.children) {
+            const childrenContainer = document.createElement('div');
+            childrenContainer.className = 'node-children';
+            childrenContainer.style.display = 'none'; // Collapsed by default
+            node.children.forEach(child => {
+                childrenContainer.appendChild(createTreeNode(child));
+            });
+            div.appendChild(childrenContainer);
+
+            content.onclick = (e) => {
+                if (e.ctrlKey) {
+                    toggleSelection(node.path);
+                } else {
+                    childrenContainer.style.display = childrenContainer.style.display === 'none' ? 'block' : 'none';
+                    toggle.textContent = childrenContainer.style.display === 'none' ? '📁' : '📂';
+                }
+            };
+        } else {
+            content.onclick = (e) => {
+                if (e.ctrlKey) {
+                    toggleSelection(node.path);
+                } else {
+                    // Just select if single click?
+                    selectedLibraryPaths.clear();
+                    selectedLibraryPaths.add(node.path);
+                    renderMusicLibrary();
+                }
+            };
+        }
+
+        content.ondblclick = (e) => {
+            e.stopPropagation();
+            const files = getAllFiles(node);
+            if (files.length > 0) {
+                window.electron.ipcRenderer.send('library-action', { action: 'play-now', paths: files });
+            }
+        };
+
+        return div;
+    }
+
+    function toggleSelection(path) {
+        if (selectedLibraryPaths.has(path)) {
+            selectedLibraryPaths.delete(path);
+        } else {
+            selectedLibraryPaths.add(path);
+        }
+        renderMusicLibrary();
+    }
+
+    function getAllFiles(node) {
+        if (node.type === 'file') return [node.path];
+        let files = [];
+        if (node.children) {
+            node.children.forEach(c => {
+                files = files.concat(getAllFiles(c));
+            });
+        }
+        return files;
+    }
+
+    document.getElementById('rescan-library-btn').onclick = () => {
+        window.electron.ipcRenderer.invoke('rescan-music-library');
+    };
+
+    document.getElementById('add-loose-btn').onclick = () => {
+        window.electron.ipcRenderer.invoke('open-file-dialog', { multi: true, folders: true }).then(filePaths => {
+            if (filePaths && filePaths.length > 0) {
+                window.electron.ipcRenderer.send('library-action', { action: 'add-loose', paths: filePaths });
+            }
+        });
+    };
+
+    function getSelectedFiles() {
+        const files = new Set();
+        // Traverse the musicLibrary tree to find nodes whose path is in selectedLibraryPaths
+        const traverse = (node) => {
+            if (selectedLibraryPaths.has(node.path)) {
+                getAllFiles(node).forEach(f => files.add(f));
+            } else if (node.children) {
+                node.children.forEach(traverse);
+            }
+        };
+        traverse(musicLibrary);
+        return [...files];
+    }
+
+    document.getElementById('bulk-play-now').onclick = () => {
+        const files = getSelectedFiles();
+        if (files.length > 0) {
+            window.electron.ipcRenderer.send('library-action', { action: 'play-now', paths: files });
+        }
+    };
+
+    document.getElementById('bulk-add-top').onclick = () => {
+        const files = getSelectedFiles();
+        if (files.length > 0) {
+            window.electron.ipcRenderer.send('library-action', { action: 'add-top', paths: files });
+        }
+    };
+
+    document.getElementById('bulk-add-bottom').onclick = () => {
+        const files = getSelectedFiles();
+        if (files.length > 0) {
+            window.electron.ipcRenderer.send('library-action', { action: 'add-bottom', paths: files });
+        }
+    };
 
     let currentLoopMode = 1;
     let currentShuffleMode = false;
@@ -656,8 +959,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentLoopMode = status.loopMode;
         currentShuffleMode = status.shuffleMode;
 
+        if (status.currentIndex === -1) {
+            lastScrolledIndex = -1;
+        }
+
+        // Update Progress Bar
+        const progressBar = document.getElementById('music-progress-bar');
+        const timeDisplay = document.getElementById('music-time-display');
+        if (progressBar && timeDisplay) {
+            const percent = status.duration > 0 ? (status.currentTime / status.duration) * 100 : 0;
+            progressBar.style.width = `${percent}%`;
+
+            const formatTime = (s) => {
+                const mins = Math.floor(s / 60);
+                const secs = Math.floor(s % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+            timeDisplay.textContent = `${formatTime(status.currentTime)} / ${formatTime(status.duration)}`;
+        }
+
         playPauseButton.textContent = isPlaying ? '⏸️' : '▶️';
         playPauseButton.disabled = status.stack.length === 0;
+
+        // Handle Progress Bar Seeking
+        const progressContainer = document.querySelector('.progress-container');
+        if (progressContainer && !progressContainer.dataset.seekingListener) {
+            progressContainer.dataset.seekingListener = 'true';
+            progressContainer.addEventListener('click', (e) => {
+                if (lastMusicStatus && lastMusicStatus.duration > 0) {
+                    const rect = progressContainer.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const percent = x / rect.width;
+                    const seekTime = percent * lastMusicStatus.duration;
+                    window.electron.ipcRenderer.send('seek-music', { time: seekTime });
+                }
+            });
+        }
 
         // Update Loop Button
         const loopEmojis = ['➡️', '🔁', '🔂'];
@@ -668,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Update Shuffle Button
         shuffleBtn.classList.toggle('active', currentShuffleMode);
 
-        // Render Stack
+        // Render Playlist
         musicStackList.innerHTML = '';
         status.stack.forEach((track, index) => {
             const div = document.createElement('div');
@@ -678,10 +1015,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             div.innerHTML = `
                 <span class="track-name">${track.name}</span>
                 <div class="item-actions">
+                    <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
                     <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
                     <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
                 </div>
             `;
+            div.querySelector('.play-track-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.electron.ipcRenderer.send('jump-to-track', { index });
+            });
             div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 togglePreview(index);
@@ -691,14 +1033,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('remove-from-stack', { index });
             });
             div.addEventListener('click', () => {
-                // Jump to this track logic could go here if backend supported it
+                // Focus track on click (maybe highlight?), but don't jump yet if we want double click
+            });
+            div.addEventListener('dblclick', () => {
+                window.electron.ipcRenderer.send('jump-to-track', { index });
             });
             musicStackList.appendChild(div);
 
             // Auto-scroll to active track
-            if (index === status.currentIndex) {
+            if (index === status.currentIndex && index !== lastScrolledIndex) {
                 setTimeout(() => {
                     div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    lastScrolledIndex = index;
                 }, 100);
             }
         });
@@ -724,6 +1070,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.electron.ipcRenderer.on('populate-edit-form', (event, creature) => {
         if (!creature) return;
+
+        // Auto-expand form
+        const content = document.getElementById('add-creature-form-content');
+        const btn = document.getElementById('toggle-add-form-btn');
+        if (content) content.style.display = 'block';
+        if (btn) btn.textContent = '➖';
 
         // --- Store the creature for submission ---
         creatureBeingEdited = creature;
@@ -787,6 +1139,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.electron.ipcRenderer.on('populate-add-form', (event, creature) => {
         if (!creature) return;
+
+        // Auto-expand form
+        const content = document.getElementById('add-creature-form-content');
+        const btn = document.getElementById('toggle-add-form-btn');
+        if (content) content.style.display = 'block';
+        if (btn) btn.textContent = '➖';
 
         // This is for "Copying" a creature. It populates the form but doesn't
         // put the form into "edit mode".
@@ -955,33 +1313,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     let soundboardState = [];
-    const SOUNDBOARD_SIZE = 3;
+    let soundboardRowCount = 1; // Resizable rows in Normal mode
+    const NORMAL_SLOTS_PER_ROW = 3;
+    const AUDIO_ONLY_COLS = 6;
+    const AUDIO_ONLY_ROWS = 12;
+    const AUDIO_ONLY_TOTAL_SLOTS = AUDIO_ONLY_COLS * AUDIO_ONLY_ROWS;
 
-    // Load state from backend
-
-    // Load state from backend
+    // --- Load Soundboard State ---
     window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
         let slotsToLoad = [];
-        let volumeToLoad = 0.5; // Default slider value (which is ~0.75 effective volume)
+        let volumeToLoad = 0.5;
+        let rowsToLoad = 1;
 
         if (savedState) {
             if (Array.isArray(savedState)) {
-                // Legacy format: just an array of slots
                 slotsToLoad = savedState;
+                rowsToLoad = Math.max(1, Math.ceil(slotsToLoad.length / NORMAL_SLOTS_PER_ROW));
             } else if (typeof savedState === 'object') {
-                // New format: { volume, slots }
                 if (savedState.slots) slotsToLoad = savedState.slots;
                 if (savedState.volume !== undefined) volumeToLoad = savedState.volume;
+                if (savedState.rows !== undefined) rowsToLoad = savedState.rows;
             }
         }
 
-        // Apply Logic
-        if (slotsToLoad && slotsToLoad.length === SOUNDBOARD_SIZE) {
-            soundboardState = migrateSoundboardState(slotsToLoad);
-        } else {
-            // Initialize defaults
-            soundboardState = [];
-            for (let i = 0; i < SOUNDBOARD_SIZE; i++) {
+        soundboardRowCount = rowsToLoad;
+        soundboardState = migrateSoundboardState(slotsToLoad);
+
+        // Ensure we always have enough for the largest layout (72 slots for 12 rows of 6)
+        const totalNeeded = 72;
+
+        if (soundboardState.length < totalNeeded) {
+            for (let i = soundboardState.length; i < totalNeeded; i++) {
                 soundboardState.push({
                     id: i,
                     tracks: [],
@@ -994,31 +1356,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // Set Volume UI and Backend
         const soundboardVolumeSlider = document.getElementById('soundboard-volume');
         if (soundboardVolumeSlider) {
             soundboardVolumeSlider.value = volumeToLoad;
-            // Trigger 1.5x scaling logic immediately
             const effectiveVolume = volumeToLoad * 1.5;
             window.electron.ipcRenderer.send('set-soundboard-volume', { volume: effectiveVolume });
         }
 
-        // Force a render
         renderSoundboard();
     });
 
+    // Expose for verification/IPC
+    window.renderSoundboard = renderSoundboard;
+
     let saveSoundboardStateTimeout;
     function saveSoundboardState() {
-        const volume = parseFloat(document.getElementById('soundboard-volume').value);
+        const volumeEl = document.getElementById('soundboard-volume');
+        const volume = volumeEl ? parseFloat(volumeEl.value) : 0.5;
         const stateToSave = {
             volume: volume,
+            rows: soundboardRowCount,
             slots: soundboardState.map(slot => ({
                 ...slot,
                 isPlaying: false // Don't save playing state
             }))
         };
 
-        clearTimeout(saveSoundboardStateTimeout);
+        if (saveSoundboardStateTimeout) clearTimeout(saveSoundboardStateTimeout);
         saveSoundboardStateTimeout = setTimeout(() => {
             window.electron.ipcRenderer.send('save-soundboard-state', stateToSave);
         }, 1000);
@@ -1044,13 +1408,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadPresetBtn.addEventListener('click', () => {
             window.electron.ipcRenderer.invoke('load-soundboard-preset').then(result => {
                 if (result.success && result.state) {
-                    soundboardState = migrateSoundboardState(result.state);
+                    const loadedState = migrateSoundboardState(result.state);
+                    soundboardState = loadedState;
+                    // Ensure we always have enough for the largest layout (72 slots for 12 rows of 6)
+                    const totalNeeded = 72;
+                    for (let i = soundboardState.length; i < totalNeeded; i++) {
+                        soundboardState.push({
+                            id: i, tracks: [], currentTrackIndex: 0, emoji: '🎨', loop: 'none', playMode: 'sequential', isPlaying: false
+                        });
+                    }
+                    soundboardRowCount = Math.min(16, Math.max(1, Math.ceil(loadedState.length / NORMAL_SLOTS_PER_ROW)));
                     saveSoundboardState();
                     renderSoundboard();
                 }
             });
         });
     }
+
+    document.getElementById('add-row-btn').addEventListener('click', () => {
+        const MAX_ROWS = 72 / NORMAL_SLOTS_PER_ROW;
+        if (soundboardRowCount < MAX_ROWS) {
+            soundboardRowCount++;
+            saveSoundboardState();
+            renderSoundboard();
+        }
+    });
+
+    document.getElementById('remove-row-btn').addEventListener('click', () => {
+        if (soundboardRowCount > 1) {
+            soundboardRowCount--;
+            saveSoundboardState();
+            renderSoundboard();
+        }
+    });
 
     // --- Emoji Picker Logic ---
     const emojiDialog = document.getElementById('emoji-picker-dialog');
@@ -1077,10 +1467,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             emojiInput.value = soundboardState[slotId].emoji;
             emojiDialog.showModal();
         }
-    }
-
-    function saveSoundboardState() {
-        window.electron.ipcRenderer.send('save-soundboard-state', soundboardState);
     }
 
     // --- Global Event Delegation for Combatant Details ---
@@ -1147,11 +1533,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // --- Render Functions ---
+    function updateSoundboardContainerHeight() {
+        const soundboardContainer = document.getElementById('soundboard-container');
+        if (!soundboardContainer) return;
+
+        if (document.body.classList.contains('audio-only')) {
+            soundboardContainer.style.flex = '1 1 0';
+            soundboardContainer.style.height = '';
+            return;
+        }
+
+        const grid = document.getElementById('soundboard-grid');
+        const header = soundboardContainer.querySelector('.panel-header');
+
+        if (grid && grid.firstElementChild) {
+            const slotHeight = grid.firstElementChild.getBoundingClientRect().height;
+            const style = window.getComputedStyle(grid);
+            const gap = parseInt(style.gap) || 5;
+            const containerStyle = window.getComputedStyle(soundboardContainer);
+            const padding = (parseInt(containerStyle.paddingTop) || 0) + (parseInt(containerStyle.paddingBottom) || 0);
+            const headerHeight = header ? header.getBoundingClientRect().height : 0;
+            const headerMargin = header ? (parseInt(window.getComputedStyle(header).marginBottom) || 0) : 0;
+
+            const newHeight = (soundboardRowCount * slotHeight) + ((soundboardRowCount - 1) * gap) + padding + headerHeight + headerMargin + 4;
+
+            // Respect parent height constraints
+            const parent = soundboardContainer.parentElement;
+            if (parent) {
+                const parentHeight = parent.getBoundingClientRect().height;
+                if (newHeight > parentHeight * 0.8) {
+                    soundboardContainer.style.flex = `1 1 auto`;
+                    soundboardContainer.style.height = ``;
+                    return;
+                }
+            }
+
+            soundboardContainer.style.flex = `0 0 ${newHeight}px`;
+            soundboardContainer.style.height = `${newHeight}px`;
+        } else {
+            // Fallback if not rendered yet
+            const rowHeight = 110;
+            const headerAndPadding = 60;
+            const newHeight = (soundboardRowCount * rowHeight) + headerAndPadding;
+            soundboardContainer.style.flex = `0 0 ${newHeight}px`;
+            soundboardContainer.style.height = `${newHeight}px`;
+        }
+    }
+
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
         grid.innerHTML = '';
 
-        soundboardState.forEach(slot => {
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        const rows = isAudioOnly ? AUDIO_ONLY_ROWS : soundboardRowCount;
+        const cols = isAudioOnly ? AUDIO_ONLY_COLS : NORMAL_SLOTS_PER_ROW;
+        const totalSlotsToRender = isAudioOnly ? AUDIO_ONLY_TOTAL_SLOTS : (soundboardRowCount * NORMAL_SLOTS_PER_ROW);
+
+        grid.style.setProperty('--sb-rows', rows);
+        grid.style.setProperty('--sb-cols', cols);
+
+        // Render subset of state based on current layout
+        for (let i = 0; i < totalSlotsToRender; i++) {
+            let slot = soundboardState[i];
+            if (!slot) {
+                // Should not happen if padded correctly
+                slot = { id: i, tracks: [], currentTrackIndex: 0, emoji: '🎨', isPlaying: false, loop: 'none', playMode: 'sequential' };
+            }
             const slotDiv = document.createElement('div');
             slotDiv.className = 'soundboard-stack-slot';
 
@@ -1174,10 +1621,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
 
+            const currentTrackName = slot.tracks[slot.currentTrackIndex]?.name || (trackCount > 0 ? '---' : 'Empty');
             slotDiv.innerHTML = `
                 <div class="stack-header">
                     <button class="stack-emoji-btn" data-id="${slot.id}" title="Edit Emoji">${slot.emoji}</button>
-                    <button class="stack-btn stack-add-btn" data-id="${slot.id}" title="Add Sound">${addOrCountIcon}</button>
+                    <button class="stack-btn stack-add-btn" data-id="${slot.id}" title="Add Sound">➕</button>
+                    <button class="stack-btn stack-add-folder-btn" data-id="${slot.id}" title="Add Folder">📁</button>
                     <button class="stack-btn stack-clear-btn" data-id="${slot.id}" title="Clear Stack">🗑️</button>
                 </div>
                 <div class="stack-controls">
@@ -1185,11 +1634,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button class="stack-btn stack-loop-btn ${loopClass}" data-id="${slot.id}" title="Toggle Loop (Stack)">${loopIcon}</button>
                     <button class="stack-btn stack-shuffle-btn ${shuffleClass}" data-id="${slot.id}" title="Toggle Shuffle">${shuffleIcon}</button>
                 </div>
+                <div class="stack-track-display" title="${currentTrackName}">${currentTrackName}</div>
             `;
             grid.appendChild(slotDiv);
-        });
+        }
 
         attachSoundboardListeners();
+        updateSoundboardContainerHeight();
     }
 
     function attachSoundboardListeners() {
@@ -1235,7 +1686,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.stack-add-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const slotId = parseInt(e.target.dataset.id, 10);
-                window.electron.ipcRenderer.invoke('load-sound', { slotId, multi: true }).then(tracks => {
+                window.electron.ipcRenderer.invoke('load-sound', { slotId, multi: true, folders: false }).then(tracks => {
+                    if (tracks && tracks.length > 0) {
+                        soundboardState[slotId].tracks.push(...tracks);
+                        saveSoundboardState();
+                        renderSoundboard();
+                    }
+                });
+            });
+        });
+
+        // Add Folder
+        document.querySelectorAll('.stack-add-folder-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const slotId = parseInt(e.target.dataset.id, 10);
+                window.electron.ipcRenderer.invoke('load-sound', { slotId, multi: true, folders: true }).then(tracks => {
                     if (tracks && tracks.length > 0) {
                         soundboardState[slotId].tracks.push(...tracks);
                         saveSoundboardState();

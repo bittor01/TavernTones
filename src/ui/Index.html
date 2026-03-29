@@ -12,25 +12,45 @@
 <body>
   <div class="main-grid">
     <!-- -------------------- LEFT COLUMN -------------------- -->
-    <div class="column column-left">
+    <div class="column column-left audio-only-left-column">
       <div id="creature-entry-container" class="box">
         <form id="add-creature-form">
           <!-- Form fields will be added here via JS or next step -->
         </form>
       </div>
       <div id="log-wrapper" class="box">
-        <div class="panel-header">
-          <h2 id="log-title">Log</h2>
-          <div class="panel-header-controls">
-            <button id="push-panel-btn" class="small-btn" title="Push to Chat" style="display: none;">🖨️</button>
-            <button id="log-toggle-btn" class="small-btn" title="Toggle Panel">🔃</button>
+        <div class="panel-header" style="flex-direction: column; align-items: stretch; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 id="pane-mode-title" style="margin: 0; border: none; padding: 0;">Log</h2>
+            <div class="panel-header-controls">
+              <button id="push-panel-btn" class="small-btn" title="Push to Chat" style="display: none;">🖨️</button>
+              <button id="main-settings-btn" class="small-btn" title="Settings">⚙️</button>
+            </div>
+          </div>
+          <div class="panel-modes" style="justify-content: space-around; border-top: 1px solid #333; padding-top: 5px;">
+            <button id="mode-log" class="mode-btn active" title="Application Log">🪵</button>
+            <button id="mode-dice" class="mode-btn" title="Dice Log">🎲</button>
+            <button id="mode-stats" class="mode-btn" title="Stat Blocks">🪪</button>
+            <button id="mode-library" class="mode-btn" title="Music Library">🎶</button>
           </div>
         </div>
         <div class="log-area" id="logArea"></div>
         <div class="log-area" id="diceLog" style="display: none;"></div>
         <div class="log-area" id="statBlockArea" style="display: none;"></div>
+        <div class="log-area" id="musicLibraryArea" style="display: none;">
+          <div class="library-toolbar">
+            <button id="rescan-library-btn" class="small-btn" title="Rescan Music Folder">🔄</button>
+            <button id="add-loose-btn" class="small-btn" title="Add Loose Files/Folders">➕</button>
+            <div class="bulk-actions" style="margin-left: auto; display: flex; gap: 5px;">
+              <button id="bulk-play-now" class="small-btn" title="Play Selected Now">▶️</button>
+              <button id="bulk-add-top" class="small-btn" title="Add Selected to Top">⬆️</button>
+              <button id="bulk-add-bottom" class="small-btn" title="Add Selected to Bottom">⬇️</button>
+            </div>
+          </div>
+          <div id="library-tree-container"></div>
+        </div>
       </div>
-      <div id="music-controls-container" class="box">
+      <div id="music-controls-container" class="box music-controls-container">
         <div class="panel-header">
           <div style="display: flex; align-items: center; gap: 8px;">
             <h2>Music Player</h2>
@@ -47,17 +67,21 @@
           <button id="playNextButton">⏭️</button>
           <button id="loop-mode-btn">🔁</button>
           <button id="shuffle-btn">🔀</button>
-          <button id="selectFileButton" title="Add File(s)">➕</button>
-          <button id="clear-stack-btn" title="Clear Stack">🗑️</button>
+          <button id="selectFileButton" title="Open Music Library">➕</button>
+          <button id="clear-stack-btn" title="Clear Playlist">🗑️</button>
         </div>
-        <div id="music-stack-list" style="max-height: 150px; overflow-y: auto; margin-top: 5px; border: 1px solid #444; background: #1a1a1a;">
-          <!-- Stack items will be rendered here -->
+        <div class="progress-container">
+          <div id="music-progress-bar" class="progress-bar"></div>
+          <span id="music-time-display">0:00 / 0:00</span>
+        </div>
+        <div id="music-stack-list">
+          <!-- Playlist items will be rendered here -->
         </div>
       </div>
     </div>
 
     <!-- -------------------- MIDDLE COLUMN -------------------- -->
-    <div class="column column-middle">
+    <div class="column column-middle audio-only-middle-column">
       <div id="turn-controls-container" class="box">
         <div class="panel-header">
           <h2>Controls</h2>
@@ -87,10 +111,12 @@
           <!-- Simple initiative list will be rendered here -->
         </div>
       </div>
-      <div id="soundboard-container" class="box">
+      <div id="soundboard-container" class="box soundboard-container">
         <div class="panel-header">
           <h2>Soundboard</h2>
           <div class="panel-header-controls">
+            <button id="add-row-btn" class="small-btn" title="Add Row">🔼</button>
+            <button id="remove-row-btn" class="small-btn" title="Remove Row">🔽</button>
             <button id="save-preset-btn" class="small-btn" title="Save Preset">💾</button>
             <button id="load-preset-btn" class="small-btn" title="Load Preset">📂</button>
             <label for="soundboard-volume">Vol:</label>
@@ -104,16 +130,18 @@
     </div>
 
     <!-- -------------------- RIGHT COLUMN -------------------- -->
-    <div class="column column-right box">
-      <div class="panel-header">
-        <h2>Combatants</h2>
-        <div class="panel-header-controls">
-          <button id="reset-encounter-right" class="small-btn" title="Reset Encounter">⏪</button>
-          <button id="clear-encounter-right" class="small-btn" title="Clear Encounter">🗑️</button>
+    <div class="column column-right audio-only-right-column">
+      <div id="combatant-wrapper" class="box" style="flex-grow: 1; display: flex; flex-direction: column; min-height: 0;">
+        <div class="panel-header">
+          <h2>Combatants</h2>
+          <div class="panel-header-controls">
+            <button id="reset-encounter-right" class="small-btn" title="Reset Encounter">⏪</button>
+            <button id="clear-encounter-right" class="small-btn" title="Clear Encounter">🗑️</button>
+          </div>
         </div>
-      </div>
-      <div id="combatant-details-list">
-        <!-- Full interactive list of all combatants rendered here -->
+        <div id="combatant-details-list" style="flex-grow: 1; overflow-y: auto;">
+          <!-- Full interactive list of all combatants rendered here -->
+        </div>
       </div>
     </div>
   </div>
@@ -148,6 +176,7 @@
     </form>
   </dialog>
 
+  <div id="library-notification" class="notification-toast"></div>
   <div id="global-tooltip"></div>
   <script src="renderer.js"></script>
 </body>

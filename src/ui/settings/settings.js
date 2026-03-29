@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const githubTokenInput = document.getElementById('githubToken');
     const randomTablesPathInput = document.getElementById('randomTablesPath');
     const defaultMusicPathInput = document.getElementById('defaultMusicPath');
+    const audioModeToggle = document.getElementById('audioModeToggle');
 
     // Buttons
     const browseFfmpegBtn = document.getElementById('browse-ffmpeg');
@@ -41,7 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
             gitRepoUrl: gitRepoUrlInput.value,
             githubToken: githubTokenInput.value,
             randomTablesPath: randomTablesPathInput.value,
-            defaultMusicPath: defaultMusicPathInput.value
+            defaultMusicPath: defaultMusicPathInput.value,
+            audioMode: audioModeToggle.checked
         };
 
         const isDirty = Object.keys(currentConfig).some(key => {
@@ -76,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     [tokenInput, voiceChannelInput, textChannelInput, botRoleIdInput, ffmpegPathInput, bestiaryPathInput, gitRepoUrlInput, githubTokenInput, randomTablesPathInput, defaultMusicPathInput].forEach(el => {
         el.addEventListener('input', checkDirty);
     });
+    audioModeToggle.addEventListener('change', checkDirty);
 
     // Function to handle browsing for a folder
     const handleBrowse = async (ipcChannel, inputElement) => {
@@ -168,6 +171,27 @@ document.addEventListener('DOMContentLoaded', () => {
         unregisterSlashBtn.disabled = false;
     });
 
+    // --- Help Button ---
+    const helpButton = document.getElementById('help-button');
+    const helpDialog = document.getElementById('help-dialog');
+    const helpContent = document.getElementById('help-content');
+
+    helpButton.addEventListener('click', async () => {
+        const content = await window.settings.getHelpContent();
+        // Basic Markdown-ish parsing for better display
+        const parsed = content
+            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/^- (.*$)/gm, '<li>$1</li>')
+            .replace(/\[(.*?)\]\((.*?)\)/g, (m, text, url) => `<a href="#" onclick="window.settings.openExternal('${url}')">${text}</a>`)
+            .replace(/\n\n/g, '<br><br>');
+
+        helpContent.innerHTML = parsed;
+        helpDialog.showModal();
+    });
+
     window.settings.onBotStatus(updateBotStatusUI);
 
     // Request existing config from main process when window loads
@@ -192,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
             githubTokenInput.value = config.githubToken || '';
             randomTablesPathInput.value = config.randomTablesPath || '';
             defaultMusicPathInput.value = config.defaultMusicPath || '';
+            audioModeToggle.checked = !!config.audioMode;
 
             // Auto-detect FFmpeg if not set
             if (!config.ffmpegPath) {
@@ -225,7 +250,8 @@ document.addEventListener('DOMContentLoaded', () => {
             gitRepoUrl: gitRepoUrlInput.value,
             githubToken: githubTokenInput.value,
             randomTablesPath: randomTablesPathInput.value,
-            defaultMusicPath: defaultMusicPathInput.value
+            defaultMusicPath: defaultMusicPathInput.value,
+            audioMode: audioModeToggle.checked
         };
         window.settings.setDiscordConfig(newConfig);
         originalConfig = newConfig;

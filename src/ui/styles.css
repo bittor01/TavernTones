@@ -70,7 +70,7 @@ button:disabled {
 .box {
     background-color: #252526;
     border-radius: 8px;
-    padding: 15px;
+    padding: 6px 8px;
     border: 1px solid #333;
 }
 
@@ -94,7 +94,7 @@ button:disabled {
     flex-grow: 1;
     overflow-y: auto;
     background-color: #1e1e1e;
-    padding: 8px;
+    padding: 4px;
     border-radius: 4px;
     font-size: 0.9em;
     line-height: 1.4;
@@ -104,6 +104,14 @@ button:disabled {
 }
 
 #music-controls-container {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+#music-controls-container .panel-header,
+#music-controls-container .music-controls,
+#music-controls-container .progress-container {
     flex-shrink: 0;
 }
 
@@ -123,7 +131,7 @@ button:disabled {
 }
 
 #initiative-list-container {
-    flex-grow: 1;
+    flex: 1 1 auto;
     display: flex;
     /* Add flex to make list itself grow */
     flex-direction: column;
@@ -205,14 +213,40 @@ button:disabled {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid #444;
-    padding-bottom: 8px;
-    margin-bottom: 12px;
+    padding-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .panel-header h2 {
     margin: 0;
     border: none;
     padding: 0;
+}
+
+.panel-modes {
+    display: flex;
+    gap: 5px;
+}
+
+.mode-btn {
+    background: none;
+    border: 1px solid transparent;
+    padding: 4px 8px;
+    font-size: 1.2em;
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: all 0.2s;
+}
+
+.mode-btn:hover {
+    background-color: #333;
+    opacity: 1;
+}
+
+.mode-btn.active {
+    background-color: #444;
+    border-color: #666;
+    opacity: 1;
 }
 
 .status-indicator {
@@ -609,16 +643,47 @@ input[type="number"] {
 
 /* --- Soundboard Styles --- */
 #soundboard-container {
-    flex-shrink: 0;
+    flex: 0 0 170px;
     /* Prevent it from shrinking */
-    min-height: 140px;
+    min-height: 100px;
     /* Ensure sufficient space for buttons and text */
 }
 
 #soundboard-grid {
     display: grid;
+    grid-template-columns: repeat(var(--sb-cols, 3), 1fr);
+    grid-template-rows: repeat(var(--sb-rows, 1), auto);
+    gap: 5px;
+    overflow-y: auto;
+    height: 100%;
+    align-content: start;
+}
+
+body.audio-only #soundboard-grid {
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    align-content: start;
+    overflow-y: auto;
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.resize-handle {
+    height: 6px;
+    background: #333;
+    cursor: row-resize;
+    margin: -3px 0;
+    z-index: 10;
+    transition: background 0.2s;
+}
+
+.resize-handle:hover {
+    background: #007bff;
+}
+
+body.audio-only .resize-handle,
+body.audio-only #add-row-btn,
+body.audio-only #remove-row-btn {
+    display: none !important;
 }
 
 .soundboard-slot {
@@ -630,6 +695,7 @@ input[type="number"] {
     padding: 8px;
     overflow: hidden;
     /* Contain text */
+    height: fit-content;
 }
 
 .soundboard-play-btn {
@@ -783,10 +849,27 @@ input:disabled {
     background-color: #2b3035;
     border: 1px solid #444;
     border-radius: 8px;
-    padding: 4px;
+    padding: 3px 4px;
     display: flex;
     flex-direction: column;
     gap: 3px;
+    min-width: 0;
+    height: fit-content;
+}
+
+body.audio-only .soundboard-stack-slot {
+    padding: 2px;
+    gap: 1px;
+    min-height: 0;
+}
+
+body.audio-only .soundboard-stack-slot .stack-btn {
+    padding: 1px 0;
+    font-size: 0.8rem;
+}
+
+body.audio-only .soundboard-stack-slot .stack-emoji-btn {
+    font-size: 1rem;
 }
 
 .stack-header {
@@ -799,7 +882,7 @@ input:disabled {
 .stack-emoji-btn {
     background: none;
     border: none;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     cursor: pointer;
     padding: 0;
     flex-grow: 1;
@@ -826,14 +909,15 @@ input:disabled {
     border: 1px solid #555;
     color: #ddd;
     border-radius: 4px;
-    padding: 4px 2px;
-    font-size: 1rem;
+    padding: 2px 1px;
+    font-size: 0.9rem;
     cursor: pointer;
     flex: 1;
     /* Distribute space evenly */
     display: flex;
     justify-content: center;
     align-items: center;
+    min-width: 0;
 }
 
 .stack-btn:hover:not(:disabled) {
@@ -863,7 +947,85 @@ input:disabled {
     overflow: hidden;
     text-overflow: ellipsis;
     text-align: center;
-    margin-top: 4px;
+    margin-top: 2px;
+}
+
+/* --- Music Library Styles --- */
+#musicLibraryArea {
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+}
+
+.library-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+}
+
+#library-tree-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    font-size: 0.9em;
+    min-height: 0;
+}
+
+.tree-node {
+    margin-left: 15px;
+}
+
+.tree-node-content {
+    display: flex;
+    align-items: center;
+    padding: 3px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    gap: 5px;
+    user-select: none;
+}
+
+.tree-node-content:hover {
+    background-color: #333;
+}
+
+.tree-node-content.selected {
+    background-color: #004d99;
+}
+
+.tree-node-content .node-name {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tree-node-actions {
+    display: none;
+    gap: 2px;
+}
+
+.tree-node-content:hover .tree-node-actions {
+    display: flex;
+}
+
+.tree-node-actions .small-btn {
+    font-size: 0.9em;
+    padding: 0 2px;
+    opacity: 0.7;
+}
+
+.tree-node-actions .small-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.folder-toggle {
+    width: 16px;
+    text-align: center;
+    font-family: monospace;
 }
 
 /* --- Music Stack Styles --- */
@@ -906,21 +1068,225 @@ input:disabled {
     transition: opacity 0.2s;
 }
 
+.progress-container {
+    height: 20px;
+    background-color: #333;
+    border-radius: 4px;
+    margin-top: 5px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: #28a745;
+    width: 0%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    transition: width 0.5s ease-in-out;
+}
+
+#music-time-display {
+    position: relative;
+    z-index: 2;
+    font-size: 0.8em;
+    width: 100%;
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 1px #000;
+}
+
 .music-stack-item:hover .item-actions {
     opacity: 1;
+}
+
+#music-stack-list {
+    max-height: 150px;
+    overflow-y: auto;
+    margin-top: 5px;
+    border: 1px solid #444;
+    background: #1a1a1a;
+    flex-grow: 1;
+}
+
+body.audio-only #music-stack-list {
+    max-height: 400px;
 }
 
 .music-controls {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px !important;
+    gap: 2px !important;
 }
 
 .music-controls button {
-    flex: 1 1 auto;
-    padding: 6px 8px;
+    flex: 1 0 30px;
+    padding: 6px 2px;
+    font-size: 0.85em;
+    min-width: 0;
+}
+
+/* --- Audio Only Mode --- */
+body.audio-only .box {
+    padding-top: 5px;
+}
+
+body.audio-only .panel-header {
+    margin-bottom: 5px;
+    padding-bottom: 4px;
+}
+
+body.audio-only #musicLibraryArea,
+body.audio-only #logArea {
+    padding-top: 0;
+}
+
+body.audio-only .column-middle,
+body.audio-only #creature-entry-container,
+body.audio-only #combatant-wrapper {
+    display: none !important;
+}
+
+body.audio-only .main-grid {
+    grid-template-columns: 350px 1fr;
+}
+
+body.audio-only .column-left {
+    grid-column: 1;
+    overflow: hidden;
+    width: 350px;
+}
+
+body.audio-only .column-right {
+    display: flex;
+    grid-column: 2;
+    overflow: hidden;
+}
+
+body.audio-only .audio-only-left-column #log-wrapper {
+    height: 100%;
+}
+
+body.audio-only .audio-only-left-column #musicLibraryArea {
+    height: 100%;
+}
+
+/* Audio Only Right Column Layout */
+body.audio-only .audio-only-right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Clear display:none for relevant children inside the right column */
+body.audio-only .audio-only-right-column #music-controls-container,
+body.audio-only .audio-only-right-column #soundboard-container {
+    display: flex !important;
+    background-color: #252526;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 4px; /* Even tighter padding */
+}
+
+/* Music Player at the top, increased to 280px */
+body.audio-only .audio-only-right-column #music-controls-container {
+    height: 280px;
+    max-height: 280px;
+    flex-shrink: 0;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+body.audio-only .audio-only-right-column #music-stack-list {
+    flex-grow: 1;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+}
+
+/* Soundboard takes the rest */
+body.audio-only .audio-only-right-column #soundboard-container {
+    flex-grow: 1;
+    min-height: 0;
+    flex-direction: column;
+    padding-bottom: 2px;
+}
+
+body.audio-only #soundboard-container .panel-header {
+    margin-bottom: 5px;
+    padding-bottom: 4px;
+}
+
+body.audio-only .audio-only-right-column #soundboard-grid {
+    grid-template-columns: repeat(var(--sb-cols, 6), 1fr);
+    grid-template-rows: repeat(var(--sb-rows, 12), 1fr);
+    gap: 2px;
+    flex-grow: 1;
+    min-height: 0;
+    height: 100%;
+    align-content: stretch; /* Stretch to fit exactly */
+    overflow: hidden; /* Prefer no scroll if we are stretching to fit */
+}
+
+body.audio-only .audio-only-right-column #soundboard-grid:hover {
+    overflow-y: auto; /* Allow scroll if it still overflows despite stretch */
+}
+
+body.audio-only .soundboard-stack-slot .stack-track-display {
+    padding: 1px 2px;
+    font-size: 0.75rem;
+    margin-top: 1px;
+}
+
+body.audio-only #soundboard-container .panel-header {
+    margin-bottom: 2px;
+    padding-bottom: 2px;
+}
+
+body.audio-only #soundboard-container .panel-header h2 {
+    font-size: 1rem;
+}
+
+/* Compact tweaks */
+#music-stack-list {
+    background-color: #1e1e1e;
+    border-radius: 4px;
+}
+
+.music-stack-item {
+    padding: 2px 8px;
+    border-bottom: 1px solid #2d2d2d;
+}
+
+.tree-node-content {
+    padding: 1px 5px;
+}
+
+/* --- Notification Toasts --- */
+.notification-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: #333;
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+    display: none;
     font-size: 0.9em;
-    min-width: 40px;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
 /* --- Import Selection Dialog --- */

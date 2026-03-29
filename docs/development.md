@@ -51,7 +51,7 @@ The output will be located in the `build/` directory.
 To bundle FFmpeg with the application:
 1. Create a `ffmpeg` folder inside the `resources` directory of the project.
 2. Download a static FFmpeg build for Windows.
-3. Place `ffmpeg.exe` into the `resources/ffmpeg/` directory.
+3. Place `ffmpeg.exe` and `ffprobe.exe` into the `resources/ffmpeg/` directory. (**Note:** `ffprobe` is required for song duration and progress bar features).
 4. When you run `npm run build`, `electron-builder` is configured to include the `resources` folder in the build.
 5. On first launch, the app will detect the bundled FFmpeg and set the default path accordingly.
 

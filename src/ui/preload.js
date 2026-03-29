@@ -25,7 +25,8 @@ contextBridge.exposeInMainWorld('electron', {
         'open-gamify-tool', 'save-high-score', 'open-settings-window',
         'roll-attack', 'push-mob-rules-to-discord', 'save-soundboard-state',
         'play-next', 'play-prev', 'set-loop-mode', 'set-shuffle', 'remove-from-stack', 'clear-stack',
-        'request-bot-status', 'voice-toggle'
+        'request-bot-status', 'voice-toggle', 'jump-to-track',
+        'library-action', 'get-discord-config', 'seek-music'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, data);
@@ -40,14 +41,15 @@ contextBridge.exposeInMainWorld('electron', {
         'scrap-and-get-next-item', 'show-confirm-dialog', 'get-mob-rules-data',
         'get-image-as-data-url', 'get-preview-audio-data', 'load-sound',
         'get-soundboard-state', 'save-soundboard-preset', 'load-soundboard-preset',
-        'read-combat-file', 'save-music-preset', 'load-music-preset'
+        'read-combat-file', 'save-music-preset', 'load-music-preset',
+        'get-music-library', 'rescan-music-library'
       ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, data);
       }
     },
     on: (channel, func) => {
-      const validChannels = ['log-message', 'music-player-status', 'dice-log', 'update-initiative-list', 'populate-edit-form', 'soundboard-state-change', 'populate-add-form', 'sound-finished', 'discord-bot-status', 'switch-panel'];
+      const validChannels = ['log-message', 'music-player-status', 'dice-log', 'update-initiative-list', 'populate-edit-form', 'soundboard-state-change', 'populate-add-form', 'sound-finished', 'discord-bot-status', 'switch-panel', 'music-library-update', 'discord-config'];
       if (validChannels.includes(channel)) {
         const subscription = (event, ...args) => func(event, ...args);
         ipcRenderer.on(channel, subscription);

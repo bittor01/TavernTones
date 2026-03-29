@@ -20,7 +20,10 @@ async function getStore() {
                 bestiaryPath: { type: 'string' },
                 randomTablesPath: { type: 'string' },
                 ffmpegPath: { type: 'string' },
-                gitRepoUrl: { type: 'string' }
+                gitRepoUrl: { type: 'string' },
+                audioMode: { type: 'boolean', default: false },
+                musicLibrary: { type: 'object', default: {} },
+                looseFiles: { type: 'array', items: { type: 'string' }, default: [] }
             },
             default: {}
         }

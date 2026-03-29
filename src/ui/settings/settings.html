@@ -86,9 +86,14 @@
                         <h2>Discord Bot</h2>
                         <span id="bot-status-indicator" class="status-indicator" title="Bot Status: Unknown">🟥</span>
                     </div>
-                    <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
-                        <input type="checkbox" id="enableDiscordBot" style="margin-right: 5px; width: auto;"> Enable
-                    </label>
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
+                            <input type="checkbox" id="enableDiscordBot" style="margin-right: 5px; width: auto;"> Enable Bot
+                        </label>
+                        <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
+                            <input type="checkbox" id="audioModeToggle" style="margin-right: 5px; width: auto;"> Audio-Only Layout
+                        </label>
+                    </div>
                 </div>
                 <div id="discord-fields">
                     <div class="form-group">
@@ -115,15 +120,22 @@
                     <button id="register-slash-btn">Register</button>
                     <button id="unregister-slash-btn">Unregister</button>
                 </div>
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Interaction Instructions</label>
+                    <div style="background: #1e1e1e; border: 1px solid #444; padding: 10px; border-radius: 4px; font-size: 0.85em; color: #aaa; line-height: 1.4;">
+                        <strong>Slash Commands:</strong> Type <code>/</code> in Discord (e.g. <code>/roll</code>).<br>
+                        <strong>Text Commands:</strong> You must <strong>@mention</strong> the bot (e.g. <code>@TavernTones !pl chill</code>).
+                    </div>
+                </div>
             </div>
 
             <!-- Right Column: Paths & Dependencies -->
             <div class="settings-column">
                 <h2>External Dependencies</h2>
                 <div class="form-group">
-                    <label for="ffmpegPath">FFmpeg Path</label>
+                    <label for="ffmpegPath">FFmpeg Binaries Folder</label>
                     <div class="path-input-group">
-                        <input type="text" id="ffmpegPath" placeholder="Path to ffmpeg executable">
+                        <input type="text" id="ffmpegPath" placeholder="Folder containing ffmpeg and ffprobe">
                         <button id="browse-ffmpeg">Browse</button>
                     </div>
                 </div>
@@ -164,11 +176,25 @@
                     <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx">
                 </div>
                 <button id="fetch-bestiary-btn" style="width: 100%;">Fetch/Update Bestiary</button>
+
             </div>
         </div>
 
-        <button id="save-button">Save and Close</button>
+        <div style="display: flex; gap: 10px;">
+            <button id="help-button" style="width: 100px;">Help</button>
+            <button id="save-button" style="flex-grow: 1;">Save and Close</button>
+        </div>
     </div>
+
+    <dialog id="help-dialog" style="width: 80%; max-height: 80%; background: #252526; color: #d4d4d4; border: 1px solid #444; border-radius: 8px; padding: 20px;">
+        <div id="help-content" style="overflow-y: auto; max-height: 60vh; line-height: 1.6;">
+            <!-- Help content will be loaded here -->
+        </div>
+        <div style="text-align: right; margin-top: 20px;">
+            <button onclick="document.getElementById('help-dialog').close()">Close</button>
+        </div>
+    </dialog>
+
     <script src="settings.js"></script>
 </body>
 </html>
