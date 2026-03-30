@@ -174,6 +174,9 @@ if (-not $TargetBranch) { exit 1 }
 # FIX: Use if ( -not (...) ) to both check for success and suppress the $true output
 if (-not (Invoke-WithRetry -Command "git" -Arguments @("checkout", $TargetBranch) -ErrorName "Git Checkout" -WorkingDirectory $GitWorkingDir)) { exit 1 }
 
+# Set upstream to ensure the branch tracks the remote
+if (-not (Invoke-WithRetry -Command "git" -Arguments @("branch", "--set-upstream-to=origin/$TargetBranch", $TargetBranch) -ErrorName "Set Upstream" -WorkingDirectory $GitWorkingDir)) { exit 1 }
+
 # Pull the latest code for that branch
 # FIX: Use if ( -not (...) ) to both check for success and suppress the $true output
 if (-not (Invoke-WithRetry -Command "git" -Arguments @("pull") -ErrorName "Git Pull" -WorkingDirectory $GitWorkingDir)) { exit 1 }
