@@ -120,21 +120,32 @@ function Get-LatestRemoteBranch {
         return $null
     }
     
-    # 2. List all remote branches and their last commit date, then find the newest.
+    # 2. Try to get the branch that origin/HEAD points to
     Set-Location $WorkingDirectory
-    $LatestCommitBranch = git branch -r --sort=-committerdate | 
-                            Select-Object -First 1
+    $BranchToCheckout = $null
+    try {
+        $BranchToCheckout = git symbolic-ref --short refs/remotes/origin/HEAD 2>$null
+        if ($BranchToCheckout) {
+            Write-Host "Found remote HEAD branch: '$BranchToCheckout'" -ForegroundColor Green
+        }
+    } catch {
+        # Fallback to finding the latest commit branch
+        $LatestCommitBranch = git branch -r --sort=-committerdate | Select-Object -First 1
+        if ($LatestCommitBranch -and $LatestCommitBranch -match '->') {
+            # If it contains '->', extract the target branch
+            $BranchToCheckout = ($LatestCommitBranch -split '->')[1].Trim() -replace 'origin/', ''
+        } else {
+            $BranchToCheckout = $LatestCommitBranch.Trim() -replace 'origin/', ''
+        }
+        Write-Host "Found remote branch with latest commit: '$BranchToCheckout'" -ForegroundColor Green
+    }
     Set-Location $ScriptBaseDir # Restore location
                             
-    if (-not $LatestCommitBranch) {
+    if (-not $BranchToCheckout) {
         Write-Host "ERROR: Could not determine the latest remote branch." -ForegroundColor Red
         return $null
     }
-
-    # Extract the branch name (after the colon)
-    $BranchToCheckout = $LatestCommitBranch.Trim() -replace 'origin/', ''
     
-    Write-Host "Found remote branch with latest commit: '$BranchToCheckout'" -ForegroundColor Green
     return $BranchToCheckout
 }
 
