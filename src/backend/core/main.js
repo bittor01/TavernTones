@@ -39,15 +39,14 @@ let discordConfig;
 
 let connection;
 let voiceStatus = 'disconnected'; // disconnected, connecting, connected
+let isJoiningVoice = false; // Prevents race conditions during knocking/joining
 let musicPlayer;
 let isAppReady = false; // Flag to indicate if the app is ready
 let initiativeTracker;
 let fiveEToolsParser;
 
 // Anti-collision state
-let sessionId = Math.random().toString(36).substring(7);
 let isSoftLocked = false;
-let otherInstanceSessionId = null;
 
 // Local Instance Lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -887,9 +886,16 @@ async function ipcloader() {
         if (musicPlayer) musicPlayer.clearStack();
     });
 
-    ipcMain.on('jump-to-track', (event, { index }) => {
+    ipcMain.on('jump-to-track', async (event, { index }) => {
         if (musicPlayer) {
+            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
             musicPlayer.jumpTo(index);
+        }
+    });
+
+    ipcMain.on('seek-music', (event, { time }) => {
+        if (musicPlayer) {
+            musicPlayer.seek(time);
         }
     });
 
@@ -1017,21 +1023,19 @@ async function ipcloader() {
         switch (action) {
             case 'play-now':
                 // For 'play now' from library, we insert at the very top (index 0) and play.
-                // If loop mode 1 is on, BackendAudioPlayer.jumpTo will handle moving existing tracks to bottom if we jumped to a new top.
-                // But we need to actually add them first.
                 const currentStack = [...musicPlayer.stack];
                 musicPlayer.stack = [...resolvedPaths, ...currentStack];
                 musicPlayer.currentIndex = 0;
+                if (voiceStatus !== 'connected') await joinVoiceChannelAction();
                 musicPlayer.play();
                 break;
             case 'add-top':
-                const stackAfterTop = [...musicPlayer.stack];
-                // Insert after the current track if playing, or at top if not?
-                // User said "add to top of list" ⬆️.
-                // Usually this means index 0.
-                musicPlayer.stack = [...resolvedPaths, ...stackAfterTop];
-                if (musicPlayer.currentIndex !== -1) {
-                    musicPlayer.currentIndex += resolvedPaths.length;
+                if (musicPlayer.currentIndex === -1) {
+                    // Nothing playing, add to the very top
+                    musicPlayer.stack = [...resolvedPaths, ...musicPlayer.stack];
+                } else {
+                    // Add below the currently playing track
+                    musicPlayer.stack.splice(musicPlayer.currentIndex + 1, 0, ...resolvedPaths);
                 }
                 musicPlayer._emitStatusUpdate();
                 break;
@@ -1672,7 +1676,7 @@ function initializeDiscordBot() {
 
 function broadcastBotStatus() {
     const status = client.isReady() ? (isSoftLocked ? 'soft-locked' : 'online') : 'offline';
-    const message = isSoftLocked ? `Busy (ID: ${otherInstanceSessionId})` : (client.isReady() ? 'Connected' : (discordConfig.token ? 'Connecting...' : 'Not Configured'));
+    const message = isSoftLocked ? 'Busy (Occupied)' : (client.isReady() ? 'Connected' : (discordConfig.token ? 'Connecting...' : 'Not Configured'));
 
     const payload = {
         status,
@@ -1696,11 +1700,6 @@ const shutdown = async () => {
     try {
         console.log('Cleaning up and exiting.');
 
-        // Cleanup heartbeat
-        if (client.heartbeatInterval) clearInterval(client.heartbeatInterval);
-        if (client.heartbeatMessage) {
-            try { await client.heartbeatMessage.delete().catch(() => {}); } catch(e) {}
-        }
 
         // Delete media control message gracefully
         if (client && client.lastMediaMessage) {
@@ -1763,25 +1762,65 @@ app.on('window-all-closed', () => {
 });
 
 async function joinVoiceChannelAction() {
-    if (isSoftLocked) {
-        logToRenderer("Join cancelled: Bot is soft-locked by another instance.");
+    if (isJoiningVoice) return;
+
+    // Wait for client readiness if necessary
+    if (!client.isReady()) {
+        logToRenderer("[Discord] Client not ready for voice join.");
         return;
     }
 
-    const voiceChannel = client.channels.cache.get(discordConfig.voiceChannel);
+    const isActive = connection && (
+        connection.state.status !== VoiceConnectionStatus.Disconnected &&
+        connection.state.status !== VoiceConnectionStatus.Destroyed
+    );
+    if (isActive) return;
+
+    isJoiningVoice = true;
+    isSoftLocked = false;
+
+    const voiceChannelId = discordConfig.voiceChannel;
+    if (voiceChannelId && discordConfig.textChannel) {
+        let textChannel = client.channels.cache.get(discordConfig.textChannel);
+        if (!textChannel) {
+            try { textChannel = await client.channels.fetch(discordConfig.textChannel); } catch (e) {}
+        }
+
+        if (textChannel && textChannel.isTextBased()) {
+            logToRenderer(`[Anti-Collision] Knocking on voice channel ${voiceChannelId}...`);
+            const knockMsg = await textChannel.send(`||~~TT_KNOCK:${voiceChannelId}~~||`);
+            setTimeout(() => knockMsg.delete().catch(() => {}), 500);
+
+            // Wait 1 second for occupancy response
+            let isOccupied = false;
+            const collector = textChannel.createMessageCollector({
+                filter: m => m.content.includes(`TT_OCCUPIED:${voiceChannelId}`) && m.author.id === client.user.id,
+                time: 1000
+            });
+
+            await new Promise(resolve => {
+                collector.on('collect', () => {
+                    isOccupied = true;
+                    collector.stop();
+                });
+                collector.on('end', resolve);
+            });
+
+            if (isOccupied) {
+                logToRenderer(`[Anti-Collision] Voice channel ${voiceChannelId} is occupied. Join cancelled.`);
+                isSoftLocked = true;
+                isJoiningVoice = false;
+                broadcastBotStatus();
+                return;
+            }
+        }
+    }
+
+    const voiceChannel = client.channels.cache.get(voiceChannelId);
     if (voiceChannel && voiceChannel.isVoiceBased()) {
         try {
             voiceStatus = 'connecting';
             broadcastBotStatus();
-
-            // Final check: Is anyone else in voice?
-            const me = voiceChannel.guild.members.me;
-            if (me && me.voice.channelId) {
-                logToRenderer(`[Anti-Collision] Bot is already in voice channel ${me.voice.channelId}. Entering soft-lock.`);
-                isSoftLocked = true;
-                broadcastBotStatus();
-                return;
-            }
 
             const existingConnection = getVoiceConnection(voiceChannel.guild.id);
             if (existingConnection) {
@@ -1801,9 +1840,6 @@ async function joinVoiceChannelAction() {
                 broadcastBotStatus();
                 logToRenderer('The bot has connected to the channel!');
                 musicPlayer.setConnection(connection);
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.send('switch-panel', 'diceLog');
-                }
             });
 
             connection.on(VoiceConnectionStatus.Disconnected, async () => {
@@ -1828,9 +1864,12 @@ async function joinVoiceChannelAction() {
         } catch (error) {
             logToRenderer('Error joining voice channel: ', error.message || error);
             leaveVoiceChannelAction();
+        } finally {
+            isJoiningVoice = false;
         }
     } else {
         logToRenderer('Voice channel not found or is not a voice channel!');
+        isJoiningVoice = false;
     }
 }
 
@@ -1845,61 +1884,39 @@ function leaveVoiceChannelAction() {
 
 client.once(Events.ClientReady, async () => {
     logToRenderer('TavernTones is online!');
-    if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('switch-panel', 'diceLog');
-    }
 
-    // Robust collision detection using a probe/response handshake
+    // Robust collision detection for Voice Channels using a "Knock" protocol
     if (discordConfig.textChannel) {
         try {
             let channel = client.channels.cache.get(discordConfig.textChannel);
             if (!channel) channel = await client.channels.fetch(discordConfig.textChannel);
 
             if (channel && channel.isTextBased()) {
-                logToRenderer("[Anti-Collision] Probing for other instances...");
-
-                // Helper to send and immediately delete a message
-                const sendEphemeral = async (content) => {
-                    try {
-                        const m = await channel.send(content);
-                        setTimeout(() => m.delete().catch(() => {}), 500); // Delete very quickly
-                    } catch (e) {}
-                };
-
-                // Listen for handshakes
+                // Listen for knocks from other instances
                 client.on('messageCreate', async (m) => {
                     if (m.author.id !== client.user.id) return;
 
-                    if (m.content.includes('TT_PROBE:')) {
-                        const otherId = m.content.split('TT_PROBE:')[1].split(' ')[0];
-                        if (otherId !== sessionId) {
-                            logToRenderer(`[Anti-Collision] Responding to probe from ${otherId}`);
-                            sendEphemeral(`TT_HEARTBEAT:${sessionId} (Responding to probe)`);
-                        }
-                    } else if (m.content.includes('TT_HEARTBEAT:')) {
-                        const otherId = m.content.split('TT_HEARTBEAT:')[1].split(' ')[0];
-                        if (otherId !== sessionId && !isSoftLocked) {
-                            isSoftLocked = true;
-                            otherInstanceSessionId = otherId;
-                            logToRenderer(`[Anti-Collision] Soft-lock active: Instance ${otherId} detected.`);
-                            broadcastBotStatus();
+                    // Response to a "knock" if we are currently in that voice channel
+                    // AND we have an active connection (we don't respond if we are just a ghost/zombie)
+                    if (m.content.includes('TT_KNOCK:')) {
+                        const targetId = m.content.split('TT_KNOCK:')[1].split('~')[0];
+                        const me = m.guild.members.me;
+                        const isActivelyConnected = connection && (
+                            connection.state.status === VoiceConnectionStatus.Ready ||
+                            connection.state.status === VoiceConnectionStatus.Connecting ||
+                            connection.state.status === VoiceConnectionStatus.Signalling
+                        );
+
+                        if (me && me.voice.channelId === targetId && isActivelyConnected) {
+                            logToRenderer(`[Anti-Collision] Responding to knock for channel ${targetId}`);
+                            const occMsg = await m.channel.send(`||~~TT_OCCUPIED:${targetId}~~||`);
+                            setTimeout(() => occMsg.delete().catch(() => {}), 500);
                         }
                     }
                 });
-
-                // Send initial probe
-                await sendEphemeral(`TT_PROBE:${sessionId} (Checking for other instances)`);
-
-                // Also maintain a periodic heartbeat that is immediately deleted
-                // This handles cases where instances start very close together or a probe is missed.
-                const heartLoop = async () => {
-                    if (isShuttingDown || isSoftLocked) return;
-                    sendEphemeral(`TT_HEARTBEAT:${sessionId} (Periodic check)`);
-                };
-                client.heartbeatInterval = setInterval(heartLoop, 60000);
             }
         } catch (e) {
-            logToRenderer("[Anti-Collision] Error during probe: " + e.message);
+            logToRenderer("[Anti-Collision] Error setting up listener: " + e.message);
         }
     }
 
@@ -1907,7 +1924,7 @@ client.once(Events.ClientReady, async () => {
     // updateDiscordMediaControl(); // MOVED DOWN
 
 
-    logToRenderer(`Logged in as ${client.user.tag} (Session: ${sessionId})`);
+    logToRenderer(`Logged in as ${client.user.tag}`);
 
     client.on('messageCreate', async message => {
         if (client.commandHandler) client.commandHandler.handleMessage(message);
@@ -2013,7 +2030,7 @@ client.once(Events.ClientReady, async () => {
                 { name: 'Shuffle', value: status.shuffleMode ? '🔀 On' : '🔀 Off', inline: true },
                 { name: 'Track', value: status.currentTrack ? path.basename(status.currentTrack) : 'None' },
                 { name: 'Progress', value: `${createProgressString(status.currentTime, status.duration)} \`[${formatTime(status.currentTime)} / ${formatTime(status.duration)}]\`` },
-                { name: 'Playlist', value: `${status.currentIndex + 1} / ${status.stackSize}` }
+                { name: 'Playlist', value: `${status.stackSize} tracks` }
             )
             .setTimestamp();
 
