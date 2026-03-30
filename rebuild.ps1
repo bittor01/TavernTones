@@ -122,8 +122,7 @@ function Get-LatestRemoteBranch {
     
     # 2. List all remote branches and their last commit date, then find the newest.
     Set-Location $WorkingDirectory
-    $LatestCommitBranch = git for-each-ref --sort=-committerdate --format='%(committerdate:iso):%(refname:short)' refs/remotes/origin | 
-                            Where-Object { $_ -notmatch ':origin/HEAD$' } | 
+    $LatestCommitBranch = git branch -r --sort=-committerdate | 
                             Select-Object -First 1
     Set-Location $ScriptBaseDir # Restore location
                             
@@ -133,7 +132,7 @@ function Get-LatestRemoteBranch {
     }
 
     # Extract the branch name (after the colon)
-    $BranchToCheckout = ($LatestCommitBranch -split ':')[-1] -replace 'origin/', ''
+    $BranchToCheckout = $LatestCommitBranch.Trim() -replace 'origin/', ''
     
     Write-Host "Found remote branch with latest commit: '$BranchToCheckout'" -ForegroundColor Green
     return $BranchToCheckout
@@ -173,7 +172,7 @@ if (-not $TargetBranch) { exit 1 }
 
 # Checkout the determined branch
 # FIX: Use if ( -not (...) ) to both check for success and suppress the $true output
-if (-not (Invoke-WithRetry -Command "git" -Arguments @("checkout", $TargetBranch, "||", "git", "checkout", "-b", $TargetBranch, "origin/$TargetBranch") -ErrorName "Git Checkout" -WorkingDirectory $GitWorkingDir)) { exit 1 }
+if (-not (Invoke-WithRetry -Command "cmd" -Arguments @("/c", "git checkout $TargetBranch || git checkout -b $TargetBranch origin/$TargetBranch") -ErrorName "Git Checkout" -WorkingDirectory $GitWorkingDir)) { exit 1 }
 
 # Set upstream to ensure the branch tracks the remote
 if (-not (Invoke-WithRetry -Command "git" -Arguments @("branch", "--set-upstream-to=origin/$TargetBranch", $TargetBranch) -ErrorName "Set Upstream" -WorkingDirectory $GitWorkingDir)) { exit 1 }
