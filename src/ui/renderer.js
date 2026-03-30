@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentPanelIndex = 3; // Default to 'Music Library'
     let musicLibrary = { children: [] };
     let selectedLibraryPaths = new Set();
+    let expandedLibraryPaths = new Set();
     let botStatus = { status: 'offline', message: 'Unknown' };
     let isBotEnabled = false;
     let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
@@ -749,6 +750,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    function updateSelectionUI() {
+        const nodes = document.querySelectorAll('#library-tree-container .tree-node-content');
+        nodes.forEach(content => {
+            const path = content.getAttribute('data-path');
+            if (selectedLibraryPaths.has(path)) {
+                content.classList.add('selected');
+            } else {
+                content.classList.remove('selected');
+            }
+        });
+    }
+
     function createTreeNode(node, isRoot = false) {
         const div = document.createElement('div');
         div.className = 'tree-node';
@@ -756,6 +769,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const content = document.createElement('div');
         content.className = 'tree-node-content';
+        content.setAttribute('data-path', node.path);
         if (selectedLibraryPaths.has(node.path)) content.classList.add('selected');
 
         const toggle = document.createElement('span');
@@ -820,7 +834,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (node.type === 'directory' && node.children) {
             const childrenContainer = document.createElement('div');
             childrenContainer.className = 'node-children';
-            childrenContainer.style.display = 'none'; // Collapsed by default
+            const isExpanded = expandedLibraryPaths.has(node.path);
+            childrenContainer.style.display = isExpanded ? 'block' : 'none';
+            if (isExpanded) toggle.textContent = '📂';
+
             node.children.forEach(child => {
                 childrenContainer.appendChild(createTreeNode(child));
             });
@@ -830,8 +847,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (e.ctrlKey) {
                     toggleSelection(node.path);
                 } else {
-                    childrenContainer.style.display = childrenContainer.style.display === 'none' ? 'block' : 'none';
-                    toggle.textContent = childrenContainer.style.display === 'none' ? '📁' : '📂';
+                    selectedLibraryPaths.clear();
+                    selectedLibraryPaths.add(node.path);
+                    updateSelectionUI();
+
+                    // Toggle expansion only if clicking folder icon or name
+                    if (e.target.classList.contains('folder-toggle') || e.target.classList.contains('node-name')) {
+                        const nextDisplay = childrenContainer.style.display === 'none' ? 'block' : 'none';
+                        childrenContainer.style.display = nextDisplay;
+                        toggle.textContent = nextDisplay === 'none' ? '📁' : '📂';
+                        if (nextDisplay === 'block') {
+                            expandedLibraryPaths.add(node.path);
+                        } else {
+                            expandedLibraryPaths.delete(node.path);
+                        }
+                    }
                 }
             };
         } else {
@@ -839,10 +869,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (e.ctrlKey) {
                     toggleSelection(node.path);
                 } else {
-                    // Just select if single click?
                     selectedLibraryPaths.clear();
                     selectedLibraryPaths.add(node.path);
-                    renderMusicLibrary();
+                    updateSelectionUI();
                 }
             };
         }
