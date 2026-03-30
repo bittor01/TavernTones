@@ -73,11 +73,14 @@ function Invoke-WithRetry {
                 Set-Location $WorkingDirectory
             }
             
-            # THE CRITICAL FIX: Use the comma and @ array notation to ensure arguments are passed correctly.
-            # We must use @Arguments to correctly pass the array of strings to the external command.
-            # THE ROBUST FIX: Use a sub-expression to guarantee proper argument parsing for native executables.
-            $CommandString = "$Command " + ($Arguments -join ' ')
-            Invoke-Expression -Command $CommandString
+            # Execute the command, handling cmd specially to avoid PowerShell parsing issues with ||
+            if ($Command -eq "cmd") {
+                $process = Start-Process -FilePath "cmd.exe" -ArgumentList $Arguments -Wait -NoNewWindow -PassThru
+                $LASTEXITCODE = $process.ExitCode
+            } else {
+                $CommandString = "$Command " + ($Arguments -join ' ')
+                Invoke-Expression -Command $CommandString
+            }
             
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "SUCCESS: $ErrorName completed successfully." -ForegroundColor Green
@@ -124,7 +127,7 @@ function Get-LatestRemoteBranch {
     Set-Location $WorkingDirectory
     $BranchToCheckout = $null
     try {
-        $BranchToCheckout = git symbolic-ref --short refs/remotes/origin/HEAD 2>$null
+        $BranchToCheckout = (git symbolic-ref --short refs/remotes/origin/HEAD 2>$null) -replace 'origin/', ''
         if ($BranchToCheckout) {
             Write-Host "Found remote HEAD branch: '$BranchToCheckout'" -ForegroundColor Green
         }
@@ -133,9 +136,9 @@ function Get-LatestRemoteBranch {
         $LatestCommitBranch = git branch -r --sort=-committerdate | Select-Object -First 1
         if ($LatestCommitBranch -and $LatestCommitBranch -match '->') {
             # If it contains '->', extract the target branch
-            $BranchToCheckout = ($LatestCommitBranch -split '->')[1].Trim() -replace 'origin/', ''
+            $BranchToCheckout = (($LatestCommitBranch -split '->')[1].Trim() -replace 'origin/', '')
         } else {
-            $BranchToCheckout = $LatestCommitBranch.Trim() -replace 'origin/', ''
+            $BranchToCheckout = ($LatestCommitBranch.Trim() -replace 'origin/', '')
         }
         Write-Host "Found remote branch with latest commit: '$BranchToCheckout'" -ForegroundColor Green
     }
