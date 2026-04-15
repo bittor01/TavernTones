@@ -104,6 +104,26 @@ class BackendAudioPlayer extends EventEmitter {
         });
     }
 
+    _recreateDiscordStream() {
+        try {
+            if (this.player) {
+                this.player.stop(false);
+            }
+            this.player = createAudioPlayer();
+            this.setupPlayerEvents();
+            if (this.connection) {
+                this.connection.subscribe(this.player);
+            }
+            if (this.mixedResource && !this.mixedResource.ended) {
+                this.player.play(this.mixedResource);
+            }
+            this.log('[AudioPlayer] Recreated Discord AudioPlayer.');
+        } catch (e) {
+            this.log(`[AudioPlayer] Error recreating stream: ${e.message}`);
+        }
+    }
+
+
     setConnection(connection) {
         if (!connection) return;
         this.connection = connection;
@@ -211,7 +231,11 @@ class BackendAudioPlayer extends EventEmitter {
 
             // Immediate feedback for UI
             this.currentTime = startTime;
-            if (startTime === 0) this.duration = 0;
+            if (startTime === 0) {
+                this.duration = 0;
+                this._recreateDiscordStream();
+                if (this.mixer) this.mixer.bufferQueue = []; // flush stale audio
+            }
             this.isPlaying = true;
             this.playerStatus = AudioPlayerStatus.Playing;
             this._emitStatusUpdate();
@@ -496,6 +520,7 @@ class BackendAudioPlayer extends EventEmitter {
                 this.stack.push(...preceding);
             }
             this.currentIndex = 0;
+            this.playLock = false; // Prevent stuck states
             this._play();
         }
     }
@@ -515,6 +540,7 @@ class BackendAudioPlayer extends EventEmitter {
 
     play() {
         if (this.isPlaying) return;
+        this.playLock = false; // ensure play works even if previously locked
         if (this.playerStatus === AudioPlayerStatus.Paused && this.currentIndex >= 0) {
             this._play(this.currentTime);
             return;
