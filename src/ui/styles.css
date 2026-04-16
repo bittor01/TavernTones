@@ -52,7 +52,7 @@ button:disabled {
 /* --- Main Layout --- */
 .main-grid {
     display: grid;
-    grid-template-columns: 25% 25% 50%;
+    grid-template-columns: var(--left-col-width, 25%) var(--mid-col-width, 25%) 1fr;
     height: 100vh;
     gap: 10px;
     padding: 10px;
@@ -107,6 +107,7 @@ button:disabled {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
+    height: var(--music-player-height, auto);
 }
 
 #music-controls-container .panel-header,
@@ -680,9 +681,31 @@ body.audio-only #soundboard-grid {
     background: #007bff;
 }
 
-body.audio-only .resize-handle,
-body.audio-only #add-row-btn,
-body.audio-only #remove-row-btn {
+.resizer-v {
+    height: 8px;
+    background: transparent;
+    cursor: row-resize;
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+.resizer-v:hover {
+    background: rgba(0, 123, 255, 0.3);
+}
+
+.resizer-h {
+    width: 8px;
+    background: transparent;
+    cursor: col-resize;
+    margin: 0 -4px;
+    z-index: 10;
+}
+
+.resizer-h:hover {
+    background: rgba(0, 123, 255, 0.3);
+}
+
+body.audio-only .resize-handle {
     display: none !important;
 }
 
@@ -1151,18 +1174,19 @@ body.audio-only #combatant-wrapper {
 }
 
 body.audio-only .main-grid {
-    grid-template-columns: 350px 1fr;
+    grid-template-columns: var(--left-col-width, 350px) auto 1fr;
+    gap: 0; /* Use handle for spacing */
 }
 
 body.audio-only .column-left {
     grid-column: 1;
     overflow: hidden;
-    width: 350px;
+    width: var(--left-col-width, 350px);
 }
 
 body.audio-only .column-right {
     display: flex;
-    grid-column: 2;
+    grid-column: 3;
     overflow: hidden;
 }
 
@@ -1195,8 +1219,8 @@ body.audio-only .audio-only-right-column #soundboard-container {
 
 /* Music Player at the top, increased to 280px */
 body.audio-only .audio-only-right-column #music-controls-container {
-    height: 280px;
-    max-height: 280px;
+    height: var(--music-player-height, 280px);
+    max-height: var(--music-player-height, 280px);
     flex-shrink: 0;
     flex-direction: column;
     overflow: hidden;
@@ -1229,12 +1253,8 @@ body.audio-only .audio-only-right-column #soundboard-grid {
     flex-grow: 1;
     min-height: 0;
     height: 100%;
-    align-content: stretch; /* Stretch to fit exactly */
-    overflow: hidden; /* Prefer no scroll if we are stretching to fit */
-}
-
-body.audio-only .audio-only-right-column #soundboard-grid:hover {
-    overflow-y: auto; /* Allow scroll if it still overflows despite stretch */
+    align-content: start;
+    overflow-y: auto;
 }
 
 body.audio-only .soundboard-stack-slot .stack-track-display {

@@ -676,28 +676,34 @@ async function ipcloader() {
     });
 
     ipcMain.on('set-discord-config', async (event, config) => {
-        await setDiscordConfig(config);
+        // Merge with existing config to prevent data loss
+        const existingConfig = await getDiscordConfig();
+        const mergedConfig = { ...existingConfig, ...config };
+
+        await setDiscordConfig(mergedConfig);
 
         // --- Update the live configuration ---
         // The in-memory config needs to be updated to reflect the newly saved settings.
-        discordConfig = config;
+        discordConfig = mergedConfig;
         // The music player instance also needs to be told about the new path.
         if (musicPlayer) {
-            musicPlayer.musicFolder = config.defaultMusicPath;
-            musicPlayer.ffmpegBinFolder = config.ffmpegPath; // Note: config key remains ffmpegPath for compatibility
+            musicPlayer.musicFolder = mergedConfig.defaultMusicPath;
+            musicPlayer.ffmpegBinFolder = mergedConfig.ffmpegPath; // Note: config key remains ffmpegPath for compatibility
             logToRenderer(`[IPC] Updated music player's default folder to: ${musicPlayer.musicFolder}`);
         }
         // --- End of update ---
 
-        await dialog.showMessageBox(null, {
-            type: 'info',
-            title: 'Settings Saved',
-            message: 'Your settings have been saved. Please close and reopen the application to apply all changes.',
-            buttons: ['OK']
-        });
-        // Close the settings window after saving
-        if (settingsWindow) {
-            settingsWindow.close();
+        // Only show dialog and close if it was sent from the settings window
+        if (event.sender === (settingsWindow && settingsWindow.webContents)) {
+            await dialog.showMessageBox(null, {
+                type: 'info',
+                title: 'Settings Saved',
+                message: 'Your settings have been saved. Please close and reopen the application to apply all changes.',
+                buttons: ['OK']
+            });
+            if (settingsWindow) {
+                settingsWindow.close();
+            }
         }
     });
 

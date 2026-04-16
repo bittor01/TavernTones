@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let DND_CONDITIONS = {};
     let MOB_RULES_DATA = {};
     let lastScrolledIndex = -1;
+    let discordConfig = {};
 
     // --- Form State ---
     let isMobMode = false;
@@ -672,14 +673,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     window.electron.ipcRenderer.on('discord-config', (event, config) => {
+        discordConfig = config;
+        if (config.audioOnlyRows) audioOnlyRows = config.audioOnlyRows;
+        if (config.audioOnlyCols) audioOnlyCols = config.audioOnlyCols;
+        if (config.leftColumnWidth) {
+            document.documentElement.style.setProperty('--left-col-width', `${config.leftColumnWidth}px`);
+        }
+        if (config.musicPlayerHeight) {
+            document.documentElement.style.setProperty('--music-player-height', `${config.musicPlayerHeight}px`);
+        }
+
         if (config.audioMode) {
             document.body.classList.add('audio-only');
             // Move containers to columns
             const rightCol = document.querySelector('.audio-only-right-column');
             const musicControls = document.getElementById('music-controls-container');
             const soundboard = document.getElementById('soundboard-container');
-            if (rightCol && musicControls && soundboard) {
+            const musicResizer = document.getElementById('music-player-resizer');
+            if (rightCol && musicControls && soundboard && musicResizer) {
                 rightCol.appendChild(musicControls);
+                rightCol.appendChild(musicResizer);
                 rightCol.appendChild(soundboard);
             }
             showPanel('musicLibraryArea');
@@ -690,7 +703,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const midCol = document.querySelector('.column-middle');
             const musicControls = document.getElementById('music-controls-container');
             const soundboard = document.getElementById('soundboard-container');
-            if (leftCol && musicControls) leftCol.appendChild(musicControls);
+            const musicResizer = document.getElementById('music-player-resizer');
+            if (leftCol && musicControls && musicResizer) {
+                leftCol.appendChild(musicResizer);
+                leftCol.appendChild(musicControls);
+            }
             if (midCol && soundboard) midCol.appendChild(soundboard);
         }
         renderSoundboard(); // Ensure soundboard layout updates when mode changes
@@ -1344,9 +1361,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let soundboardState = [];
     let soundboardRowCount = 1; // Resizable rows in Normal mode
     const NORMAL_SLOTS_PER_ROW = 3;
-    const AUDIO_ONLY_COLS = 6;
-    const AUDIO_ONLY_ROWS = 12;
-    const AUDIO_ONLY_TOTAL_SLOTS = AUDIO_ONLY_COLS * AUDIO_ONLY_ROWS;
+    let audioOnlyCols = 6;
+    let audioOnlyRows = 10;
 
     // --- Load Soundboard State ---
     window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
@@ -1455,19 +1471,63 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     document.getElementById('add-row-btn').addEventListener('click', () => {
-        const MAX_ROWS = 72 / NORMAL_SLOTS_PER_ROW;
-        if (soundboardRowCount < MAX_ROWS) {
-            soundboardRowCount++;
-            saveSoundboardState();
-            renderSoundboard();
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        if (isAudioOnly) {
+            if (audioOnlyRows < 12) {
+                audioOnlyRows++;
+                discordConfig.audioOnlyRows = audioOnlyRows;
+                window.electron.ipcRenderer.send('set-discord-config', { audioOnlyRows: audioOnlyRows });
+                renderSoundboard();
+            }
+        } else {
+            const MAX_ROWS = 72 / NORMAL_SLOTS_PER_ROW;
+            if (soundboardRowCount < MAX_ROWS) {
+                soundboardRowCount++;
+                saveSoundboardState();
+                renderSoundboard();
+            }
         }
     });
 
     document.getElementById('remove-row-btn').addEventListener('click', () => {
-        if (soundboardRowCount > 1) {
-            soundboardRowCount--;
-            saveSoundboardState();
-            renderSoundboard();
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        if (isAudioOnly) {
+            if (audioOnlyRows > 1) {
+                audioOnlyRows--;
+                discordConfig.audioOnlyRows = audioOnlyRows;
+                window.electron.ipcRenderer.send('set-discord-config', { audioOnlyRows: audioOnlyRows });
+                renderSoundboard();
+            }
+        } else {
+            if (soundboardRowCount > 1) {
+                soundboardRowCount--;
+                saveSoundboardState();
+                renderSoundboard();
+            }
+        }
+    });
+
+    document.getElementById('add-col-btn').addEventListener('click', () => {
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        if (isAudioOnly) {
+            if (audioOnlyCols < 12) {
+                audioOnlyCols++;
+                discordConfig.audioOnlyCols = audioOnlyCols;
+                window.electron.ipcRenderer.send('set-discord-config', { audioOnlyCols: audioOnlyCols });
+                renderSoundboard();
+            }
+        }
+    });
+
+    document.getElementById('remove-col-btn').addEventListener('click', () => {
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        if (isAudioOnly) {
+            if (audioOnlyCols > 1) {
+                audioOnlyCols--;
+                discordConfig.audioOnlyCols = audioOnlyCols;
+                window.electron.ipcRenderer.send('set-discord-config', { audioOnlyCols: audioOnlyCols });
+                renderSoundboard();
+            }
         }
     });
 
@@ -1614,9 +1674,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         grid.innerHTML = '';
 
         const isAudioOnly = document.body.classList.contains('audio-only');
-        const rows = isAudioOnly ? AUDIO_ONLY_ROWS : soundboardRowCount;
-        const cols = isAudioOnly ? AUDIO_ONLY_COLS : NORMAL_SLOTS_PER_ROW;
-        const totalSlotsToRender = isAudioOnly ? AUDIO_ONLY_TOTAL_SLOTS : (soundboardRowCount * NORMAL_SLOTS_PER_ROW);
+        const rows = isAudioOnly ? audioOnlyRows : soundboardRowCount;
+        const cols = isAudioOnly ? audioOnlyCols : NORMAL_SLOTS_PER_ROW;
+        const totalSlotsToRender = isAudioOnly ? (audioOnlyRows * audioOnlyCols) : (soundboardRowCount * NORMAL_SLOTS_PER_ROW);
 
         grid.style.setProperty('--sb-rows', rows);
         grid.style.setProperty('--sb-cols', cols);
@@ -2502,5 +2562,65 @@ document.addEventListener('DOMContentLoaded', async () => {
             globalTooltip.style.top = `${y}px`;
         }
     }
+
+    // --- Resizing Logic ---
+    const columnResizer = document.getElementById('column-resizer');
+    const musicPlayerResizer = document.getElementById('music-player-resizer');
+    let isResizingColumn = false;
+    let isResizingMusicPlayer = false;
+
+    if (columnResizer) {
+        columnResizer.addEventListener('mousedown', (e) => {
+            isResizingColumn = true;
+            document.body.style.cursor = 'col-resize';
+            e.preventDefault();
+        });
+    }
+
+    if (musicPlayerResizer) {
+        musicPlayerResizer.addEventListener('mousedown', (e) => {
+            isResizingMusicPlayer = true;
+            document.body.style.cursor = 'row-resize';
+            e.preventDefault();
+        });
+    }
+
+    document.addEventListener('mousemove', (e) => {
+        if (isResizingColumn) {
+            const newWidth = Math.max(200, Math.min(600, e.clientX));
+            document.documentElement.style.setProperty('--left-col-width', `${newWidth}px`);
+            discordConfig.leftColumnWidth = newWidth;
+        } else if (isResizingMusicPlayer) {
+            const musicControls = document.getElementById('music-controls-container');
+            if (musicControls) {
+                const rect = musicControls.getBoundingClientRect();
+                const isAudioOnly = document.body.classList.contains('audio-only');
+                let newHeight;
+                if (isAudioOnly) {
+                    // music player is at the top of the right column
+                    newHeight = Math.max(150, Math.min(600, e.clientY - rect.top));
+                } else {
+                    // music player is at the bottom of the left column
+                    // The resizer is ABOVE it
+                    newHeight = Math.max(150, Math.min(600, rect.bottom - e.clientY));
+                }
+                document.documentElement.style.setProperty('--music-player-height', `${newHeight}px`);
+                discordConfig.musicPlayerHeight = newHeight;
+            }
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizingColumn || isResizingMusicPlayer) {
+            isResizingColumn = false;
+            isResizingMusicPlayer = false;
+            document.body.style.cursor = '';
+            // Only send the relevant parts to be merged
+            window.electron.ipcRenderer.send('set-discord-config', {
+                leftColumnWidth: discordConfig.leftColumnWidth,
+                musicPlayerHeight: discordConfig.musicPlayerHeight
+            });
+        }
+    });
 
 });

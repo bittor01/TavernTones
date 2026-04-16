@@ -23,7 +23,11 @@ async function getStore() {
                 gitRepoUrl: { type: 'string' },
                 audioMode: { type: 'boolean', default: false },
                 musicLibrary: { type: 'object', default: {} },
-                looseFiles: { type: 'array', items: { type: 'string' }, default: [] }
+                looseFiles: { type: 'array', items: { type: 'string' }, default: [] },
+                audioOnlyRows: { type: 'number', default: 10 },
+                audioOnlyCols: { type: 'number', default: 6 },
+                leftColumnWidth: { type: 'number', default: 350 },
+                musicPlayerHeight: { type: 'number', default: 280 }
             },
             default: {}
         }
