@@ -1476,7 +1476,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (audioOnlyRows < 12) {
                 audioOnlyRows++;
                 discordConfig.audioOnlyRows = audioOnlyRows;
-                window.electron.ipcRenderer.send('set-discord-config', { audioOnlyRows: audioOnlyRows });
+
+                // Add row makes soundboard taller, music player smaller
+                const currentHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--music-player-height')) || 280;
+                const newHeight = Math.max(150, currentHeight - 40);
+                document.documentElement.style.setProperty('--music-player-height', `${newHeight}px`);
+                discordConfig.musicPlayerHeight = newHeight;
+
+                window.electron.ipcRenderer.send('set-discord-config', {
+                    audioOnlyRows: audioOnlyRows,
+                    musicPlayerHeight: newHeight
+                });
                 renderSoundboard();
             }
         } else {
@@ -1495,7 +1505,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (audioOnlyRows > 1) {
                 audioOnlyRows--;
                 discordConfig.audioOnlyRows = audioOnlyRows;
-                window.electron.ipcRenderer.send('set-discord-config', { audioOnlyRows: audioOnlyRows });
+
+                // Remove row (down) makes music player larger, soundboard smaller
+                const currentHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--music-player-height')) || 280;
+                const newHeight = Math.min(600, currentHeight + 40);
+                document.documentElement.style.setProperty('--music-player-height', `${newHeight}px`);
+                discordConfig.musicPlayerHeight = newHeight;
+
+                window.electron.ipcRenderer.send('set-discord-config', {
+                    audioOnlyRows: audioOnlyRows,
+                    musicPlayerHeight: newHeight
+                });
                 renderSoundboard();
             }
         } else {
@@ -1513,7 +1533,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (audioOnlyCols < 12) {
                 audioOnlyCols++;
                 discordConfig.audioOnlyCols = audioOnlyCols;
-                window.electron.ipcRenderer.send('set-discord-config', { audioOnlyCols: audioOnlyCols });
+
+                // Left (wider) makes right side wider, left side thinner
+                const currentWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--left-col-width')) || 350;
+                const newWidth = Math.max(200, currentWidth - 40);
+                document.documentElement.style.setProperty('--left-col-width', `${newWidth}px`);
+                discordConfig.leftColumnWidth = newWidth;
+
+                window.electron.ipcRenderer.send('set-discord-config', {
+                    audioOnlyCols: audioOnlyCols,
+                    leftColumnWidth: newWidth
+                });
                 renderSoundboard();
             }
         }
@@ -1525,7 +1555,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (audioOnlyCols > 1) {
                 audioOnlyCols--;
                 discordConfig.audioOnlyCols = audioOnlyCols;
-                window.electron.ipcRenderer.send('set-discord-config', { audioOnlyCols: audioOnlyCols });
+
+                // Right (less wide) makes right side less wide, left side wider
+                const currentWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--left-col-width')) || 350;
+                const newWidth = Math.min(600, currentWidth + 40);
+                document.documentElement.style.setProperty('--left-col-width', `${newWidth}px`);
+                discordConfig.leftColumnWidth = newWidth;
+
+                window.electron.ipcRenderer.send('set-discord-config', {
+                    audioOnlyCols: audioOnlyCols,
+                    leftColumnWidth: newWidth
+                });
                 renderSoundboard();
             }
         }

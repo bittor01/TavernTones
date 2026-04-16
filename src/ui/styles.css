@@ -52,7 +52,7 @@ button:disabled {
 /* --- Main Layout --- */
 .main-grid {
     display: grid;
-    grid-template-columns: var(--left-col-width, 25%) var(--mid-col-width, 25%) 1fr;
+    grid-template-columns: var(--left-col-width, 25%) auto var(--mid-col-width, 25%) 1fr;
     height: 100vh;
     gap: 10px;
     padding: 10px;
@@ -699,10 +699,25 @@ body.audio-only #soundboard-grid {
     cursor: col-resize;
     margin: 0 -4px;
     z-index: 10;
+    display: none;
 }
 
 .resizer-h:hover {
     background: rgba(0, 123, 255, 0.3);
+}
+
+body.audio-only .resizer-h {
+    display: block;
+}
+
+#add-col-btn,
+#remove-col-btn {
+    display: none !important;
+}
+
+body.audio-only #add-col-btn,
+body.audio-only #remove-col-btn {
+    display: block !important;
 }
 
 body.audio-only .resize-handle {
@@ -1174,7 +1189,7 @@ body.audio-only #combatant-wrapper {
 }
 
 body.audio-only .main-grid {
-    grid-template-columns: var(--left-col-width, 350px) auto 1fr;
+    grid-template-columns: var(--left-col-width, 350px) auto 0px 1fr;
     gap: 0; /* Use handle for spacing */
 }
 
@@ -1186,7 +1201,7 @@ body.audio-only .column-left {
 
 body.audio-only .column-right {
     display: flex;
-    grid-column: 3;
+    grid-column: 4;
     overflow: hidden;
 }
 
