@@ -1536,7 +1536,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Left (wider) makes right side wider, left side thinner
                 const currentWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--left-col-width')) || 350;
-                const newWidth = Math.max(200, currentWidth - 40);
+                const newWidth = Math.max(200, currentWidth - 100);
                 document.documentElement.style.setProperty('--left-col-width', `${newWidth}px`);
                 discordConfig.leftColumnWidth = newWidth;
 
@@ -1558,7 +1558,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Right (less wide) makes right side less wide, left side wider
                 const currentWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--left-col-width')) || 350;
-                const newWidth = Math.min(600, currentWidth + 40);
+                const newWidth = Math.min(800, currentWidth + 100);
                 document.documentElement.style.setProperty('--left-col-width', `${newWidth}px`);
                 discordConfig.leftColumnWidth = newWidth;
 
