@@ -1272,11 +1272,11 @@ body.audio-only .audio-only-right-column #soundboard-container {
     min-width: 100%;
 }
 
-/* Music Player at the top, increased to 280px */
+/* Music Player at the top, now flexible to fill remaining space */
 body.audio-only .audio-only-right-column #music-controls-container {
-    height: var(--music-player-height, 280px);
-    max-height: var(--music-player-height, 280px);
-    flex-shrink: 0;
+    height: auto;
+    max-height: none;
+    flex: 1 1 0%;
     flex-direction: column;
     overflow: hidden;
 }
@@ -1292,9 +1292,10 @@ body.audio-only .audio-only-right-column #music-stack-list {
     overflow-y: auto;
 }
 
-/* Soundboard takes the rest */
+/* Soundboard takes only the space it needs at the bottom */
 body.audio-only .audio-only-right-column #soundboard-container {
-    flex-grow: 1;
+    flex: 0 0 auto;
+    height: auto;
     min-height: 0;
     flex-direction: column;
     padding-bottom: 2px;

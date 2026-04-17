@@ -1514,29 +1514,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 audioOnlyRows++;
                 discordConfig.audioOnlyRows = audioOnlyRows;
 
-                // Add row makes soundboard taller, music player smaller
-                // Dynamically measure first slot height + gap
-                const firstSlot = document.querySelector('.soundboard-stack-slot');
-                let offset = 0;
-                if (firstSlot) {
-                    const grid = document.getElementById('soundboard-grid');
-                    const gap = parseInt(getComputedStyle(grid).gap) || 5;
-                    offset = firstSlot.getBoundingClientRect().height + gap;
-                } else {
-                    offset = 64; // Approx height in audio-only
-                }
-
-                // Use the CSS variable as base if possible for consistency
-                const currentHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--music-player-height')) || document.getElementById('music-controls-container').offsetHeight;
-                const newHeight = Math.max(100, currentHeight - offset);
-
-                // Update CSS variable immediately
-                document.documentElement.style.setProperty('--music-player-height', `${newHeight}px`);
-                discordConfig.musicPlayerHeight = newHeight;
-
                 window.electron.ipcRenderer.send('set-discord-config', {
-                    audioOnlyRows: audioOnlyRows,
-                    musicPlayerHeight: newHeight
+                    audioOnlyRows: audioOnlyRows
                 });
                 renderSoundboard();
             }
@@ -1557,29 +1536,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 audioOnlyRows--;
                 discordConfig.audioOnlyRows = audioOnlyRows;
 
-                // Remove row (down) makes music player larger, soundboard smaller
-                // Dynamically measure first slot height + gap
-                const firstSlot = document.querySelector('.soundboard-stack-slot');
-                let offset = 0;
-                if (firstSlot) {
-                    const grid = document.getElementById('soundboard-grid');
-                    const gap = parseInt(getComputedStyle(grid).gap) || 5;
-                    offset = firstSlot.getBoundingClientRect().height + gap;
-                } else {
-                    offset = 64; // Approx height in audio-only
-                }
-
-                // Use the CSS variable as base if possible for consistency
-                const currentHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--music-player-height')) || document.getElementById('music-controls-container').offsetHeight;
-                const newHeight = Math.min(1000, currentHeight + offset);
-
-                // Update CSS variable immediately
-                document.documentElement.style.setProperty('--music-player-height', `${newHeight}px`);
-                discordConfig.musicPlayerHeight = newHeight;
-
                 window.electron.ipcRenderer.send('set-discord-config', {
-                    audioOnlyRows: audioOnlyRows,
-                    musicPlayerHeight: newHeight
+                    audioOnlyRows: audioOnlyRows
                 });
                 renderSoundboard();
             }
@@ -1724,8 +1682,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!soundboardContainer) return;
 
         if (document.body.classList.contains('audio-only')) {
-            soundboardContainer.style.flex = '1 1 0';
-            soundboardContainer.style.height = '';
+            soundboardContainer.style.flex = '0 0 auto';
+            soundboardContainer.style.height = 'auto';
             return;
         }
 
