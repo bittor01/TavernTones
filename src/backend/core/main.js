@@ -1554,6 +1554,10 @@ async function ipcloader() {
         initiativeTracker.updateCreatureFlag(creatureId, flag, value);
     });
 
+    ipcMain.on('show-emoji-panel', () => {
+        app.showEmojiPanel();
+    });
+
     ipcMain.handle('search-monsters', async (event, query) => {
         logToRenderer(`[IPC] Received "search-monsters" with query: "${query}"`);
         if (!fiveEToolsParser) {
