@@ -82,6 +82,7 @@ let windowloaded = false;
 
 // --- State Management ---
 const autosavePath = path.join(app.getPath('userData'), 'autosave.json');
+const musicAutosavePath = path.join(app.getPath('userData'), 'music-autosave.json');
 
 /**
  * A map of D&D 5e conditions to their emoji, color, and description.
@@ -837,6 +838,7 @@ async function ipcloader() {
         if (initiativeTracker) {
             initiativeTracker.sendFullState();
         }
+        autoloadMusic();
         if (discordConfig && discordConfig.enabled) {
             if (client && client.isReady()) {
                 mainWindow.webContents.send('discord-bot-status', { status: 'online', message: 'Connected' });
@@ -851,6 +853,22 @@ async function ipcloader() {
     });
 
     // Music Player IPC Handlers
+    const autoloadMusic = async () => {
+        if (discordConfig && discordConfig.musicAutosave && fs.existsSync(musicAutosavePath)) {
+            try {
+                const data = await fs.promises.readFile(musicAutosavePath, 'utf-8');
+                const stack = JSON.parse(data);
+                if (Array.isArray(stack)) {
+                    musicPlayer.clearStack();
+                    await musicPlayer.addToStack(stack);
+                    logToRenderer(`[Music] Autoloaded ${stack.length} tracks.`);
+                }
+            } catch (e) {
+                console.error("Autoload failed:", e);
+            }
+        }
+    };
+
     ipcMain.on('load-music-file', (event, filePaths) => {
         if (filePaths) {
             musicPlayer.addToStack(filePaths);
@@ -906,6 +924,17 @@ async function ipcloader() {
     });
 
     ipcMain.handle('save-music-preset', async (event, stack) => {
+        // Internal call (autosave) or background save
+        if (!event && stack) {
+            try {
+                await fs.promises.writeFile(musicAutosavePath, JSON.stringify(stack, null, 2));
+                return { success: true };
+            } catch (e) {
+                console.error("Autosave failed:", e);
+                return { success: false, error: e.message };
+            }
+        }
+
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
             title: 'Save Music Stack Preset',
             defaultPath: 'music-preset.json',
@@ -914,6 +943,10 @@ async function ipcloader() {
         if (!canceled && filePath) {
             try {
                 await fs.promises.writeFile(filePath, JSON.stringify(stack, null, 2));
+                // Also update autosave file if enabled
+                if (discordConfig && discordConfig.musicAutosave) {
+                    await fs.promises.writeFile(musicAutosavePath, JSON.stringify(stack, null, 2));
+                }
                 return { success: true };
             } catch (e) {
                 return { success: false, error: e.message };

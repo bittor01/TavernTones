@@ -27,7 +27,8 @@ async function getStore() {
                 audioOnlyRows: { type: 'number', default: 10 },
                 audioOnlyCols: { type: 'number', default: 6 },
                 leftColumnWidth: { type: 'number', default: 350 },
-                musicPlayerHeight: { type: 'number', default: 280 }
+                musicPlayerHeight: { type: 'number', default: 280 },
+                musicAutosave: { type: 'boolean', default: false }
             },
             default: {}
         }

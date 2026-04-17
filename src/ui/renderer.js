@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const clearStackBtn = document.getElementById('clear-stack-btn');
     const saveMusicPresetBtn = document.getElementById('save-music-preset-btn');
     const loadMusicPresetBtn = document.getElementById('load-music-preset-btn');
+    const musicAutosaveCheck = document.getElementById('music-autosave-check');
     const musicStackList = document.getElementById('music-stack-list');
     const previewAudioPlayer = document.getElementById('preview-audio-player');
     const addCreatureForm = document.getElementById('add-creature-form');
@@ -674,6 +675,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.electron.ipcRenderer.on('discord-config', (event, config) => {
         discordConfig = config;
+        if (musicAutosaveCheck) {
+            musicAutosaveCheck.checked = !!config.musicAutosave;
+        }
         if (config.audioOnlyRows) audioOnlyRows = config.audioOnlyRows;
         if (config.audioOnlyCols) audioOnlyCols = config.audioOnlyCols;
         if (config.leftColumnWidth) {
@@ -1000,6 +1004,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
+        // Handle Autosave
+        if (musicAutosaveCheck && musicAutosaveCheck.checked) {
+            const oldStack = lastMusicStatus ? lastMusicStatus.stack : [];
+            const newStack = status.stack || [];
+
+            // Check if stack content changed (simplified check: length and paths)
+            const changed = oldStack.length !== newStack.length ||
+                newStack.some((track, i) => !oldStack[i] || track.path !== oldStack[i].path);
+
+            if (changed && newStack.length > 0) {
+                window.electron.ipcRenderer.invoke('save-music-preset', newStack.map(t => t.path));
+            }
+        }
+
         lastMusicStatus = status;
         isPlaying = status.isPlaying;
         currentLoopMode = status.loopMode;
@@ -2601,6 +2619,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             globalTooltip.style.left = `${x}px`;
             globalTooltip.style.top = `${y}px`;
         }
+    }
+
+    // --- Music Autosave Toggle ---
+    if (musicAutosaveCheck) {
+        musicAutosaveCheck.addEventListener('change', () => {
+            window.electron.ipcRenderer.send('set-discord-config', {
+                musicAutosave: musicAutosaveCheck.checked
+            });
+        });
     }
 
     // --- Resizing Logic ---
