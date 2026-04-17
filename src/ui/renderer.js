@@ -684,6 +684,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (config.musicPlayerHeight) {
             document.documentElement.style.setProperty('--music-player-height', `${config.musicPlayerHeight}px`);
+        } else if (config.audioMode) {
+            document.documentElement.style.setProperty('--music-player-height', `280px`);
         }
 
         if (config.audioMode) {
@@ -695,6 +697,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const musicResizer = document.getElementById('music-player-resizer');
             if (rightCol && musicControls && soundboard && musicResizer) {
                 rightCol.appendChild(musicControls);
+                // In Audio-Only mode, ensure music-player-resizer is at the top of the right column or removed
+                // Actually we just hide it via CSS, but moving it helps layout flow
                 rightCol.appendChild(musicResizer);
                 rightCol.appendChild(soundboard);
             }
@@ -1511,8 +1515,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 discordConfig.audioOnlyRows = audioOnlyRows;
 
                 // Add row makes soundboard taller, music player smaller
-                const currentHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--music-player-height')) || 280;
-                const newHeight = Math.max(150, currentHeight - 40);
+                // Dynamically measure first slot height + gap
+                const firstSlot = document.querySelector('.soundboard-stack-slot');
+                let offset = 0;
+                if (firstSlot) {
+                    const grid = document.getElementById('soundboard-grid');
+                    const gap = parseInt(getComputedStyle(grid).gap) || 5;
+                    offset = firstSlot.getBoundingClientRect().height + gap;
+                } else {
+                    offset = 64; // Approx height in audio-only
+                }
+
+                // Use the CSS variable as base if possible for consistency
+                const currentHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--music-player-height')) || document.getElementById('music-controls-container').offsetHeight;
+                const newHeight = Math.max(100, currentHeight - offset);
+
+                // Update CSS variable immediately
                 document.documentElement.style.setProperty('--music-player-height', `${newHeight}px`);
                 discordConfig.musicPlayerHeight = newHeight;
 
@@ -1540,8 +1558,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 discordConfig.audioOnlyRows = audioOnlyRows;
 
                 // Remove row (down) makes music player larger, soundboard smaller
-                const currentHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--music-player-height')) || 280;
-                const newHeight = Math.min(600, currentHeight + 40);
+                // Dynamically measure first slot height + gap
+                const firstSlot = document.querySelector('.soundboard-stack-slot');
+                let offset = 0;
+                if (firstSlot) {
+                    const grid = document.getElementById('soundboard-grid');
+                    const gap = parseInt(getComputedStyle(grid).gap) || 5;
+                    offset = firstSlot.getBoundingClientRect().height + gap;
+                } else {
+                    offset = 64; // Approx height in audio-only
+                }
+
+                // Use the CSS variable as base if possible for consistency
+                const currentHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--music-player-height')) || document.getElementById('music-controls-container').offsetHeight;
+                const newHeight = Math.min(1000, currentHeight + offset);
+
+                // Update CSS variable immediately
                 document.documentElement.style.setProperty('--music-player-height', `${newHeight}px`);
                 discordConfig.musicPlayerHeight = newHeight;
 
@@ -1736,6 +1768,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
+        if (!grid) return;
         grid.innerHTML = '';
 
         const isAudioOnly = document.body.classList.contains('audio-only');
