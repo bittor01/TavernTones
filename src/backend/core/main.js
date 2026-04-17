@@ -518,12 +518,25 @@ function setupFilesystemWatchers(config) {
         { name: 'Bestiary', path: bestiaryPath, callback: () => logToRenderer("Bestiary folder changed. Refreshing...") }
     ];
 
+    const watcherTimers = new Map();
+
     watchers.forEach(w => {
         if (w.path && fs.existsSync(w.path)) {
             try {
                 fs.watch(w.path, { recursive: true }, (eventType, filename) => {
-                    logToRenderer(`[Watcher] ${w.name} change detected: ${eventType} ${filename || ''}`);
-                    w.callback();
+                    // Debounce watcher events to prevent spam
+                    const timerKey = `${w.name}:${filename}`;
+                    if (watcherTimers.has(timerKey)) {
+                        clearTimeout(watcherTimers.get(timerKey));
+                    }
+
+                    const timer = setTimeout(() => {
+                        logToRenderer(`[Watcher] ${w.name} change detected: ${eventType} ${filename || ''}`);
+                        w.callback();
+                        watcherTimers.delete(timerKey);
+                    }, 500);
+
+                    watcherTimers.set(timerKey, timer);
                 });
                 logToRenderer(`[Watcher] Started watching ${w.name}: ${w.path}`);
             } catch (err) {
@@ -923,9 +936,9 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.handle('save-music-preset', async (event, stack) => {
+    ipcMain.handle('save-music-preset', async (event, stack, isManual = true) => {
         // Internal call (autosave) or background save
-        if (!event && stack) {
+        if ((!event || !isManual) && stack) {
             try {
                 await fs.promises.writeFile(musicAutosavePath, JSON.stringify(stack, null, 2));
                 return { success: true };

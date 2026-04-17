@@ -472,13 +472,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('voice-toggle');
                 break;
             case 'save-music-preset-btn':
-                // We need the current stack from the UI state or ask backend
-                // The renderer doesn't have a local 'stack' variable, it relies on status updates.
-                // We'll use the latest initiativeOrder as a proxy for 'has data',
-                // but actually we need the music stack.
-                // Let's store the last received stack.
                 if (lastMusicStatus && lastMusicStatus.stack) {
-                    window.electron.ipcRenderer.invoke('save-music-preset', lastMusicStatus.stack.map(t => t.path));
+                    window.electron.ipcRenderer.invoke('save-music-preset', lastMusicStatus.stack.map(t => t.path), true);
                 }
                 break;
             case 'load-music-preset-btn':
@@ -1014,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 newStack.some((track, i) => !oldStack[i] || track.path !== oldStack[i].path);
 
             if (changed && newStack.length > 0) {
-                window.electron.ipcRenderer.invoke('save-music-preset', newStack.map(t => t.path));
+                window.electron.ipcRenderer.invoke('save-music-preset', newStack.map(t => t.path), false);
             }
         }
 
