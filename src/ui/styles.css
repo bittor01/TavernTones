@@ -1307,7 +1307,7 @@ body.audio-only #soundboard-container .panel-header {
 
 body.audio-only .audio-only-right-column #soundboard-grid {
     grid-template-columns: repeat(var(--sb-cols, 6), 180px);
-    grid-template-rows: repeat(var(--sb-rows, 12), 1fr);
+    grid-template-rows: repeat(var(--sb-rows, 12), auto);
     gap: 5px;
     flex-grow: 1;
     min-height: 0;
