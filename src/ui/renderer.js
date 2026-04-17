@@ -469,6 +469,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('clear-stack');
                 break;
             case 'bot-status-indicator':
+                // Pause if connecting/connected and clicking to disconnect
+                if (botStatus.status === 'online' || botStatus.message === 'Connecting...') {
+                    window.electron.ipcRenderer.send('pause-music');
+                }
                 window.electron.ipcRenderer.send('voice-toggle');
                 break;
             case 'save-music-preset-btn':
@@ -700,14 +704,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Move containers back
             const leftCol = document.querySelector('.column-left');
             const midCol = document.querySelector('.column-middle');
+            const rightCol = document.querySelector('.column-right');
             const musicControls = document.getElementById('music-controls-container');
             const soundboard = document.getElementById('soundboard-container');
             const musicResizer = document.getElementById('music-player-resizer');
-            if (leftCol && musicControls && musicResizer) {
+            const creatureEntry = document.getElementById('creature-entry-container');
+            const logWrapper = document.getElementById('log-wrapper');
+            const initiativeList = document.getElementById('initiative-list-container');
+            const turnControls = document.getElementById('turn-controls-container');
+            const combatantWrapper = document.getElementById('combatant-wrapper');
+
+            if (leftCol && creatureEntry && logWrapper && musicResizer && musicControls) {
+                leftCol.appendChild(creatureEntry);
+                leftCol.appendChild(logWrapper);
                 leftCol.appendChild(musicResizer);
                 leftCol.appendChild(musicControls);
             }
-            if (midCol && soundboard) midCol.appendChild(soundboard);
+            if (midCol && turnControls && initiativeList && soundboard) {
+                midCol.appendChild(turnControls);
+                midCol.appendChild(initiativeList);
+                midCol.appendChild(soundboard);
+            }
+            if (rightCol && combatantWrapper) {
+                rightCol.appendChild(combatantWrapper);
+            }
         }
         renderSoundboard(); // Ensure soundboard layout updates when mode changes
     });

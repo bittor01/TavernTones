@@ -52,10 +52,15 @@ button:disabled {
 /* --- Main Layout --- */
 .main-grid {
     display: grid;
-    grid-template-columns: var(--left-col-width, 25%) auto var(--mid-col-width, 25%) 1fr;
+    grid-template-columns: var(--left-col-width, 25%) 50% 1fr; /* 3-column default */
     height: 100vh;
     gap: 10px;
     padding: 10px;
+}
+
+body.audio-only .main-grid {
+    grid-template-columns: var(--left-col-width, 350px) auto 0px 1fr; /* 2-column audio-only */
+    gap: 0;
 }
 
 .column {
@@ -117,6 +122,10 @@ button:disabled {
 }
 
 /* --- Middle Column --- */
+.column-middle {
+    min-width: 300px;
+}
+
 #turn-controls-container .controls {
     display: flex;
     justify-content: space-between;
@@ -356,6 +365,7 @@ input[type="number"] {
 /* --- Right Column --- */
 .column-right {
     overflow-y: auto;
+    min-width: 300px;
 }
 
 .combatant-details-entry {
@@ -1067,6 +1077,33 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
 }
 
 /* --- Music Stack Styles --- */
+.autosave-label {
+    font-size: 0.75em;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    background: #333;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #444;
+    color: #aaa;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.autosave-label:hover {
+    background: #444;
+    color: #fff;
+}
+
+#music-autosave-check {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
 .music-stack-item {
     display: flex;
     justify-content: space-between;
@@ -1142,16 +1179,12 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
 }
 
 #music-stack-list {
-    max-height: 150px;
+    flex: 1 1 0%;
     overflow-y: auto;
     margin-top: 5px;
     border: 1px solid #444;
     background: #1a1a1a;
-    flex-grow: 1;
-}
-
-body.audio-only #music-stack-list {
-    max-height: 400px;
+    min-height: 100px;
 }
 
 .music-controls {
@@ -1186,11 +1219,6 @@ body.audio-only .column-middle,
 body.audio-only #creature-entry-container,
 body.audio-only #combatant-wrapper {
     display: none !important;
-}
-
-body.audio-only .main-grid {
-    grid-template-columns: var(--left-col-width, 350px) auto 0px 1fr;
-    gap: 0; /* Use handle for spacing */
 }
 
 body.audio-only .column-left {

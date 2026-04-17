@@ -938,7 +938,7 @@ async function ipcloader() {
 
     ipcMain.handle('save-music-preset', async (event, stack, isManual = true) => {
         // Internal call (autosave) or background save
-        if ((!event || !isManual) && stack) {
+        if ((!event || isManual === false || isManual === 'false') && stack) {
             try {
                 await fs.promises.writeFile(musicAutosavePath, JSON.stringify(stack, null, 2));
                 return { success: true };
