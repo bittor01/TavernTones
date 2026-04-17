@@ -1264,18 +1264,34 @@ body.audio-only #soundboard-container .panel-header {
 body.audio-only .audio-only-right-column #soundboard-grid {
     grid-template-columns: repeat(var(--sb-cols, 6), 1fr);
     grid-template-rows: repeat(var(--sb-rows, 12), 1fr);
-    gap: 2px;
+    gap: 1px;
     flex-grow: 1;
     min-height: 0;
     height: 100%;
-    align-content: start;
-    overflow-y: auto;
+    align-content: stretch;
+    overflow: hidden;
 }
 
 body.audio-only .soundboard-stack-slot .stack-track-display {
-    padding: 1px 2px;
+    padding: 0px 1px;
+    font-size: 0.7rem;
+    margin-top: 0px;
+    height: 1.1em;
+    line-height: 1.1;
+}
+
+body.audio-only .soundboard-stack-slot {
+    padding: 1px;
+    gap: 0px;
+}
+
+body.audio-only .soundboard-stack-slot .stack-btn {
+    padding: 0px;
     font-size: 0.75rem;
-    margin-top: 1px;
+}
+
+body.audio-only .soundboard-stack-slot .stack-emoji-btn {
+    font-size: 0.9rem;
 }
 
 body.audio-only #soundboard-container .panel-header {
