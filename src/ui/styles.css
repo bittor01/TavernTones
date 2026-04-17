@@ -60,8 +60,10 @@ button:disabled {
 }
 
 body.audio-only .main-grid {
-    grid-template-columns: var(--left-col-width, 350px) auto 0px 1fr; /* 2-column audio-only */
+    /* Left side is flexible, right side (soundboard) snaps to content width */
+    grid-template-columns: 1fr 0px 0px min-content;
     gap: 0;
+    padding-right: 0; /* Abut the right edge */
 }
 
 .column {
@@ -1232,7 +1234,6 @@ body.audio-only #combatant-wrapper {
 body.audio-only .column-left {
     grid-column: 1;
     overflow: hidden;
-    width: var(--left-col-width, 350px);
 }
 
 body.audio-only .column-right {
@@ -1256,6 +1257,7 @@ body.audio-only .audio-only-right-column {
     gap: 10px;
     height: 100%;
     overflow: hidden;
+    min-width: 350px;
 }
 
 /* Clear display:none for relevant children inside the right column */
@@ -1266,6 +1268,8 @@ body.audio-only .audio-only-right-column #soundboard-container {
     border: 1px solid #333;
     border-radius: 8px;
     padding: 4px; /* Even tighter padding */
+    width: fit-content;
+    min-width: 100%;
 }
 
 /* Music Player at the top, increased to 280px */
@@ -1304,12 +1308,13 @@ body.audio-only #soundboard-container .panel-header {
 body.audio-only .audio-only-right-column #soundboard-grid {
     grid-template-columns: repeat(var(--sb-cols, 6), 180px);
     grid-template-rows: repeat(var(--sb-rows, 12), 1fr);
-    gap: 1px;
+    gap: 5px;
     flex-grow: 1;
     min-height: 0;
     height: 100%;
-    align-content: stretch;
+    align-content: start;
     overflow: auto;
+    justify-content: start;
 }
 
 body.audio-only .soundboard-stack-slot .stack-track-display {

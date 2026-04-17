@@ -1567,15 +1567,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 audioOnlyCols++;
                 discordConfig.audioOnlyCols = audioOnlyCols;
 
-                // Expand panel width by slot width (180px + gap)
-                const currentWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--left-col-width')) || 350;
-                const newWidth = Math.max(200, currentWidth - 185);
-                document.documentElement.style.setProperty('--left-col-width', `${newWidth}px`);
-                discordConfig.leftColumnWidth = newWidth;
-
                 window.electron.ipcRenderer.send('set-discord-config', {
-                    audioOnlyCols: audioOnlyCols,
-                    leftColumnWidth: newWidth
+                    audioOnlyCols: audioOnlyCols
                 });
                 renderSoundboard();
             }
@@ -1589,15 +1582,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 audioOnlyCols--;
                 discordConfig.audioOnlyCols = audioOnlyCols;
 
-                // Shrink panel width by slot width (180px + gap)
-                const currentWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--left-col-width')) || 350;
-                const newWidth = Math.min(1200, currentWidth + 185);
-                document.documentElement.style.setProperty('--left-col-width', `${newWidth}px`);
-                discordConfig.leftColumnWidth = newWidth;
-
                 window.electron.ipcRenderer.send('set-discord-config', {
-                    audioOnlyCols: audioOnlyCols,
-                    leftColumnWidth: newWidth
+                    audioOnlyCols: audioOnlyCols
                 });
                 renderSoundboard();
             }
