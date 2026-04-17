@@ -52,7 +52,8 @@ button:disabled {
 /* --- Main Layout --- */
 .main-grid {
     display: grid;
-    grid-template-columns: var(--left-col-width, 25%) 50% 1fr; /* 3-column default */
+    /* Left two panels roughly 56%, right panel roughly 44% (1fr) */
+    grid-template-columns: var(--left-col-width, 28%) 28% 1fr;
     height: 100vh;
     gap: 10px;
     padding: 10px;
