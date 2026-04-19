@@ -52,8 +52,8 @@ button:disabled {
 /* --- Main Layout --- */
 .main-grid {
     display: grid;
-    /* Left two panels roughly 56%, right panel roughly 44% (1fr) */
-    grid-template-columns: var(--left-col-width, 28%) 28% 1fr;
+    /* Left panel roughly 25%, Middle panel fixed to fit soundboard (3x180px + gaps + padding), Right fills rest */
+    grid-template-columns: 25% 568px 1fr;
     height: 100vh;
     gap: 10px;
     padding: 10px;
@@ -759,6 +759,10 @@ body.audio-only #soundboard-grid {
 }
 
 .resizer-h {
+    display: none !important;
+}
+
+#column-resizer {
     display: none !important;
 }
 

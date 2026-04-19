@@ -679,9 +679,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (config.audioOnlyRows) audioOnlyRows = config.audioOnlyRows;
         if (config.audioOnlyCols) audioOnlyCols = config.audioOnlyCols;
-        if (config.leftColumnWidth) {
-            document.documentElement.style.setProperty('--left-col-width', `${config.leftColumnWidth}px`);
-        }
         if (config.musicPlayerHeight) {
             document.documentElement.style.setProperty('--music-player-height', `${config.musicPlayerHeight}px`);
         } else if (config.audioMode) {
@@ -2629,18 +2626,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Resizing Logic ---
-    const columnResizer = document.getElementById('column-resizer');
     const musicPlayerResizer = document.getElementById('music-player-resizer');
-    let isResizingColumn = false;
     let isResizingMusicPlayer = false;
-
-    if (columnResizer) {
-        columnResizer.addEventListener('mousedown', (e) => {
-            isResizingColumn = true;
-            document.body.style.cursor = 'col-resize';
-            e.preventDefault();
-        });
-    }
 
     if (musicPlayerResizer) {
         musicPlayerResizer.addEventListener('mousedown', (e) => {
@@ -2652,12 +2639,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.addEventListener('mousemove', (e) => {
         const isAudioOnly = document.body.classList.contains('audio-only');
-        if (isResizingColumn) {
-            if (isAudioOnly) return; // Disable manual horizontal resize in audio-only
-            const newWidth = Math.max(200, Math.min(600, e.clientX));
-            document.documentElement.style.setProperty('--left-col-width', `${newWidth}px`);
-            discordConfig.leftColumnWidth = newWidth;
-        } else if (isResizingMusicPlayer) {
+        if (isResizingMusicPlayer) {
             if (isAudioOnly) return; // Disable manual vertical resize in audio-only
             const musicControls = document.getElementById('music-controls-container');
             if (musicControls) {
@@ -2679,13 +2661,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.addEventListener('mouseup', () => {
-        if (isResizingColumn || isResizingMusicPlayer) {
-            isResizingColumn = false;
+        if (isResizingMusicPlayer) {
             isResizingMusicPlayer = false;
             document.body.style.cursor = '';
             // Only send the relevant parts to be merged
             window.electron.ipcRenderer.send('set-discord-config', {
-                leftColumnWidth: discordConfig.leftColumnWidth,
                 musicPlayerHeight: discordConfig.musicPlayerHeight
             });
         }
