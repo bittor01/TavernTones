@@ -37,6 +37,39 @@ const { Worker } = require('worker_threads');
 
 let discordConfig;
 
+const getMusicLibrary = () => {
+    if (!discordConfig) return { children: [] };
+    const library = JSON.parse(JSON.stringify(discordConfig.musicLibrary || { children: [] }));
+    const looseFiles = discordConfig.looseFiles || [];
+    if (looseFiles.length > 0) {
+        let looseFolder = library.children.find(c => c.name === 'Loose Files');
+        if (!looseFolder) {
+            looseFolder = { name: 'Loose Files', type: 'directory', children: [], path: 'loose' };
+            library.children.push(looseFolder);
+        }
+        looseFolder.children = looseFiles.map(p => ({
+            name: path.basename(p),
+            path: p,
+            type: 'file'
+        }));
+    }
+    return library;
+};
+
+const getFlatMusicList = () => {
+    const list = [];
+    const traverse = (node) => {
+        if (node.type === 'file') {
+            list.push(node.path);
+        } else if (node.children) {
+            node.children.forEach(traverse);
+        }
+    };
+    const library = getMusicLibrary();
+    traverse(library);
+    return list;
+};
+
 let connection;
 let voiceStatus = 'disconnected'; // disconnected, connecting, connected
 let isJoiningVoice = false; // Prevents race conditions during knocking/joining
@@ -1022,23 +1055,6 @@ async function ipcloader() {
         broadcastBotStatus();
     });
 
-    const getMusicLibrary = () => {
-        const library = JSON.parse(JSON.stringify(discordConfig.musicLibrary || { children: [] }));
-        const looseFiles = discordConfig.looseFiles || [];
-        if (looseFiles.length > 0) {
-            let looseFolder = library.children.find(c => c.name === 'Loose Files');
-            if (!looseFolder) {
-                looseFolder = { name: 'Loose Files', type: 'directory', children: [], path: 'loose' };
-                library.children.push(looseFolder);
-            }
-            looseFolder.children = looseFiles.map(p => ({
-                name: path.basename(p),
-                path: p,
-                type: 'file'
-            }));
-        }
-        return library;
-    };
 
     ipcMain.handle('get-music-library', async () => {
         return getMusicLibrary();
@@ -2088,7 +2104,7 @@ client.once(Events.ClientReady, async () => {
             .setTimestamp();
 
         // --- Row 1: Song Selector Dropdown ---
-        const songs = musicPlayer.getMusicFiles().map(p => ({
+        const songs = getFlatMusicList().map(p => ({
             label: path.basename(p).substring(0, 100),
             value: getSongId(p)
         }));
@@ -2167,8 +2183,20 @@ client.once(Events.ClientReady, async () => {
         }
     }
 
-    musicPlayer.on('status-change', () => {
-        updateDiscordMediaControl();
+    let lastDiscordMediaUpdate = 0;
+    musicPlayer.on('status-change', (status) => {
+        const now = Date.now();
+        // If it's just a time update, throttle to every 10 seconds
+        if (status.isTimeUpdate) {
+            if (now - lastDiscordMediaUpdate >= 10000) {
+                lastDiscordMediaUpdate = now;
+                updateDiscordMediaControl();
+            }
+        } else {
+            // Significant status change (play/pause/track change), update immediately
+            lastDiscordMediaUpdate = now;
+            updateDiscordMediaControl();
+        }
     });
 
     client.on('interactionCreate', async interaction => {

@@ -66,7 +66,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.activeStreams = new Map(); // id -> { process, stream }
     }
 
-    _emitStatusUpdate() {
+    _emitStatusUpdate(isTimeUpdate = false) {
         const getRelativePath = (filePath) => {
             if (!filePath || !this.musicFolder) return filePath;
             try {
@@ -89,7 +89,8 @@ class BackendAudioPlayer extends EventEmitter {
             shuffleMode: this.shuffleMode,
             playerStatus: this.playerStatus,
             currentTime: this.currentTime,
-            duration: this.duration
+            duration: this.duration,
+            isTimeUpdate: isTimeUpdate
         };
         this.emit('status-change', status);
     }
@@ -446,7 +447,7 @@ class BackendAudioPlayer extends EventEmitter {
                 if (this.duration > 0 && this.currentTime > this.duration) {
                     this.currentTime = this.duration;
                 }
-                this._emitStatusUpdate();
+                this._emitStatusUpdate(true);
             }
         }, 1000);
     }
