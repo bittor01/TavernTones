@@ -1034,7 +1034,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        lastMusicStatus = status;
         isPlaying = status.isPlaying;
         currentLoopMode = status.loopMode;
         currentShuffleMode = status.shuffleMode;
@@ -1137,6 +1136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         }
+        lastMusicStatus = status;
     });
 
     window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {
