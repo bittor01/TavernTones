@@ -1085,49 +1085,58 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Update Shuffle Button
         shuffleBtn.classList.toggle('active', currentShuffleMode);
 
-        // Render Playlist
-        musicStackList.innerHTML = '';
-        status.stack.forEach((track, index) => {
-            const div = document.createElement('div');
-            div.className = 'music-stack-item' + (index === status.currentIndex ? ' active' : '');
-            if (status.isCaching && index === status.currentIndex) div.classList.add('caching');
+        // Render Playlist - Only if stack or index changed
+        const stackChanged = !lastMusicStatus ||
+            lastMusicStatus.stack.length !== status.stack.length ||
+            status.stack.some((t, i) => t.path !== lastMusicStatus.stack[i].path);
 
-            div.innerHTML = `
-                <span class="track-name">${track.name}</span>
-                <div class="item-actions">
-                    <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
-                    <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
-                    <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
-                </div>
-            `;
-            div.querySelector('.play-track-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                window.electron.ipcRenderer.send('jump-to-track', { index });
-            });
-            div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                togglePreview(index);
-            });
-            div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                window.electron.ipcRenderer.send('remove-from-stack', { index });
-            });
-            div.addEventListener('click', () => {
-                // Focus track on click (maybe highlight?), but don't jump yet if we want double click
-            });
-            div.addEventListener('dblclick', () => {
-                window.electron.ipcRenderer.send('jump-to-track', { index });
-            });
-            musicStackList.appendChild(div);
+        const indexChanged = !lastMusicStatus || lastMusicStatus.currentIndex !== status.currentIndex;
+        const cachingChanged = !lastMusicStatus || lastMusicStatus.isCaching !== status.isCaching;
 
-            // Auto-scroll to active track
-            if (index === status.currentIndex && index !== lastScrolledIndex) {
-                setTimeout(() => {
-                    div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    lastScrolledIndex = index;
-                }, 100);
-            }
-        });
+        if (stackChanged || indexChanged || cachingChanged) {
+            musicStackList.innerHTML = '';
+            status.stack.forEach((track, index) => {
+                const div = document.createElement('div');
+                div.className = 'music-stack-item' + (index === status.currentIndex ? ' active' : '');
+                if (status.isCaching && index === status.currentIndex) div.classList.add('caching');
+
+                div.innerHTML = `
+                    <span class="track-name">${track.name}</span>
+                    <div class="item-actions">
+                        <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
+                        <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
+                        <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
+                    </div>
+                `;
+                div.querySelector('.play-track-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    window.electron.ipcRenderer.send('jump-to-track', { index });
+                });
+                div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    togglePreview(index);
+                });
+                div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    window.electron.ipcRenderer.send('remove-from-stack', { index });
+                });
+                div.addEventListener('click', () => {
+                    // Focus track on click (maybe highlight?), but don't jump yet if we want double click
+                });
+                div.addEventListener('dblclick', () => {
+                    window.electron.ipcRenderer.send('jump-to-track', { index });
+                });
+                musicStackList.appendChild(div);
+
+                // Auto-scroll to active track
+                if (index === status.currentIndex && index !== lastScrolledIndex) {
+                    setTimeout(() => {
+                        div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        lastScrolledIndex = index;
+                    }, 100);
+                }
+            });
+        }
     });
 
     window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {
