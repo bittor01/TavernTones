@@ -36,6 +36,7 @@ const GitHubSync = require('./GitHubSync.js');
 const { Worker } = require('worker_threads');
 
 let discordConfig;
+let musicLibraryFlat = []; // Flat list of music files for fast lookup
 
 let connection;
 let voiceStatus = 'disconnected'; // disconnected, connecting, connected
@@ -250,6 +251,19 @@ async function apploader() {
             // Load from cache immediately for speed
             if (discordConfig.musicLibrary) {
                 ipcMain.handleOnce('get-music-library-ready', () => true); // Signal that initial data is there
+                // Initialize musicLibraryFlat from cache
+                const collectPaths = (node, results = []) => {
+                    if (node.type === 'file') results.push(node.path);
+                    else if (node.children) node.children.forEach(c => collectPaths(c, results));
+                    return results;
+                };
+                musicLibraryFlat = collectPaths(discordConfig.musicLibrary);
+                if (discordConfig.looseFiles) {
+                    musicLibraryFlat = [...new Set([...musicLibraryFlat, ...discordConfig.looseFiles])];
+                }
+                if (musicPlayer) {
+                    musicPlayer.musicFilesCache = musicLibraryFlat;
+                }
             }
             scanMusicLibrary();
         }
@@ -836,6 +850,7 @@ async function ipcloader() {
         if (mainWindow && mainWindow.webContents) {
             mainWindow.webContents.send('music-player-status', status);
         }
+        updateDiscordMediaControl(false, status.forceDiscordUpdate);
     });
     musicPlayer.on('sound-finished', (slotId) => {
         if (mainWindow && mainWindow.webContents) {
@@ -1099,6 +1114,21 @@ async function ipcloader() {
                     }
                 }
                 await setDiscordConfig(discordConfig);
+
+                // Update musicLibraryFlat when loose files change
+                const collectPaths = (node, results = []) => {
+                    if (node.type === 'file') results.push(node.path);
+                    else if (node.children) node.children.forEach(c => collectPaths(c, results));
+                    return results;
+                };
+                musicLibraryFlat = collectPaths(discordConfig.musicLibrary || { children: [] });
+                if (discordConfig.looseFiles) {
+                    musicLibraryFlat = [...new Set([...musicLibraryFlat, ...discordConfig.looseFiles])];
+                }
+                if (musicPlayer) {
+                    musicPlayer.musicFilesCache = musicLibraryFlat;
+                }
+
                 const updatedLibrary = getMusicLibrary();
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('music-library-update', { library: updatedLibrary, diff: null });
@@ -2018,9 +2048,12 @@ client.once(Events.ClientReady, async () => {
     }
 
     // Now call it once defined
-    updateDiscordMediaControl();
+    updateDiscordMediaControl(false, true);
 
-    async function updateDiscordMediaControl(disabled = false) {
+    let lastDiscordUpdateTime = 0;
+    const DISCORD_PROGRESS_UPDATE_INTERVAL = 10000; // 10 seconds
+
+    async function updateDiscordMediaControl(disabled = false, force = false) {
         if (!discordConfig.textChannel) {
             logToRenderer('[Discord] No text channel configured for media controls.');
             return;
@@ -2030,6 +2063,12 @@ client.once(Events.ClientReady, async () => {
             return;
         }
         if (isShuttingDown) return;
+
+        // Check if we should skip this update based on interval, unless forced (e.g. play/pause/track change)
+        const now = Date.now();
+        if (!force && (now - lastDiscordUpdateTime < DISCORD_PROGRESS_UPDATE_INTERVAL)) {
+            return;
+        }
 
         let targetChannel = client.channels.cache.get(discordConfig.textChannel);
         if (!targetChannel) {
@@ -2047,6 +2086,7 @@ client.once(Events.ClientReady, async () => {
         }
 
         isUpdatingMediaControl = true;
+        lastDiscordUpdateTime = now;
 
         const status = {
             isPlaying: musicPlayer.isPlaying,
@@ -2088,7 +2128,8 @@ client.once(Events.ClientReady, async () => {
             .setTimestamp();
 
         // --- Row 1: Song Selector Dropdown ---
-        const songs = musicPlayer.getMusicFiles().map(p => ({
+        // Use cached flat list instead of scanning disk
+        const songs = musicLibraryFlat.map(p => ({
             label: path.basename(p).substring(0, 100),
             value: getSongId(p)
         }));
@@ -2162,14 +2203,10 @@ client.once(Events.ClientReady, async () => {
             isUpdatingMediaControl = false;
             if (pendingMediaUpdate) {
                 pendingMediaUpdate = false;
-                updateDiscordMediaControl(disabled);
+                updateDiscordMediaControl(disabled, true);
             }
         }
     }
-
-    musicPlayer.on('status-change', () => {
-        updateDiscordMediaControl();
-    });
 
     client.on('interactionCreate', async interaction => {
         if (interaction.isChatInputCommand()) {
@@ -2321,7 +2358,7 @@ client.once(Events.ClientReady, async () => {
                     selectedSongInDropdown = idToSongPathMap.get(val);
                 }
                 await interaction.deferUpdate();
-                updateDiscordMediaControl();
+                updateDiscordMediaControl(false, true);
             }
         }
 
@@ -2361,7 +2398,7 @@ client.once(Events.ClientReady, async () => {
                         musicPlayer.removeFromStack(musicPlayer.currentIndex);
                         break;
                 }
-                updateDiscordMediaControl();
+                updateDiscordMediaControl(false, true);
             }
         }
     });
@@ -2444,6 +2481,20 @@ function scanMusicLibrary() {
 
             discordConfig.musicLibrary = newLibrary;
             await setDiscordConfig(discordConfig);
+
+            // Update musicLibraryFlat
+            const collectPaths = (node, results = []) => {
+                if (node.type === 'file') results.push(node.path);
+                else if (node.children) node.children.forEach(c => collectPaths(c, results));
+                return results;
+            };
+            musicLibraryFlat = collectPaths(newLibrary);
+            if (discordConfig.looseFiles) {
+                musicLibraryFlat = [...new Set([...musicLibraryFlat, ...discordConfig.looseFiles])];
+            }
+            if (musicPlayer) {
+                musicPlayer.musicFilesCache = musicLibraryFlat;
+            }
 
         } else {
             logToRenderer(`[Library] Scan failed: ${result.error}`);

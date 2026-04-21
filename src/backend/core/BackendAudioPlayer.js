@@ -64,9 +64,10 @@ class BackendAudioPlayer extends EventEmitter {
         this._emitStatusUpdate();
 
         this.activeStreams = new Map(); // id -> { process, stream }
+        this.musicFilesCache = [];
     }
 
-    _emitStatusUpdate() {
+    _emitStatusUpdate(forceDiscordUpdate = false) {
         const getRelativePath = (filePath) => {
             if (!filePath || !this.musicFolder) return filePath;
             try {
@@ -89,7 +90,8 @@ class BackendAudioPlayer extends EventEmitter {
             shuffleMode: this.shuffleMode,
             playerStatus: this.playerStatus,
             currentTime: this.currentTime,
-            duration: this.duration
+            duration: this.duration,
+            forceDiscordUpdate
         };
         this.emit('status-change', status);
     }
@@ -149,14 +151,14 @@ class BackendAudioPlayer extends EventEmitter {
     setLoopMode(mode) {
         this.loopMode = mode; // 0, 1, 2
         this.log(`[AudioPlayer] Loop mode set to: ${mode}`);
-        this._emitStatusUpdate();
+        this._emitStatusUpdate(true);
     }
 
     setShuffle(enabled) {
         this.shuffleMode = enabled;
         this.playedIndices = [];
         this.log(`[AudioPlayer] Shuffle mode: ${enabled}`);
-        this._emitStatusUpdate();
+        this._emitStatusUpdate(true);
     }
 
     async addToStack(filePaths) {
@@ -179,7 +181,7 @@ class BackendAudioPlayer extends EventEmitter {
         if (this.currentIndex === -1 && this.stack.length > 0) {
             this.currentIndex = 0;
         }
-        this._emitStatusUpdate();
+        this._emitStatusUpdate(true);
     }
 
     removeFromStack(index) {
@@ -197,7 +199,7 @@ class BackendAudioPlayer extends EventEmitter {
             } else if (this.currentIndex > index) {
                 this.currentIndex--;
             }
-            this._emitStatusUpdate();
+            this._emitStatusUpdate(true);
         }
     }
 
@@ -211,7 +213,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.duration = 0;
         this.cachedAudio.clear();
         this.consecutiveErrors = 0;
-        this._emitStatusUpdate();
+        this._emitStatusUpdate(true);
     }
 
     async _play(startTime = 0) {
@@ -252,14 +254,14 @@ class BackendAudioPlayer extends EventEmitter {
             }
             this.isPlaying = true;
             this.playerStatus = AudioPlayerStatus.Playing;
-            this._emitStatusUpdate();
+            this._emitStatusUpdate(true);
 
             // Start duration fetch in background
             if (startTime === 0) {
                 this._getDuration(filePath).then(duration => {
                     if (this.isPlaying && this.stack[this.currentIndex] === filePath) {
                         this.duration = duration;
-                        this._emitStatusUpdate();
+                        this._emitStatusUpdate(true);
                     }
                 }).catch(err => this.log(`[AudioPlayer] Error fetching duration: ${err.message}`));
             }
@@ -575,7 +577,7 @@ class BackendAudioPlayer extends EventEmitter {
         this._stopTimer();
         this.isPlaying = false;
         this.playerStatus = AudioPlayerStatus.Paused;
-        this._emitStatusUpdate();
+        this._emitStatusUpdate(true);
     }
 
     stop() {
@@ -587,7 +589,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.duration = 0;
         this.consecutiveErrors = 0;
         this.playerStatus = AudioPlayerStatus.Idle;
-        this._emitStatusUpdate();
+        this._emitStatusUpdate(true);
     }
 
     // --- Soundboard API ---
@@ -646,22 +648,31 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     getMusicFiles() {
+        if (this.musicFilesCache && this.musicFilesCache.length > 0) {
+            return this.musicFilesCache;
+        }
+        // This function is kept for legacy support but is slow for large libraries.
+        // It's better to use the cached library in the main process.
         if (!this.musicFolder || !fs.existsSync(this.musicFolder)) return [];
 
         const getAllFiles = (dir, results = []) => {
-            const list = fs.readdirSync(dir);
-            list.forEach(file => {
-                const fullPath = path.join(dir, file);
-                const stat = fs.statSync(fullPath);
-                if (stat && stat.isDirectory()) {
-                    getAllFiles(fullPath, results);
-                } else {
-                    const ext = path.extname(fullPath).toLowerCase();
-                    if (['.mp3', '.wav', '.ogg', '.lnk'].includes(ext)) {
-                        results.push(fullPath);
-                    }
-                }
-            });
+            try {
+                const list = fs.readdirSync(dir);
+                list.forEach(file => {
+                    const fullPath = path.join(dir, file);
+                    try {
+                        const stat = fs.statSync(fullPath);
+                        if (stat && stat.isDirectory()) {
+                            getAllFiles(fullPath, results);
+                        } else {
+                            const ext = path.extname(fullPath).toLowerCase();
+                            if (['.mp3', '.wav', '.ogg', '.lnk'].includes(ext)) {
+                                results.push(fullPath);
+                            }
+                        }
+                    } catch (e) {}
+                });
+            } catch (e) {}
             return results;
         };
 

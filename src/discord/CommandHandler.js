@@ -31,10 +31,10 @@ class CommandHandler {
      * @returns {string[]}
      */
     getFolderSongs(folderPath) {
-        if (!fs.existsSync(folderPath)) return [];
-        return fs.readdirSync(folderPath)
-            .filter(f => ['.mp3', '.wav', '.ogg', '.lnk'].includes(path.extname(f).toLowerCase()))
-            .map(f => path.join(folderPath, f));
+        if (!musicPlayer) return [];
+        const allFiles = musicPlayer.getMusicFiles();
+        const normalizedFolder = path.normalize(folderPath).toLowerCase();
+        return allFiles.filter(f => path.normalize(path.dirname(f)).toLowerCase() === normalizedFolder);
     }
 
     /**
@@ -43,24 +43,8 @@ class CommandHandler {
      * @returns {string|null}
      */
     findSong(query) {
-        const musicPath = this.config.defaultMusicPath;
-        if (!musicPath || !fs.existsSync(musicPath)) return null;
-
-        const getAllFiles = (dir, results = []) => {
-            const list = fs.readdirSync(dir);
-            list.forEach(file => {
-                file = path.join(dir, file);
-                const stat = fs.statSync(file);
-                if (stat && stat.isDirectory()) getAllFiles(file, results);
-                else {
-                    const ext = path.extname(file).toLowerCase();
-                    if (['.mp3', '.wav', '.ogg', '.lnk'].includes(ext)) results.push(file);
-                }
-            });
-            return results;
-        };
-
-        const allFiles = getAllFiles(musicPath);
+        if (!musicPlayer) return null;
+        const allFiles = musicPlayer.getMusicFiles();
         return allFiles.find(f => path.parse(f).name.toLowerCase().includes(query.toLowerCase()));
     }
 
@@ -70,19 +54,18 @@ class CommandHandler {
      * @returns {string|null}
      */
     findFolder(query) {
-        const musicPath = this.config.defaultMusicPath;
-        if (!musicPath || !fs.existsSync(musicPath)) return null;
+        if (!musicPlayer) return null;
+        const allFiles = musicPlayer.getMusicFiles();
 
-        const subDirs = fs.readdirSync(musicPath, { withFileTypes: true })
-            .filter(d => d.isDirectory()).map(d => d.name);
+        const allDirs = [...new Set(allFiles.map(f => path.dirname(f)))];
 
         // 1. Exact match
-        const exact = subDirs.find(d => d.toLowerCase() === query.toLowerCase());
-        if (exact) return path.join(musicPath, exact);
+        const exact = allDirs.find(d => path.basename(d).toLowerCase() === query.toLowerCase());
+        if (exact) return exact;
 
         // 2. Partial match
-        const partial = subDirs.find(d => d.toLowerCase().includes(query.toLowerCase()));
-        if (partial) return path.join(musicPath, partial);
+        const partial = allDirs.find(d => path.basename(d).toLowerCase().includes(query.toLowerCase()));
+        if (partial) return partial;
 
         return null;
     }
@@ -344,63 +327,47 @@ class CommandHandler {
     }
 
     async findMusic(term1, term2) {
-        const musicPath = this.config.defaultMusicPath;
-        if (!musicPath || !fs.existsSync(musicPath)) return null;
-
-        const getAllFiles = (dir, results = []) => {
-            const list = fs.readdirSync(dir);
-            list.forEach(file => {
-                file = path.join(dir, file);
-                const stat = fs.statSync(file);
-                if (stat && stat.isDirectory()) getAllFiles(file, results);
-                else {
-                    const ext = path.extname(file).toLowerCase();
-                    if (['.mp3', '.wav', '.ogg', '.lnk'].includes(ext)) results.push(file);
-                }
-            });
-            return results;
-        };
-
-        const subDirs = fs.readdirSync(musicPath, { withFileTypes: true })
-            .filter(d => d.isDirectory()).map(d => d.name);
+        if (!musicPlayer) return null;
+        const allFiles = musicPlayer.getMusicFiles();
 
         // 1. Exact Folder
-        const exactFolder = subDirs.find(d => d.toLowerCase() === term1.toLowerCase());
-        if (exactFolder) {
-            const folderPath = path.join(musicPath, exactFolder);
-            const files = fs.readdirSync(folderPath).filter(f => ['.mp3', '.wav', '.ogg', '.lnk'].includes(path.extname(f).toLowerCase()));
-            if (term2) {
-                const match = files.find(f => path.parse(f).name.toLowerCase().includes(term2.toLowerCase()));
-                if (match) return path.join(folderPath, match);
+        // We can simulate folder search by checking path components
+        if (term1) {
+            const folderMatch = allFiles.filter(f => {
+                const parts = path.dirname(f).split(path.sep);
+                return parts.some(p => p.toLowerCase() === term1.toLowerCase());
+            });
+            if (folderMatch.length > 0) {
+                if (term2) {
+                    const match = folderMatch.find(f => path.parse(f).name.toLowerCase().includes(term2.toLowerCase()));
+                    if (match) return match;
+                }
+                return folderMatch[Math.floor(Math.random() * folderMatch.length)];
             }
-            if (files.length > 0) return path.join(folderPath, files[Math.floor(Math.random() * files.length)]);
         }
 
         // 2. Partial Folder
-        const partialFolder = subDirs.find(d => d.toLowerCase().includes(term1.toLowerCase()));
-        if (partialFolder) {
-            const folderPath = path.join(musicPath, partialFolder);
-            const files = fs.readdirSync(folderPath).filter(f => ['.mp3', '.wav', '.ogg', '.lnk'].includes(path.extname(f).toLowerCase()));
-            if (term2) {
-                const match = files.find(f => path.parse(f).name.toLowerCase().includes(term2.toLowerCase()));
-                if (match) return path.join(folderPath, match);
+        if (term1) {
+            const partialFolderMatch = allFiles.filter(f => {
+                const parts = path.dirname(f).split(path.sep);
+                return parts.some(p => p.toLowerCase().includes(term1.toLowerCase()));
+            });
+            if (partialFolderMatch.length > 0) {
+                if (term2) {
+                    const match = partialFolderMatch.find(f => path.parse(f).name.toLowerCase().includes(term2.toLowerCase()));
+                    if (match) return match;
+                }
+                return partialFolderMatch[Math.floor(Math.random() * partialFolderMatch.length)];
             }
-            if (files.length > 0) return path.join(folderPath, files[Math.floor(Math.random() * files.length)]);
         }
 
-        // 3. Exact Root File
-        const rootFiles = fs.readdirSync(musicPath).filter(f => ['.mp3', '.wav', '.ogg', '.lnk'].includes(path.extname(f).toLowerCase()));
-        const exactRoot = rootFiles.find(f => path.parse(f).name.toLowerCase() === term1.toLowerCase());
-        if (exactRoot) return path.join(musicPath, exactRoot);
+        // 3. Exact File Name
+        const exactFile = allFiles.find(f => path.parse(f).name.toLowerCase() === term1.toLowerCase());
+        if (exactFile) return exactFile;
 
-        // 4. Partial Root File
-        const partialRoot = rootFiles.find(f => path.parse(f).name.toLowerCase().includes(term1.toLowerCase()));
-        if (partialRoot) return path.join(musicPath, partialRoot);
-
-        // 5. Deep Recursive Search
-        const allFiles = getAllFiles(musicPath);
-        const deepMatch = allFiles.find(f => path.parse(f).name.toLowerCase().includes(term1.toLowerCase()));
-        if (deepMatch) return deepMatch;
+        // 4. Partial File Name (Deep search)
+        const partialFile = allFiles.find(f => path.parse(f).name.toLowerCase().includes(term1.toLowerCase()));
+        if (partialFile) return partialFile;
 
         return null;
     }
