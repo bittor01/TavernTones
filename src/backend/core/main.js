@@ -1074,32 +1074,14 @@ async function ipcloader() {
 
     ipcMain.handle('get-licenses', async () => {
         try {
-            const packageJsonPath = path.join(__dirname, '../../../package.json');
-            const packageLockJsonPath = path.join(__dirname, '../../../package-lock.json');
-
-            const pkg = JSON.parse(await fs.promises.readFile(packageJsonPath, 'utf8'));
-            let lockPkg = {};
-            if (fs.existsSync(packageLockJsonPath)) {
-                lockPkg = JSON.parse(await fs.promises.readFile(packageLockJsonPath, 'utf8'));
+            const licensesPath = path.join(__dirname, '../data/licenses.json');
+            if (fs.existsSync(licensesPath)) {
+                const licenses = JSON.parse(await fs.promises.readFile(licensesPath, 'utf8'));
+                return { success: true, licenses };
             }
 
-            const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-            const licenses = [];
-
-            for (const name of Object.keys(deps)) {
-                let license = 'Unknown';
-                // Try to find in package-lock.json (npm v7+ style)
-                if (lockPkg.packages && lockPkg.packages[`node_modules/${name}`]) {
-                    license = lockPkg.packages[`node_modules/${name}`].license || 'Unknown';
-                } else if (lockPkg.dependencies && lockPkg.dependencies[name]) {
-                    // Fallback for older package-lock versions
-                    license = lockPkg.dependencies[name].license || 'Unknown';
-                }
-
-                licenses.push({ name, version: deps[name], license });
-            }
-
-            return { success: true, licenses };
+            // Fallback if licenses.json doesn't exist yet
+            return { success: false, error: "License data not generated. Please run build." };
         } catch (e) {
             console.error("Error getting licenses:", e);
             return { success: false, error: e.message };

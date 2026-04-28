@@ -178,6 +178,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const licenseButton = document.getElementById('license-button');
     const licenseDialog = document.getElementById('license-dialog');
     const licenseTableBody = document.getElementById('license-table-body');
+    const licenseTextDialog = document.getElementById('license-text-dialog');
+    const licenseTextTitle = document.getElementById('license-text-title');
+    const licenseTextContent = document.getElementById('license-text-content');
 
     helpButton.addEventListener('click', async () => {
         const content = await window.settings.getHelpContent();
@@ -202,11 +205,35 @@ document.addEventListener('DOMContentLoaded', () => {
             result.licenses.forEach(pkg => {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #333';
-                tr.innerHTML = `
-                    <td style="padding: 8px;">${pkg.name}</td>
-                    <td style="padding: 8px;">${pkg.version}</td>
-                    <td style="padding: 8px;">${pkg.license}</td>
-                `;
+
+                const nameTd = document.createElement('td');
+                nameTd.style.padding = '8px';
+                nameTd.textContent = pkg.name;
+
+                const versionTd = document.createElement('td');
+                versionTd.style.padding = '8px';
+                versionTd.textContent = pkg.version;
+
+                const licenseTd = document.createElement('td');
+                licenseTd.style.padding = '8px';
+                const licenseSpan = document.createElement('span');
+                licenseSpan.textContent = pkg.licenseType || pkg.license || 'Unknown';
+                licenseSpan.style.cursor = 'pointer';
+                licenseSpan.style.textDecoration = 'underline';
+                licenseSpan.style.color = '#a0c8ff';
+                licenseSpan.title = 'Click to view full license text';
+
+                licenseSpan.onclick = () => {
+                    licenseTextTitle.textContent = `${pkg.name} - ${licenseSpan.textContent} License`;
+                    licenseTextContent.textContent = pkg.licenseText || 'No license text available.';
+                    licenseTextDialog.showModal();
+                };
+
+                licenseTd.appendChild(licenseSpan);
+                tr.appendChild(nameTd);
+                tr.appendChild(versionTd);
+                tr.appendChild(licenseTd);
+
                 licenseTableBody.appendChild(tr);
             });
             licenseDialog.showModal();
