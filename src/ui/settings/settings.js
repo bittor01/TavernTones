@@ -175,6 +175,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const helpButton = document.getElementById('help-button');
     const helpDialog = document.getElementById('help-dialog');
     const helpContent = document.getElementById('help-content');
+    const licenseButton = document.getElementById('license-button');
+    const licenseDialog = document.getElementById('license-dialog');
+    const licenseTableBody = document.getElementById('license-table-body');
 
     helpButton.addEventListener('click', async () => {
         const content = await window.settings.getHelpContent();
@@ -190,6 +193,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         helpContent.innerHTML = parsed;
         helpDialog.showModal();
+    });
+
+    licenseButton.addEventListener('click', async () => {
+        const result = await window.settings.getLicenses();
+        if (result.success) {
+            licenseTableBody.innerHTML = '';
+            result.licenses.forEach(pkg => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #333';
+                tr.innerHTML = `
+                    <td style="padding: 8px;">${pkg.name}</td>
+                    <td style="padding: 8px;">${pkg.version}</td>
+                    <td style="padding: 8px;">${pkg.license}</td>
+                `;
+                licenseTableBody.appendChild(tr);
+            });
+            licenseDialog.showModal();
+        } else {
+            alert("Error fetching licenses: " + result.error);
+        }
     });
 
     window.settings.onBotStatus(updateBotStatusUI);

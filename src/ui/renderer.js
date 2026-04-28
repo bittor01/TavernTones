@@ -1106,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
                 div.querySelector('.play-track-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    window.electron.ipcRenderer.send('jump-to-track', { index });
+                    window.electron.ipcRenderer.send('play-now', { index });
                 });
                 div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -1117,7 +1117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.electron.ipcRenderer.send('remove-from-stack', { index });
                 });
                 div.addEventListener('dblclick', () => {
-                    window.electron.ipcRenderer.send('jump-to-track', { index });
+                    window.electron.ipcRenderer.send('play-now', { index });
                 });
                 musicStackList.appendChild(div);
             });

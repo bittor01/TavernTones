@@ -960,6 +960,13 @@ async function ipcloader() {
         }
     });
 
+    ipcMain.on('play-now', async (event, { index }) => {
+        if (musicPlayer) {
+            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+            musicPlayer.jumpTo(index);
+        }
+    });
+
     ipcMain.on('seek-music', (event, { time }) => {
         if (musicPlayer) {
             musicPlayer.seek(time);
@@ -1065,6 +1072,40 @@ async function ipcloader() {
         return { success: true };
     });
 
+    ipcMain.handle('get-licenses', async () => {
+        try {
+            const packageJsonPath = path.join(__dirname, '../../../package.json');
+            const packageLockJsonPath = path.join(__dirname, '../../../package-lock.json');
+
+            const pkg = JSON.parse(await fs.promises.readFile(packageJsonPath, 'utf8'));
+            let lockPkg = {};
+            if (fs.existsSync(packageLockJsonPath)) {
+                lockPkg = JSON.parse(await fs.promises.readFile(packageLockJsonPath, 'utf8'));
+            }
+
+            const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+            const licenses = [];
+
+            for (const name of Object.keys(deps)) {
+                let license = 'Unknown';
+                // Try to find in package-lock.json (npm v7+ style)
+                if (lockPkg.packages && lockPkg.packages[`node_modules/${name}`]) {
+                    license = lockPkg.packages[`node_modules/${name}`].license || 'Unknown';
+                } else if (lockPkg.dependencies && lockPkg.dependencies[name]) {
+                    // Fallback for older package-lock versions
+                    license = lockPkg.dependencies[name].license || 'Unknown';
+                }
+
+                licenses.push({ name, version: deps[name], license });
+            }
+
+            return { success: true, licenses };
+        } catch (e) {
+            console.error("Error getting licenses:", e);
+            return { success: false, error: e.message };
+        }
+    });
+
     const resolveLibraryPaths = (paths) => {
         return paths.map(p => {
             if (path.extname(p).toLowerCase() === '.lnk') {
@@ -1090,9 +1131,8 @@ async function ipcloader() {
                 // For 'play now' from library, we insert at the very top (index 0) and play.
                 const currentStack = [...musicPlayer.stack];
                 musicPlayer.stack = [...resolvedPaths, ...currentStack];
-                musicPlayer.currentIndex = 0;
                 if (voiceStatus !== 'connected') await joinVoiceChannelAction();
-                musicPlayer.play();
+                musicPlayer.jumpTo(0);
                 break;
             case 'add-top':
                 if (musicPlayer.currentIndex === -1) {
