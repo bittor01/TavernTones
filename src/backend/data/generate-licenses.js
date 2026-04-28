@@ -21,10 +21,34 @@ async function main() {
             templates = JSON.parse(fs.readFileSync(templatesPath, 'utf8'));
         }
 
+        const manualPath = path.join(rootDir, 'resources/manual-licenses');
+        const manualDeps = [];
+        if (fs.existsSync(manualPath)) {
+            const manualDirs = fs.readdirSync(manualPath);
+            manualDirs.forEach(name => {
+                const dir = path.join(manualPath, name);
+                if (fs.statSync(dir).isDirectory()) {
+                    const files = fs.readdirSync(dir);
+                    const licenseFile = files.find(f => /\.txt$/i.test(f));
+                    if (licenseFile) {
+                        manualDeps.push({
+                            name,
+                            licenseType: path.basename(licenseFile, '.txt'),
+                            licenseText: fs.readFileSync(path.join(dir, licenseFile), 'utf8')
+                        });
+                    }
+                }
+            });
+        }
+
         const deps = { ...pkg.dependencies, ...pkg.devDependencies };
         const licenses = [];
 
+        // Track seen dependencies to merge manual ones
+        const seen = new Set();
+
         for (const name of Object.keys(deps)) {
+            seen.add(name);
             let licenseType = 'Unknown';
             let licenseText = '';
 
@@ -57,7 +81,14 @@ async function main() {
                 }
             }
 
-            // 3. Fallback to templates
+            // 3. Manual overrides
+            const manual = manualDeps.find(m => m.name === name);
+            if (manual) {
+                licenseType = manual.licenseType;
+                licenseText = manual.licenseText;
+            }
+
+            // 4. Fallback to templates
             if (!licenseText && templates[licenseType]) {
                 licenseText = templates[licenseType];
             }
@@ -68,6 +99,18 @@ async function main() {
                 licenseType,
                 licenseText
             });
+        }
+
+        // Add manual dependencies that weren't in package.json (like ffmpeg)
+        for (const manual of manualDeps) {
+            if (!seen.has(manual.name)) {
+                licenses.push({
+                    name: manual.name,
+                    version: 'Bundled',
+                    licenseType: manual.licenseType,
+                    licenseText: manual.licenseText
+                });
+            }
         }
 
         fs.writeFileSync(outputPath, JSON.stringify(licenses, null, 2));
