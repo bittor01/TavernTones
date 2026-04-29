@@ -410,8 +410,8 @@ class BackendAudioPlayer extends EventEmitter {
         if (startTime > 0) {
             args.push('-ss', startTime.toString());
         }
-        // Remove -re to allow FFmpeg to fill buffers as fast as possible
-        args.push('-i', filePath, '-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1');
+        // Keep -re to prevent FFmpeg from overwhelming the main thread/IPC with too much data too fast
+        args.push('-re', '-i', filePath, '-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1');
         return spawn(ffmpegPath, args);
     }
 
