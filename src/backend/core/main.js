@@ -37,13 +37,30 @@ const { Worker } = require('worker_threads');
 
 let discordConfig;
 
+// Caching for music library
+let cachedMusicLibrary = null;
+let cachedFlatMusicList = null;
+let cachedDiscordSongOptions = null;
+
 const getMusicLibrary = () => {
     if (!discordConfig) return { children: [] };
-    const library = JSON.parse(JSON.stringify(discordConfig.musicLibrary || { children: [] }));
+    if (cachedMusicLibrary) return cachedMusicLibrary;
+
+    // Use a simpler copy instead of full deep clone if we don't modify it much
+    // Or just return it if we trust consumers not to mutate.
+    // For safety, we'll do a light clone of the top level and 'Loose Files'
+    const library = { ...(discordConfig.musicLibrary || { children: [] }) };
+    library.children = library.children ? [...library.children] : [];
+
     const looseFiles = discordConfig.looseFiles || [];
     if (looseFiles.length > 0) {
         let looseFolder = library.children.find(c => c.name === 'Loose Files');
-        if (!looseFolder) {
+        if (looseFolder) {
+            // Clone loose folder to avoid mutating discordConfig
+            looseFolder = { ...looseFolder };
+            const idx = library.children.findIndex(c => c.name === 'Loose Files');
+            library.children[idx] = looseFolder;
+        } else {
             looseFolder = { name: 'Loose Files', type: 'directory', children: [], path: 'loose' };
             library.children.push(looseFolder);
         }
@@ -53,10 +70,13 @@ const getMusicLibrary = () => {
             type: 'file'
         }));
     }
+    cachedMusicLibrary = library;
     return library;
 };
 
 const getFlatMusicList = () => {
+    if (cachedFlatMusicList) return cachedFlatMusicList;
+
     const list = [];
     const traverse = (node) => {
         if (node.type === 'file') {
@@ -67,8 +87,15 @@ const getFlatMusicList = () => {
     };
     const library = getMusicLibrary();
     traverse(library);
+    cachedFlatMusicList = list;
     return list;
 };
+
+function invalidateMusicCache() {
+    cachedMusicLibrary = null;
+    cachedFlatMusicList = null;
+    cachedDiscordSongOptions = null;
+}
 
 let connection;
 let voiceStatus = 'disconnected'; // disconnected, connecting, connected
@@ -732,6 +759,8 @@ async function ipcloader() {
         // --- Update the live configuration ---
         // The in-memory config needs to be updated to reflect the newly saved settings.
         discordConfig = mergedConfig;
+        invalidateMusicCache();
+
         // The music player instance also needs to be told about the new path.
         if (musicPlayer) {
             musicPlayer.musicFolder = mergedConfig.defaultMusicPath;
@@ -960,6 +989,13 @@ async function ipcloader() {
         }
     });
 
+    ipcMain.on('play-now', async (event, { index }) => {
+        if (musicPlayer) {
+            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+            musicPlayer.jumpTo(index);
+        }
+    });
+
     ipcMain.on('seek-music', (event, { time }) => {
         if (musicPlayer) {
             musicPlayer.seek(time);
@@ -1065,6 +1101,22 @@ async function ipcloader() {
         return { success: true };
     });
 
+    ipcMain.handle('get-licenses', async () => {
+        try {
+            const licensesPath = path.join(__dirname, '../data/licenses.json');
+            if (fs.existsSync(licensesPath)) {
+                const licenses = JSON.parse(await fs.promises.readFile(licensesPath, 'utf8'));
+                return { success: true, licenses };
+            }
+
+            // Fallback if licenses.json doesn't exist yet
+            return { success: false, error: "License data not generated. Please run build." };
+        } catch (e) {
+            console.error("Error getting licenses:", e);
+            return { success: false, error: e.message };
+        }
+    });
+
     const resolveLibraryPaths = (paths) => {
         return paths.map(p => {
             if (path.extname(p).toLowerCase() === '.lnk') {
@@ -1090,9 +1142,8 @@ async function ipcloader() {
                 // For 'play now' from library, we insert at the very top (index 0) and play.
                 const currentStack = [...musicPlayer.stack];
                 musicPlayer.stack = [...resolvedPaths, ...currentStack];
-                musicPlayer.currentIndex = 0;
                 if (voiceStatus !== 'connected') await joinVoiceChannelAction();
-                musicPlayer.play();
+                musicPlayer.jumpTo(0);
                 break;
             case 'add-top':
                 if (musicPlayer.currentIndex === -1) {
@@ -2104,10 +2155,13 @@ client.once(Events.ClientReady, async () => {
             .setTimestamp();
 
         // --- Row 1: Song Selector Dropdown ---
-        const songs = getFlatMusicList().map(p => ({
-            label: path.basename(p).substring(0, 100),
-            value: getSongId(p)
-        }));
+        if (!cachedDiscordSongOptions) {
+            cachedDiscordSongOptions = getFlatMusicList().map(p => ({
+                label: path.basename(p).substring(0, 100),
+                value: getSongId(p)
+            }));
+        }
+        const songs = cachedDiscordSongOptions;
 
         const totalPages = Math.ceil(songs.length / PAGE_SIZE);
         const start = currentDropdownPage * PAGE_SIZE;
@@ -2471,6 +2525,7 @@ function scanMusicLibrary() {
             }
 
             discordConfig.musicLibrary = newLibrary;
+            invalidateMusicCache();
             await setDiscordConfig(discordConfig);
 
         } else {
