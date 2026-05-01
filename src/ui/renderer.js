@@ -14,12 +14,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentPanelIndex = 3; // Default to 'Music Library'
     let musicLibrary = { children: [] };
     let selectedLibraryPaths = new Set();
+    let expandedLibraryPaths = new Set();
     let botStatus = { status: 'offline', message: 'Unknown' };
     let isBotEnabled = false;
     let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
     let DND_CONDITIONS = {};
     let MOB_RULES_DATA = {};
     let lastScrolledIndex = -1;
+    let discordConfig = {};
 
     // --- Form State ---
     let isMobMode = false;
@@ -39,6 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const clearStackBtn = document.getElementById('clear-stack-btn');
     const saveMusicPresetBtn = document.getElementById('save-music-preset-btn');
     const loadMusicPresetBtn = document.getElementById('load-music-preset-btn');
+    const musicAutosaveCheck = document.getElementById('music-autosave-check');
     const musicStackList = document.getElementById('music-stack-list');
     const previewAudioPlayer = document.getElementById('preview-audio-player');
     const addCreatureForm = document.getElementById('add-creature-form');
@@ -466,16 +469,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('clear-stack');
                 break;
             case 'bot-status-indicator':
+                // Pause if connecting/connected and clicking to disconnect
+                if (botStatus.status === 'online' || botStatus.message === 'Connecting...') {
+                    window.electron.ipcRenderer.send('pause-music');
+                }
                 window.electron.ipcRenderer.send('voice-toggle');
                 break;
             case 'save-music-preset-btn':
-                // We need the current stack from the UI state or ask backend
-                // The renderer doesn't have a local 'stack' variable, it relies on status updates.
-                // We'll use the latest initiativeOrder as a proxy for 'has data',
-                // but actually we need the music stack.
-                // Let's store the last received stack.
                 if (lastMusicStatus && lastMusicStatus.stack) {
-                    window.electron.ipcRenderer.invoke('save-music-preset', lastMusicStatus.stack.map(t => t.path));
+                    window.electron.ipcRenderer.invoke('save-music-preset', lastMusicStatus.stack.map(t => t.path), true);
                 }
                 break;
             case 'load-music-preset-btn':
@@ -671,14 +673,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     window.electron.ipcRenderer.on('discord-config', (event, config) => {
+        discordConfig = config;
+        if (musicAutosaveCheck) {
+            musicAutosaveCheck.checked = !!config.musicAutosave;
+        }
+        if (config.audioOnlyRows) audioOnlyRows = config.audioOnlyRows;
+        if (config.audioOnlyCols) audioOnlyCols = config.audioOnlyCols;
+        if (config.musicPlayerHeight) {
+            document.documentElement.style.setProperty('--music-player-height', `${config.musicPlayerHeight}px`);
+        } else if (config.audioMode) {
+            document.documentElement.style.setProperty('--music-player-height', `280px`);
+        }
+
         if (config.audioMode) {
             document.body.classList.add('audio-only');
             // Move containers to columns
             const rightCol = document.querySelector('.audio-only-right-column');
             const musicControls = document.getElementById('music-controls-container');
             const soundboard = document.getElementById('soundboard-container');
-            if (rightCol && musicControls && soundboard) {
+            const musicResizer = document.getElementById('music-player-resizer');
+            if (rightCol && musicControls && soundboard && musicResizer) {
                 rightCol.appendChild(musicControls);
+                // In Audio-Only mode, ensure music-player-resizer is at the top of the right column or removed
+                // Actually we just hide it via CSS, but moving it helps layout flow
+                rightCol.appendChild(musicResizer);
                 rightCol.appendChild(soundboard);
             }
             showPanel('musicLibraryArea');
@@ -687,10 +705,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Move containers back
             const leftCol = document.querySelector('.column-left');
             const midCol = document.querySelector('.column-middle');
+            const rightCol = document.querySelector('.column-right');
             const musicControls = document.getElementById('music-controls-container');
             const soundboard = document.getElementById('soundboard-container');
-            if (leftCol && musicControls) leftCol.appendChild(musicControls);
-            if (midCol && soundboard) midCol.appendChild(soundboard);
+            const musicResizer = document.getElementById('music-player-resizer');
+            const creatureEntry = document.getElementById('creature-entry-container');
+            const logWrapper = document.getElementById('log-wrapper');
+            const initiativeList = document.getElementById('initiative-list-container');
+            const turnControls = document.getElementById('turn-controls-container');
+            const combatantWrapper = document.getElementById('combatant-wrapper');
+
+            if (leftCol && creatureEntry && logWrapper && musicResizer && musicControls) {
+                leftCol.appendChild(creatureEntry);
+                leftCol.appendChild(logWrapper);
+                leftCol.appendChild(musicResizer);
+                leftCol.appendChild(musicControls);
+            }
+            if (midCol && turnControls && initiativeList && soundboard) {
+                midCol.appendChild(turnControls);
+                midCol.appendChild(initiativeList);
+                midCol.appendChild(soundboard);
+            }
+            if (rightCol && combatantWrapper) {
+                rightCol.appendChild(combatantWrapper);
+            }
         }
         renderSoundboard(); // Ensure soundboard layout updates when mode changes
     });
@@ -749,6 +787,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    function updateSelectionUI() {
+        const nodes = document.querySelectorAll('#library-tree-container .tree-node-content');
+        nodes.forEach(content => {
+            const path = content.getAttribute('data-path');
+            if (selectedLibraryPaths.has(path)) {
+                content.classList.add('selected');
+            } else {
+                content.classList.remove('selected');
+            }
+        });
+    }
+
     function createTreeNode(node, isRoot = false) {
         const div = document.createElement('div');
         div.className = 'tree-node';
@@ -756,6 +806,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const content = document.createElement('div');
         content.className = 'tree-node-content';
+        content.setAttribute('data-path', node.path);
         if (selectedLibraryPaths.has(node.path)) content.classList.add('selected');
 
         const toggle = document.createElement('span');
@@ -820,7 +871,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (node.type === 'directory' && node.children) {
             const childrenContainer = document.createElement('div');
             childrenContainer.className = 'node-children';
-            childrenContainer.style.display = 'none'; // Collapsed by default
+            const isExpanded = expandedLibraryPaths.has(node.path);
+            childrenContainer.style.display = isExpanded ? 'block' : 'none';
+            if (isExpanded) toggle.textContent = '📂';
+
             node.children.forEach(child => {
                 childrenContainer.appendChild(createTreeNode(child));
             });
@@ -830,8 +884,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (e.ctrlKey) {
                     toggleSelection(node.path);
                 } else {
-                    childrenContainer.style.display = childrenContainer.style.display === 'none' ? 'block' : 'none';
-                    toggle.textContent = childrenContainer.style.display === 'none' ? '📁' : '📂';
+                    selectedLibraryPaths.clear();
+                    selectedLibraryPaths.add(node.path);
+                    updateSelectionUI();
+
+                    // Toggle expansion only if clicking folder icon or name
+                    if (e.target.classList.contains('folder-toggle') || e.target.classList.contains('node-name')) {
+                        const nextDisplay = childrenContainer.style.display === 'none' ? 'block' : 'none';
+                        childrenContainer.style.display = nextDisplay;
+                        toggle.textContent = nextDisplay === 'none' ? '📁' : '📂';
+                        if (nextDisplay === 'block') {
+                            expandedLibraryPaths.add(node.path);
+                        } else {
+                            expandedLibraryPaths.delete(node.path);
+                        }
+                    }
                 }
             };
         } else {
@@ -839,10 +906,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (e.ctrlKey) {
                     toggleSelection(node.path);
                 } else {
-                    // Just select if single click?
                     selectedLibraryPaths.clear();
                     selectedLibraryPaths.add(node.path);
-                    renderMusicLibrary();
+                    updateSelectionUI();
                 }
             };
         }
@@ -928,6 +994,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentLoopMode = 1;
     let currentShuffleMode = false;
     let lastMusicStatus = null;
+    let lastStackFingerprint = '';
 
     function togglePreview(index = -1) {
         if (!previewAudioPlayer.paused) {
@@ -954,6 +1021,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
+        // Handle Autosave
+        if (musicAutosaveCheck && musicAutosaveCheck.checked) {
+            const oldStack = lastMusicStatus ? lastMusicStatus.stack : [];
+            const newStack = status.stack || [];
+
+            // Check if stack content changed (simplified check: length and paths)
+            const changed = oldStack.length !== newStack.length ||
+                newStack.some((track, i) => !oldStack[i] || track.path !== oldStack[i].path);
+
+            if (changed && newStack.length > 0) {
+                window.electron.ipcRenderer.invoke('save-music-preset', newStack.map(t => t.path), false);
+            }
+        }
+
         lastMusicStatus = status;
         isPlaying = status.isPlaying;
         currentLoopMode = status.loopMode;
@@ -1006,42 +1087,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         shuffleBtn.classList.toggle('active', currentShuffleMode);
 
         // Render Playlist
-        musicStackList.innerHTML = '';
-        status.stack.forEach((track, index) => {
-            const div = document.createElement('div');
-            div.className = 'music-stack-item' + (index === status.currentIndex ? ' active' : '');
-            if (status.isCaching && index === status.currentIndex) div.classList.add('caching');
+        const stackFingerprint = status.stack.map(t => t.path).join('|');
+        if (stackFingerprint !== lastStackFingerprint) {
+            lastStackFingerprint = stackFingerprint;
+            musicStackList.innerHTML = '';
+            status.stack.forEach((track, index) => {
+                const div = document.createElement('div');
+                div.className = 'music-stack-item';
+                div.dataset.index = index;
 
-            div.innerHTML = `
-                <span class="track-name">${track.name}</span>
-                <div class="item-actions">
-                    <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
-                    <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
-                    <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
-                </div>
-            `;
-            div.querySelector('.play-track-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                window.electron.ipcRenderer.send('jump-to-track', { index });
+                div.innerHTML = `
+                    <span class="track-name">${track.name}</span>
+                    <div class="item-actions">
+                        <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
+                        <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
+                        <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
+                    </div>
+                `;
+                div.querySelector('.play-track-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    window.electron.ipcRenderer.send('play-now', { index });
+                });
+                div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    togglePreview(index);
+                });
+                div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    window.electron.ipcRenderer.send('remove-from-stack', { index });
+                });
+                div.addEventListener('dblclick', () => {
+                    window.electron.ipcRenderer.send('play-now', { index });
+                });
+                musicStackList.appendChild(div);
             });
-            div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                togglePreview(index);
-            });
-            div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                window.electron.ipcRenderer.send('remove-from-stack', { index });
-            });
-            div.addEventListener('click', () => {
-                // Focus track on click (maybe highlight?), but don't jump yet if we want double click
-            });
-            div.addEventListener('dblclick', () => {
-                window.electron.ipcRenderer.send('jump-to-track', { index });
-            });
-            musicStackList.appendChild(div);
+        }
+
+        // Lightweight updates for active/caching states on existing elements
+        const items = musicStackList.querySelectorAll('.music-stack-item');
+        items.forEach((div, index) => {
+            const isActive = index === status.currentIndex;
+            const isCaching = status.isCaching && isActive;
+
+            div.classList.toggle('active', isActive);
+            div.classList.toggle('caching', isCaching);
 
             // Auto-scroll to active track
-            if (index === status.currentIndex && index !== lastScrolledIndex) {
+            if (isActive && index !== lastScrolledIndex) {
                 setTimeout(() => {
                     div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     lastScrolledIndex = index;
@@ -1315,9 +1407,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let soundboardState = [];
     let soundboardRowCount = 1; // Resizable rows in Normal mode
     const NORMAL_SLOTS_PER_ROW = 3;
-    const AUDIO_ONLY_COLS = 6;
-    const AUDIO_ONLY_ROWS = 12;
-    const AUDIO_ONLY_TOTAL_SLOTS = AUDIO_ONLY_COLS * AUDIO_ONLY_ROWS;
+    let audioOnlyCols = 6;
+    let audioOnlyRows = 8;
 
     // --- Load Soundboard State ---
     window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
@@ -1426,19 +1517,75 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     document.getElementById('add-row-btn').addEventListener('click', () => {
-        const MAX_ROWS = 72 / NORMAL_SLOTS_PER_ROW;
-        if (soundboardRowCount < MAX_ROWS) {
-            soundboardRowCount++;
-            saveSoundboardState();
-            renderSoundboard();
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        if (isAudioOnly) {
+            if (audioOnlyRows < 12) {
+                audioOnlyRows++;
+                discordConfig.audioOnlyRows = audioOnlyRows;
+
+                window.electron.ipcRenderer.send('set-discord-config', {
+                    audioOnlyRows: audioOnlyRows
+                });
+                renderSoundboard();
+            }
+        } else {
+            const MAX_ROWS = 72 / NORMAL_SLOTS_PER_ROW;
+            if (soundboardRowCount < MAX_ROWS) {
+                soundboardRowCount++;
+                saveSoundboardState();
+                renderSoundboard();
+            }
         }
     });
 
     document.getElementById('remove-row-btn').addEventListener('click', () => {
-        if (soundboardRowCount > 1) {
-            soundboardRowCount--;
-            saveSoundboardState();
-            renderSoundboard();
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        if (isAudioOnly) {
+            if (audioOnlyRows > 1) {
+                audioOnlyRows--;
+                discordConfig.audioOnlyRows = audioOnlyRows;
+
+                window.electron.ipcRenderer.send('set-discord-config', {
+                    audioOnlyRows: audioOnlyRows
+                });
+                renderSoundboard();
+            }
+        } else {
+            if (soundboardRowCount > 1) {
+                soundboardRowCount--;
+                saveSoundboardState();
+                renderSoundboard();
+            }
+        }
+    });
+
+    document.getElementById('add-col-btn').addEventListener('click', () => {
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        if (isAudioOnly) {
+            if (audioOnlyCols < 12) {
+                audioOnlyCols++;
+                discordConfig.audioOnlyCols = audioOnlyCols;
+
+                window.electron.ipcRenderer.send('set-discord-config', {
+                    audioOnlyCols: audioOnlyCols
+                });
+                renderSoundboard();
+            }
+        }
+    });
+
+    document.getElementById('remove-col-btn').addEventListener('click', () => {
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        if (isAudioOnly) {
+            if (audioOnlyCols > 1) {
+                audioOnlyCols--;
+                discordConfig.audioOnlyCols = audioOnlyCols;
+
+                window.electron.ipcRenderer.send('set-discord-config', {
+                    audioOnlyCols: audioOnlyCols
+                });
+                renderSoundboard();
+            }
         }
     });
 
@@ -1466,6 +1613,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentEditingSlotId = slotId;
             emojiInput.value = soundboardState[slotId].emoji;
             emojiDialog.showModal();
+            // Automatically open OS emoji panel
+            window.electron.ipcRenderer.send('show-emoji-panel');
+            setTimeout(() => {
+                emojiInput.focus();
+                emojiInput.select();
+            }, 100);
         }
     }
 
@@ -1538,8 +1691,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!soundboardContainer) return;
 
         if (document.body.classList.contains('audio-only')) {
-            soundboardContainer.style.flex = '1 1 0';
-            soundboardContainer.style.height = '';
+            soundboardContainer.style.flex = '0 0 auto';
+            soundboardContainer.style.height = 'auto';
             return;
         }
 
@@ -1582,12 +1735,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
+        if (!grid) return;
         grid.innerHTML = '';
 
         const isAudioOnly = document.body.classList.contains('audio-only');
-        const rows = isAudioOnly ? AUDIO_ONLY_ROWS : soundboardRowCount;
-        const cols = isAudioOnly ? AUDIO_ONLY_COLS : NORMAL_SLOTS_PER_ROW;
-        const totalSlotsToRender = isAudioOnly ? AUDIO_ONLY_TOTAL_SLOTS : (soundboardRowCount * NORMAL_SLOTS_PER_ROW);
+        const rows = isAudioOnly ? audioOnlyRows : soundboardRowCount;
+        const cols = isAudioOnly ? audioOnlyCols : NORMAL_SLOTS_PER_ROW;
+        const totalSlotsToRender = isAudioOnly ? (audioOnlyRows * audioOnlyCols) : (soundboardRowCount * NORMAL_SLOTS_PER_ROW);
 
         grid.style.setProperty('--sb-rows', rows);
         grid.style.setProperty('--sb-cols', cols);
@@ -2473,5 +2627,60 @@ document.addEventListener('DOMContentLoaded', async () => {
             globalTooltip.style.top = `${y}px`;
         }
     }
+
+    // --- Music Autosave Toggle ---
+    if (musicAutosaveCheck) {
+        musicAutosaveCheck.addEventListener('change', () => {
+            window.electron.ipcRenderer.send('set-discord-config', {
+                musicAutosave: musicAutosaveCheck.checked
+            });
+        });
+    }
+
+    // --- Resizing Logic ---
+    const musicPlayerResizer = document.getElementById('music-player-resizer');
+    let isResizingMusicPlayer = false;
+
+    if (musicPlayerResizer) {
+        musicPlayerResizer.addEventListener('mousedown', (e) => {
+            isResizingMusicPlayer = true;
+            document.body.style.cursor = 'row-resize';
+            e.preventDefault();
+        });
+    }
+
+    document.addEventListener('mousemove', (e) => {
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        if (isResizingMusicPlayer) {
+            if (isAudioOnly) return; // Disable manual vertical resize in audio-only
+            const musicControls = document.getElementById('music-controls-container');
+            if (musicControls) {
+                const rect = musicControls.getBoundingClientRect();
+                const isAudioOnly = document.body.classList.contains('audio-only');
+                let newHeight;
+                if (isAudioOnly) {
+                    // music player is at the top of the right column
+                    newHeight = Math.max(150, Math.min(600, e.clientY - rect.top));
+                } else {
+                    // music player is at the bottom of the left column
+                    // The resizer is ABOVE it
+                    newHeight = Math.max(150, Math.min(600, rect.bottom - e.clientY));
+                }
+                document.documentElement.style.setProperty('--music-player-height', `${newHeight}px`);
+                discordConfig.musicPlayerHeight = newHeight;
+            }
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizingMusicPlayer) {
+            isResizingMusicPlayer = false;
+            document.body.style.cursor = '';
+            // Only send the relevant parts to be merged
+            window.electron.ipcRenderer.send('set-discord-config', {
+                musicPlayerHeight: discordConfig.musicPlayerHeight
+            });
+        }
+    });
 
 });

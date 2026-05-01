@@ -9,15 +9,17 @@ class ThreadedAudioMixer extends Readable {
         this.worker = new Worker(path.join(__dirname, 'AudioMixerWorker.js'));
         this.bufferQueue = [];
         this.isReady = false;
+        this.BUFFER_TARGET = 5; // Maintain 5 chunks (~100ms) in buffer to smooth jitter
 
         this.worker.on('message', (msg) => {
             if (msg.type === 'mixed-chunk') {
                 const buffer = Buffer.from(msg.data);
-                if (this.isReading) {
-                    this.push(buffer);
+                this.bufferQueue.push(buffer);
+                this._maybeFillTarget();
+
+                if (this.isReading && this.bufferQueue.length > 0) {
+                    this.push(this.bufferQueue.shift());
                     this.isReading = false;
-                } else {
-                    this.bufferQueue.push(buffer);
                 }
             }
         });
@@ -51,12 +53,23 @@ class ThreadedAudioMixer extends Readable {
     _read(size) {
         // The consumer (Discord) wants data.
         if (this.bufferQueue.length > 0) {
-            const chunk = this.bufferQueue.shift();
-            this.push(chunk);
+            this.push(this.bufferQueue.shift());
+            this._maybeFillTarget();
         } else {
-            // We need data. Ask worker for a mix.
+            // We are empty. Ask worker for data immediately.
             this.isReading = true;
+            this._maybeFillTarget();
+        }
+    }
+
+    _maybeFillTarget() {
+        // Ensure we always have BUFFER_TARGET chunks requested/available
+        // This is a simple look-ahead to keep the pipeline full
+        while (this.bufferQueue.length < this.BUFFER_TARGET) {
             this.worker.postMessage({ type: 'request-mix' });
+            // We don't want to flood the worker too much,
+            // but for 5 chunks it's perfectly fine and recommended for stability.
+            break; // Just request one at a time for now to keep it steady
         }
     }
 

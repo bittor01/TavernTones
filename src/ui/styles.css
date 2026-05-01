@@ -52,10 +52,18 @@ button:disabled {
 /* --- Main Layout --- */
 .main-grid {
     display: grid;
-    grid-template-columns: 25% 25% 50%;
+    /* Left panel roughly 25%, Middle panel fixed to fit soundboard (3x180px + gaps + padding), Right fills rest */
+    grid-template-columns: 25% 568px 1fr;
     height: 100vh;
     gap: 10px;
     padding: 10px;
+}
+
+body.audio-only .main-grid {
+    /* Left side is flexible, right side (soundboard) snaps to content width */
+    grid-template-columns: 1fr 0px 0px min-content;
+    gap: 0;
+    padding-right: 0; /* Abut the right edge */
 }
 
 .column {
@@ -107,6 +115,7 @@ button:disabled {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
+    height: var(--music-player-height, auto);
 }
 
 #music-controls-container .panel-header,
@@ -116,6 +125,10 @@ button:disabled {
 }
 
 /* --- Middle Column --- */
+.column-middle {
+    min-width: 300px;
+}
+
 #turn-controls-container .controls {
     display: flex;
     justify-content: space-between;
@@ -355,6 +368,7 @@ input[type="number"] {
 /* --- Right Column --- */
 .column-right {
     overflow-y: auto;
+    min-width: 300px;
 }
 
 .combatant-details-entry {
@@ -560,7 +574,40 @@ input[type="number"] {
     text-shadow: 1px 1px 2px black;
 }
 
-/* --- Popup Styles --- */
+/* --- Dialog & Popup Styles --- */
+dialog {
+    background-color: #252526;
+    color: #d4d4d4;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+dialog h3 {
+    margin-top: 0;
+    color: #fff;
+    border-bottom: 1px solid #444;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+#emoji-picker-dialog {
+    text-align: center;
+    min-width: 200px;
+}
+
+#emoji-picker-dialog .dialog-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
 .popup-dialog {
     position: absolute;
     background-color: #444;
@@ -651,20 +698,22 @@ input[type="number"] {
 
 #soundboard-grid {
     display: grid;
-    grid-template-columns: repeat(var(--sb-cols, 3), 1fr);
+    grid-template-columns: repeat(var(--sb-cols, 3), 180px);
     grid-template-rows: repeat(var(--sb-rows, 1), auto);
     gap: 5px;
-    overflow-y: auto;
+    overflow: auto;
     height: 100%;
     align-content: start;
+    justify-content: start;
 }
 
 body.audio-only #soundboard-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(var(--sb-cols, 6), 180px);
     align-content: start;
-    overflow-y: auto;
+    overflow: auto;
     flex-grow: 1;
     min-height: 0;
+    justify-content: start;
 }
 
 .resize-handle {
@@ -680,9 +729,54 @@ body.audio-only #soundboard-grid {
     background: #007bff;
 }
 
-body.audio-only .resize-handle,
-body.audio-only #add-row-btn,
-body.audio-only #remove-row-btn {
+.resizer-v {
+    height: 8px;
+    background: transparent;
+    cursor: row-resize;
+    flex-shrink: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.resizer-v::after {
+    content: '---';
+    font-size: 14px;
+    line-height: 8px;
+    color: #444;
+    font-weight: bold;
+    letter-spacing: 2px;
+    transition: color 0.2s;
+}
+
+.resizer-v:hover::after {
+    color: #007bff;
+}
+
+.resizer-v:hover {
+    background: rgba(0, 123, 255, 0.1);
+}
+
+.resizer-h {
+    display: none !important;
+}
+
+#column-resizer {
+    display: none !important;
+}
+
+#add-col-btn,
+#remove-col-btn {
+    display: none !important;
+}
+
+body.audio-only #add-col-btn,
+body.audio-only #remove-col-btn {
+    display: block !important;
+}
+
+body.audio-only .resize-handle {
     display: none !important;
 }
 
@@ -853,7 +947,8 @@ input:disabled {
     display: flex;
     flex-direction: column;
     gap: 3px;
-    min-width: 0;
+    min-width: 180px;
+    width: 180px;
     height: fit-content;
 }
 
@@ -1029,6 +1124,33 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
 }
 
 /* --- Music Stack Styles --- */
+.autosave-label {
+    font-size: 0.75em;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    background: #333;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #444;
+    color: #aaa;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.autosave-label:hover {
+    background: #444;
+    color: #fff;
+}
+
+#music-autosave-check {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
 .music-stack-item {
     display: flex;
     justify-content: space-between;
@@ -1104,16 +1226,12 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
 }
 
 #music-stack-list {
-    max-height: 150px;
+    flex: 1 1 0%;
     overflow-y: auto;
     margin-top: 5px;
     border: 1px solid #444;
     background: #1a1a1a;
-    flex-grow: 1;
-}
-
-body.audio-only #music-stack-list {
-    max-height: 400px;
+    min-height: 100px;
 }
 
 .music-controls {
@@ -1150,19 +1268,14 @@ body.audio-only #combatant-wrapper {
     display: none !important;
 }
 
-body.audio-only .main-grid {
-    grid-template-columns: 350px 1fr;
-}
-
 body.audio-only .column-left {
     grid-column: 1;
     overflow: hidden;
-    width: 350px;
 }
 
 body.audio-only .column-right {
     display: flex;
-    grid-column: 2;
+    grid-column: 4;
     overflow: hidden;
 }
 
@@ -1181,6 +1294,7 @@ body.audio-only .audio-only-right-column {
     gap: 10px;
     height: 100%;
     overflow: hidden;
+    min-width: 350px;
 }
 
 /* Clear display:none for relevant children inside the right column */
@@ -1191,15 +1305,21 @@ body.audio-only .audio-only-right-column #soundboard-container {
     border: 1px solid #333;
     border-radius: 8px;
     padding: 4px; /* Even tighter padding */
+    width: fit-content;
+    min-width: 100%;
 }
 
-/* Music Player at the top, increased to 280px */
+/* Music Player at the top, now flexible to fill remaining space */
 body.audio-only .audio-only-right-column #music-controls-container {
-    height: 280px;
-    max-height: 280px;
-    flex-shrink: 0;
+    height: auto;
+    max-height: none;
+    flex: 1 1 0%;
     flex-direction: column;
     overflow: hidden;
+}
+
+body.audio-only .resizer-v {
+    display: none !important;
 }
 
 body.audio-only .audio-only-right-column #music-stack-list {
@@ -1209,9 +1329,10 @@ body.audio-only .audio-only-right-column #music-stack-list {
     overflow-y: auto;
 }
 
-/* Soundboard takes the rest */
+/* Soundboard takes only the space it needs at the bottom */
 body.audio-only .audio-only-right-column #soundboard-container {
-    flex-grow: 1;
+    flex: 0 0 auto;
+    height: auto;
     min-height: 0;
     flex-direction: column;
     padding-bottom: 2px;
@@ -1223,24 +1344,37 @@ body.audio-only #soundboard-container .panel-header {
 }
 
 body.audio-only .audio-only-right-column #soundboard-grid {
-    grid-template-columns: repeat(var(--sb-cols, 6), 1fr);
-    grid-template-rows: repeat(var(--sb-rows, 12), 1fr);
-    gap: 2px;
+    grid-template-columns: repeat(var(--sb-cols, 6), 180px);
+    grid-template-rows: repeat(var(--sb-rows, 12), auto);
+    gap: 5px;
     flex-grow: 1;
     min-height: 0;
     height: 100%;
-    align-content: stretch; /* Stretch to fit exactly */
-    overflow: hidden; /* Prefer no scroll if we are stretching to fit */
-}
-
-body.audio-only .audio-only-right-column #soundboard-grid:hover {
-    overflow-y: auto; /* Allow scroll if it still overflows despite stretch */
+    align-content: start;
+    overflow: auto;
+    justify-content: start;
 }
 
 body.audio-only .soundboard-stack-slot .stack-track-display {
-    padding: 1px 2px;
+    padding: 0px 1px;
+    font-size: 0.7rem;
+    margin-top: 0px;
+    height: 1.1em;
+    line-height: 1.1;
+}
+
+body.audio-only .soundboard-stack-slot {
+    padding: 1px;
+    gap: 0px;
+}
+
+body.audio-only .soundboard-stack-slot .stack-btn {
+    padding: 0px;
     font-size: 0.75rem;
-    margin-top: 1px;
+}
+
+body.audio-only .soundboard-stack-slot .stack-emoji-btn {
+    font-size: 0.9rem;
 }
 
 body.audio-only #soundboard-container .panel-header {
@@ -1291,24 +1425,7 @@ body.audio-only #soundboard-container .panel-header h2 {
 
 /* --- Import Selection Dialog --- */
 #import-selection-dialog {
-    background-color: #444;
-    color: #d4d4d4;
-    border: 1px solid #666;
-    border-radius: 6px;
-    padding: 20px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
     min-width: 300px;
-}
-
-#import-selection-dialog::backdrop {
-    background-color: rgba(0, 0, 0, 0.6);
-}
-
-#import-selection-dialog h3 {
-    margin-top: 0;
-    color: #fff;
-    border-bottom: 1px solid #666;
-    padding-bottom: 10px;
 }
 
 #import-list-container {
