@@ -613,6 +613,10 @@ function setupFilesystemWatchers(config) {
  * music player, initiative tracker, and more.
  */
 async function ipcloader() {
+    ipcMain.on('window-ready', () => {
+        // Handle window ready if needed, or just let it be a signal
+    });
+
     // Helper function to open a directory selection dialog
     const selectDirectory = async (title) => {
         const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
@@ -1256,24 +1260,6 @@ async function ipcloader() {
         return [];
     });
 
-    ipcMain.on('play-sound', (event, { slotId }) => {
-        // We need the renderer to tell us WHAT file to play, or we store it in backend.
-        // The renderer state seems to hold the file path, so it should send it, 
-        // OR the renderer sends "play slot X" and the backend looks up what slot X is.
-        // But currently main.js doesn't store soundboard state. 
-        // The renderer calls 'play-sound' with { slotId }... wait.
-        // My implementation plan said: "Trigger BackendAudioPlayer.playSound(file)".
-        // BUT the renderer's `play-sound` event in the *existing code (renderer.js)* 
-        // implies it might send just ID? 
-        // Let's check renderer.js again.
-        // Actually I haven't written the renderer code yet, but the *existing* placeholder code in renderer.js:
-        // window.electron.ipcRenderer.send('play-sound', { slotId });
-        // It doesn't send the file path. Ideally the backend should know, OR the renderer should send it.
-        // To keep backend stateless regarding UI config if possible, I'll update renderer to send the path always.
-        // Updating `main.js` to expect `filePath` in the payload.
-    });
-
-    // Redoing the above block properly:
     ipcMain.on('play-sound', async (event, { slotId, filePath }) => {
         logToRenderer(`IPC 'play-sound' slot ${slotId}, file: ${filePath}`);
         if (filePath && musicPlayer) {
@@ -1455,16 +1441,6 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.on('copy-creature', (event, { creatureId }) => {
-        const creature = initiativeTracker.getCreature(creatureId);
-        if (creature) {
-            // When copying, we want to populate the "Add" form, not the "Edit" form.
-            // We give it a new ID to ensure it's a distinct creature.
-            const newCreature = { ...creature, id: Date.now() };
-            mainWindow.webContents.send('populate-add-form', newCreature);
-        }
-    });
-
     ipcMain.on('save-encounter', async () => {
         try {
             const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
@@ -1585,6 +1561,7 @@ async function ipcloader() {
             mainWindow.webContents.send('populate-add-form', creature);
         }
     });
+
 
     ipcMain.on('previous-turn', async () => {
         const turnInfo = initiativeTracker.previousTurn();

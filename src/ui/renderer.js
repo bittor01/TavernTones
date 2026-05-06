@@ -776,15 +776,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    let renderLibraryTimeout;
     function renderMusicLibrary() {
-        const container = document.getElementById('library-tree-container');
-        container.innerHTML = '';
-        if (musicLibrary && musicLibrary.children) {
-            // Flatten: Add each child of the root directly to the container
-            musicLibrary.children.forEach(child => {
-                container.appendChild(createTreeNode(child, true));
-            });
-        }
+        if (renderLibraryTimeout) clearTimeout(renderLibraryTimeout);
+        renderLibraryTimeout = setTimeout(() => {
+            const container = document.getElementById('library-tree-container');
+            if (!container) return;
+            container.innerHTML = '';
+            if (musicLibrary && musicLibrary.children) {
+                const fragment = document.createDocumentFragment();
+                musicLibrary.children.forEach(child => {
+                    fragment.appendChild(createTreeNode(child, true));
+                });
+                container.appendChild(fragment);
+            }
+        }, 50); // Small debounce to prevent multiple immediate renders
     }
 
     function updateSelectionUI() {
@@ -1021,30 +1027,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
-        // Handle Autosave
-        if (musicAutosaveCheck && musicAutosaveCheck.checked) {
-            const oldStack = lastMusicStatus ? lastMusicStatus.stack : [];
-            const newStack = status.stack || [];
-
-            // Check if stack content changed (simplified check: length and paths)
-            const changed = oldStack.length !== newStack.length ||
-                newStack.some((track, i) => !oldStack[i] || track.path !== oldStack[i].path);
-
-            if (changed && newStack.length > 0) {
-                window.electron.ipcRenderer.invoke('save-music-preset', newStack.map(t => t.path), false);
-            }
-        }
-
-        lastMusicStatus = status;
+        // Update basic state
         isPlaying = status.isPlaying;
-        currentLoopMode = status.loopMode;
-        currentShuffleMode = status.shuffleMode;
-
         if (status.currentIndex === -1) {
             lastScrolledIndex = -1;
         }
 
-        // Update Progress Bar
+        // Update Progress Bar (Frequent)
         const progressBar = document.getElementById('music-progress-bar');
         const timeDisplay = document.getElementById('music-time-display');
         if (progressBar && timeDisplay) {
@@ -1060,67 +1049,74 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         playPauseButton.textContent = isPlaying ? '⏸️' : '▶️';
-        playPauseButton.disabled = status.stack.length === 0;
 
-        // Handle Progress Bar Seeking
-        const progressContainer = document.querySelector('.progress-container');
-        if (progressContainer && !progressContainer.dataset.seekingListener) {
-            progressContainer.dataset.seekingListener = 'true';
-            progressContainer.addEventListener('click', (e) => {
-                if (lastMusicStatus && lastMusicStatus.duration > 0) {
-                    const rect = progressContainer.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const percent = x / rect.width;
-                    const seekTime = percent * lastMusicStatus.duration;
-                    window.electron.ipcRenderer.send('seek-music', { time: seekTime });
+        // Heavy updates (Only if not a simple time update)
+        if (!status.isTimeUpdate && status.stack) {
+            // Handle Autosave
+            if (musicAutosaveCheck && musicAutosaveCheck.checked) {
+                const oldStack = (lastMusicStatus && lastMusicStatus.stack) ? lastMusicStatus.stack : [];
+                const newStack = status.stack;
+
+                // Check if stack content changed (simplified check: length and paths)
+                const changed = oldStack.length !== newStack.length ||
+                    newStack.some((track, i) => !oldStack[i] || track.path !== oldStack[i].path);
+
+                if (changed && newStack.length > 0) {
+                    window.electron.ipcRenderer.invoke('save-music-preset', newStack.map(t => t.path), false);
                 }
-            });
-        }
+            }
 
-        // Update Loop Button
-        const loopEmojis = ['➡️', '🔁', '🔂'];
-        const loopTitles = ['No Loop', 'Loop All', 'Loop Single'];
-        loopModeBtn.textContent = loopEmojis[currentLoopMode];
-        loopModeBtn.title = loopTitles[currentLoopMode];
+            lastMusicStatus = status;
+            currentLoopMode = status.loopMode;
+            currentShuffleMode = status.shuffleMode;
 
-        // Update Shuffle Button
-        shuffleBtn.classList.toggle('active', currentShuffleMode);
+            playPauseButton.disabled = status.stack.length === 0;
 
-        // Render Playlist
-        const stackFingerprint = status.stack.map(t => t.path).join('|');
-        if (stackFingerprint !== lastStackFingerprint) {
-            lastStackFingerprint = stackFingerprint;
-            musicStackList.innerHTML = '';
-            status.stack.forEach((track, index) => {
-                const div = document.createElement('div');
-                div.className = 'music-stack-item';
-                div.dataset.index = index;
+            // Update Loop Button
+            const loopEmojis = ['➡️', '🔁', '🔂'];
+            const loopTitles = ['No Loop', 'Loop All', 'Loop Single'];
+            loopModeBtn.textContent = loopEmojis[currentLoopMode];
+            loopModeBtn.title = loopTitles[currentLoopMode];
 
-                div.innerHTML = `
-                    <span class="track-name">${track.name}</span>
-                    <div class="item-actions">
-                        <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
-                        <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
-                        <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
-                    </div>
-                `;
-                div.querySelector('.play-track-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    window.electron.ipcRenderer.send('play-now', { index });
+            // Update Shuffle Button
+            shuffleBtn.classList.toggle('active', currentShuffleMode);
+
+            // Render Playlist
+            const stackFingerprint = status.stack.map(t => t.path).join('|');
+            if (stackFingerprint !== lastStackFingerprint) {
+                lastStackFingerprint = stackFingerprint;
+                musicStackList.innerHTML = '';
+                status.stack.forEach((track, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'music-stack-item';
+                    div.dataset.index = index;
+
+                    div.innerHTML = `
+                        <span class="track-name">${track.name}</span>
+                        <div class="item-actions">
+                            <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
+                            <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
+                            <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
+                        </div>
+                    `;
+                    div.querySelector('.play-track-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        window.electron.ipcRenderer.send('play-now', { index });
+                    });
+                    div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        togglePreview(index);
+                    });
+                    div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        window.electron.ipcRenderer.send('remove-from-stack', { index });
+                    });
+                    div.addEventListener('dblclick', () => {
+                        window.electron.ipcRenderer.send('play-now', { index });
+                    });
+                    musicStackList.appendChild(div);
                 });
-                div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    togglePreview(index);
-                });
-                div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    window.electron.ipcRenderer.send('remove-from-stack', { index });
-                });
-                div.addEventListener('dblclick', () => {
-                    window.electron.ipcRenderer.send('play-now', { index });
-                });
-                musicStackList.appendChild(div);
-            });
+            }
         }
 
         // Lightweight updates for active/caching states on existing elements
@@ -1140,6 +1136,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }, 100);
             }
         });
+
+        // Handle Progress Bar Seeking Listener (Setup once)
+        const progressContainer = document.querySelector('.progress-container');
+        if (progressContainer && !progressContainer.dataset.seekingListener) {
+            progressContainer.dataset.seekingListener = 'true';
+            progressContainer.addEventListener('click', (e) => {
+                if (lastMusicStatus && lastMusicStatus.duration > 0) {
+                    const rect = progressContainer.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const percent = x / rect.width;
+                    const seekTime = percent * lastMusicStatus.duration;
+                    window.electron.ipcRenderer.send('seek-music', { time: seekTime });
+                }
+            });
+        }
     });
 
     window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {

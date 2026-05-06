@@ -9,7 +9,7 @@ class ThreadedAudioMixer extends Readable {
         this.worker = new Worker(path.join(__dirname, 'AudioMixerWorker.js'));
         this.bufferQueue = [];
         this.isReady = false;
-        this.BUFFER_TARGET = 5; // Maintain 5 chunks (~100ms) in buffer to smooth jitter
+        this.BUFFER_TARGET = 20; // Maintain 20 chunks (~400ms) in buffer to smooth jitter
 
         this.worker.on('message', (msg) => {
             if (msg.type === 'mixed-chunk') {

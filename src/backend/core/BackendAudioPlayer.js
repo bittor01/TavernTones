@@ -67,31 +67,36 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     _emitStatusUpdate(isTimeUpdate = false) {
-        const getRelativePath = (filePath) => {
-            if (!filePath || !this.musicFolder) return filePath;
-            try {
-                return path.relative(this.musicFolder, filePath);
-            } catch (e) {
-                return filePath;
-            }
-        };
-
         const status = {
             isPlaying: this.isPlaying,
             isCaching: this.isCaching,
-            stack: this.stack.map(p => ({
-                path: p,
-                name: path.basename(p),
-                relativePath: getRelativePath(p)
-            })),
             currentIndex: this.currentIndex,
-            loopMode: this.loopMode,
-            shuffleMode: this.shuffleMode,
             playerStatus: this.playerStatus,
             currentTime: this.currentTime,
             duration: this.duration,
             isTimeUpdate: isTimeUpdate
         };
+
+        // Only include heavy data if it's not a frequent time update
+        if (!isTimeUpdate) {
+            const getRelativePath = (filePath) => {
+                if (!filePath || !this.musicFolder) return filePath;
+                try {
+                    return path.relative(this.musicFolder, filePath);
+                } catch (e) {
+                    return filePath;
+                }
+            };
+
+            status.stack = this.stack.map(p => ({
+                path: p,
+                name: path.basename(p),
+                relativePath: getRelativePath(p)
+            }));
+            status.loopMode = this.loopMode;
+            status.shuffleMode = this.shuffleMode;
+        }
+
         this.emit('status-change', status);
     }
 
