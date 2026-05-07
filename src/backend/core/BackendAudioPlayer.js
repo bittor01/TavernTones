@@ -31,7 +31,9 @@ class BackendAudioPlayer extends EventEmitter {
 
         this.currentTime = 0; // Current playback time in seconds
         this.duration = 0; // Total duration of current track in seconds
+        this.playCount = 0; // To prevent stale duration updates
         this.timer = null;
+        this.cacheInterval = null;
         this.consecutiveErrors = 0;
 
         // Caching
@@ -225,6 +227,8 @@ class BackendAudioPlayer extends EventEmitter {
         if (this.isDestroyed) return;
         if (this.playLock) return;
         this.playLock = true;
+        this.playCount++;
+        const currentPlayId = this.playCount;
 
         try {
             if (this.currentIndex < 0 || this.currentIndex >= this.stack.length) {
@@ -264,7 +268,7 @@ class BackendAudioPlayer extends EventEmitter {
             // Start duration fetch in background
             if (startTime === 0) {
                 this._getDuration(filePath).then(duration => {
-                    if (this.isPlaying && this.stack[this.currentIndex] === filePath) {
+                    if (this.isPlaying && this.playCount === currentPlayId) {
                         this.duration = duration;
                         this._emitStatusUpdate();
                     }
@@ -276,28 +280,26 @@ class BackendAudioPlayer extends EventEmitter {
             const cachedBuffer = this.cachedAudio.get(filePath);
 
             if (cachedBuffer && startTime === 0) {
-                this.log(`[AudioPlayer] Using throttled cache stream for: ${path.basename(filePath)}`);
+                this.log(`[AudioPlayer] Using throttled cache interval for: ${path.basename(filePath)}`);
 
                 const CHUNK_SIZE = 3840; // 20ms
                 let offset = 0;
 
-                const stream = new Readable({
-                    read() {
-                        const sendChunk = () => {
-                            if (offset >= cachedBuffer.length) {
-                                this.push(null);
-                                return;
-                            }
-                            const end = Math.min(offset + CHUNK_SIZE, cachedBuffer.length);
-                            const chunk = cachedBuffer.subarray(offset, end);
-                            offset = end;
-                            this.push(chunk);
-                        };
-                        // Use a small timeout to emulate native frame rate,
-                        // preventing the mixer/player from thinking the track finished instantly
-                        setTimeout(sendChunk, 19);
+                const stream = new PassThrough();
+                this.cacheInterval = setInterval(() => {
+                    if (offset >= cachedBuffer.length) {
+                        stream.end();
+                        if (this.cacheInterval) {
+                            clearInterval(this.cacheInterval);
+                            this.cacheInterval = null;
+                        }
+                        return;
                     }
-                });
+                    const end = Math.min(offset + CHUNK_SIZE, cachedBuffer.length);
+                    const chunk = cachedBuffer.subarray(offset, end);
+                    offset = end;
+                    stream.write(chunk);
+                }, 19); // ~48 chunks per second for 48kHz stereo 16-bit
 
                 stream.once('end', () => {
                     const currentMusic = this.activeStreams.get('music');
@@ -396,11 +398,19 @@ class BackendAudioPlayer extends EventEmitter {
         this._stopTimer();
         this._emitStatusUpdate();
 
-        if (this.consecutiveErrors >= this.stack.length || this.consecutiveErrors > 5) {
-            this.log("[AudioPlayer] Multiple playback errors, stopping.");
+        // Retry limit reached
+        if (this.consecutiveErrors > 10) {
+            this.log("[AudioPlayer] CRITICAL: Too many consecutive errors, stopping.");
             this.stop();
+            return;
+        }
+
+        // If we've tried this track multiple times, move on even if looping single
+        if (this.consecutiveErrors % 3 === 0) {
+            this.log("[AudioPlayer] Persistent error on current track, skipping.");
+            setTimeout(() => this.next(false), 1000); // skip like a manual skip
         } else {
-            this.log("[AudioPlayer] Playback error, skipping to next track.");
+            this.log("[AudioPlayer] Playback error, retrying/skipping...");
             setTimeout(() => this.next(true), 1000);
         }
     }
@@ -492,6 +502,10 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     _stopMusicStream() {
+        if (this.cacheInterval) {
+            clearInterval(this.cacheInterval);
+            this.cacheInterval = null;
+        }
         if (this.activeStreams.has('music')) {
             const entry = this.activeStreams.get('music');
             if (this.mixer) this.mixer.removeInput('music');
@@ -500,6 +514,9 @@ class BackendAudioPlayer extends EventEmitter {
                     entry.process.stdout.unpipe();
                     entry.process.kill('SIGKILL');
                 } catch (e) {}
+            }
+            if (entry.stream && entry.stream.end) {
+                entry.stream.end();
             }
             this.activeStreams.delete('music');
         }
