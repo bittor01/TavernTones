@@ -178,10 +178,10 @@ const hpBarEmojiMap = {
 };
 
 async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
-    if (isAppReady && mainWindow.webContents) {
+    if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex });
     }
-    else {
+    else if (!isAppReady) {
         await sleep(100);
         sendInitiativeUpdate(initiativeOrder, currentTurnIndex);
     }
@@ -189,9 +189,9 @@ async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
 
 // Function to send dice roll log messages to the renderer
 async function logDiceRollToRenderer(message) {
-    if (isAppReady && mainWindow.webContents) {
+    if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send('dice-log', message);
-    } else {
+    } else if (!isAppReady) {
         await sleep(100);
         logDiceRollToRenderer(message);
     }

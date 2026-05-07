@@ -208,6 +208,7 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     clearStack() {
+        if (this.mixer) this.mixer.reset();
         this._stopMusicStream();
         this._stopTimer();
         this.stack = [];
@@ -311,18 +312,21 @@ class BackendAudioPlayer extends EventEmitter {
                 const mixerStream = new PassThrough();
                 ffmpegOutput.pipe(mixerStream);
 
-                let pcmBuffer = Buffer.alloc(0);
+                let pcmChunks = [];
+                let currentPcmSize = 0;
                 let tooBig = false;
                 this.isCaching = (startTime === 0);
                 if (this.isCaching) this._emitStatusUpdate();
 
                 ffmpegOutput.on('data', (chunk) => {
                     if (this.isCaching && !tooBig) {
-                        if (pcmBuffer.length + chunk.length <= this.MAX_CACHE_SIZE) {
-                            pcmBuffer = Buffer.concat([pcmBuffer, chunk]);
+                        if (currentPcmSize + chunk.length <= this.MAX_CACHE_SIZE) {
+                            pcmChunks.push(chunk);
+                            currentPcmSize += chunk.length;
                         } else {
                             tooBig = true;
                             this.log(`[AudioPlayer] File too large for cache: ${path.basename(filePath)}`);
+                            pcmChunks = []; // Free memory
                             this.isCaching = false;
                             this._emitStatusUpdate();
                         }
@@ -335,10 +339,12 @@ class BackendAudioPlayer extends EventEmitter {
                         this.activeStreams.delete('music');
                         this.mixer.removeInput('music');
 
-                        if (!tooBig && pcmBuffer.length > 1024 && startTime === 0) {
+                        if (!tooBig && currentPcmSize > 1024 && startTime === 0) {
+                            const pcmBuffer = Buffer.concat(pcmChunks);
                             this.cachedAudio.set(filePath, pcmBuffer);
                             this.log(`[AudioPlayer] Cached ${path.basename(filePath)} (${(pcmBuffer.length / 1024 / 1024).toFixed(2)} MB)`);
                         }
+                        pcmChunks = [];
                         this.isCaching = false;
                         this._stopTimer();
                         this._emitStatusUpdate();
@@ -468,8 +474,13 @@ class BackendAudioPlayer extends EventEmitter {
     _stopMusicStream() {
         if (this.activeStreams.has('music')) {
             const entry = this.activeStreams.get('music');
-            this.mixer.removeInput('music');
-            if (entry.process) entry.process.kill();
+            if (this.mixer) this.mixer.removeInput('music');
+            if (entry.process) {
+                try {
+                    entry.process.stdout.unpipe();
+                    entry.process.kill('SIGKILL');
+                } catch (e) {}
+            }
             this.activeStreams.delete('music');
         }
     }

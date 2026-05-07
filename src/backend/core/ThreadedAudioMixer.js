@@ -7,6 +7,7 @@ class ThreadedAudioMixer extends Readable {
     constructor() {
         super();
         this.worker = new Worker(path.join(__dirname, 'AudioMixerWorker.js'));
+        this.inputs = new Map(); // id -> { stream, onData }
         this.bufferQueue = [];
         this.isReady = false;
         this.BUFFER_TARGET = 20; // Maintain 20 chunks (~400ms) in buffer to smooth jitter
@@ -65,36 +66,35 @@ class ThreadedAudioMixer extends Readable {
     _maybeFillTarget() {
         // Ensure we always have BUFFER_TARGET chunks requested/available
         // This is a simple look-ahead to keep the pipeline full
-        while (this.bufferQueue.length < this.BUFFER_TARGET) {
+        const chunksNeeded = this.BUFFER_TARGET - this.bufferQueue.length;
+        for (let i = 0; i < chunksNeeded; i++) {
             this.worker.postMessage({ type: 'request-mix' });
-            // We don't want to flood the worker too much,
-            // but for 5 chunks it's perfectly fine and recommended for stability.
-            break; // Just request one at a time for now to keep it steady
         }
     }
 
     addInput(stream, id, volume = 1.0) {
-        this.worker.postMessage({ type: 'add-input', id, volume });
+        this.removeInput(id);
 
-        // Pipe stream data to worker
-        stream.on('data', (chunk) => {
-            // We must copy or ensure the buffer is safe to pass? 
-            // postMessage clones significantly unless transferred.
-            // But we can just send it.
+        const onData = (chunk) => {
+            if (this.isDestroyed) return;
             this.worker.postMessage({ type: 'input-chunk', id, data: chunk });
-        });
+        };
 
-        stream.on('end', () => {
-            // Do not automatically remove input? Or should we?
-            // Usually BackendAudioPlayer manages stopped streams.
-            // But for safety:
-            // this.removeInput(id); // Let the player do explicit removal
-        });
+        const onEnd = () => {
+            // Optional: handle end
+        };
 
-        stream.on('error', (err) => {
+        const onError = (err) => {
             console.error(`Stream error for input ${id}:`, err);
             this.removeInput(id);
-        });
+        };
+
+        stream.on('data', onData);
+        stream.on('end', onEnd);
+        stream.on('error', onError);
+
+        this.inputs.set(id, { stream, onData, onEnd, onError });
+        this.worker.postMessage({ type: 'add-input', id, volume });
     }
 
     setInputVolume(id, volume) {
@@ -102,7 +102,24 @@ class ThreadedAudioMixer extends Readable {
     }
 
     removeInput(id) {
+        const input = this.inputs.get(id);
+        if (input) {
+            input.stream.removeListener('data', input.onData);
+            input.stream.removeListener('end', input.onEnd);
+            input.stream.removeListener('error', input.onError);
+            this.inputs.delete(id);
+        }
         this.worker.postMessage({ type: 'remove-input', id });
+    }
+
+    reset() {
+        // Clear all inputs
+        for (const id of this.inputs.keys()) {
+            this.removeInput(id);
+        }
+        this.bufferQueue = [];
+        this.isReading = false;
+        // The worker queues are cleared by remove-input messages
     }
 
     destroy() {
