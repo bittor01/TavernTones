@@ -276,8 +276,28 @@ class BackendAudioPlayer extends EventEmitter {
             const cachedBuffer = this.cachedAudio.get(filePath);
 
             if (cachedBuffer && startTime === 0) {
-                this.log(`[AudioPlayer] Using cached buffer for: ${path.basename(filePath)}`);
-                const stream = Readable.from(cachedBuffer);
+                this.log(`[AudioPlayer] Using throttled cache stream for: ${path.basename(filePath)}`);
+
+                const CHUNK_SIZE = 3840; // 20ms
+                let offset = 0;
+
+                const stream = new Readable({
+                    read() {
+                        const sendChunk = () => {
+                            if (offset >= cachedBuffer.length) {
+                                this.push(null);
+                                return;
+                            }
+                            const end = Math.min(offset + CHUNK_SIZE, cachedBuffer.length);
+                            const chunk = cachedBuffer.subarray(offset, end);
+                            offset = end;
+                            this.push(chunk);
+                        };
+                        // Use a small timeout to emulate native frame rate,
+                        // preventing the mixer/player from thinking the track finished instantly
+                        setTimeout(sendChunk, 19);
+                    }
+                });
 
                 stream.once('end', () => {
                     const currentMusic = this.activeStreams.get('music');
@@ -381,7 +401,7 @@ class BackendAudioPlayer extends EventEmitter {
             this.stop();
         } else {
             this.log("[AudioPlayer] Playback error, skipping to next track.");
-            setTimeout(() => this.next(), 1000);
+            setTimeout(() => this.next(true), 1000);
         }
     }
 
@@ -498,6 +518,7 @@ class BackendAudioPlayer extends EventEmitter {
 
         if (this.loopMode === 2) { // Loop 1
             this.log("[AudioPlayer] Loop 1: Restarting current track.");
+            // In Loop 1, we don't move the track, just replay it.
             this._play();
         } else if (this.loopMode === 1) { // Loop All
             this.log("[AudioPlayer] Loop All: Rolling current track to bottom.");
@@ -518,8 +539,8 @@ class BackendAudioPlayer extends EventEmitter {
         }
     }
 
-    next() {
-        this.log(`[AudioPlayer] next() called. stackSize=${this.stack.length}, loopMode=${this.loopMode}, shuffle=${this.shuffleMode}`);
+    next(isError = false) {
+        this.log(`[AudioPlayer] next(isError=${isError}) called. stackSize=${this.stack.length}, loopMode=${this.loopMode}, shuffle=${this.shuffleMode}`);
         if (this.stack.length === 0) return;
 
         if (this.shuffleMode) {
@@ -532,8 +553,12 @@ class BackendAudioPlayer extends EventEmitter {
             this.currentIndex = nextIndex;
             this.log(`[AudioPlayer] Shuffle chose index ${this.currentIndex}`);
         } else {
-            // Skips always move current track to bottom if looping is on
-            if (this.loopMode === 1 || this.loopMode === 2) {
+            // In Loop Single mode, automatic transition (from error) should probably stay on track
+            // but manual skip should still go to next.
+            if (this.loopMode === 2 && isError) {
+                this.log("[AudioPlayer] next(): Loop Single + Error, restarting same track.");
+                this.currentIndex = 0;
+            } else if (this.loopMode === 1 || this.loopMode === 2) {
                 this.log("[AudioPlayer] next(): Moving current track to bottom.");
                 const current = this.stack.shift();
                 if (current) this.stack.push(current);
