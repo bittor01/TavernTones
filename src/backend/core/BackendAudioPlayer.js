@@ -259,7 +259,7 @@ class BackendAudioPlayer extends EventEmitter {
                     this._recreateDiscordStream();
                 }
 
-                if (this.mixer) this.mixer.bufferQueue = []; // flush stale audio
+                if (this.mixer) this.mixer.reset(); // Full reset to clear stale audio and pending requests
             }
             this.isPlaying = true;
             this.playerStatus = AudioPlayerStatus.Playing;
@@ -527,7 +527,8 @@ class BackendAudioPlayer extends EventEmitter {
         this.log(`[AudioPlayer] _handleMusicFinish: elapsed=${elapsed}ms, duration=${this.duration}s, loopMode=${this.loopMode}`);
 
         // Avoid stopping on very short tracks unless it's a thrash scenario
-        if (elapsed < 500 && (this.duration === 0 || this.duration > 2)) {
+        // Increased threshold slightly and added check for duration > 0
+        if (elapsed < 1000 && this.duration > 2) {
             this.log(`[AudioPlayer] Track finished too quickly (${elapsed}ms), considering it an error.`);
             this._handlePlaybackError(this.stack[this.currentIndex]);
             return;

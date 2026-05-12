@@ -11,9 +11,11 @@ class ThreadedAudioMixer extends Readable {
         this.bufferQueue = [];
         this.isReady = false;
         this.BUFFER_TARGET = 20; // Maintain 20 chunks (~400ms) in buffer to smooth jitter
+        this.pendingRequests = 0; // Track outstanding mix requests to prevent explosion
 
         this.worker.on('message', (msg) => {
             if (msg.type === 'mixed-chunk') {
+                this.pendingRequests = Math.max(0, this.pendingRequests - 1);
                 const buffer = Buffer.from(msg.data);
                 this.bufferQueue.push(buffer);
                 this._maybeFillTarget();
@@ -66,8 +68,10 @@ class ThreadedAudioMixer extends Readable {
     _maybeFillTarget() {
         // Ensure we always have BUFFER_TARGET chunks requested/available
         // This is a simple look-ahead to keep the pipeline full
-        const chunksNeeded = this.BUFFER_TARGET - this.bufferQueue.length;
+        // We subtract pendingRequests to avoid overwhelming the worker with duplicate requests
+        const chunksNeeded = this.BUFFER_TARGET - (this.bufferQueue.length + this.pendingRequests);
         for (let i = 0; i < chunksNeeded; i++) {
+            this.pendingRequests++;
             this.worker.postMessage({ type: 'request-mix' });
         }
     }
@@ -119,6 +123,7 @@ class ThreadedAudioMixer extends Readable {
         }
         this.bufferQueue = [];
         this.isReading = false;
+        this.pendingRequests = 0;
         // The worker queues are cleared by remove-input messages
     }
 
