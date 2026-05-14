@@ -123,15 +123,18 @@ class ThreadedAudioMixer extends Readable {
         this.worker.postMessage({ type: 'remove-input', id });
     }
 
-    reset() {
-        // Clear all inputs
-        for (const id of this.inputs.keys()) {
-            this.removeInput(id);
+    reset(hard = true) {
+        if (hard) {
+            for (const id of this.inputs.keys()) {
+                this.removeInput(id);
+            }
+            this.bufferQueue = [];
+            this.pendingRequests = 0;
+            this.currentRequestId++;
+        } else {
+            // Soft reset just clears non-music inputs if needed,
+            // but we keep the currentRequestId to allow seamless transitions
         }
-        this.bufferQueue = [];
-        this.pendingRequests = 0;
-        this.currentRequestId++; // Invalidate all pending worker responses
-        // The worker queues are cleared by remove-input messages
         this._maybeFillTarget();
     }
 

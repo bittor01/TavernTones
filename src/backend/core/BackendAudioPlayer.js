@@ -60,9 +60,56 @@ class BackendAudioPlayer extends EventEmitter {
         this.connection = null;
 
         this.setupPlayerEvents();
+        this._ensureDiscordPipeline();
         this._emitStatusUpdate();
 
         this.activeStreams = new Map(); // id -> { process, stream }
+    }
+
+    _ensureDiscordPipeline() {
+        try {
+            if (!this.player) {
+                this.log('[AudioPlayer] Creating Discord AudioPlayer.');
+                this.player = createAudioPlayer();
+                this.setupPlayerEvents();
+            }
+
+            if (this.connection) {
+                this.connection.subscribe(this.player);
+            }
+
+            if (!this.mixerProxy || this.mixerProxy.destroyed) {
+                this.log('[AudioPlayer] Establishing mixer proxy.');
+                if (this.mixerProxy) {
+                    try { this.mixer.unpipe(this.mixerProxy); } catch (e) {}
+                    try { this.mixerProxy.destroy(); } catch (e) {}
+                }
+                this.mixerProxy = new PassThrough();
+                this.mixer.pipe(this.mixerProxy);
+                this.mixedResource = null;
+            }
+
+            if (!this.mixedResource || this.mixedResource.ended || this.player.state.status === AudioPlayerStatus.Idle) {
+                const now = Date.now();
+                this.recoveryAttempts = this.recoveryAttempts.filter(t => now - t < 10000);
+                this.recoveryAttempts.push(now);
+
+                if (this.recoveryAttempts.length > 8) {
+                    this.log('[AudioPlayer] CRITICAL: Rapid recovery loop detected. Stopping playback.');
+                    this.stop();
+                    return;
+                }
+
+                this.log('[AudioPlayer] Establishing audio pipeline resource.');
+                this.mixedResource = createAudioResource(this.mixerProxy, {
+                    inputType: StreamType.Raw,
+                    inlineVolume: false
+                });
+                this.player.play(this.mixedResource);
+            }
+        } catch (e) {
+            this.log(`[AudioPlayer] Error ensuring pipeline: ${e.message}`);
+        }
     }
 
     _emitStatusUpdate(isTimeUpdate = false) {
@@ -102,20 +149,14 @@ class BackendAudioPlayer extends EventEmitter {
     setupPlayerEvents() {
         this.player.on(AudioPlayerStatus.Idle, (oldState) => {
             this.log('[AudioPlayer] Mixer player went IDLE.');
-            // If the player goes idle while we THINK we should be playing,
-            // it means the stream ended or failed. Attempt to kickstart.
             if (this.isPlaying) {
-                // IMPORTANT: If the resource that just finished is NOT our current active resource,
-                // then this is a stale 'Idle' event from a previous track/proxy. Ignore it.
                 if (oldState.resource && oldState.resource !== this.mixedResource) {
                     this.log('[AudioPlayer] Idle event was for a stale resource. Ignoring.');
                     return;
                 }
-
-                // Double check we are still actually Idle before trying to recover.
                 if (this.player.state.status === AudioPlayerStatus.Idle) {
-                    this.log('[AudioPlayer] Mixer unexpectedly idle, re-creating stream resource.');
-                    this._recreateDiscordStream();
+                    this.log('[AudioPlayer] Mixer unexpectedly idle, ensuring pipeline.');
+                    this._ensureDiscordPipeline();
                 }
             }
         });
@@ -123,55 +164,6 @@ class BackendAudioPlayer extends EventEmitter {
         this.player.on('error', error => {
             this.log(`[AudioPlayer] Error in audio player (Mixer): ${error.message}`);
         });
-    }
-
-    _recreateDiscordStream() {
-        try {
-            // Rapid-recovery safeguard to prevent infinite loops and crashes
-            const now = Date.now();
-            this.recoveryAttempts = this.recoveryAttempts.filter(t => now - t < 10000);
-            this.recoveryAttempts.push(now);
-
-            if (this.recoveryAttempts.length > 5) {
-                this.log('[AudioPlayer] CRITICAL: Rapid recovery loop detected. Stopping playback to prevent crash.');
-                this.stop();
-                return;
-            }
-
-            if (!this.player) {
-                this.log('[AudioPlayer] Creating new Discord AudioPlayer.');
-                this.player = createAudioPlayer();
-                this.setupPlayerEvents();
-            }
-
-            if (this.connection) {
-                this.connection.subscribe(this.player);
-            }
-
-            // --- PassThrough Proxy Logic ---
-            // We use a proxy stream so that when Discord's AudioResource ends/closes,
-            // it only closes the proxy and NOT our central mixer.
-            if (this.mixerProxy) {
-                this.mixer.unpipe(this.mixerProxy);
-                this.mixerProxy.end();
-                this.mixerProxy.destroy();
-            }
-
-            this.mixerProxy = new PassThrough();
-            this.mixer.pipe(this.mixerProxy);
-
-            // Create a FRESH audio resource for the proxy
-            this.log('[AudioPlayer] Creating fresh AudioResource for the mixer proxy.');
-            this.mixedResource = createAudioResource(this.mixerProxy, {
-                inputType: StreamType.Raw,
-                inlineVolume: false
-            });
-
-            this.player.play(this.mixedResource);
-            this.log('[AudioPlayer] Mixer proxy resource applied to Discord player.');
-        } catch (e) {
-            this.log(`[AudioPlayer] Error recreating stream: ${e.message}`);
-        }
     }
 
 
@@ -289,9 +281,7 @@ class BackendAudioPlayer extends EventEmitter {
 
             if (startTime === 0) {
                 this.duration = 0;
-                // Always recreate the resource on a new track (at 0s) to force the player to recognize data flow
-                this._recreateDiscordStream();
-
+                this._ensureDiscordPipeline();
                 if (this.mixer) this.mixer.reset(); // Full reset to clear stale audio and pending requests
             }
             this.playerStatus = AudioPlayerStatus.Playing;
@@ -312,28 +302,30 @@ class BackendAudioPlayer extends EventEmitter {
             const cachedBuffer = this.cachedAudio.get(filePath);
 
             if (cachedBuffer && startTime === 0) {
-                this.log(`[AudioPlayer] Using throttled cache interval for: ${path.basename(filePath)}`);
-
-                // We emulate real-time flow for cached audio by delivering data in 20ms chunks.
-                // Delivering the entire buffer at once would overwhelm the mixer and the IPC channel.
-                const CHUNK_SIZE = 3840; // 20ms (48kHz * 2 bytes * 2 channels * 0.02s)
-                let offset = 0;
+                this.log(`[AudioPlayer] Using throttled cache delivery for: ${path.basename(filePath)}`);
 
                 const stream = new PassThrough();
-                this.cacheInterval = setInterval(() => {
+                let offset = 0;
+                const CHUNK_SIZE = 16384;
+
+                const deliver = () => {
+                    if (this.isDestroyed || this.cacheInterval !== deliver || !this.isPlaying) return;
+
                     if (offset >= cachedBuffer.length) {
                         stream.end();
-                        if (this.cacheInterval) {
-                            clearInterval(this.cacheInterval);
-                            this.cacheInterval = null;
-                        }
                         return;
                     }
+
                     const end = Math.min(offset + CHUNK_SIZE, cachedBuffer.length);
-                    const chunk = cachedBuffer.subarray(offset, end);
+                    stream.write(cachedBuffer.subarray(offset, end));
                     offset = end;
-                    stream.write(chunk);
-                }, 20); // Exactly 50 chunks per second for 48kHz stereo 16-bit
+
+                    const delay = (CHUNK_SIZE / 192000) * 1000;
+                    setTimeout(deliver, delay);
+                };
+
+                this.cacheInterval = deliver;
+                setImmediate(deliver);
 
                 stream.once('end', () => {
                     const currentMusic = this.activeStreams.get('music');
@@ -539,7 +531,6 @@ class BackendAudioPlayer extends EventEmitter {
 
     _stopMusicStream() {
         if (this.cacheInterval) {
-            clearInterval(this.cacheInterval);
             this.cacheInterval = null;
         }
         if (this.activeStreams.has('music')) {
@@ -571,6 +562,9 @@ class BackendAudioPlayer extends EventEmitter {
         }
 
         const playWithDelay = () => {
+            // Use soft reset for seamless loops
+            if (this.mixer) this.mixer.reset(false);
+
             // Add a small delay for rapid loops to prevent crashing the mixer/discord client
             if (elapsed < 500) {
                 this.log("[AudioPlayer] Rapid loop detected, delaying restart by 200ms.");
