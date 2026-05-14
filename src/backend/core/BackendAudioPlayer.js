@@ -35,6 +35,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.timer = null;
         this.cacheInterval = null;
         this.consecutiveErrors = 0;
+        this.recoveryAttempts = [];
 
         // Caching
         this.cachedAudio = new Map(); // filePath -> Buffer
@@ -99,13 +100,23 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     setupPlayerEvents() {
-        this.player.on(AudioPlayerStatus.Idle, () => {
+        this.player.on(AudioPlayerStatus.Idle, (oldState) => {
             this.log('[AudioPlayer] Mixer player went IDLE.');
             // If the player goes idle while we THINK we should be playing,
             // it means the stream ended or failed. Attempt to kickstart.
             if (this.isPlaying) {
-                this.log('[AudioPlayer] Mixer unexpectedly idle, re-creating stream resource.');
-                this._recreateDiscordStream();
+                // IMPORTANT: If the resource that just finished is NOT our current active resource,
+                // then this is a stale 'Idle' event from a previous track/proxy. Ignore it.
+                if (oldState.resource && oldState.resource !== this.mixedResource) {
+                    this.log('[AudioPlayer] Idle event was for a stale resource. Ignoring.');
+                    return;
+                }
+
+                // Double check we are still actually Idle before trying to recover.
+                if (this.player.state.status === AudioPlayerStatus.Idle) {
+                    this.log('[AudioPlayer] Mixer unexpectedly idle, re-creating stream resource.');
+                    this._recreateDiscordStream();
+                }
             }
         });
 
@@ -116,6 +127,17 @@ class BackendAudioPlayer extends EventEmitter {
 
     _recreateDiscordStream() {
         try {
+            // Rapid-recovery safeguard to prevent infinite loops and crashes
+            const now = Date.now();
+            this.recoveryAttempts = this.recoveryAttempts.filter(t => now - t < 10000);
+            this.recoveryAttempts.push(now);
+
+            if (this.recoveryAttempts.length > 5) {
+                this.log('[AudioPlayer] CRITICAL: Rapid recovery loop detected. Stopping playback to prevent crash.');
+                this.stop();
+                return;
+            }
+
             if (!this.player) {
                 this.log('[AudioPlayer] Creating new Discord AudioPlayer.');
                 this.player = createAudioPlayer();
@@ -326,6 +348,7 @@ class BackendAudioPlayer extends EventEmitter {
                 this.activeStreams.set('music', { stream });
                 this._startTimer();
                 this.consecutiveErrors = 0;
+                this.recoveryAttempts = [];
             } else {
                 this.log(`[AudioPlayer] Starting FFmpeg stream for: ${path.basename(filePath)} at offset ${startTime}`);
                 const ffmpegProcess = this._createFfmpegStream(filePath, startTime);
@@ -390,6 +413,7 @@ class BackendAudioPlayer extends EventEmitter {
                 this.activeStreams.set('music', { process: ffmpegProcess, stream: mixerStream });
                 this._startTimer();
                 this.consecutiveErrors = 0;
+                this.recoveryAttempts = [];
             }
 
             const currentVolume = this.activeSfxCount > 0 ? this.playbackVolume * this.duckingVolume : this.playbackVolume;
@@ -703,6 +727,7 @@ class BackendAudioPlayer extends EventEmitter {
         this.currentTime = 0;
         this.duration = 0;
         this.consecutiveErrors = 0;
+        this.recoveryAttempts = [];
         this.playerStatus = AudioPlayerStatus.Idle;
         this._emitStatusUpdate();
     }
