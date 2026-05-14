@@ -10,7 +10,7 @@ class ThreadedAudioMixer extends Readable {
         this.inputs = new Map(); // id -> { stream, onData }
         this.bufferQueue = [];
         this.isReady = false;
-        this.BUFFER_TARGET = 20; // Maintain 20 chunks (~400ms) in buffer to smooth jitter
+        this.BUFFER_TARGET = 40; // Maintain 40 chunks (~800ms) in buffer to smooth jitter
         this.pendingRequests = 0; // Track outstanding mix requests to prevent explosion
         this.currentRequestId = 0; // Correlation ID to discard stale audio from previous tracks
 
@@ -20,6 +20,9 @@ class ThreadedAudioMixer extends Readable {
 
                 // Discard stale audio from before the last reset/track change
                 if (msg.requestId !== undefined && msg.requestId !== this.currentRequestId) {
+                    // CRITICAL: If we discard a chunk, we must immediately try to fill the target again
+                    // otherwise we might deadlock if all pending requests were stale.
+                    this._maybeFillTarget();
                     return;
                 }
 
@@ -123,18 +126,18 @@ class ThreadedAudioMixer extends Readable {
         this.worker.postMessage({ type: 'remove-input', id });
     }
 
-    reset(hard = true) {
-        if (hard) {
-            for (const id of this.inputs.keys()) {
+    reset() {
+        // Clear non-SFX inputs (like the previous track's silence)
+        // We keep SFX inputs as they might still be playing during a track change
+        for (const id of this.inputs.keys()) {
+            if (id === 'music') {
                 this.removeInput(id);
             }
-            this.bufferQueue = [];
-            this.pendingRequests = 0;
-            this.currentRequestId++;
-        } else {
-            // Soft reset just clears non-music inputs if needed,
-            // but we keep the currentRequestId to allow seamless transitions
         }
+
+        this.bufferQueue = [];
+        this.pendingRequests = 0;
+        this.currentRequestId++; // Invalidate all pending worker responses
         this._maybeFillTarget();
     }
 
