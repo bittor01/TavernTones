@@ -105,6 +105,12 @@ class BackendAudioPlayer extends EventEmitter {
     setupPlayerEvents() {
         this.player.on(AudioPlayerStatus.Idle, () => {
             this.log('[AudioPlayer] Mixer player went IDLE.');
+            // If the player goes idle while we THINK we should be playing,
+            // it means the stream ended or failed. Attempt to kickstart.
+            if (this.isPlaying && this.mixedResource && !this.mixedResource.ended) {
+                this.log('[AudioPlayer] Mixer unexpectedly idle, re-playing resource.');
+                this.player.play(this.mixedResource);
+            }
         });
 
         this.player.on('error', error => {
@@ -114,24 +120,29 @@ class BackendAudioPlayer extends EventEmitter {
 
     _recreateDiscordStream() {
         try {
-            if (this.player) {
-                this.player.stop(true);
+            if (!this.player) {
+                this.player = createAudioPlayer();
+                this.setupPlayerEvents();
             }
-            this.player = createAudioPlayer();
-            this.setupPlayerEvents();
+
             if (this.connection) {
                 this.connection.subscribe(this.player);
             }
 
             // Always create a FRESH audio resource for the mixer to avoid
             // "Resource is already being played by another audio player"
+            if (this.mixedResource) {
+                // If it exists, make sure it's stopped/cleared as much as possible
+                // though usually we just replace it.
+            }
+
             this.mixedResource = createAudioResource(this.mixer, {
                 inputType: StreamType.Raw,
                 inlineVolume: false
             });
 
             this.player.play(this.mixedResource);
-            this.log('[AudioPlayer] Recreated Discord AudioPlayer and Mixer Resource.');
+            this.log('[AudioPlayer] Recreated Mixer Resource and ensured Player is active.');
         } catch (e) {
             this.log(`[AudioPlayer] Error recreating stream: ${e.message}`);
         }

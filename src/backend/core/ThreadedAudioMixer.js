@@ -122,9 +122,9 @@ class ThreadedAudioMixer extends Readable {
             this.removeInput(id);
         }
         this.bufferQueue = [];
-        this.isReading = false;
         this.pendingRequests = 0;
         // The worker queues are cleared by remove-input messages
+        this._maybeFillTarget();
     }
 
     destroy() {
