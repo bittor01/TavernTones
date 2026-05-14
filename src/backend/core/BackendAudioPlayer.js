@@ -53,15 +53,11 @@ class BackendAudioPlayer extends EventEmitter {
             this.log(`[AudioPlayer] Mixer Error: ${err.message}`);
         });
 
-        this.mixedResource = createAudioResource(this.mixer, {
-            inputType: StreamType.Raw,
-            inlineVolume: false
-        });
-
+        this.mixerProxy = null;
+        this.mixedResource = null;
         this.player = createAudioPlayer();
         this.connection = null;
 
-        this.player.play(this.mixedResource);
         this.setupPlayerEvents();
         this._emitStatusUpdate();
 
@@ -107,9 +103,9 @@ class BackendAudioPlayer extends EventEmitter {
             this.log('[AudioPlayer] Mixer player went IDLE.');
             // If the player goes idle while we THINK we should be playing,
             // it means the stream ended or failed. Attempt to kickstart.
-            if (this.isPlaying && this.mixedResource) {
-                this.log('[AudioPlayer] Mixer unexpectedly idle, re-applying mixed resource.');
-                this.player.play(this.mixedResource);
+            if (this.isPlaying) {
+                this.log('[AudioPlayer] Mixer unexpectedly idle, re-creating stream resource.');
+                this._recreateDiscordStream();
             }
         });
 
@@ -130,17 +126,26 @@ class BackendAudioPlayer extends EventEmitter {
                 this.connection.subscribe(this.player);
             }
 
-            // Always create a FRESH audio resource for the mixer to avoid
-            // "Resource is already being played by another audio player"
-            // This is CRITICAL for smooth track transitions.
-            this.log('[AudioPlayer] Creating fresh AudioResource for the mixer.');
-            this.mixedResource = createAudioResource(this.mixer, {
+            // --- PassThrough Proxy Logic ---
+            // We use a proxy stream so that when Discord's AudioResource ends/closes,
+            // it only closes the proxy and NOT our central mixer.
+            if (this.mixerProxy) {
+                this.mixer.unpipe(this.mixerProxy);
+                this.mixerProxy.end();
+            }
+
+            this.mixerProxy = new PassThrough();
+            this.mixer.pipe(this.mixerProxy);
+
+            // Create a FRESH audio resource for the proxy
+            this.log('[AudioPlayer] Creating fresh AudioResource for the mixer proxy.');
+            this.mixedResource = createAudioResource(this.mixerProxy, {
                 inputType: StreamType.Raw,
                 inlineVolume: false
             });
 
             this.player.play(this.mixedResource);
-            this.log('[AudioPlayer] Mixer resource applied to Discord player.');
+            this.log('[AudioPlayer] Mixer proxy resource applied to Discord player.');
         } catch (e) {
             this.log(`[AudioPlayer] Error recreating stream: ${e.message}`);
         }
@@ -286,7 +291,9 @@ class BackendAudioPlayer extends EventEmitter {
             if (cachedBuffer && startTime === 0) {
                 this.log(`[AudioPlayer] Using throttled cache interval for: ${path.basename(filePath)}`);
 
-                const CHUNK_SIZE = 3840; // 20ms
+                // We emulate real-time flow for cached audio by delivering data in 20ms chunks.
+                // Delivering the entire buffer at once would overwhelm the mixer and the IPC channel.
+                const CHUNK_SIZE = 3840; // 20ms (48kHz * 2 bytes * 2 channels * 0.02s)
                 let offset = 0;
 
                 const stream = new PassThrough();
