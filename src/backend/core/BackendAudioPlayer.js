@@ -107,8 +107,8 @@ class BackendAudioPlayer extends EventEmitter {
             this.log('[AudioPlayer] Mixer player went IDLE.');
             // If the player goes idle while we THINK we should be playing,
             // it means the stream ended or failed. Attempt to kickstart.
-            if (this.isPlaying && this.mixedResource && !this.mixedResource.ended) {
-                this.log('[AudioPlayer] Mixer unexpectedly idle, re-playing resource.');
+            if (this.isPlaying && this.mixedResource) {
+                this.log('[AudioPlayer] Mixer unexpectedly idle, re-applying mixed resource.');
                 this.player.play(this.mixedResource);
             }
         });
@@ -121,6 +121,7 @@ class BackendAudioPlayer extends EventEmitter {
     _recreateDiscordStream() {
         try {
             if (!this.player) {
+                this.log('[AudioPlayer] Creating new Discord AudioPlayer.');
                 this.player = createAudioPlayer();
                 this.setupPlayerEvents();
             }
@@ -131,18 +132,15 @@ class BackendAudioPlayer extends EventEmitter {
 
             // Always create a FRESH audio resource for the mixer to avoid
             // "Resource is already being played by another audio player"
-            if (this.mixedResource) {
-                // If it exists, make sure it's stopped/cleared as much as possible
-                // though usually we just replace it.
-            }
-
+            // This is CRITICAL for smooth track transitions.
+            this.log('[AudioPlayer] Creating fresh AudioResource for the mixer.');
             this.mixedResource = createAudioResource(this.mixer, {
                 inputType: StreamType.Raw,
                 inlineVolume: false
             });
 
             this.player.play(this.mixedResource);
-            this.log('[AudioPlayer] Recreated Mixer Resource and ensured Player is active.');
+            this.log('[AudioPlayer] Mixer resource applied to Discord player.');
         } catch (e) {
             this.log(`[AudioPlayer] Error recreating stream: ${e.message}`);
         }
@@ -259,20 +257,15 @@ class BackendAudioPlayer extends EventEmitter {
 
             // Immediate feedback for UI
             this.currentTime = startTime;
+            this.isPlaying = true; // Set playing early so recovery logic can catch stalls during startup
+
             if (startTime === 0) {
                 this.duration = 0;
-                // Only recreate player if it's NOT already playing our mixedResource correctly
-                const isMixerActive = this.player &&
-                                    this.player.state.status !== AudioPlayerStatus.Idle &&
-                                    this.mixedResource && !this.mixedResource.ended;
-
-                if (!isMixerActive) {
-                    this._recreateDiscordStream();
-                }
+                // Always recreate the resource on a new track (at 0s) to force the player to recognize data flow
+                this._recreateDiscordStream();
 
                 if (this.mixer) this.mixer.reset(); // Full reset to clear stale audio and pending requests
             }
-            this.isPlaying = true;
             this.playerStatus = AudioPlayerStatus.Playing;
             this._emitStatusUpdate();
 
