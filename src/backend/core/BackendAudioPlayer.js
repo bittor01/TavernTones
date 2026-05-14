@@ -132,6 +132,7 @@ class BackendAudioPlayer extends EventEmitter {
             if (this.mixerProxy) {
                 this.mixer.unpipe(this.mixerProxy);
                 this.mixerProxy.end();
+                this.mixerProxy.destroy();
             }
 
             this.mixerProxy = new PassThrough();
@@ -310,7 +311,7 @@ class BackendAudioPlayer extends EventEmitter {
                     const chunk = cachedBuffer.subarray(offset, end);
                     offset = end;
                     stream.write(chunk);
-                }, 19); // ~48 chunks per second for 48kHz stereo 16-bit
+                }, 20); // Exactly 50 chunks per second for 48kHz stereo 16-bit
 
                 stream.once('end', () => {
                     const currentMusic = this.activeStreams.get('music');
@@ -538,23 +539,33 @@ class BackendAudioPlayer extends EventEmitter {
         this.log(`[AudioPlayer] _handleMusicFinish: elapsed=${elapsed}ms, duration=${this.duration}s, loopMode=${this.loopMode}`);
 
         // Avoid stopping on very short tracks unless it's a thrash scenario
-        // Increased threshold slightly and added check for duration > 0
-        if (elapsed < 1000 && this.duration > 2) {
+        // Increased threshold slightly and restored check for duration === 0 (unknown duration)
+        if (elapsed < 1000 && (this.duration === 0 || this.duration > 2)) {
             this.log(`[AudioPlayer] Track finished too quickly (${elapsed}ms), considering it an error.`);
             this._handlePlaybackError(this.stack[this.currentIndex]);
             return;
         }
 
+        const playWithDelay = () => {
+            // Add a small delay for rapid loops to prevent crashing the mixer/discord client
+            if (elapsed < 500) {
+                this.log("[AudioPlayer] Rapid loop detected, delaying restart by 200ms.");
+                setTimeout(() => this._play(), 200);
+            } else {
+                this._play();
+            }
+        };
+
         if (this.loopMode === 2) { // Loop 1
             this.log("[AudioPlayer] Loop 1: Restarting current track.");
             // In Loop 1, we don't move the track, just replay it.
-            this._play();
+            playWithDelay();
         } else if (this.loopMode === 1) { // Loop All
             this.log("[AudioPlayer] Loop All: Rolling current track to bottom.");
             const finished = this.stack.shift();
             if (finished) this.stack.push(finished);
             this.currentIndex = 0;
-            this._play();
+            playWithDelay();
         } else { // None
             this.log("[AudioPlayer] Loop None: Rolling current track off.");
             this.stack.shift();

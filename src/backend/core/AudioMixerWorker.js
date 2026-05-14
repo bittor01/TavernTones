@@ -33,12 +33,12 @@ parentPort.on('message', (msg) => {
             break;
 
         case 'request-mix':
-            mixAndSend();
+            mixAndSend(msg.requestId);
             break;
     }
 });
 
-function mixAndSend() {
+function mixAndSend(requestId) {
     // We need to produce ONE CHUNK_SIZE buffer.
     const outputBuffer = Buffer.alloc(CHUNK_SIZE);
     let activeInputs = 0;
@@ -85,7 +85,7 @@ function mixAndSend() {
 
     if (activeInputs === 0) {
         // Silence
-        parentPort.postMessage({ type: 'mixed-chunk', data: outputBuffer });
+        parentPort.postMessage({ type: 'mixed-chunk', data: outputBuffer, requestId });
         return;
     }
 
@@ -97,5 +97,5 @@ function mixAndSend() {
         outputBuffer.writeInt16LE(val, i * 2);
     }
 
-    parentPort.postMessage({ type: 'mixed-chunk', data: outputBuffer });
+    parentPort.postMessage({ type: 'mixed-chunk', data: outputBuffer, requestId });
 }
