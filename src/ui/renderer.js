@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const saveMusicPresetBtn = document.getElementById('save-music-preset-btn');
     const loadMusicPresetBtn = document.getElementById('load-music-preset-btn');
     const musicAutosaveCheck = document.getElementById('music-autosave-check');
+    const discordMediaControlToggle = document.getElementById('discord-media-control-toggle');
     const musicStackList = document.getElementById('music-stack-list');
     const previewAudioPlayer = document.getElementById('preview-audio-player');
     const addCreatureForm = document.getElementById('add-creature-form');
@@ -676,6 +677,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         discordConfig = config;
         if (musicAutosaveCheck) {
             musicAutosaveCheck.checked = !!config.musicAutosave;
+        }
+        if (discordMediaControlToggle) {
+            discordMediaControlToggle.checked = config.showMediaControl !== false;
         }
         if (config.audioOnlyRows) audioOnlyRows = config.audioOnlyRows;
         if (config.audioOnlyCols) audioOnlyCols = config.audioOnlyCols;
@@ -1502,6 +1506,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (result.success) {
                     console.log('Saved preset to', result.filePath);
                 }
+            });
+        });
+    }
+
+    if (discordMediaControlToggle) {
+        discordMediaControlToggle.addEventListener('change', () => {
+            window.electron.ipcRenderer.send('set-discord-config', {
+                showMediaControl: discordMediaControlToggle.checked
             });
         });
     }

@@ -557,8 +557,9 @@ class BackendAudioPlayer extends EventEmitter {
         }
     }
 
-    next(isError = false) {
-        this.log(`[AudioPlayer] next(isError=${isError}) called. stackSize=${this.stack.length}, loopMode=${this.loopMode}, shuffle=${this.shuffleMode}`);
+    next(isError = false, forcePlay = false) {
+        const wasPlaying = this.isPlaying || forcePlay;
+        this.log(`[AudioPlayer] next(isError=${isError}, forcePlay=${forcePlay}) called. wasPlaying=${wasPlaying}, stackSize=${this.stack.length}, loopMode=${this.loopMode}, shuffle=${this.shuffleMode}`);
         if (this.stack.length === 0) return;
 
         if (this.shuffleMode) {
@@ -591,11 +592,17 @@ class BackendAudioPlayer extends EventEmitter {
                 this.currentIndex = 0;
             }
         }
-        this._play();
+        if (wasPlaying || isError) {
+            this._play();
+        } else {
+            this.currentTime = 0;
+            this._emitStatusUpdate();
+        }
     }
 
-    jumpTo(index) {
-        this.log(`[AudioPlayer] jumpTo(${index}) called. stackSize=${this.stack.length}, loopMode=${this.loopMode}`);
+    jumpTo(index, forcePlay = false) {
+        const wasPlaying = this.isPlaying || forcePlay;
+        this.log(`[AudioPlayer] jumpTo(${index}, forcePlay=${forcePlay}) called. wasPlaying=${wasPlaying}, stackSize=${this.stack.length}, loopMode=${this.loopMode}`);
         if (index >= 0 && index < this.stack.length) {
             // In the roll-off system, jumping to index X means bumping everything BEFORE X to the bottom
             const preceding = this.stack.splice(0, index);
@@ -607,12 +614,19 @@ class BackendAudioPlayer extends EventEmitter {
             }
             this.currentIndex = 0;
             this.playLock = false; // Prevent stuck states
-            this._play();
+
+            if (wasPlaying) {
+                this._play();
+            } else {
+                this.currentTime = 0;
+                this._emitStatusUpdate();
+            }
         }
     }
 
-    prev() {
-        this.log(`[AudioPlayer] prev() called. stackSize=${this.stack.length}, loopMode=${this.loopMode}`);
+    prev(forcePlay = false) {
+        const wasPlaying = this.isPlaying || forcePlay;
+        this.log(`[AudioPlayer] prev(forcePlay=${forcePlay}) called. wasPlaying=${wasPlaying}, stackSize=${this.stack.length}, loopMode=${this.loopMode}`);
         if (this.stack.length === 0) return;
         // In roll-off system, prev means taking the LAST track and putting it at the TOP
         if (this.loopMode === 1 || this.loopMode === 2) {
@@ -624,7 +638,13 @@ class BackendAudioPlayer extends EventEmitter {
             this.log("[AudioPlayer] prev(): Restarting current track (no loop).");
             this.currentIndex = 0; // Restart if no loop
         }
-        this._play();
+
+        if (wasPlaying) {
+            this._play();
+        } else {
+            this.currentTime = 0;
+            this._emitStatusUpdate();
+        }
     }
 
     play() {
