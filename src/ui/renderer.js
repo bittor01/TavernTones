@@ -1123,14 +1123,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // Lightweight updates for active/caching states on existing elements
+        // Lightweight updates for active states on existing elements
         const items = musicStackList.querySelectorAll('.music-stack-item');
         items.forEach((div, index) => {
             const isActive = index === status.currentIndex;
-            const isCaching = status.isCaching && isActive;
 
             div.classList.toggle('active', isActive);
-            div.classList.toggle('caching', isCaching);
 
             // Auto-scroll to active track
             if (isActive && index !== lastScrolledIndex) {
