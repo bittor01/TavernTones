@@ -32,7 +32,7 @@ TavernTones is a tool for Dungeon Masters to stream ambient soundscapes, music, 
 
 ## Dependencies
 
-TavernTones requires **FFmpeg** for audio processing. The application will attempt to auto-detect FFmpeg on your system. If not found, it will provide some and you can manually specify the path in the Settings menu.
+TavernTones requires **FFmpeg** for audio processing. The application will attempt to auto-detect FFmpeg on your system. If not found, it will provide some. You can manually specify the path in the Settings menu if you have newer or preferred ones installed.
 
 ---
 
