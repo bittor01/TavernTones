@@ -1171,10 +1171,6 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     color: #fff;
 }
 
-.music-stack-item.caching {
-    color: #ffc107;
-}
-
 .music-stack-item .track-name {
     white-space: nowrap;
     overflow: hidden;
