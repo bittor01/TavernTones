@@ -123,21 +123,20 @@ function Get-LatestRemoteBranch {
         return $null
     }
     
-    # 2. Try to get the branch that origin/HEAD points to
+    # 2. Find the branch with the most recent commit
     Set-Location $WorkingDirectory
     $BranchToCheckout = $null
-    try {
-        $BranchToCheckout = (git symbolic-ref --short refs/remotes/origin/HEAD 2>$null) -replace 'origin/', ''
-        if ($BranchToCheckout) {
-            Write-Host "Found remote HEAD branch: '$BranchToCheckout'" -ForegroundColor Green
-        }
-    } catch {
-        # Fallback to finding the latest commit branch
-        $LatestCommitBranch = git branch -r --sort=-committerdate | Select-Object -First 1
-        if ($LatestCommitBranch -and $LatestCommitBranch -match '->') {
-            # If it contains '->', extract the target branch
+    
+    # Get all remote branches sorted by most recent commit
+    $LatestCommitBranch = git branch -r --sort=-committerdate | Select-Object -First 1
+    
+    if ($LatestCommitBranch) {
+        # Handle symbolic refs like "origin/HEAD -> origin/master"
+        if ($LatestCommitBranch -match '->') {
+            # Extract the target branch after the arrow
             $BranchToCheckout = (($LatestCommitBranch -split '->')[1].Trim() -replace 'origin/', '')
         } else {
+            # Regular branch name
             $BranchToCheckout = ($LatestCommitBranch.Trim() -replace 'origin/', '')
         }
         Write-Host "Found remote branch with latest commit: '$BranchToCheckout'" -ForegroundColor Green
@@ -221,6 +220,9 @@ if (Test-Path ".\build") {
 
 # 3. RUN NPM BUILD
 # -----------------
+Write-Host "`n--- Generating License Data ---" -ForegroundColor Yellow
+$null = Invoke-WithRetry -Command "node" -Arguments @("src/backend/data/generate-licenses.js") -ErrorName "License Generation" -RetryLimit $MaxRetries
+
 Write-Host "`n--- Running NPM Build ---" -ForegroundColor Yellow
 $null = Invoke-WithRetry -Command "npm" -Arguments @("run", "build") -ErrorName "NPM Build" -RetryLimit $MaxRetries
 $null = Invoke-WithRetry -Command "npm" -Arguments @("run", "installer") -ErrorName "NPM Installer" -RetryLimit $MaxRetries

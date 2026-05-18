@@ -37,6 +37,66 @@ const { Worker } = require('worker_threads');
 
 let discordConfig;
 
+// Caching for music library
+let cachedMusicLibrary = null;
+let cachedFlatMusicList = null;
+let cachedDiscordSongOptions = null;
+
+const getMusicLibrary = () => {
+    if (!discordConfig) return { children: [] };
+    if (cachedMusicLibrary) return cachedMusicLibrary;
+
+    // Use a simpler copy instead of full deep clone if we don't modify it much
+    // Or just return it if we trust consumers not to mutate.
+    // For safety, we'll do a light clone of the top level and 'Loose Files'
+    const library = { ...(discordConfig.musicLibrary || { children: [] }) };
+    library.children = library.children ? [...library.children] : [];
+
+    const looseFiles = discordConfig.looseFiles || [];
+    if (looseFiles.length > 0) {
+        let looseFolder = library.children.find(c => c.name === 'Loose Files');
+        if (looseFolder) {
+            // Clone loose folder to avoid mutating discordConfig
+            looseFolder = { ...looseFolder };
+            const idx = library.children.findIndex(c => c.name === 'Loose Files');
+            library.children[idx] = looseFolder;
+        } else {
+            looseFolder = { name: 'Loose Files', type: 'directory', children: [], path: 'loose' };
+            library.children.push(looseFolder);
+        }
+        looseFolder.children = looseFiles.map(p => ({
+            name: path.basename(p),
+            path: p,
+            type: 'file'
+        }));
+    }
+    cachedMusicLibrary = library;
+    return library;
+};
+
+const getFlatMusicList = () => {
+    if (cachedFlatMusicList) return cachedFlatMusicList;
+
+    const list = [];
+    const traverse = (node) => {
+        if (node.type === 'file') {
+            list.push(node.path);
+        } else if (node.children) {
+            node.children.forEach(traverse);
+        }
+    };
+    const library = getMusicLibrary();
+    traverse(library);
+    cachedFlatMusicList = list;
+    return list;
+};
+
+function invalidateMusicCache() {
+    cachedMusicLibrary = null;
+    cachedFlatMusicList = null;
+    cachedDiscordSongOptions = null;
+}
+
 let connection;
 let voiceStatus = 'disconnected'; // disconnected, connecting, connected
 let isJoiningVoice = false; // Prevents race conditions during knocking/joining
@@ -82,6 +142,7 @@ let windowloaded = false;
 
 // --- State Management ---
 const autosavePath = path.join(app.getPath('userData'), 'autosave.json');
+const musicAutosavePath = path.join(app.getPath('userData'), 'music-autosave.json');
 
 /**
  * A map of D&D 5e conditions to their emoji, color, and description.
@@ -117,10 +178,10 @@ const hpBarEmojiMap = {
 };
 
 async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
-    if (isAppReady && mainWindow.webContents) {
+    if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex });
     }
-    else {
+    else if (!isAppReady) {
         await sleep(100);
         sendInitiativeUpdate(initiativeOrder, currentTurnIndex);
     }
@@ -128,9 +189,9 @@ async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
 
 // Function to send dice roll log messages to the renderer
 async function logDiceRollToRenderer(message) {
-    if (isAppReady && mainWindow.webContents) {
+    if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send('dice-log', message);
-    } else {
+    } else if (!isAppReady) {
         await sleep(100);
         logDiceRollToRenderer(message);
     }
@@ -517,12 +578,25 @@ function setupFilesystemWatchers(config) {
         { name: 'Bestiary', path: bestiaryPath, callback: () => logToRenderer("Bestiary folder changed. Refreshing...") }
     ];
 
+    const watcherTimers = new Map();
+
     watchers.forEach(w => {
         if (w.path && fs.existsSync(w.path)) {
             try {
                 fs.watch(w.path, { recursive: true }, (eventType, filename) => {
-                    logToRenderer(`[Watcher] ${w.name} change detected: ${eventType} ${filename || ''}`);
-                    w.callback();
+                    // Debounce watcher events to prevent spam
+                    const timerKey = `${w.name}:${filename}`;
+                    if (watcherTimers.has(timerKey)) {
+                        clearTimeout(watcherTimers.get(timerKey));
+                    }
+
+                    const timer = setTimeout(() => {
+                        logToRenderer(`[Watcher] ${w.name} change detected: ${eventType} ${filename || ''}`);
+                        w.callback();
+                        watcherTimers.delete(timerKey);
+                    }, 500);
+
+                    watcherTimers.set(timerKey, timer);
                 });
                 logToRenderer(`[Watcher] Started watching ${w.name}: ${w.path}`);
             } catch (err) {
@@ -539,6 +613,10 @@ function setupFilesystemWatchers(config) {
  * music player, initiative tracker, and more.
  */
 async function ipcloader() {
+    ipcMain.on('window-ready', () => {
+        // Handle window ready if needed, or just let it be a signal
+    });
+
     // Helper function to open a directory selection dialog
     const selectDirectory = async (title) => {
         const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
@@ -676,28 +754,38 @@ async function ipcloader() {
     });
 
     ipcMain.on('set-discord-config', async (event, config) => {
-        await setDiscordConfig(config);
+        // Merge with existing config to prevent data loss
+        const existingConfig = await getDiscordConfig();
+        const mergedConfig = { ...existingConfig, ...config };
+
+        await setDiscordConfig(mergedConfig);
 
         // --- Update the live configuration ---
         // The in-memory config needs to be updated to reflect the newly saved settings.
-        discordConfig = config;
+        const oldShowMediaControl = discordConfig ? discordConfig.showMediaControl : true;
+        discordConfig = mergedConfig;
+        invalidateMusicCache();
+
+        if (oldShowMediaControl !== mergedConfig.showMediaControl) {
+            updateDiscordMediaControl();
+        }
+
         // The music player instance also needs to be told about the new path.
         if (musicPlayer) {
-            musicPlayer.musicFolder = config.defaultMusicPath;
-            musicPlayer.ffmpegBinFolder = config.ffmpegPath; // Note: config key remains ffmpegPath for compatibility
+            musicPlayer.musicFolder = mergedConfig.defaultMusicPath;
+            musicPlayer.ffmpegBinFolder = mergedConfig.ffmpegPath; // Note: config key remains ffmpegPath for compatibility
             logToRenderer(`[IPC] Updated music player's default folder to: ${musicPlayer.musicFolder}`);
         }
         // --- End of update ---
 
-        await dialog.showMessageBox(null, {
-            type: 'info',
-            title: 'Settings Saved',
-            message: 'Your settings have been saved. Please close and reopen the application to apply all changes.',
-            buttons: ['OK']
-        });
-        // Close the settings window after saving
-        if (settingsWindow) {
-            settingsWindow.close();
+        // Only show dialog and close if it was sent from the settings window
+        if (event.sender === (settingsWindow && settingsWindow.webContents)) {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('discord-config', mergedConfig);
+            }
+            if (settingsWindow) {
+                settingsWindow.close();
+            }
         }
     });
 
@@ -831,6 +919,7 @@ async function ipcloader() {
         if (initiativeTracker) {
             initiativeTracker.sendFullState();
         }
+        autoloadMusic();
         if (discordConfig && discordConfig.enabled) {
             if (client && client.isReady()) {
                 mainWindow.webContents.send('discord-bot-status', { status: 'online', message: 'Connected' });
@@ -845,6 +934,22 @@ async function ipcloader() {
     });
 
     // Music Player IPC Handlers
+    const autoloadMusic = async () => {
+        if (discordConfig && discordConfig.musicAutosave && fs.existsSync(musicAutosavePath)) {
+            try {
+                const data = await fs.promises.readFile(musicAutosavePath, 'utf-8');
+                const stack = JSON.parse(data);
+                if (Array.isArray(stack)) {
+                    musicPlayer.clearStack();
+                    await musicPlayer.addToStack(stack);
+                    logToRenderer(`[Music] Autoloaded ${stack.length} tracks.`);
+                }
+            } catch (e) {
+                console.error("Autoload failed:", e);
+            }
+        }
+    };
+
     ipcMain.on('load-music-file', (event, filePaths) => {
         if (filePaths) {
             musicPlayer.addToStack(filePaths);
@@ -863,11 +968,11 @@ async function ipcloader() {
     });
 
     ipcMain.on('play-next', (event) => {
-        if (musicPlayer) musicPlayer.next();
+        if (musicPlayer) musicPlayer.next(false, false);
     });
 
     ipcMain.on('play-prev', (event) => {
-        if (musicPlayer) musicPlayer.prev();
+        if (musicPlayer) musicPlayer.prev(false);
     });
 
     ipcMain.on('set-loop-mode', (event, { mode }) => {
@@ -889,7 +994,14 @@ async function ipcloader() {
     ipcMain.on('jump-to-track', async (event, { index }) => {
         if (musicPlayer) {
             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
-            musicPlayer.jumpTo(index);
+            musicPlayer.jumpTo(index, true);
+        }
+    });
+
+    ipcMain.on('play-now', async (event, { index }) => {
+        if (musicPlayer) {
+            if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+            musicPlayer.jumpTo(index, true);
         }
     });
 
@@ -899,7 +1011,18 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.handle('save-music-preset', async (event, stack) => {
+    ipcMain.handle('save-music-preset', async (event, stack, isManual = true) => {
+        // Internal call (autosave) or background save
+        if ((!event || isManual === false || isManual === 'false') && stack) {
+            try {
+                await fs.promises.writeFile(musicAutosavePath, JSON.stringify(stack, null, 2));
+                return { success: true };
+            } catch (e) {
+                console.error("Autosave failed:", e);
+                return { success: false, error: e.message };
+            }
+        }
+
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
             title: 'Save Music Stack Preset',
             defaultPath: 'music-preset.json',
@@ -908,6 +1031,10 @@ async function ipcloader() {
         if (!canceled && filePath) {
             try {
                 await fs.promises.writeFile(filePath, JSON.stringify(stack, null, 2));
+                // Also update autosave file if enabled
+                if (discordConfig && discordConfig.musicAutosave) {
+                    await fs.promises.writeFile(musicAutosavePath, JSON.stringify(stack, null, 2));
+                }
                 return { success: true };
             } catch (e) {
                 return { success: false, error: e.message };
@@ -973,23 +1100,6 @@ async function ipcloader() {
         broadcastBotStatus();
     });
 
-    const getMusicLibrary = () => {
-        const library = JSON.parse(JSON.stringify(discordConfig.musicLibrary || { children: [] }));
-        const looseFiles = discordConfig.looseFiles || [];
-        if (looseFiles.length > 0) {
-            let looseFolder = library.children.find(c => c.name === 'Loose Files');
-            if (!looseFolder) {
-                looseFolder = { name: 'Loose Files', type: 'directory', children: [], path: 'loose' };
-                library.children.push(looseFolder);
-            }
-            looseFolder.children = looseFiles.map(p => ({
-                name: path.basename(p),
-                path: p,
-                type: 'file'
-            }));
-        }
-        return library;
-    };
 
     ipcMain.handle('get-music-library', async () => {
         return getMusicLibrary();
@@ -998,6 +1108,22 @@ async function ipcloader() {
     ipcMain.handle('rescan-music-library', async () => {
         scanMusicLibrary();
         return { success: true };
+    });
+
+    ipcMain.handle('get-licenses', async () => {
+        try {
+            const licensesPath = path.join(__dirname, '../data/licenses.json');
+            if (fs.existsSync(licensesPath)) {
+                const licenses = JSON.parse(await fs.promises.readFile(licensesPath, 'utf8'));
+                return { success: true, licenses };
+            }
+
+            // Fallback if licenses.json doesn't exist yet
+            return { success: false, error: "License data not generated. Please run build." };
+        } catch (e) {
+            console.error("Error getting licenses:", e);
+            return { success: false, error: e.message };
+        }
     });
 
     const resolveLibraryPaths = (paths) => {
@@ -1025,9 +1151,8 @@ async function ipcloader() {
                 // For 'play now' from library, we insert at the very top (index 0) and play.
                 const currentStack = [...musicPlayer.stack];
                 musicPlayer.stack = [...resolvedPaths, ...currentStack];
-                musicPlayer.currentIndex = 0;
                 if (voiceStatus !== 'connected') await joinVoiceChannelAction();
-                musicPlayer.play();
+                musicPlayer.jumpTo(0, true);
                 break;
             case 'add-top':
                 if (musicPlayer.currentIndex === -1) {
@@ -1140,24 +1265,6 @@ async function ipcloader() {
         return [];
     });
 
-    ipcMain.on('play-sound', (event, { slotId }) => {
-        // We need the renderer to tell us WHAT file to play, or we store it in backend.
-        // The renderer state seems to hold the file path, so it should send it, 
-        // OR the renderer sends "play slot X" and the backend looks up what slot X is.
-        // But currently main.js doesn't store soundboard state. 
-        // The renderer calls 'play-sound' with { slotId }... wait.
-        // My implementation plan said: "Trigger BackendAudioPlayer.playSound(file)".
-        // BUT the renderer's `play-sound` event in the *existing code (renderer.js)* 
-        // implies it might send just ID? 
-        // Let's check renderer.js again.
-        // Actually I haven't written the renderer code yet, but the *existing* placeholder code in renderer.js:
-        // window.electron.ipcRenderer.send('play-sound', { slotId });
-        // It doesn't send the file path. Ideally the backend should know, OR the renderer should send it.
-        // To keep backend stateless regarding UI config if possible, I'll update renderer to send the path always.
-        // Updating `main.js` to expect `filePath` in the payload.
-    });
-
-    // Redoing the above block properly:
     ipcMain.on('play-sound', async (event, { slotId, filePath }) => {
         logToRenderer(`IPC 'play-sound' slot ${slotId}, file: ${filePath}`);
         if (filePath && musicPlayer) {
@@ -1339,16 +1446,6 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.on('copy-creature', (event, { creatureId }) => {
-        const creature = initiativeTracker.getCreature(creatureId);
-        if (creature) {
-            // When copying, we want to populate the "Add" form, not the "Edit" form.
-            // We give it a new ID to ensure it's a distinct creature.
-            const newCreature = { ...creature, id: Date.now() };
-            mainWindow.webContents.send('populate-add-form', newCreature);
-        }
-    });
-
     ipcMain.on('save-encounter', async () => {
         try {
             const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
@@ -1470,6 +1567,7 @@ async function ipcloader() {
         }
     });
 
+
     ipcMain.on('previous-turn', async () => {
         const turnInfo = initiativeTracker.previousTurn();
         if (turnInfo) {
@@ -1500,6 +1598,10 @@ async function ipcloader() {
 
     ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
         initiativeTracker.updateCreatureFlag(creatureId, flag, value);
+    });
+
+    ipcMain.on('show-emoji-panel', () => {
+        app.showEmojiPanel();
     });
 
     ipcMain.handle('search-monsters', async (event, query) => {
@@ -1968,6 +2070,20 @@ client.once(Events.ClientReady, async () => {
     updateDiscordMediaControl();
 
     async function updateDiscordMediaControl(disabled = false) {
+        if (isShuttingDown) return;
+
+        if (discordConfig.showMediaControl === false) {
+            if (client.lastMediaMessage) {
+                try {
+                    await client.lastMediaMessage.delete().catch(() => {});
+                    client.lastMediaMessage = null;
+                } catch (e) {
+                    console.error("Error deleting media control:", e);
+                }
+            }
+            return;
+        }
+
         if (!discordConfig.textChannel) {
             logToRenderer('[Discord] No text channel configured for media controls.');
             return;
@@ -1976,7 +2092,6 @@ client.once(Events.ClientReady, async () => {
             pendingMediaUpdate = true;
             return;
         }
-        if (isShuttingDown) return;
 
         let targetChannel = client.channels.cache.get(discordConfig.textChannel);
         if (!targetChannel) {
@@ -2035,10 +2150,13 @@ client.once(Events.ClientReady, async () => {
             .setTimestamp();
 
         // --- Row 1: Song Selector Dropdown ---
-        const songs = musicPlayer.getMusicFiles().map(p => ({
-            label: path.basename(p).substring(0, 100),
-            value: getSongId(p)
-        }));
+        if (!cachedDiscordSongOptions) {
+            cachedDiscordSongOptions = getFlatMusicList().map(p => ({
+                label: path.basename(p).substring(0, 100),
+                value: getSongId(p)
+            }));
+        }
+        const songs = cachedDiscordSongOptions;
 
         const totalPages = Math.ceil(songs.length / PAGE_SIZE);
         const start = currentDropdownPage * PAGE_SIZE;
@@ -2114,8 +2232,20 @@ client.once(Events.ClientReady, async () => {
         }
     }
 
-    musicPlayer.on('status-change', () => {
-        updateDiscordMediaControl();
+    let lastDiscordMediaUpdate = 0;
+    musicPlayer.on('status-change', (status) => {
+        const now = Date.now();
+        // If it's just a time update, throttle to every 10 seconds
+        if (status.isTimeUpdate) {
+            if (now - lastDiscordMediaUpdate >= 10000) {
+                lastDiscordMediaUpdate = now;
+                updateDiscordMediaControl();
+            }
+        } else {
+            // Significant status change (play/pause/track change), update immediately
+            lastDiscordMediaUpdate = now;
+            updateDiscordMediaControl();
+        }
     });
 
     client.on('interactionCreate', async interaction => {
@@ -2390,6 +2520,7 @@ function scanMusicLibrary() {
             }
 
             discordConfig.musicLibrary = newLibrary;
+            invalidateMusicCache();
             await setDiscordConfig(discordConfig);
 
         } else {
