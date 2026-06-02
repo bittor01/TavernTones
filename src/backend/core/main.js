@@ -303,6 +303,8 @@ async function apploader() {
 
         // Initialize components
         musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, discordConfig.ffmpegPath);
+        musicPlayer.setDuckingVolume(discordConfig.duckingVolume !== undefined ? discordConfig.duckingVolume : 0.3);
+        musicPlayer.setNormalization(!!discordConfig.volumeNormalization);
         setupFilesystemWatchers(discordConfig);
 
         // --- Start Music Library Scan ---
@@ -770,11 +772,19 @@ async function ipcloader() {
             updateDiscordMediaControl();
         }
 
-        // The music player instance also needs to be told about the new path.
+        // The music player instance also needs to be told about the new settings.
         if (musicPlayer) {
             musicPlayer.musicFolder = mergedConfig.defaultMusicPath;
             musicPlayer.ffmpegBinFolder = mergedConfig.ffmpegPath; // Note: config key remains ffmpegPath for compatibility
-            logToRenderer(`[IPC] Updated music player's default folder to: ${musicPlayer.musicFolder}`);
+
+            if (config.duckingVolume !== undefined) {
+                musicPlayer.setDuckingVolume(config.duckingVolume);
+            }
+            if (config.volumeNormalization !== undefined) {
+                musicPlayer.setNormalization(config.volumeNormalization);
+            }
+
+            logToRenderer(`[IPC] Updated music player's live settings.`);
         }
         // --- End of update ---
 
