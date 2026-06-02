@@ -41,6 +41,8 @@ class BackendAudioPlayer extends EventEmitter {
         this.soundboardVolume = 0.5;
         this.duckingVolume = 0.3;
         this.activeSfxCount = 0;
+        this.useNormalization = false;
+        this.isAutoPausedForDucking = false;
 
         // Audio Pipelines
         this.mixer = new ThreadedAudioMixer();
@@ -173,6 +175,35 @@ class BackendAudioPlayer extends EventEmitter {
                 const currentVolume = this.activeSfxCount > 0 ? this.playbackVolume * this.duckingVolume : this.playbackVolume;
                 this.mixer.setInputVolume('music', currentVolume);
             }
+        }
+    }
+
+    setDuckingVolume(volume) {
+        if (volume >= 0 && volume <= 1) {
+            this.duckingVolume = volume;
+            if (this.activeSfxCount > 0) {
+                if (this.duckingVolume === 0) {
+                    if (this.activeStreams.has('music')) {
+                        this.isAutoPausedForDucking = true;
+                        this.pause(true);
+                    }
+                } else {
+                    if (this.isAutoPausedForDucking) {
+                        this.isAutoPausedForDucking = false;
+                        this.play();
+                    } else if (this.activeStreams.has('music')) {
+                        this.mixer.setInputVolume('music', this.playbackVolume * this.duckingVolume);
+                    }
+                }
+            }
+        }
+    }
+
+    setNormalization(enabled) {
+        this.useNormalization = !!enabled;
+        this.log(`[AudioPlayer] Volume normalization: ${this.useNormalization}`);
+        if (this.isPlaying) {
+            this._play(this.currentTime);
         }
     }
 
@@ -399,7 +430,13 @@ class BackendAudioPlayer extends EventEmitter {
             args.push('-ss', startTime.toString());
         }
         // Keep -re to prevent FFmpeg from overwhelming the main thread/IPC with too much data too fast
-        args.push('-re', '-i', filePath, '-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1');
+        args.push('-re', '-i', filePath);
+
+        if (this.useNormalization) {
+            args.push('-af', 'dynaudnorm');
+        }
+
+        args.push('-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1');
         return spawn(ffmpegPath, args);
     }
 
@@ -618,11 +655,12 @@ class BackendAudioPlayer extends EventEmitter {
         }
     }
 
-    pause() {
+    pause(isAuto = false) {
         this._stopMusicStream();
         this._stopTimer();
         this.isPlaying = false;
         this.playerStatus = AudioPlayerStatus.Paused;
+        if (!isAuto) this.isAutoPausedForDucking = false;
         this._emitStatusUpdate();
     }
 
@@ -650,7 +688,12 @@ class BackendAudioPlayer extends EventEmitter {
             const stream = ffmpegProcess.stdout;
 
             if (this.activeSfxCount === 0 && this.activeStreams.has('music')) {
-                this.mixer.setInputVolume('music', this.playbackVolume * this.duckingVolume);
+                if (this.duckingVolume === 0) {
+                    this.isAutoPausedForDucking = true;
+                    this.pause(true);
+                } else {
+                    this.mixer.setInputVolume('music', this.playbackVolume * this.duckingVolume);
+                }
             }
             this.activeSfxCount++;
 
@@ -660,8 +703,13 @@ class BackendAudioPlayer extends EventEmitter {
                     this.mixer.removeInput(id);
                     this.emit('sound-finished', slotId);
                     this.activeSfxCount = Math.max(0, this.activeSfxCount - 1);
-                    if (this.activeSfxCount === 0 && this.activeStreams.has('music')) {
-                        this.mixer.setInputVolume('music', this.playbackVolume);
+                    if (this.activeSfxCount === 0) {
+                        if (this.activeStreams.has('music')) {
+                            this.mixer.setInputVolume('music', this.playbackVolume);
+                        } else if (this.isAutoPausedForDucking) {
+                            this.isAutoPausedForDucking = false;
+                            this.play();
+                        }
                     }
                 }
             });
@@ -681,8 +729,13 @@ class BackendAudioPlayer extends EventEmitter {
             if (process) process.kill();
             this.activeStreams.delete(id);
             this.activeSfxCount = Math.max(0, this.activeSfxCount - 1);
-            if (this.activeSfxCount === 0 && this.activeStreams.has('music')) {
-                this.mixer.setInputVolume('music', this.playbackVolume);
+            if (this.activeSfxCount === 0) {
+                if (this.activeStreams.has('music')) {
+                    this.mixer.setInputVolume('music', this.playbackVolume);
+                } else if (this.isAutoPausedForDucking) {
+                    this.isAutoPausedForDucking = false;
+                    this.play();
+                }
             }
         }
     }

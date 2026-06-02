@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadMusicPresetBtn = document.getElementById('load-music-preset-btn');
     const musicAutosaveCheck = document.getElementById('music-autosave-check');
     const discordMediaControlToggle = document.getElementById('discord-media-control-toggle');
+    const musicNormalizationCheck = document.getElementById('music-normalization-check');
     const musicStackList = document.getElementById('music-stack-list');
     const previewAudioPlayer = document.getElementById('preview-audio-player');
     const addCreatureForm = document.getElementById('add-creature-form');
@@ -484,22 +485,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             case 'load-music-preset-btn':
                 window.electron.ipcRenderer.invoke('load-music-preset');
                 break;
+            case 'music-settings-btn':
+                document.getElementById('music-settings-dialog').showModal();
+                break;
+            case 'sb-settings-btn':
+                document.getElementById('sb-settings-dialog').showModal();
+                break;
         }
     });
 
-    // --- Soundboard Listeners (placeholders for now) ---
     // --- Soundboard Listeners ---
     const soundboardVolumeSlider = document.getElementById('soundboard-volume');
+    const duckingVolumeSlider = document.getElementById('ducking-volume');
 
     soundboardVolumeSlider.addEventListener('input', (e) => {
         const sliderValue = parseFloat(e.target.value);
-        // Scale: 0-1 slider maps to 0-1.5 actual volume (150%)
+        // Scale: 0-1 slider maps to 1.5 actual volume (150%)
         const effectiveVolume = sliderValue * 1.5;
 
         // Update backend
         window.electron.ipcRenderer.send('set-soundboard-volume', { volume: effectiveVolume });
 
-        // Save state (debounced ideally, but on input for now is fine for local app)
+        // Save state
+        saveSoundboardState();
+    });
+
+    duckingVolumeSlider.addEventListener('input', (e) => {
+        const sliderValue = parseFloat(e.target.value);
+
+        // Update backend
+        window.electron.ipcRenderer.send('set-discord-config', { duckingVolume: sliderValue });
+
+        // Save state
         saveSoundboardState();
     });
 
@@ -680,6 +697,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (discordMediaControlToggle) {
             discordMediaControlToggle.checked = config.showMediaControl !== false;
+        }
+        if (musicNormalizationCheck) {
+            musicNormalizationCheck.checked = !!config.volumeNormalization;
+        }
+        if (duckingVolumeSlider) {
+            duckingVolumeSlider.value = config.duckingVolume !== undefined ? config.duckingVolume : 0.3;
         }
         if (config.audioOnlyRows) audioOnlyRows = config.audioOnlyRows;
         if (config.audioOnlyCols) audioOnlyCols = config.audioOnlyCols;
@@ -1489,6 +1512,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (saveSoundboardStateTimeout) clearTimeout(saveSoundboardStateTimeout);
         saveSoundboardStateTimeout = setTimeout(() => {
             window.electron.ipcRenderer.send('save-soundboard-state', stateToSave);
+            // Also update discord config for ducking volume since it's shared
+            const duckingEl = document.getElementById('ducking-volume');
+            if (duckingEl) {
+                window.electron.ipcRenderer.send('set-discord-config', { duckingVolume: parseFloat(duckingEl.value) });
+            }
         }, 1000);
     }
 
@@ -2649,11 +2677,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Music Autosave Toggle ---
+    // --- Music Settings Listeners ---
     if (musicAutosaveCheck) {
         musicAutosaveCheck.addEventListener('change', () => {
             window.electron.ipcRenderer.send('set-discord-config', {
                 musicAutosave: musicAutosaveCheck.checked
+            });
+        });
+    }
+
+    if (musicNormalizationCheck) {
+        musicNormalizationCheck.addEventListener('change', () => {
+            window.electron.ipcRenderer.send('set-discord-config', {
+                volumeNormalization: musicNormalizationCheck.checked
             });
         });
     }

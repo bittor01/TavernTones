@@ -24,7 +24,7 @@
             <h2 id="pane-mode-title" style="margin: 0; border: none; padding: 0;">Log</h2>
             <div class="panel-header-controls">
               <button id="push-panel-btn" class="small-btn" title="Push to Chat" style="display: none;">🖨️</button>
-              <button id="main-settings-btn" class="small-btn" title="Settings">⚙️</button>
+              <button id="main-settings-btn" class="small-btn" title="Settings">🛠️ Settings</button>
             </div>
           </div>
           <div class="panel-modes" style="justify-content: space-around; border-top: 1px solid #333; padding-top: 5px;">
@@ -56,15 +56,9 @@
           <div style="display: flex; align-items: center; gap: 8px;">
             <h2>Music Player</h2>
             <button id="bot-status-indicator" class="small-btn status-indicator" title="Voice Status: Unknown" style="font-size: 1em; padding: 2px 4px;">🟥</button>
-            <input type="checkbox" id="discord-media-control-toggle" title="Toggle Discord Media Control Embed" checked>
           </div>
           <div class="panel-header-controls" style="display: flex; align-items: center; gap: 5px;">
-            <label class="autosave-label" title="Auto-save/load playlist">
-              <input type="checkbox" id="music-autosave-check">
-              Auto
-            </label>
-            <button id="save-music-preset-btn" class="small-btn" title="Save Preset">💾</button>
-            <button id="load-music-preset-btn" class="small-btn" title="Load Preset">📂</button>
+            <button id="music-settings-btn" class="small-btn" title="Music Player Settings">⚙️</button>
           </div>
         </div>
         <div class="controls music-controls">
@@ -92,7 +86,7 @@
         <div class="panel-header">
           <h2>Controls</h2>
           <div class="panel-header-controls">
-            <button id="settings-button" class="small-btn" title="Settings">⚙️</button>
+            <button id="settings-button" class="small-btn" title="Settings">🛠️ Settings</button>
             <button id="reset-encounter-mid" class="small-btn" title="Reset Encounter">⏪</button>
             <button id="clear-encounter-mid" class="small-btn" title="Clear Encounter">🗑️</button>
           </div>
@@ -121,14 +115,7 @@
         <div class="panel-header">
           <h2>Soundboard</h2>
           <div class="panel-header-controls">
-            <button id="add-col-btn" class="small-btn" title="Add Column">◀️</button>
-            <button id="add-row-btn" class="small-btn" title="Add Row">🔼</button>
-            <button id="remove-row-btn" class="small-btn" title="Remove Row">🔽</button>
-            <button id="remove-col-btn" class="small-btn" title="Remove Column">▶️</button>
-            <button id="save-preset-btn" class="small-btn" title="Save Preset">💾</button>
-            <button id="load-preset-btn" class="small-btn" title="Load Preset">📂</button>
-            <label for="soundboard-volume">Vol:</label>
-            <input type="range" id="soundboard-volume" min="0" max="1" step="0.05" value="0.5">
+            <button id="sb-settings-btn" class="small-btn" title="Soundboard Settings">⚙️</button>
           </div>
         </div>
         <div id="soundboard-grid">
@@ -163,6 +150,68 @@
       <div class="dialog-controls">
         <button value="cancel">Cancel</button>
         <button id="confirm-emoji-btn" value="default">Confirm</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="music-settings-dialog">
+    <form method="dialog">
+      <h3>Music Player Settings</h3>
+      <div class="settings-group">
+        <label title="Auto-save/load playlist to music-autosave.json">
+          <input type="checkbox" id="music-autosave-check">
+          Playlist Autosave
+        </label>
+      </div>
+      <div class="settings-group">
+        <label title="Toggle the Discord Media Control Embed in the text channel">
+          <input type="checkbox" id="discord-media-control-toggle" checked>
+          Discord Media Controls
+        </label>
+      </div>
+      <div class="settings-group">
+        <label title="Enable FFmpeg volume normalization (dynaudnorm)">
+          <input type="checkbox" id="music-normalization-check">
+          Volume Normalization
+        </label>
+      </div>
+      <div class="settings-group" style="margin-top: 15px;">
+        <button type="button" id="save-music-preset-btn" title="Save current playlist to a file">💾 Save Playlist</button>
+        <button type="button" id="load-music-preset-btn" title="Load playlist from a file">📂 Load Playlist</button>
+      </div>
+      <div class="dialog-controls" style="margin-top: 20px;">
+        <button value="close">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="sb-settings-dialog">
+    <form method="dialog">
+      <h3>Soundboard Settings</h3>
+      <div class="settings-group">
+        <label for="soundboard-volume">🔊 Sound Volume:</label>
+        <input type="range" id="soundboard-volume" min="0" max="1" step="0.05" value="0.5">
+      </div>
+      <div class="settings-group">
+        <label for="ducking-volume" title="How much to duck music when playing SFX. 0 will pause music.">🦆 Ducking Level:</label>
+        <input type="range" id="ducking-volume" min="0" max="1" step="0.05" value="0.3">
+      </div>
+      <hr>
+      <div class="settings-group">
+        <p>Grid Layout:</p>
+        <button type="button" id="add-col-btn" title="Add Column">◀️ Add Col</button>
+        <button type="button" id="remove-col-btn" title="Remove Column">Remove Col ▶️</button>
+        <br>
+        <button type="button" id="add-row-btn" title="Add Row">🔼 Add Row</button>
+        <button type="button" id="remove-row-btn" title="Remove Row">Remove Row 🔽</button>
+      </div>
+      <hr>
+      <div class="settings-group">
+        <button type="button" id="save-preset-btn" title="Save soundboard configuration to a file">💾 Save Preset</button>
+        <button type="button" id="load-preset-btn" title="Load soundboard configuration from a file">📂 Load Preset</button>
+      </div>
+      <div class="dialog-controls" style="margin-top: 20px;">
+        <button value="close">Close</button>
       </div>
     </form>
   </dialog>

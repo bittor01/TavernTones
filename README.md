@@ -28,7 +28,44 @@ TavernTones is a tool for Dungeon Masters to stream ambient soundscapes, music, 
     - In Settings, check **Enable Discord Bot**.
     - Enter your Bot Token, Channel IDs, and Role ID.
     - Save and restart the application.
+    - *See [Discord Bot Setup Guide](#discord-bot-setup-guide) below for details.*
 5.  **Run Combat**: Add combatants using the "Add Combatant" form or by searching the imported bestiary.
+
+## Discord Bot Setup Guide
+
+To use the audio streaming and chat integration features, you need to create a Discord Bot and add it to your server.
+
+### 1. Create your Bot
+1.  Go to the [Discord Developer Portal](https://discord.com/developers/applications).
+2.  Click **New Application** and give it a name (e.g., "TavernTones Bot").
+3.  Navigate to the **Bot** tab in the sidebar.
+4.  Click **Reset Token** (or **Copy Token**) to get your **Bot Token**. *Keep this secret!*
+5.  Scroll down to **Privileged Gateway Intents** and enable:
+    - **Message Content Intent** (Required for reading chat commands).
+
+### 2. Permissions & Invite Link
+1.  Navigate to **OAuth2** -> **URL Generator**.
+2.  Select the `bot` and `applications.commands` scopes.
+3.  In **Bot Permissions**, select the following (Principle of Least Privilege):
+    - **General Permissions**:
+        - `View Channels`
+    - **Text Permissions**:
+        - `Send Messages`
+        - `Embed Links`
+        - `Read Message History`
+        - `Use External Emojis`
+    - **Voice Permissions**:
+        - `Connect`
+        - `Speak`
+        - `Use Voice Activity`
+4.  **Permission Integer**: The resulting bitmask should be `37047296`.
+5.  Copy the generated URL and paste it into your browser to invite the bot to your server.
+
+### 3. Server Setup
+1.  **Bot Role**: Discord automatically creates a role for your bot. Ensure this role is positioned high enough in the server settings if you want it to interact with specific users/roles.
+2.  **Channel IDs**: In TavernTones Settings, you will need the IDs for your Text and Voice channels.
+    - Enable **Developer Mode** in Discord (User Settings -> Advanced).
+    - Right-click any channel and select **Copy Channel ID**.
 
 ## Dependencies
 

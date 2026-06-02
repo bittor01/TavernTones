@@ -608,6 +608,30 @@ dialog h3 {
     margin-top: 20px;
 }
 
+/* --- Settings Groups --- */
+.settings-group {
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.settings-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.settings-group input[type="range"] {
+    width: 100%;
+}
+
+.settings-group p {
+    margin: 0 0 5px 0;
+    font-weight: bold;
+}
+
 .popup-dialog {
     position: absolute;
     background-color: #444;

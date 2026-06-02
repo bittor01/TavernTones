@@ -29,7 +29,9 @@ async function getStore() {
                 leftColumnWidth: { type: 'number', default: 350 },
                 musicPlayerHeight: { type: 'number', default: 280 },
                 musicAutosave: { type: 'boolean', default: false },
-                showMediaControl: { type: 'boolean', default: true }
+                showMediaControl: { type: 'boolean', default: true },
+                duckingVolume: { type: 'number', default: 0.3 },
+                volumeNormalization: { type: 'boolean', default: false }
             },
             default: {}
         }
