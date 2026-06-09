@@ -178,10 +178,10 @@ const hpBarEmojiMap = {
 };
 
 async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
-    if (isAppReady && mainWindow.webContents) {
+    if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex });
     }
-    else {
+    else if (!isAppReady) {
         await sleep(100);
         sendInitiativeUpdate(initiativeOrder, currentTurnIndex);
     }
@@ -189,9 +189,9 @@ async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
 
 // Function to send dice roll log messages to the renderer
 async function logDiceRollToRenderer(message) {
-    if (isAppReady && mainWindow.webContents) {
+    if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send('dice-log', message);
-    } else {
+    } else if (!isAppReady) {
         await sleep(100);
         logDiceRollToRenderer(message);
     }
@@ -613,6 +613,10 @@ function setupFilesystemWatchers(config) {
  * music player, initiative tracker, and more.
  */
 async function ipcloader() {
+    ipcMain.on('window-ready', () => {
+        // Handle window ready if needed, or just let it be a signal
+    });
+
     // Helper function to open a directory selection dialog
     const selectDirectory = async (title) => {
         const { filePaths } = await dialog.showOpenDialog(settingsWindow || mainWindow, {
@@ -758,8 +762,13 @@ async function ipcloader() {
 
         // --- Update the live configuration ---
         // The in-memory config needs to be updated to reflect the newly saved settings.
+        const oldShowMediaControl = discordConfig ? discordConfig.showMediaControl : true;
         discordConfig = mergedConfig;
         invalidateMusicCache();
+
+        if (oldShowMediaControl !== mergedConfig.showMediaControl) {
+            updateDiscordMediaControl();
+        }
 
         // The music player instance also needs to be told about the new path.
         if (musicPlayer) {
@@ -959,11 +968,11 @@ async function ipcloader() {
     });
 
     ipcMain.on('play-next', (event) => {
-        if (musicPlayer) musicPlayer.next();
+        if (musicPlayer) musicPlayer.next(false, false);
     });
 
     ipcMain.on('play-prev', (event) => {
-        if (musicPlayer) musicPlayer.prev();
+        if (musicPlayer) musicPlayer.prev(false);
     });
 
     ipcMain.on('set-loop-mode', (event, { mode }) => {
@@ -985,14 +994,14 @@ async function ipcloader() {
     ipcMain.on('jump-to-track', async (event, { index }) => {
         if (musicPlayer) {
             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
-            musicPlayer.jumpTo(index);
+            musicPlayer.jumpTo(index, true);
         }
     });
 
     ipcMain.on('play-now', async (event, { index }) => {
         if (musicPlayer) {
             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
-            musicPlayer.jumpTo(index);
+            musicPlayer.jumpTo(index, true);
         }
     });
 
@@ -1143,7 +1152,7 @@ async function ipcloader() {
                 const currentStack = [...musicPlayer.stack];
                 musicPlayer.stack = [...resolvedPaths, ...currentStack];
                 if (voiceStatus !== 'connected') await joinVoiceChannelAction();
-                musicPlayer.jumpTo(0);
+                musicPlayer.jumpTo(0, true);
                 break;
             case 'add-top':
                 if (musicPlayer.currentIndex === -1) {
@@ -1256,24 +1265,6 @@ async function ipcloader() {
         return [];
     });
 
-    ipcMain.on('play-sound', (event, { slotId }) => {
-        // We need the renderer to tell us WHAT file to play, or we store it in backend.
-        // The renderer state seems to hold the file path, so it should send it, 
-        // OR the renderer sends "play slot X" and the backend looks up what slot X is.
-        // But currently main.js doesn't store soundboard state. 
-        // The renderer calls 'play-sound' with { slotId }... wait.
-        // My implementation plan said: "Trigger BackendAudioPlayer.playSound(file)".
-        // BUT the renderer's `play-sound` event in the *existing code (renderer.js)* 
-        // implies it might send just ID? 
-        // Let's check renderer.js again.
-        // Actually I haven't written the renderer code yet, but the *existing* placeholder code in renderer.js:
-        // window.electron.ipcRenderer.send('play-sound', { slotId });
-        // It doesn't send the file path. Ideally the backend should know, OR the renderer should send it.
-        // To keep backend stateless regarding UI config if possible, I'll update renderer to send the path always.
-        // Updating `main.js` to expect `filePath` in the payload.
-    });
-
-    // Redoing the above block properly:
     ipcMain.on('play-sound', async (event, { slotId, filePath }) => {
         logToRenderer(`IPC 'play-sound' slot ${slotId}, file: ${filePath}`);
         if (filePath && musicPlayer) {
@@ -1455,16 +1446,6 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.on('copy-creature', (event, { creatureId }) => {
-        const creature = initiativeTracker.getCreature(creatureId);
-        if (creature) {
-            // When copying, we want to populate the "Add" form, not the "Edit" form.
-            // We give it a new ID to ensure it's a distinct creature.
-            const newCreature = { ...creature, id: Date.now() };
-            mainWindow.webContents.send('populate-add-form', newCreature);
-        }
-    });
-
     ipcMain.on('save-encounter', async () => {
         try {
             const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
@@ -1585,6 +1566,7 @@ async function ipcloader() {
             mainWindow.webContents.send('populate-add-form', creature);
         }
     });
+
 
     ipcMain.on('previous-turn', async () => {
         const turnInfo = initiativeTracker.previousTurn();
@@ -2088,6 +2070,20 @@ client.once(Events.ClientReady, async () => {
     updateDiscordMediaControl();
 
     async function updateDiscordMediaControl(disabled = false) {
+        if (isShuttingDown) return;
+
+        if (discordConfig.showMediaControl === false) {
+            if (client.lastMediaMessage) {
+                try {
+                    await client.lastMediaMessage.delete().catch(() => {});
+                    client.lastMediaMessage = null;
+                } catch (e) {
+                    console.error("Error deleting media control:", e);
+                }
+            }
+            return;
+        }
+
         if (!discordConfig.textChannel) {
             logToRenderer('[Discord] No text channel configured for media controls.');
             return;
@@ -2096,7 +2092,6 @@ client.once(Events.ClientReady, async () => {
             pendingMediaUpdate = true;
             return;
         }
-        if (isShuttingDown) return;
 
         let targetChannel = client.channels.cache.get(discordConfig.textChannel);
         if (!targetChannel) {

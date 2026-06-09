@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const saveMusicPresetBtn = document.getElementById('save-music-preset-btn');
     const loadMusicPresetBtn = document.getElementById('load-music-preset-btn');
     const musicAutosaveCheck = document.getElementById('music-autosave-check');
+    const discordMediaControlToggle = document.getElementById('discord-media-control-toggle');
     const musicStackList = document.getElementById('music-stack-list');
     const previewAudioPlayer = document.getElementById('preview-audio-player');
     const addCreatureForm = document.getElementById('add-creature-form');
@@ -677,6 +678,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (musicAutosaveCheck) {
             musicAutosaveCheck.checked = !!config.musicAutosave;
         }
+        if (discordMediaControlToggle) {
+            discordMediaControlToggle.checked = config.showMediaControl !== false;
+        }
         if (config.audioOnlyRows) audioOnlyRows = config.audioOnlyRows;
         if (config.audioOnlyCols) audioOnlyCols = config.audioOnlyCols;
         if (config.musicPlayerHeight) {
@@ -776,15 +780,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    let renderLibraryTimeout;
     function renderMusicLibrary() {
-        const container = document.getElementById('library-tree-container');
-        container.innerHTML = '';
-        if (musicLibrary && musicLibrary.children) {
-            // Flatten: Add each child of the root directly to the container
-            musicLibrary.children.forEach(child => {
-                container.appendChild(createTreeNode(child, true));
-            });
-        }
+        if (renderLibraryTimeout) clearTimeout(renderLibraryTimeout);
+        renderLibraryTimeout = setTimeout(() => {
+            const container = document.getElementById('library-tree-container');
+            if (!container) return;
+            container.innerHTML = '';
+            if (musicLibrary && musicLibrary.children) {
+                const fragment = document.createDocumentFragment();
+                musicLibrary.children.forEach(child => {
+                    fragment.appendChild(createTreeNode(child, true));
+                });
+                container.appendChild(fragment);
+            }
+        }, 50); // Small debounce to prevent multiple immediate renders
     }
 
     function updateSelectionUI() {
@@ -1021,30 +1031,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
-        // Handle Autosave
-        if (musicAutosaveCheck && musicAutosaveCheck.checked) {
-            const oldStack = lastMusicStatus ? lastMusicStatus.stack : [];
-            const newStack = status.stack || [];
-
-            // Check if stack content changed (simplified check: length and paths)
-            const changed = oldStack.length !== newStack.length ||
-                newStack.some((track, i) => !oldStack[i] || track.path !== oldStack[i].path);
-
-            if (changed && newStack.length > 0) {
-                window.electron.ipcRenderer.invoke('save-music-preset', newStack.map(t => t.path), false);
-            }
-        }
-
-        lastMusicStatus = status;
+        // Update basic state
         isPlaying = status.isPlaying;
-        currentLoopMode = status.loopMode;
-        currentShuffleMode = status.shuffleMode;
-
         if (status.currentIndex === -1) {
             lastScrolledIndex = -1;
         }
 
-        // Update Progress Bar
+        // Update Progress Bar (Frequent)
         const progressBar = document.getElementById('music-progress-bar');
         const timeDisplay = document.getElementById('music-time-display');
         if (progressBar && timeDisplay) {
@@ -1060,9 +1053,93 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         playPauseButton.textContent = isPlaying ? '⏸️' : '▶️';
-        playPauseButton.disabled = status.stack.length === 0;
 
-        // Handle Progress Bar Seeking
+        // Heavy updates (Only if not a simple time update)
+        if (!status.isTimeUpdate && status.stack) {
+            // Handle Autosave
+            if (musicAutosaveCheck && musicAutosaveCheck.checked) {
+                const oldStack = (lastMusicStatus && lastMusicStatus.stack) ? lastMusicStatus.stack : [];
+                const newStack = status.stack;
+
+                // Check if stack content changed (simplified check: length and paths)
+                const changed = oldStack.length !== newStack.length ||
+                    newStack.some((track, i) => !oldStack[i] || track.path !== oldStack[i].path);
+
+                if (changed && newStack.length > 0) {
+                    window.electron.ipcRenderer.invoke('save-music-preset', newStack.map(t => t.path), false);
+                }
+            }
+
+            lastMusicStatus = status;
+            currentLoopMode = status.loopMode;
+            currentShuffleMode = status.shuffleMode;
+
+            playPauseButton.disabled = status.stack.length === 0;
+
+            // Update Loop Button
+            const loopEmojis = ['➡️', '🔁', '🔂'];
+            const loopTitles = ['No Loop', 'Loop All', 'Loop Single'];
+            loopModeBtn.textContent = loopEmojis[currentLoopMode];
+            loopModeBtn.title = loopTitles[currentLoopMode];
+
+            // Update Shuffle Button
+            shuffleBtn.classList.toggle('active', currentShuffleMode);
+
+            // Render Playlist
+            const stackFingerprint = status.stack.map(t => t.path).join('|');
+            if (stackFingerprint !== lastStackFingerprint) {
+                lastStackFingerprint = stackFingerprint;
+                musicStackList.innerHTML = '';
+                status.stack.forEach((track, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'music-stack-item';
+                    div.dataset.index = index;
+
+                    div.innerHTML = `
+                        <span class="track-name">${track.name}</span>
+                        <div class="item-actions">
+                            <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
+                            <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
+                            <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
+                        </div>
+                    `;
+                    div.querySelector('.play-track-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        window.electron.ipcRenderer.send('play-now', { index });
+                    });
+                    div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        togglePreview(index);
+                    });
+                    div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        window.electron.ipcRenderer.send('remove-from-stack', { index });
+                    });
+                    div.addEventListener('dblclick', () => {
+                        window.electron.ipcRenderer.send('play-now', { index });
+                    });
+                    musicStackList.appendChild(div);
+                });
+            }
+        }
+
+        // Lightweight updates for active states on existing elements
+        const items = musicStackList.querySelectorAll('.music-stack-item');
+        items.forEach((div, index) => {
+            const isActive = index === status.currentIndex;
+
+            div.classList.toggle('active', isActive);
+
+            // Auto-scroll to active track
+            if (isActive && index !== lastScrolledIndex) {
+                setTimeout(() => {
+                    div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    lastScrolledIndex = index;
+                }, 100);
+            }
+        });
+
+        // Handle Progress Bar Seeking Listener (Setup once)
         const progressContainer = document.querySelector('.progress-container');
         if (progressContainer && !progressContainer.dataset.seekingListener) {
             progressContainer.dataset.seekingListener = 'true';
@@ -1076,70 +1153,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         }
-
-        // Update Loop Button
-        const loopEmojis = ['➡️', '🔁', '🔂'];
-        const loopTitles = ['No Loop', 'Loop All', 'Loop Single'];
-        loopModeBtn.textContent = loopEmojis[currentLoopMode];
-        loopModeBtn.title = loopTitles[currentLoopMode];
-
-        // Update Shuffle Button
-        shuffleBtn.classList.toggle('active', currentShuffleMode);
-
-        // Render Playlist
-        const stackFingerprint = status.stack.map(t => t.path).join('|');
-        if (stackFingerprint !== lastStackFingerprint) {
-            lastStackFingerprint = stackFingerprint;
-            musicStackList.innerHTML = '';
-            status.stack.forEach((track, index) => {
-                const div = document.createElement('div');
-                div.className = 'music-stack-item';
-                div.dataset.index = index;
-
-                div.innerHTML = `
-                    <span class="track-name">${track.name}</span>
-                    <div class="item-actions">
-                        <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
-                        <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
-                        <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
-                    </div>
-                `;
-                div.querySelector('.play-track-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    window.electron.ipcRenderer.send('play-now', { index });
-                });
-                div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    togglePreview(index);
-                });
-                div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    window.electron.ipcRenderer.send('remove-from-stack', { index });
-                });
-                div.addEventListener('dblclick', () => {
-                    window.electron.ipcRenderer.send('play-now', { index });
-                });
-                musicStackList.appendChild(div);
-            });
-        }
-
-        // Lightweight updates for active/caching states on existing elements
-        const items = musicStackList.querySelectorAll('.music-stack-item');
-        items.forEach((div, index) => {
-            const isActive = index === status.currentIndex;
-            const isCaching = status.isCaching && isActive;
-
-            div.classList.toggle('active', isActive);
-            div.classList.toggle('caching', isCaching);
-
-            // Auto-scroll to active track
-            if (isActive && index !== lastScrolledIndex) {
-                setTimeout(() => {
-                    div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    lastScrolledIndex = index;
-                }, 100);
-            }
-        });
     });
 
     window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {
@@ -1491,6 +1504,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (result.success) {
                     console.log('Saved preset to', result.filePath);
                 }
+            });
+        });
+    }
+
+    if (discordMediaControlToggle) {
+        discordMediaControlToggle.addEventListener('change', () => {
+            window.electron.ipcRenderer.send('set-discord-config', {
+                showMediaControl: discordMediaControlToggle.checked
             });
         });
     }
