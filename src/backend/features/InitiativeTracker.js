@@ -181,6 +181,14 @@ class InitiativeTracker {
             creature.singleCreatureHP = creature.maxHp;
             delete creature.mobInitialCount;
         }
+
+        // Initialize Death Saves
+        if (!creature.deathSaves) {
+            creature.deathSaves = { successes: 0, failures: 0 };
+        }
+        if (creature.noDeathSaves === undefined) {
+            creature.noDeathSaves = false;
+        }
         // For mobs, we trust the renderer to have set hp, maxHp, singleCreatureHP, and mobInitialCount correctly.
 
 
@@ -272,6 +280,12 @@ class InitiativeTracker {
             const newCreature = this.initiativeOrder[this.currentTurnIndex];
             this._updateFrontend();
             this._saveState();
+
+            // Check for death saves requirement
+            if (newCreature.hp <= 0 && !newCreature.noDeathSaves && !newCreature.isMob) {
+                this.sendInitiativeUpdate(this.initiativeOrder, this.currentTurnIndex, { type: 'death-save-reminder', creatureId: newCreature.id });
+            }
+
             return { oldCreature, newCreature };
         }
         return null;

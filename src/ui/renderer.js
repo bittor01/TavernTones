@@ -134,11 +134,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             <input type="text" id="wis-save" placeholder="+1">
             <input type="text" id="cha-save" placeholder="+1">
         </div>
-        <div class="form-actions">
-            <button type="button" id="convert-to-mob-btn">Convert to Mob</button>
-            <button type="button" id="import-monster-btn">Import Combatant</button>
-            <button type="submit" class="add-creature-button">Add Combatant</button>
-            <button type="button" id="clear-form-btn">Clear</button>
+        <div class="form-actions" style="margin-top: 5px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 5px;">
+                <button type="button" id="convert-to-mob-btn">Convert to Mob</button>
+                <button type="button" id="import-monster-btn">Import Combatant</button>
+            </div>
+            <div style="display: flex; gap: 5px; align-items: center;">
+                <label style="font-size: 0.85em; cursor: pointer; user-select: none;"><input type="checkbox" id="creature-no-death-saves"> No Death Saves</label>
+                <button type="submit" class="add-creature-button">Add Combatant</button>
+                <button type="button" id="clear-form-btn">Clear</button>
+            </div>
         </div>
         </div>
     `;
@@ -552,6 +557,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 creature.saves = { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), };
                 creature.isMob = isMobMode;
                 creature.hp = getInt('creature-hp'); // Always take current HP from form for edits
+                creature.noDeathSaves = document.getElementById('creature-no-death-saves').checked;
                 creature.hidden = false; // Ensure creature is visible after update
 
                 // Parse initiative as a number for updates (it's already been rolled)
@@ -592,6 +598,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     saves: { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), },
                     tempHp: 0, conditions: [], isConcentrating: false, isFriendly: false, reminders: { start: '', end: '' },
                     isMob: isMobMode,
+                    noDeathSaves: document.getElementById('creature-no-death-saves').checked,
+                    deathSaves: { successes: 0, failures: 0 }
                 };
 
                 if (isMobMode) {
@@ -1161,6 +1169,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         combatantPanelOrder = [...initiativeOrder];
         renderInitiativeList(initiativeOrder, currentTurnIndex);
         renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
+
+        if (data.extra && data.extra.type === 'death-save-reminder') {
+            const creature = initiativeOrder.find(c => c.id === data.extra.creatureId);
+            if (creature) {
+                createPopup('death-save-reminder', creature.id, document.querySelector(`.combatant-details-entry[data-id='${creature.id}']`) || document.body);
+            }
+        }
     });
 
     window.electron.ipcRenderer.on('soundboard-state-change', (event, { slotId, isPlaying, file, emoji }) => {
@@ -1213,6 +1228,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('wis-save').value = saves.wis || '';
         document.getElementById('cha-save').value = saves.cha || '';
 
+        // --- Handle Death Saves State ---
+        document.getElementById('creature-no-death-saves').checked = !!creature.noDeathSaves;
+
         // --- Handle Mob State ---
         isMobMode = creature.isMob || false;
         const mobControls = document.getElementById('mob-controls');
@@ -1250,6 +1268,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const btn = document.getElementById('toggle-add-form-btn');
         if (content) content.style.display = 'block';
         if (btn) btn.textContent = '➖';
+
+        // --- Handle Death Saves State ---
+        document.getElementById('creature-no-death-saves').checked = !!creature.noDeathSaves;
 
         // This is for "Copying" a creature. It populates the form but doesn't
         // put the form into "edit mode".
@@ -1314,6 +1335,61 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function populateMonsterForm(monster) {
         if (!monster) return;
+
+        // Detect Falindrith format
+        if (monster.saveVersion && monster.stats && monster.HP) {
+            const calculateModifier = (score) => Math.floor(((score || 10) - 10) / 2);
+            const formatModifier = (mod) => (mod >= 0 ? `+${mod}` : `${mod}`);
+
+            document.getElementById('imported-monster-info-btn').style.display = 'inline-block';
+            document.getElementById('creature-name').value = monster.name || '';
+            document.getElementById('creature-hp').value = `${monster.HP.HD}d${monster.HP.type}${monster.HP.modifier >= 0 ? '+' : ''}${monster.HP.modifier}`;
+            document.getElementById('creature-ac').value = monster.AC;
+
+            let highestSpeed = 0;
+            if (monster.speeds && monster.speeds.length > 0) {
+                highestSpeed = Math.max(...monster.speeds.map(s => s.speed));
+            }
+            document.getElementById('creature-speed').value = highestSpeed > 0 ? `${highestSpeed}ft` : '30ft';
+            document.getElementById('creature-initiative').value = formatModifier(calculateModifier(monster.stats.DEX));
+
+            document.getElementById('str-score').value = monster.stats.STR || 10;
+            document.getElementById('dex-score').value = monster.stats.DEX || 10;
+            document.getElementById('con-score').value = monster.stats.CON || 10;
+            document.getElementById('int-score').value = monster.stats.INT || 10;
+            document.getElementById('wis-score').value = monster.stats.WIS || 10;
+            document.getElementById('cha-score').value = monster.stats.CHA || 10;
+
+            const stats = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+            stats.forEach(s => {
+                const save = monster.saves[s];
+                let mod;
+                if (save.override) mod = save.overrideValue;
+                else mod = calculateModifier(monster.stats[s]) + (save.proficient ? monster.proficiency : 0);
+                document.getElementById(`${s.toLowerCase()}-save`).value = formatModifier(mod);
+            });
+
+            // Auto-detect Attack Mod and Save DC
+            if (monster.attacks && monster.attacks.length > 0) {
+                const firstAttack = monster.attacks[0];
+                let atkMod = firstAttack.modifier.override ? firstAttack.modifier.overrideValue : calculateModifier(monster.stats[firstAttack.modifier.stat]) + (firstAttack.modifier.proficient ? monster.proficiency : 0);
+                document.getElementById('attack-modifier').value = formatModifier(atkMod);
+            }
+            if (monster.actions && monster.actions.length > 0) {
+                const firstActionWithDc = monster.actions.find(a => a.description && a.description.includes('DC'));
+                if (firstActionWithDc) {
+                    const match = firstActionWithDc.description.match(/DC (\d+)/);
+                    if (match) document.getElementById('save-dc').value = match[1];
+                }
+            }
+
+            addCreatureForm.dataset.monsterRawData = JSON.stringify(monster);
+            const content = document.getElementById('add-creature-form-content');
+            if (content.style.display === 'none') {
+                document.getElementById('toggle-add-form-btn').click();
+            }
+            return;
+        }
 
         document.getElementById('imported-monster-info-btn').style.display = 'inline-block';
         document.getElementById('creature-name').value = monster.name || '';
@@ -1691,6 +1767,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 combatantPanelOrder.push(creature);
                 renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
             }
+        } else if (target.classList.contains('ds-dot')) {
+            const { index } = target.dataset;
+            const isSuccess = target.classList.contains('ds-success');
+            const ds = creature.deathSaves || { successes: 0, failures: 0 };
+
+            if (isSuccess) {
+                ds.successes = parseInt(index);
+                if (target.classList.contains('filled') && ds.successes === 1 && (creature.deathSaves.successes === 1)) {
+                    ds.successes = 0;
+                }
+            } else {
+                ds.failures = parseInt(index);
+                if (target.classList.contains('filled') && ds.failures === 1 && (creature.deathSaves.failures === 1)) {
+                    ds.failures = 0;
+                }
+            }
+            window.electron.ipcRenderer.send('update-death-saves', { creatureId, deathSaves: ds });
+        } else if (target.classList.contains('ds-roll-btn')) {
+            createPopup('death-save-reminder', creatureId, target);
         }
     });
 
@@ -1703,6 +1798,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isConcentrating', value: e.target.checked });
         } else if (target.classList.contains('friendly-cb')) {
             window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isFriendly', value: e.target.checked });
+        } else if (target.classList.contains('no-death-saves-cb')) {
+            window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'noDeathSaves', value: e.target.checked });
         }
     });
 
@@ -2092,6 +2189,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
 
+            const ds = creature.deathSaves || { successes: 0, failures: 0 };
+            const deathSavesHTML = (creature.hp <= 0 && !creature.isMob) ? `
+                <div class="death-saves-container" style="display: flex; align-items: center; gap: 8px;">
+                    <div class="death-save-track">
+                        <span style="font-size: 0.8em; color: #aaa;">S:</span>
+                        <span class="ds-dot ds-success ${ds.successes >= 1 ? 'filled' : ''}" data-id="${creature.id}" data-index="1"></span>
+                        <span class="ds-dot ds-success ${ds.successes >= 2 ? 'filled' : ''}" data-id="${creature.id}" data-index="2"></span>
+                        <span class="ds-dot ds-success ${ds.successes >= 3 ? 'filled' : ''}" data-id="${creature.id}" data-index="3"></span>
+                    </div>
+                    <div class="death-save-track">
+                        <span style="font-size: 0.8em; color: #aaa;">F:</span>
+                        <span class="ds-dot ds-failure ${ds.failures >= 1 ? 'filled' : ''}" data-id="${creature.id}" data-index="1"></span>
+                        <span class="ds-dot ds-failure ${ds.failures >= 2 ? 'filled' : ''}" data-id="${creature.id}" data-index="2"></span>
+                        <span class="ds-dot ds-failure ${ds.failures >= 3 ? 'filled' : ''}" data-id="${creature.id}" data-index="3"></span>
+                    </div>
+                    <button class="ds-roll-btn small-btn" data-id="${creature.id}" title="Roll Death Save">🎲</button>
+                </div>
+            ` : '';
+
             const hp = creature.hp || 0;
             const maxHp = creature.maxHp || 1;
             const tempHp = creature.tempHp || 0;
@@ -2136,9 +2252,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <button class="add-condition-btn" data-id="${creature.id}">+ Condition</button>
                         <button class="reminders-btn" data-id="${creature.id}">Reminders</button>
                     </div>
-                    <div class="secondary-controls">
-                        <label><input type="checkbox" class="concentration-cb" data-id="${creature.id}" ${creature.isConcentrating ? 'checked' : ''}> Conc.</label>
-                        <label><input type="checkbox" class="friendly-cb" data-id="${creature.id}" ${creature.isFriendly ? 'checked' : ''}> Legendary reminder</label>
+                    <div class="secondary-controls" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <label><input type="checkbox" class="concentration-cb" data-id="${creature.id}" ${creature.isConcentrating ? 'checked' : ''}> Concentration</label>
+                            <label><input type="checkbox" class="friendly-cb" data-id="${creature.id}" ${creature.isFriendly ? 'checked' : ''}> Legendary reminder</label>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <label><input type="checkbox" class="no-death-saves-cb" data-id="${creature.id}" ${creature.noDeathSaves ? 'checked' : ''}> No Death Saves</label>
+                            ${deathSavesHTML}
+                        </div>
+                    </div>
+                    <div class="secondary-controls" style="margin-top: 5px;">
                         <div class="condition-tags">${(creature.conditions || []).map(conditionName => {
                 const condition = DND_CONDITIONS[conditionName];
                 if (!condition) return '';
@@ -2216,6 +2340,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <label>End of Turn:</label>
                     <textarea id="end-turn-reminder">${endReminder}</textarea>
                     <button id="popup-reminders-save">Save</button>
+                </div>
+            `;
+        } else if (type === 'death-save-reminder') {
+            const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
+            contentHTML = `
+                <div class="death-save-popup" style="padding: 10px; min-width: 200px;">
+                    <h3 style="margin-top: 0;">Death Save: ${creature.name}</h3>
+                    <p>Roll a death saving throw?</p>
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <button class="ds-popup-roll-btn" data-roll="adv">Advantage</button>
+                        <button class="ds-popup-roll-btn" data-roll="flat">Flat</button>
+                        <button class="ds-popup-roll-btn" data-roll="dis">Disadvantage</button>
+                        <button id="ds-popup-cancel" style="margin-left: auto;">Cancel</button>
+                    </div>
                 </div>
             `;
         } else if (type === 'monster-search') {
@@ -2324,6 +2462,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('update-reminders', { creatureId: parseInt(creatureId), reminders: { start, end } });
                 popup.remove();
             });
+        } else if (type === 'death-save-reminder') {
+            document.querySelectorAll('.ds-popup-roll-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const rollType = btn.dataset.roll;
+                    window.electron.ipcRenderer.send('roll-death-save', { creatureId: parseInt(creatureId), rollType });
+                    popup.remove();
+                });
+            });
+            document.getElementById('ds-popup-cancel').addEventListener('click', () => {
+                popup.remove();
+            });
         } else if (type === 'monster-search') {
             const searchBtn = document.getElementById('popup-monster-search');
             const queryInput = document.getElementById('popup-monster-query');
@@ -2396,6 +2545,94 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const monster = JSON.parse(rawDataString);
+
+            // --- Falindrith Detection & Rendering ---
+            if (monster.saveVersion && monster.stats && monster.HP) {
+                const calculateModifier = (score) => Math.floor(((score || 10) - 10) / 2);
+                const formatModifier = (mod) => (mod >= 0 ? `+${mod}` : `${mod}`);
+
+                let html = `<h3>${monster.name || 'Unknown Creature'}</h3>`;
+                html += `<p><em>${monster.size || ''} ${monster.type || ''}, ${monster.alignment || ''}</em></p><hr>`;
+
+                const hpFormula = `${monster.HP.HD}d${monster.HP.type}${monster.HP.modifier >= 0 ? '+' : ''}${monster.HP.modifier}`;
+                const avgHp = Math.floor(monster.HP.HD * (monster.HP.type + 1) / 2) + monster.HP.modifier;
+
+                html += `<div class="property-line"><strong>Armor Class</strong> <span>${monster.AC} ${monster.ACType ? `(${monster.ACType})` : ''}</span></div>`;
+                html += `<div class="property-line"><strong>Hit Points</strong> <span>${avgHp} (${hpFormula})</span></div>`;
+
+                const speedStr = (monster.speeds || []).map(s => `${s.type} ${s.speed} ft.${s.note ? ` (${s.note})` : ''}`).join(', ');
+                html += `<div class="property-line"><strong>Speed</strong> <span>${speedStr || 'N/A'}</span></div><hr>`;
+
+                // Stats
+                const renderStat = (stat) => `${monster.stats[stat] || 10} (${formatModifier(calculateModifier(monster.stats[stat]))})`;
+                html += `<table class="stat-block-table">
+                    <tr><th>STR</th><th>DEX</th><th>CON</th></tr>
+                    <tr><td>${renderStat('STR')}</td><td>${renderStat('DEX')}</td><td>${renderStat('CON')}</td></tr>
+                    <tr><th>INT</th><th>WIS</th><th>CHA</th></tr>
+                    <tr><td>${renderStat('INT')}</td><td>${renderStat('WIS')}</td><td>${renderStat('CHA')}</td></tr>
+                </table><hr>`;
+
+                // Saves & Skills
+                const saves = Object.entries(monster.saves)
+                    .filter(([stat, save]) => save.proficient || save.override)
+                    .map(([stat, save]) => {
+                        let mod = save.override ? save.overrideValue : (calculateModifier(monster.stats[stat]) + (save.proficient ? monster.proficiency : 0));
+                        return `${stat} ${formatModifier(mod)}`;
+                    }).join(', ');
+                if (saves) html += `<div class="property-line"><strong>Saving Throws</strong> <span>${saves}</span></div>`;
+
+                const skills = (monster.skills || []).map(s => `${s.skill.label} ${formatModifier(s.override ? s.overrideValue : (calculateModifier(monster.stats[s.skill.stat]) + (s.proficient ? monster.proficiency : 0) * (s.expertise ? 2 : 1)))}`).join(', ');
+                if (skills) html += `<div class="property-line"><strong>Skills</strong> <span>${skills}</span></div>`;
+
+                if (monster.resistances?.length) html += `<div class="property-line"><strong>Damage Resistances</strong> <span>${monster.resistances.join(', ')}</span></div>`;
+                if (monster.immunities?.length) html += `<div class="property-line"><strong>Damage Immunities</strong> <span>${monster.immunities.join(', ')}</span></div>`;
+                if (monster.vulnerabilities?.length) html += `<div class="property-line"><strong>Damage Vulnerabilities</strong> <span>${monster.vulnerabilities.join(', ')}</span></div>`;
+                if (monster.conditions?.length) html += `<div class="property-line"><strong>Condition Immunities</strong> <span>${monster.conditions.join(', ')}</span></div>`;
+
+                const senses = Object.entries(monster.senses || {}).filter(([k, v]) => v > 0).map(([k, v]) => `${k} ${v} ft.`).join(', ');
+                html += `<div class="property-line"><strong>Senses</strong> <span>${senses}${monster.sensesNotes ? (senses ? ', ' : '') + monster.sensesNotes : ''}${senses || monster.sensesNotes ? ', ' : ''}passive Perception ${monster.passivePerception?.override ? monster.passivePerception.overrideValue : (10 + calculateModifier(monster.stats.WIS) + ((monster.skills || []).find(s => s.key === 'PERCEPTION')?.proficient ? monster.proficiency : 0))}</span></div>`;
+                if (monster.languages) html += `<div class="property-line"><strong>Languages</strong> <span>${monster.languages || '—'}</span></div>`;
+                html += `<div class="property-line"><strong>Challenge</strong> <span>${monster.CR} (${monster.lairCr > 0 ? `Lair: ${monster.lairCr}` : ''})</span></div><hr>`;
+
+                // Traits & Actions
+                const renderFalindrithEntry = (e) => `<div class="trait-block"><strong><em>${e.name}.</em></strong> ${e.description.replace(/\n/g, '<br>')}</div>`;
+
+                if (monster.traits?.length) html += monster.traits.map(renderFalindrithEntry).join('');
+
+                if (monster.multiattacks?.length) {
+                    html += `<h3>Actions</h3>`;
+                    monster.multiattacks.forEach(ma => {
+                        const attackNames = ma.attacks.map(aid => monster.attacks.find(a => a.id === aid)?.name).filter(Boolean);
+                        const actionNames = ma.actions.map(aid => monster.actions.find(a => a.id === aid)?.name).filter(Boolean);
+                        html += `<div class="trait-block"><strong><em>Multiattack.</em></strong> The creature makes the following attacks: ${attackNames.concat(actionNames).join(', ')}. ${monster.multiattackOptions?.postscript || ''}</div>`;
+                    });
+                } else if (monster.attacks?.length || monster.actions?.length) {
+                    html += `<h3>Actions</h3>`;
+                }
+
+                if (monster.attacks?.length) html += monster.attacks.map(renderFalindrithEntry).join('');
+                if (monster.actions?.length) html += monster.actions.filter(a => !a.legendaryOnly).map(renderFalindrithEntry).join('');
+
+                if (monster.legendaryActions?.actions?.length) {
+                    html += `<h3>Legendary Actions</h3>`;
+                    if (monster.legendaryActions.customPreamble) html += `<p>${monster.legendaryActions.customPreamble}</p>`;
+                    else html += `<p>The creature can take ${monster.legendaryActions.count} legendary action(s), choosing from the options below. Only one legendary action option can be used at a time and only at the end of another creature's turn. The creature regains spent legendary actions at the start of its turn.</p>`;
+
+                    monster.legendaryActions.actions.forEach(la => {
+                        const action = monster.actions.find(a => a.id === la.actionId) || monster.attacks.find(a => a.id === la.actionId);
+                        if (action) {
+                            html += `<div class="trait-block"><strong><em>${action.name}${la.cost > 1 ? ` (Costs ${la.cost} Actions)` : ''}.</em></strong> ${action.description.replace(/\n/g, '<br>')}</div>`;
+                        }
+                    });
+                }
+
+                if (monster.reactions?.length) {
+                    html += `<h3>Reactions</h3>`;
+                    html += monster.reactions.map(renderFalindrithEntry).join('');
+                }
+
+                return html;
+            }
 
             // --- Helper Functions ---
             const renderAc = (ac) => {

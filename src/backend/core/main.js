@@ -1194,6 +1194,55 @@ async function ipcloader() {
         try {
             const content = fs.readFileSync(filePaths[0], 'utf8');
             const data = JSON.parse(content);
+
+            // Detect Falindrith D&D Monster Maker format
+            if (data.saveVersion && data.stats && data.HP) {
+                const monster = data;
+                const calculateModifier = (score) => Math.floor(((score || 10) - 10) / 2);
+                const formatModifier = (mod) => (mod >= 0 ? `+${mod}` : `${mod}`);
+
+                const dexMod = calculateModifier(monster.stats.DEX);
+                const hpFormula = `${monster.HP.HD}d${monster.HP.type}${monster.HP.modifier >= 0 ? '+' : ''}${monster.HP.modifier}`;
+
+                // Map Falindrith saves to TavernTones saves
+                const ttSaves = {};
+                const stats = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+                stats.forEach(s => {
+                    const save = monster.saves[s];
+                    let mod;
+                    if (save.override) {
+                        mod = save.overrideValue;
+                    } else {
+                        mod = calculateModifier(monster.stats[s]);
+                        if (save.proficient) {
+                            mod += (monster.proficiency || 0);
+                        }
+                    }
+                    ttSaves[s.toLowerCase()] = formatModifier(mod);
+                });
+
+                const ttScores = {};
+                stats.forEach(s => {
+                    ttScores[s.toLowerCase()] = monster.stats[s];
+                });
+
+                const ttCombatant = {
+                    name: monster.name,
+                    hp: hpFormula,
+                    maxHp: null, // Will be rolled/parsed by addCreature
+                    ac: monster.AC,
+                    initiative: formatModifier(dexMod),
+                    scores: ttScores,
+                    saves: ttSaves,
+                    rawData: JSON.stringify(monster), // For the stat block view
+                    conditions: monster.conditions || [],
+                    deathSaves: { successes: 0, failures: 0 },
+                    noDeathSaves: false
+                };
+
+                return [ttCombatant];
+            }
+
             // Support both full save state (with initiativeOrder) or simple array
             const combatants = Array.isArray(data) ? data : (data.initiativeOrder || []);
             return combatants;
@@ -1598,6 +1647,46 @@ async function ipcloader() {
 
     ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
         initiativeTracker.updateCreatureFlag(creatureId, flag, value);
+    });
+
+    ipcMain.on('update-death-saves', (event, { creatureId, deathSaves }) => {
+        const creature = initiativeTracker.getCreature(creatureId);
+        if (creature) {
+            creature.deathSaves = deathSaves;
+            initiativeTracker._updateFrontend();
+            initiativeTracker._saveState();
+        }
+    });
+
+    ipcMain.on('roll-death-save', (event, { creatureId, rollType }) => {
+        const creature = initiativeTracker.getCreature(creatureId);
+        if (!creature) return;
+
+        let notation = '1d20';
+        if (rollType === 'adv') notation = '2d20kh1';
+        if (rollType === 'dis') notation = '2d20kl1';
+
+        const roll = new DiceRoller().roll(notation);
+        const result = roll.total;
+
+        let message = `${creature.name} rolled a Death Saving Throw (${rollType}): **${result}**`;
+        if (result === 20) {
+            message += " - **Critical Success!** (Regains 1 HP)";
+            initiativeTracker.updateHp(creatureId, 1);
+        } else if (result >= 10) {
+            message += " - Success";
+            creature.deathSaves.successes = Math.min(3, (creature.deathSaves.successes || 0) + 1);
+        } else if (result === 1) {
+            message += " - **Critical Failure!** (2 failures)";
+            creature.deathSaves.failures = Math.min(3, (creature.deathSaves.failures || 0) + 2);
+        } else {
+            message += " - Failure";
+            creature.deathSaves.failures = Math.min(3, (creature.deathSaves.failures || 0) + 1);
+        }
+
+        logDiceRollToRenderer(message);
+        initiativeTracker._updateFrontend();
+        initiativeTracker._saveState();
     });
 
     ipcMain.on('show-emoji-panel', () => {
