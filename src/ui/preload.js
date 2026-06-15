@@ -27,7 +27,7 @@ contextBridge.exposeInMainWorld('electron', {
         'play-next', 'play-prev', 'set-loop-mode', 'set-shuffle', 'remove-from-stack', 'clear-stack',
         'request-bot-status', 'voice-toggle', 'jump-to-track', 'play-now',
         'library-action', 'get-discord-config', 'seek-music', 'set-discord-config',
-        'show-emoji-panel'
+        'show-emoji-panel', 'open-walkthrough'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, ...args);
@@ -43,7 +43,7 @@ contextBridge.exposeInMainWorld('electron', {
         'get-image-as-data-url', 'get-preview-audio-data', 'load-sound',
         'get-soundboard-state', 'save-soundboard-preset', 'load-soundboard-preset',
         'read-combat-file', 'save-music-preset', 'load-music-preset',
-        'get-music-library', 'rescan-music-library'
+        'get-music-library', 'rescan-music-library', 'get-discord-config'
       ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, ...args);

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Bot Setup Guide</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #d4d4d4;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-app-region: drag;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            -webkit-app-region: no-drag;
+        }
+        h2 { border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0; }
+        .content { flex-grow: 1; overflow-y: auto; margin-bottom: 20px; font-size: 0.95em; line-height: 1.5; }
+        .footer { display: flex; justify-content: space-between; align-items: center; }
+        button {
+            padding: 8px 15px;
+            background-color: #3c3c3c;
+            color: #f0f0f0;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover { background-color: #4c4c4c; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .step-indicator { font-size: 0.85em; color: #888; }
+        code { background-color: #2d2d2d; padding: 2px 4px; border-radius: 3px; color: #e06c75; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .highlight { border: 2px solid #007bff; border-radius: 4px; padding: 10px; background: rgba(0, 123, 255, 0.1); margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 id="step-title">Step 1</h2>
+        <div class="content" id="step-content">
+            <!-- Content filled by JS -->
+        </div>
+        <div class="footer">
+            <button id="prev-btn">Previous</button>
+            <span class="step-indicator" id="step-indicator">Step 1 of 5</span>
+            <button id="next-btn">Next</button>
+        </div>
+    </div>
+    <script>
+        const steps = [
+            {
+                title: "Introduction & Prerequisites",
+                content: `
+                    <p>Welcome! This guide will help you set up your Discord Bot for TavernTones.</p>
+                    <p><strong>Prerequisites:</strong></p>
+                    <ul>
+                        <li>A Discord account.</li>
+                        <li>A Discord server where you have "Manage Server" permissions.</li>
+                        <li>Developer Mode enabled in Discord (User Settings > Advanced > Developer Mode).</li>
+                    </ul>
+                    <p>Once ready, head to the <a href="https://discord.com/developers/home" target="_blank">Discord Developer Portal</a>.</p>
+                `
+            },
+            {
+                title: "Create Application & Installation",
+                content: `
+                    <p>In the Developer Portal:</p>
+                    <ol>
+                        <li>Click <strong>"New Application"</strong> and give it a name.</li>
+                        <li>Go to <strong>"Installation"</strong> in the sidebar.</li>
+                        <li>Under <strong>"Installation Context"</strong>, ensure <strong>"Guild Install"</strong> is selected. (Uncheck "User Install" if selected).</li>
+                    </ol>
+                `
+            },
+            {
+                title: "Scopes & Permissions",
+                content: `
+                    <p>Still on the <strong>"Installation"</strong> or <strong>"OAuth2"</strong> page:</p>
+                    <p><strong>Select Scopes:</strong></p>
+                    <ul>
+                        <li><code>bot</code></li>
+                        <li><code>applications.commands</code></li>
+                    </ul>
+                    <p><strong>Select Bot Permissions:</strong></p>
+                    <div class="highlight">
+                        Attach Files, Connect, Create Public Threads, Embed Links, Send Messages, Send Messages in Threads, Speak.
+                    </div>
+                    <p>Click <strong>"Save Changes"</strong> and then use the <strong>Discord Install Link</strong> (usually at the bottom) to invite the bot to your server.</p>
+                `
+            },
+            {
+                title: "Bot Token",
+                content: `
+                    <p>Go to the <strong>"Bot"</strong> tab in the sidebar:</p>
+                    <ol>
+                        <li>Click <strong>"Reset Token"</strong>. This is normal; tokens are hidden after generation for security.</li>
+                        <li><strong>Copy the Token</strong> and paste it into the <strong>Discord Bot Token</strong> field in the TavernTones Settings window.</li>
+                    </ol>
+                    <p><em>Note: If you ever lose your token, just come back here and reset it again.</em></p>
+                `
+            },
+            {
+                title: "Channel & Role IDs",
+                content: `
+                    <p>Finally, we need some IDs from your Discord server:</p>
+                    <ol>
+                        <li>Right-click your <strong>Voice Channel</strong> > <strong>Copy Channel ID</strong>. Paste it into "Voice Channel ID".</li>
+                        <li>Right-click your <strong>Text Channel</strong> > <strong>Copy Channel ID</strong>. Paste it into "Text Channel ID".</li>
+                        <li>Right-click the <strong>Bot's Role</strong> (or your DM role) > <strong>Copy Role ID</strong>. Paste it into "Bot Role ID".</li>
+                    </ol>
+                    <p>Enable the <strong>"Enable Discord Bot"</strong> toggle and click <strong>"Save Settings"</strong>!</p>
+                `
+            }
+        ];
+
+        let currentStep = 0;
+        const titleEl = document.getElementById('step-title');
+        const contentEl = document.getElementById('step-content');
+        const indicatorEl = document.getElementById('step-indicator');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+
+        function updateUI() {
+            const step = steps[currentStep];
+            if (titleEl) titleEl.textContent = step.title;
+            if (contentEl) contentEl.innerHTML = step.content;
+            if (indicatorEl) indicatorEl.textContent = `Step ${currentStep + 1} of ${steps.length}`;
+            if (prevBtn) prevBtn.disabled = currentStep === 0;
+            if (nextBtn) nextBtn.textContent = currentStep === steps.length - 1 ? 'Finish' : 'Next';
+        }
+
+        prevBtn.onclick = () => {
+            if (currentStep > 0) {
+                currentStep--;
+                updateUI();
+            }
+        };
+
+        nextBtn.onclick = () => {
+            if (currentStep < steps.length - 1) {
+                currentStep++;
+                updateUI();
+            } else {
+                window.close();
+            }
+        };
+
+        updateUI();
+    </script>
+</body>
+</html>

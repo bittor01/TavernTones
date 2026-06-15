@@ -19,5 +19,6 @@ contextBridge.exposeInMainWorld('settings', {
     onBotStatus: (callback) => ipcRenderer.on('discord-bot-status', (event, status) => callback(status)),
     getHelpContent: () => ipcRenderer.invoke('get-help-content'),
     getLicenses: () => ipcRenderer.invoke('get-licenses'),
-    openExternal: (url) => shell.openExternal(url)
+    openExternal: (url) => shell.openExternal(url),
+    openWalkthrough: () => ipcRenderer.send('open-walkthrough')
 });

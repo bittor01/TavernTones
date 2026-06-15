@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const setupDefaultFoldersBtn = document.getElementById('setup-default-folders');
     const registerSlashBtn = document.getElementById('register-slash-btn');
     const unregisterSlashBtn = document.getElementById('unregister-slash-btn');
+    const walkthroughBtn = document.getElementById('walkthrough-btn');
     const saveButton = document.getElementById('save-button');
 
     let originalConfig = {};
@@ -170,6 +171,12 @@ document.addEventListener('DOMContentLoaded', () => {
         else alert("Error: " + result.error);
         unregisterSlashBtn.disabled = false;
     });
+
+    if (walkthroughBtn) {
+        walkthroughBtn.addEventListener('click', () => {
+            window.settings.openWalkthrough();
+        });
+    }
 
     // --- Help Button ---
     const helpButton = document.getElementById('help-button');

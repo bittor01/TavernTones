@@ -87,9 +87,12 @@
                         <span id="bot-status-indicator" class="status-indicator" title="Bot Status: Unknown">🟥</span>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 5px;">
-                        <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
-                            <input type="checkbox" id="enableDiscordBot" style="margin-right: 5px; width: auto;"> Enable Bot
-                        </label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
+                                <input type="checkbox" id="enableDiscordBot" style="margin-right: 5px; width: auto;"> Enable Bot
+                            </label>
+                            <button id="walkthrough-btn" class="small-btn" title="Setup Guide" style="font-size: 1em; padding: 2px 6px;">📖 Guide</button>
+                        </div>
                         <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
                             <input type="checkbox" id="audioModeToggle" style="margin-right: 5px; width: auto;"> Audio-Only Layout
                         </label>

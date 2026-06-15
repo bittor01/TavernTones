@@ -791,6 +791,20 @@ async function ipcloader() {
 
     ipcMain.on('open-settings-window', createSettingsWindow);
 
+    ipcMain.on('open-walkthrough', () => {
+        let walkthroughWindow = new BrowserWindow({
+            width: 500,
+            height: 600,
+            alwaysOnTop: true,
+            frame: true,
+            webPreferences: {
+                nodeIntegration: true,
+                contextIsolation: false // Simplified for this walkthrough window
+            }
+        });
+        walkthroughWindow.loadFile(path.join(__dirname, '../../ui/walkthrough/walkthrough.html'));
+    });
+
     ipcMain.handle('register-slash-commands', async () => {
         if (!discordConfig.token) return { success: false, error: 'No bot token' };
         try {
