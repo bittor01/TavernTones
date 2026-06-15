@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Specifically request the initial load after a short delay to ensure the main process is ready.
         setTimeout(() => {
             window.electron.ipcRenderer.send('request-initial-load');
-            window.electron.ipcRenderer.invoke('get-discord-config').then(config => {
+            window.electron.ipcRenderer.on('discord-config', (event, config) => {
                 // Resolution auto-detection on first run
                 if (!config.leftColumnWidth || !config.audioOnlyCols) {
                     const width = window.innerWidth;
