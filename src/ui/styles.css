@@ -973,6 +973,32 @@ input:disabled {
     /* A darker blue on hover */
 }
 
+/* --- Death Saves --- */
+.death-save-track {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ds-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid #666;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.ds-success.filled {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.ds-failure.filled {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
 /* --- Stat Block Table --- */
 .stat-block-table {
     width: 100%;
