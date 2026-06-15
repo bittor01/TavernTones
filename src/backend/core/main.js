@@ -793,8 +793,8 @@ async function ipcloader() {
 
     ipcMain.on('open-walkthrough', () => {
         let walkthroughWindow = new BrowserWindow({
-            width: 500,
-            height: 600,
+            width: 600,
+            height: 700,
             alwaysOnTop: true,
             frame: true,
             webPreferences: {

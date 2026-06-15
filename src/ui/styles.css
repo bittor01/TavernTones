@@ -62,7 +62,7 @@ button:disabled {
 
 body.audio-only .main-grid {
     /* Left side is flexible, right side (soundboard) snaps to content width */
-    grid-template-columns: 1fr 0px 0px 8px min-content;
+    grid-template-columns: 1fr 0px 0px 8px var(--right-col-width, min-content);
     gap: 0;
     padding-right: 0; /* Abut the right edge */
 }
@@ -1325,7 +1325,7 @@ body.audio-only .column-left {
 
 body.audio-only .column-right {
     display: flex;
-    grid-column: 4;
+    grid-column: 5;
     overflow: hidden;
 }
 
@@ -1394,6 +1394,7 @@ body.audio-only .audio-only-right-column #soundboard-container {
     min-height: 0;
     flex-direction: column;
     padding-bottom: 2px;
+    width: fit-content;
 }
 
 body.audio-only #soundboard-container .panel-header {

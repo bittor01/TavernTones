@@ -743,6 +743,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const musicResizer = document.getElementById('music-player-resizer');
             const sbResizerTop = document.getElementById('soundboard-resizer-top');
             const midResizerLeft = document.getElementById('middle-col-resizer-left');
+            const midResizerRight = document.getElementById('middle-col-resizer-right');
 
             if (rightCol && musicControls && soundboard && musicResizer) {
                 rightCol.appendChild(musicControls);
@@ -752,8 +753,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (midResizerLeft && rightCol) {
                 // In Audio-Only, middle-col-resizer-left acts as the left handle for the right column
+                midResizerLeft.style.gridColumn = '4';
+                midResizerLeft.style.display = 'flex';
                 rightCol.parentNode.insertBefore(midResizerLeft, rightCol);
             }
+            if (midResizerRight) {
+                midResizerRight.style.display = 'none';
+            }
+
+            // Calculate and set right column width based on columns
+            const colWidth = (audioOnlyCols * 180) + ((audioOnlyCols - 1) * 5) + 16; // slots + gaps + padding
+            document.documentElement.style.setProperty('--right-col-width', `${colWidth}px`);
 
             showPanel('musicLibraryArea');
         } else {
@@ -781,15 +791,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 leftCol.appendChild(musicControls);
             }
             if (midCol && turnControls && initiativeList && soundboard) {
-                if (sbResizerTop) midCol.prepend(sbResizerTop);
                 midCol.appendChild(turnControls);
                 midCol.appendChild(initiativeList);
+                if (sbResizerTop) midCol.appendChild(sbResizerTop);
                 midCol.appendChild(soundboard);
             }
             if (rightCol && combatantWrapper) {
                 rightCol.appendChild(combatantWrapper);
             }
             // Restore resizers position in grid
+            if (midResizerLeft) {
+                midResizerLeft.style.gridColumn = '';
+                midResizerLeft.style.display = 'flex';
+            }
+            if (midResizerRight) {
+                midResizerRight.style.display = 'flex';
+            }
             if (midResizerLeft && midCol) midCol.parentNode.insertBefore(midResizerLeft, midCol);
             if (midResizerRight && midCol) midCol.parentNode.insertBefore(midResizerRight, midCol.nextSibling);
         }
@@ -2055,6 +2072,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         grid.style.setProperty('--sb-rows', rows);
         grid.style.setProperty('--sb-cols', cols);
+
+        if (isAudioOnly) {
+            const colWidth = (cols * 180) + ((cols - 1) * 5) + 16;
+            document.documentElement.style.setProperty('--right-col-width', `${colWidth}px`);
+        }
 
         // Render subset of state based on current layout
         for (let i = 0; i < totalSlotsToRender; i++) {
