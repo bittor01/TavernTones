@@ -348,6 +348,7 @@ class InitiativeTracker {
         const creature = this.getCreature(creatureId);
         let concentrationCheckDC = null;
         if (creature) {
+            const wasAtZero = creature.hp <= 0;
             if (amount < 0) { // Damage
                 let damage = -amount;
                 const tempHpDamage = Math.min(creature.tempHp || 0, damage);
@@ -368,6 +369,11 @@ class InitiativeTracker {
                 } else {
                     // For single creatures, healing can go above maxHP (overhealing).
                     creature.hp += amount;
+                }
+
+                // Reset death saves if creature regained HP
+                if (creature.hp > 0 && !creature.isMob) {
+                    creature.deathSaves = { successes: 0, failures: 0 };
                 }
             }
             this._updateFrontend();
@@ -428,6 +434,7 @@ class InitiativeTracker {
             c.hp = c.maxHp;
             c.tempHp = 0;
             c.conditions = [];
+            c.deathSaves = { successes: 0, failures: 0 };
         });
         this.currentTurnIndex = 0;
         this._updateFrontend();
