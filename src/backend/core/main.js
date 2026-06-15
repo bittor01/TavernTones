@@ -177,13 +177,13 @@ const hpBarEmojiMap = {
     'empty': '⬛'
 };
 
-async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
+async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex, extra = null) {
     if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
-        mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex });
+        mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex, extra });
     }
     else if (!isAppReady) {
         await sleep(100);
-        sendInitiativeUpdate(initiativeOrder, currentTurnIndex);
+        sendInitiativeUpdate(initiativeOrder, currentTurnIndex, extra);
     }
 }
 
@@ -1240,16 +1240,34 @@ async function ipcloader() {
                     ttScores[s.toLowerCase()] = monster.stats[s];
                 });
 
+                const parseSpeed = (speedObj) => {
+                    if (!speedObj) return '30ft';
+                    if (typeof speedObj === 'string') {
+                        const matches = speedObj.match(/(\d+)\s*ft/g);
+                        if (matches) {
+                            const speeds = matches.map(m => parseInt(m, 10));
+                            return Math.max(...speeds) + 'ft';
+                        }
+                        return speedObj;
+                    }
+                    if (typeof speedObj === 'object') {
+                        const speeds = Object.values(speedObj).filter(s => typeof s === 'number');
+                        if (speeds.length > 0) return Math.max(...speeds) + 'ft';
+                    }
+                    return '30ft';
+                };
+
                 const ttCombatant = {
                     name: monster.name,
                     hp: hpFormula,
                     maxHp: null, // Will be rolled/parsed by addCreature
                     ac: monster.AC,
+                    speed: parseSpeed(monster.speed),
                     initiative: formatModifier(dexMod),
                     scores: ttScores,
                     saves: ttSaves,
                     rawData: JSON.stringify(monster), // For the stat block view
-                    conditions: monster.conditions || [],
+                    conditions: [], // Falindrith 'conditions' might be immunities, safer to leave empty or parse carefully
                     deathSaves: { successes: 0, failures: 0 },
                     noDeathSaves: false
                 };
@@ -1579,8 +1597,8 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.on('roll-attack', (event, { creatureId, rollType }) => {
-        const result = initiativeTracker.rollAttack(creatureId, rollType);
+    ipcMain.on('roll-attack', (event, { creatureId, rollType, modIndex }) => {
+        const result = initiativeTracker.rollAttack(creatureId, rollType, modIndex);
         if (result) {
             const { message, embed } = result;
             mainWindow.webContents.send('dice-log', message);

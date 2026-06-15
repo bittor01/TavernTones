@@ -487,11 +487,12 @@ class InitiativeTracker {
         return result;
     }
 
-    rollAttack(creatureId, rollType) {
+    rollAttack(creatureId, rollType, modIndex = "1") {
         const creature = this.getCreature(creatureId);
         if (!creature) return null;
 
-        const modifier = parseInt(creature.attackMod, 10) || 0;
+        const modStr = (modIndex === "2" && creature.attackMod2) ? creature.attackMod2 : creature.attackMod;
+        const modifier = parseInt(modStr, 10) || 0;
         const checkType = 'Attack';
 
         let rollNotation = '1d20';

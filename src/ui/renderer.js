@@ -138,7 +138,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <div class="form-row">
             <div class="form-group"><label for="creature-speed">Speed:</label><input type="text" id="creature-speed" placeholder="30ft"></div>
-            <div class="form-group"><label for="attack-modifier">Atk Mod:</label><input type="text" id="attack-modifier" placeholder="+5"></div>
+            <div class="form-group">
+                <label for="attack-modifier">Atk:</label>
+                <div style="display: flex; align-items: center; gap: 2px;">
+                    <input type="text" id="attack-modifier" placeholder="+5" style="width: 40px;">
+                    <span style="color: #666;">/</span>
+                    <input type="text" id="attack-modifier-2" placeholder="+3" style="width: 40px;">
+                </div>
+            </div>
             <div class="form-group"><label for="save-dc">Save DC:</label><input type="number" id="save-dc" placeholder="13"></div>
         </div>
         <hr>
@@ -585,6 +592,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 creature.ac = getInt('creature-ac');
                 creature.speed = getVal('creature-speed');
                 creature.attackMod = getVal('attack-modifier');
+                creature.attackMod2 = getVal('attack-modifier-2');
                 creature.saveDc = getInt('save-dc');
                 creature.scores = { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), };
                 creature.saves = { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), };
@@ -626,6 +634,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ac: getInt('creature-ac'),
                     speed: getVal('creature-speed'),
                     attackMod: getVal('attack-modifier'),
+                    attackMod2: getVal('attack-modifier-2'),
                     saveDc: getInt('save-dc'),
                     scores: { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), },
                     saves: { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), },
@@ -1312,6 +1321,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('creature-ac').value = creature.ac || '';
         document.getElementById('creature-speed').value = creature.speed || '';
         document.getElementById('attack-modifier').value = creature.attackMod || '';
+                document.getElementById('attack-modifier-2').value = creature.attackMod2 || '';
         document.getElementById('save-dc').value = creature.saveDc || '';
 
         // --- Populate stats ---
@@ -1536,12 +1546,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         const atkMatches = [...rawDataString.matchAll(/{@atkr[^}]*?}\s*\(([\+\-]?\d+)\)|{@hit ([\+\-]?\d+)}/g)];
-        const allAtkBonuses = atkMatches.map(match => parseInt(match[1] || match[2], 10));
-        const atkBonus = findMode(allAtkBonuses);
-        if (atkBonus !== null) {
-            document.getElementById('attack-modifier').value = formatModifier(atkBonus);
+        const allAtkBonuses = [...new Set(atkMatches.map(match => parseInt(match[1] || match[2], 10)))].sort((a, b) => b - a);
+
+        if (allAtkBonuses.length > 0) {
+            document.getElementById('attack-modifier').value = formatModifier(allAtkBonuses[0]);
+            if (allAtkBonuses.length > 1) {
+                document.getElementById('attack-modifier-2').value = formatModifier(allAtkBonuses[1]);
+            } else {
+                document.getElementById('attack-modifier-2').value = '';
+            }
         } else {
             document.getElementById('attack-modifier').value = '';
+            document.getElementById('attack-modifier-2').value = '';
         }
 
         const dcMatches = [...rawDataString.matchAll(/{@dc\s+(\d+)}/g)];
@@ -1941,7 +1957,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (creature.isMob) {
                     displayMobRules(creatureId);
                 } else {
-                    createPopup('attack-roll', creatureId, target);
+                    const modIndex = target.dataset.modIndex || "1";
+                    createPopup('attack-roll', creatureId, target, { modIndex });
                 }
             }
         } else if (target.classList.contains('stat-roll-btn')) {
@@ -2434,7 +2451,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
                 displayName = `${creature.name} (${currentCount})`;
             }
-            const attackButtonHTML = `<span class="header-stat interactive-stat attack-btn" data-id="${creature.id}">Attack: ${creature.attackMod || '+0'}</span>`;
+            const attackButtonHTML = `
+                <div class="header-stat interactive-stat" style="display: flex; align-items: center; gap: 2px;">
+                    <span>Atk:</span>
+                    <span class="attack-btn" data-id="${creature.id}" data-mod-index="1" title="Roll Attack 1">${creature.attackMod || '+0'}</span>
+                    ${creature.attackMod2 ? `
+                        <span style="color: #666; cursor: default;">/</span>
+                        <span class="attack-btn" data-id="${creature.id}" data-mod-index="2" title="Roll Attack 2">${creature.attackMod2}</span>
+                    ` : ''}
+                </div>
+            `;
 
             const hasStatBlock = creature.rawData;
             creatureDiv.innerHTML = `
@@ -2566,7 +2592,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <button class="ds-popup-roll-btn" data-roll="adv">Advantage</button>
                         <button class="ds-popup-roll-btn" data-roll="flat">Flat</button>
                         <button class="ds-popup-roll-btn" data-roll="dis">Disadvantage</button>
-                        <button id="ds-popup-cancel" style="margin-left: auto;">Cancel</button>
+                        <button id="ds-popup-cancel" style="margin-left: auto; background: none; border: none; font-size: 1.2em; cursor: pointer; padding: 0 5px;" title="Close">❌</button>
                     </div>
                 </div>
             `;
@@ -2642,6 +2668,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         window.electron.ipcRenderer.send('roll-attack', {
                             creatureId: parseInt(creatureId),
                             rollType: rollType,
+                            modIndex: data.modIndex || "1"
                         });
                     } else {
                         window.electron.ipcRenderer.send('roll-stat', {
