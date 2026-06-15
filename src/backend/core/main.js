@@ -1693,6 +1693,7 @@ async function ipcloader() {
     ipcMain.on('roll-death-save', (event, { creatureId, rollType }) => {
         const creature = initiativeTracker.getCreature(creatureId);
         if (!creature) return;
+        if (!creature.deathSaves) creature.deathSaves = { successes: 0, failures: 0 };
 
         let notation = '1d20';
         if (rollType === 'adv') notation = '2d20kh1';

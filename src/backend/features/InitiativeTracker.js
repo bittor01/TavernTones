@@ -78,7 +78,10 @@ class InitiativeTracker {
                 this.currentTurnIndex = savedState.currentTurnIndex || 0;
 
                 // Reset hidden state on load, in case app crashed during edit
-                this.initiativeOrder.forEach(c => delete c.hidden);
+                this.initiativeOrder.forEach(c => {
+                    delete c.hidden;
+                    if (!c.deathSaves) c.deathSaves = { successes: 0, failures: 0 };
+                });
 
                 this.logToRenderer('Autosaved encounter state loaded.');
             }

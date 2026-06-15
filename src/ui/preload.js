@@ -43,7 +43,7 @@ contextBridge.exposeInMainWorld('electron', {
         'get-image-as-data-url', 'get-preview-audio-data', 'load-sound',
         'get-soundboard-state', 'save-soundboard-preset', 'load-soundboard-preset',
         'read-combat-file', 'save-music-preset', 'load-music-preset',
-        'get-music-library', 'rescan-music-library', 'get-discord-config'
+        'get-music-library', 'rescan-music-library'
       ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, ...args);
