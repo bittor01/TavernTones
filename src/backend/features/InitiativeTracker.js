@@ -285,7 +285,11 @@ class InitiativeTracker {
             this._saveState();
 
             // Check for death saves requirement
-            if (newCreature.hp <= 0 && !newCreature.noDeathSaves && !newCreature.isMob) {
+            const ds = newCreature.deathSaves || { successes: 0, failures: 0 };
+            const needsSaves = newCreature.hp <= 0 && !newCreature.noDeathSaves && !newCreature.isMob;
+            const notYetFinished = ds.successes < 3 && ds.failures < 3;
+
+            if (needsSaves && notYetFinished) {
                 this.sendInitiativeUpdate(this.initiativeOrder, this.currentTurnIndex, { type: 'death-save-reminder', creatureId: newCreature.id });
             }
 
