@@ -27,7 +27,7 @@ contextBridge.exposeInMainWorld('electron', {
         'play-next', 'play-prev', 'set-loop-mode', 'set-shuffle', 'remove-from-stack', 'clear-stack',
         'request-bot-status', 'voice-toggle', 'jump-to-track', 'play-now',
         'library-action', 'get-discord-config', 'seek-music', 'set-discord-config',
-        'show-emoji-panel'
+        'show-emoji-panel', 'open-walkthrough', 'update-death-saves', 'roll-death-save'
       ];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, ...args);

@@ -1,7 +1,7 @@
 <!-- Performance and security update -->
 # TavernTones
 
-TavernTones is a powerful desktop application designed for Dungeon Masters to stream high-quality, glitch-free ambient soundscapes, music, and sound effects directly to their players on Discord. It also features a fully-featured Combat Initiative Tracker with support for 5e bestiary data and mob rules.
+TavernTones is a tool for Dungeon Masters to stream ambient soundscapes, music, and sound effects directly to their players on Discord. It also features a fully-featured Combat Initiative Tracker with support for 5e bestiary data and mob rules.
 
 ## Key Features
 
@@ -32,7 +32,7 @@ TavernTones is a powerful desktop application designed for Dungeon Masters to st
 
 ## Dependencies
 
-TavernTones requires **FFmpeg** for audio processing. The application will attempt to auto-detect FFmpeg on your system. If not found, you can manually specify the path in the Settings menu.
+TavernTones requires **FFmpeg** for audio processing. The application will attempt to auto-detect FFmpeg on your system. If not found, it will provide some. You can manually specify the path in the Settings menu if you have newer or preferred ones installed.
 
 ---
 

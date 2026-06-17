@@ -52,16 +52,17 @@ button:disabled {
 /* --- Main Layout --- */
 .main-grid {
     display: grid;
-    /* Left panel roughly 25%, Middle panel fixed to fit soundboard (3x180px + gaps + padding), Right fills rest */
-    grid-template-columns: 25% 568px 1fr;
+    /* Left panel flexible, Middle panel fixed, Right fills rest */
+    /* Resizers are 8px each */
+    grid-template-columns: var(--left-col-width, 25%) 8px 568px 8px 1fr;
     height: 100vh;
-    gap: 10px;
+    gap: 0;
     padding: 10px;
 }
 
 body.audio-only .main-grid {
     /* Left side is flexible, right side (soundboard) snaps to content width */
-    grid-template-columns: 1fr 0px 0px min-content;
+    grid-template-columns: 1fr 0px 0px 8px var(--right-col-width, min-content);
     gap: 0;
     padding-right: 0; /* Abut the right edge */
 }
@@ -766,14 +767,67 @@ body.audio-only #soundboard-grid {
     display: none !important;
 }
 
-#add-col-btn,
-#remove-col-btn {
-    display: none !important;
+.resizer-h-middle {
+    width: 8px;
+    background: transparent;
+    cursor: col-resize;
+    flex-shrink: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.2s;
 }
 
-body.audio-only #add-col-btn,
-body.audio-only #remove-col-btn {
-    display: block !important;
+.resizer-h-middle:hover {
+    background: rgba(0, 123, 255, 0.1);
+}
+
+.resizer-h-middle::after {
+    content: '||';
+    font-size: 14px;
+    color: #444;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.resizer-h-middle:hover::after {
+    color: #007bff;
+}
+
+.resizer-v-sb {
+    height: 8px;
+    background: transparent;
+    cursor: row-resize;
+    flex-shrink: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.resizer-v-sb::after {
+    content: '---';
+    font-size: 14px;
+    line-height: 8px;
+    color: #444;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.resizer-v-sb:hover::after {
+    color: #007bff;
+}
+
+.resizer-v-sb:hover {
+    background: rgba(0, 123, 255, 0.1);
+}
+
+#add-col-btn,
+#remove-col-btn,
+#add-row-btn,
+#remove-row-btn {
+    display: none !important;
 }
 
 body.audio-only .resize-handle {
@@ -917,6 +971,32 @@ input:disabled {
 .interactive-stat:hover {
     background-color: #0056b3;
     /* A darker blue on hover */
+}
+
+/* --- Death Saves --- */
+.death-save-track {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ds-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid #666;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.ds-success.filled {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.ds-failure.filled {
+    background-color: #dc3545;
+    border-color: #dc3545;
 }
 
 /* --- Stat Block Table --- */
@@ -1271,7 +1351,7 @@ body.audio-only .column-left {
 
 body.audio-only .column-right {
     display: flex;
-    grid-column: 4;
+    grid-column: 5;
     overflow: hidden;
 }
 
@@ -1318,6 +1398,14 @@ body.audio-only .resizer-v {
     display: none !important;
 }
 
+body.audio-only .resizer-h-middle {
+    cursor: col-resize;
+}
+
+body.audio-only .resizer-v-sb {
+    cursor: row-resize;
+}
+
 body.audio-only .audio-only-right-column #music-stack-list {
     flex-grow: 1;
     min-height: 0;
@@ -1332,6 +1420,7 @@ body.audio-only .audio-only-right-column #soundboard-container {
     min-height: 0;
     flex-direction: column;
     padding-bottom: 2px;
+    width: fit-content;
 }
 
 body.audio-only #soundboard-container .panel-header {
@@ -1398,6 +1487,23 @@ body.audio-only #soundboard-container .panel-header h2 {
 }
 
 /* --- Notification Toasts --- */
+.search-overlay {
+    position: absolute;
+    background-color: #252526;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 5px;
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.search-overlay input {
+    width: 200px;
+}
+
 .notification-toast {
     position: fixed;
     bottom: 20px;
