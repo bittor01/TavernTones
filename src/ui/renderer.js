@@ -679,9 +679,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (config.audioOnlyRows) audioOnlyRows = config.audioOnlyRows;
         if (config.audioOnlyCols) audioOnlyCols = config.audioOnlyCols;
-        if (config.leftColumnWidth) {
-            document.documentElement.style.setProperty('--left-col-width', `${config.leftColumnWidth}px`);
-        }
         if (config.musicPlayerHeight) {
             document.documentElement.style.setProperty('--music-player-height', `${config.musicPlayerHeight}px`);
         } else if (config.audioMode) {
@@ -997,6 +994,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentLoopMode = 1;
     let currentShuffleMode = false;
     let lastMusicStatus = null;
+    let lastStackFingerprint = '';
 
     function togglePreview(index = -1) {
         if (!previewAudioPlayer.paused) {
@@ -1089,42 +1087,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         shuffleBtn.classList.toggle('active', currentShuffleMode);
 
         // Render Playlist
-        musicStackList.innerHTML = '';
-        status.stack.forEach((track, index) => {
-            const div = document.createElement('div');
-            div.className = 'music-stack-item' + (index === status.currentIndex ? ' active' : '');
-            if (status.isCaching && index === status.currentIndex) div.classList.add('caching');
+        const stackFingerprint = status.stack.map(t => t.path).join('|');
+        if (stackFingerprint !== lastStackFingerprint) {
+            lastStackFingerprint = stackFingerprint;
+            musicStackList.innerHTML = '';
+            status.stack.forEach((track, index) => {
+                const div = document.createElement('div');
+                div.className = 'music-stack-item';
+                div.dataset.index = index;
 
-            div.innerHTML = `
-                <span class="track-name">${track.name}</span>
-                <div class="item-actions">
-                    <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
-                    <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
-                    <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
-                </div>
-            `;
-            div.querySelector('.play-track-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                window.electron.ipcRenderer.send('jump-to-track', { index });
+                div.innerHTML = `
+                    <span class="track-name">${track.name}</span>
+                    <div class="item-actions">
+                        <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
+                        <button class="small-btn preview-track-btn" data-index="${index}" title="Preview">🎶</button>
+                        <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
+                    </div>
+                `;
+                div.querySelector('.play-track-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    window.electron.ipcRenderer.send('play-now', { index });
+                });
+                div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    togglePreview(index);
+                });
+                div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    window.electron.ipcRenderer.send('remove-from-stack', { index });
+                });
+                div.addEventListener('dblclick', () => {
+                    window.electron.ipcRenderer.send('play-now', { index });
+                });
+                musicStackList.appendChild(div);
             });
-            div.querySelector('.preview-track-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                togglePreview(index);
-            });
-            div.querySelector('.remove-track-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                window.electron.ipcRenderer.send('remove-from-stack', { index });
-            });
-            div.addEventListener('click', () => {
-                // Focus track on click (maybe highlight?), but don't jump yet if we want double click
-            });
-            div.addEventListener('dblclick', () => {
-                window.electron.ipcRenderer.send('jump-to-track', { index });
-            });
-            musicStackList.appendChild(div);
+        }
+
+        // Lightweight updates for active/caching states on existing elements
+        const items = musicStackList.querySelectorAll('.music-stack-item');
+        items.forEach((div, index) => {
+            const isActive = index === status.currentIndex;
+            const isCaching = status.isCaching && isActive;
+
+            div.classList.toggle('active', isActive);
+            div.classList.toggle('caching', isCaching);
 
             // Auto-scroll to active track
-            if (index === status.currentIndex && index !== lastScrolledIndex) {
+            if (isActive && index !== lastScrolledIndex) {
                 setTimeout(() => {
                     div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     lastScrolledIndex = index;
@@ -2629,18 +2638,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Resizing Logic ---
-    const columnResizer = document.getElementById('column-resizer');
     const musicPlayerResizer = document.getElementById('music-player-resizer');
-    let isResizingColumn = false;
     let isResizingMusicPlayer = false;
-
-    if (columnResizer) {
-        columnResizer.addEventListener('mousedown', (e) => {
-            isResizingColumn = true;
-            document.body.style.cursor = 'col-resize';
-            e.preventDefault();
-        });
-    }
 
     if (musicPlayerResizer) {
         musicPlayerResizer.addEventListener('mousedown', (e) => {
@@ -2652,12 +2651,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.addEventListener('mousemove', (e) => {
         const isAudioOnly = document.body.classList.contains('audio-only');
-        if (isResizingColumn) {
-            if (isAudioOnly) return; // Disable manual horizontal resize in audio-only
-            const newWidth = Math.max(200, Math.min(600, e.clientX));
-            document.documentElement.style.setProperty('--left-col-width', `${newWidth}px`);
-            discordConfig.leftColumnWidth = newWidth;
-        } else if (isResizingMusicPlayer) {
+        if (isResizingMusicPlayer) {
             if (isAudioOnly) return; // Disable manual vertical resize in audio-only
             const musicControls = document.getElementById('music-controls-container');
             if (musicControls) {
@@ -2679,13 +2673,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.addEventListener('mouseup', () => {
-        if (isResizingColumn || isResizingMusicPlayer) {
-            isResizingColumn = false;
+        if (isResizingMusicPlayer) {
             isResizingMusicPlayer = false;
             document.body.style.cursor = '';
             // Only send the relevant parts to be merged
             window.electron.ipcRenderer.send('set-discord-config', {
-                leftColumnWidth: discordConfig.leftColumnWidth,
                 musicPlayerHeight: discordConfig.musicPlayerHeight
             });
         }

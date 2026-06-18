@@ -220,6 +220,9 @@ if (Test-Path ".\build") {
 
 # 3. RUN NPM BUILD
 # -----------------
+Write-Host "`n--- Generating License Data ---" -ForegroundColor Yellow
+$null = Invoke-WithRetry -Command "node" -Arguments @("src/backend/data/generate-licenses.js") -ErrorName "License Generation" -RetryLimit $MaxRetries
+
 Write-Host "`n--- Running NPM Build ---" -ForegroundColor Yellow
 $null = Invoke-WithRetry -Command "npm" -Arguments @("run", "build") -ErrorName "NPM Build" -RetryLimit $MaxRetries
 $null = Invoke-WithRetry -Command "npm" -Arguments @("run", "installer") -ErrorName "NPM Installer" -RetryLimit $MaxRetries

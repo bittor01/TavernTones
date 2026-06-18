@@ -182,9 +182,39 @@
 
         <div style="display: flex; gap: 10px;">
             <button id="help-button" style="width: 100px;">Help</button>
+            <button id="license-button" style="width: 100px;">Licenses</button>
             <button id="save-button" style="flex-grow: 1;">Save and Close</button>
         </div>
     </div>
+
+    <dialog id="license-dialog" style="width: 60%; max-height: 80%;">
+        <h3>Package Licenses</h3>
+        <div id="license-content" style="overflow-y: auto; max-height: 50vh;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                <thead>
+                    <tr style="border-bottom: 1px solid #444; text-align: left;">
+                        <th style="padding: 8px;">Package</th>
+                        <th style="padding: 8px;">Version</th>
+                        <th style="padding: 8px;">License</th>
+                    </tr>
+                </thead>
+                <tbody id="license-table-body">
+                    <!-- Rows will be added here -->
+                </tbody>
+            </table>
+        </div>
+        <div style="text-align: right; margin-top: 20px;">
+            <button onclick="document.getElementById('license-dialog').close()">Close</button>
+        </div>
+    </dialog>
+
+    <dialog id="license-text-dialog" style="width: 70%; max-height: 80%;">
+        <h3 id="license-text-title">License Text</h3>
+        <pre id="license-text-content" style="white-space: pre-wrap; background: #1e1e1e; padding: 15px; border-radius: 4px; max-height: 50vh; overflow-y: auto; font-family: monospace; font-size: 0.85em; color: #ccc;"></pre>
+        <div style="text-align: right; margin-top: 20px;">
+            <button onclick="document.getElementById('license-text-dialog').close()">Back</button>
+        </div>
+    </dialog>
 
     <dialog id="help-dialog" style="width: 80%; max-height: 80%;">
         <div id="help-content" style="overflow-y: auto; max-height: 60vh; line-height: 1.6;">
