@@ -177,13 +177,13 @@ const hpBarEmojiMap = {
     'empty': '⬛'
 };
 
-async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex) {
+async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex, extra = null) {
     if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
-        mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex });
+        mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex, extra });
     }
     else if (!isAppReady) {
         await sleep(100);
-        sendInitiativeUpdate(initiativeOrder, currentTurnIndex);
+        sendInitiativeUpdate(initiativeOrder, currentTurnIndex, extra);
     }
 }
 
@@ -791,6 +791,20 @@ async function ipcloader() {
 
     ipcMain.on('open-settings-window', createSettingsWindow);
 
+    ipcMain.on('open-walkthrough', () => {
+        let walkthroughWindow = new BrowserWindow({
+            width: 600,
+            height: 700,
+            alwaysOnTop: true,
+            frame: true,
+            webPreferences: {
+                nodeIntegration: true,
+                contextIsolation: false // Simplified for this walkthrough window
+            }
+        });
+        walkthroughWindow.loadFile(path.join(__dirname, '../../ui/walkthrough/walkthrough.html'));
+    });
+
     ipcMain.handle('register-slash-commands', async () => {
         if (!discordConfig.token) return { success: false, error: 'No bot token' };
         try {
@@ -1226,16 +1240,34 @@ async function ipcloader() {
                     ttScores[s.toLowerCase()] = monster.stats[s];
                 });
 
+                const parseSpeed = (speedObj) => {
+                    if (!speedObj) return '30ft';
+                    if (typeof speedObj === 'string') {
+                        const matches = speedObj.match(/(\d+)\s*ft/g);
+                        if (matches) {
+                            const speeds = matches.map(m => parseInt(m, 10));
+                            return Math.max(...speeds) + 'ft';
+                        }
+                        return speedObj;
+                    }
+                    if (typeof speedObj === 'object') {
+                        const speeds = Object.values(speedObj).filter(s => typeof s === 'number');
+                        if (speeds.length > 0) return Math.max(...speeds) + 'ft';
+                    }
+                    return '30ft';
+                };
+
                 const ttCombatant = {
                     name: monster.name,
                     hp: hpFormula,
                     maxHp: null, // Will be rolled/parsed by addCreature
                     ac: monster.AC,
+                    speed: parseSpeed(monster.speed),
                     initiative: formatModifier(dexMod),
                     scores: ttScores,
                     saves: ttSaves,
                     rawData: JSON.stringify(monster), // For the stat block view
-                    conditions: monster.conditions || [],
+                    conditions: [], // Falindrith 'conditions' might be immunities, safer to leave empty or parse carefully
                     deathSaves: { successes: 0, failures: 0 },
                     noDeathSaves: false
                 };
@@ -1565,8 +1597,8 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.on('roll-attack', (event, { creatureId, rollType }) => {
-        const result = initiativeTracker.rollAttack(creatureId, rollType);
+    ipcMain.on('roll-attack', (event, { creatureId, rollType, modIndex }) => {
+        const result = initiativeTracker.rollAttack(creatureId, rollType, modIndex);
         if (result) {
             const { message, embed } = result;
             mainWindow.webContents.send('dice-log', message);
@@ -1652,7 +1684,16 @@ async function ipcloader() {
     ipcMain.on('update-death-saves', (event, { creatureId, deathSaves }) => {
         const creature = initiativeTracker.getCreature(creatureId);
         if (creature) {
+            const oldSaves = creature.deathSaves || { successes: 0, failures: 0 };
             creature.deathSaves = deathSaves;
+
+            // Trigger popups if 3 is reached manually
+            if (deathSaves.successes >= 3 && oldSaves.successes < 3) {
+                dialog.showMessageBox(mainWindow, { type: 'info', title: 'Creature Stabilized', message: `${creature.name} has stabilized!`, buttons: ['OK'] });
+            } else if (deathSaves.failures >= 3 && oldSaves.failures < 3) {
+                dialog.showMessageBox(mainWindow, { type: 'error', title: 'Creature Deceased', message: `${creature.name} has died.`, buttons: ['OK'] });
+            }
+
             initiativeTracker._updateFrontend();
             initiativeTracker._saveState();
         }
@@ -1661,6 +1702,7 @@ async function ipcloader() {
     ipcMain.on('roll-death-save', (event, { creatureId, rollType }) => {
         const creature = initiativeTracker.getCreature(creatureId);
         if (!creature) return;
+        if (!creature.deathSaves) creature.deathSaves = { successes: 0, failures: 0 };
 
         let notation = '1d20';
         if (rollType === 'adv') notation = '2d20kh1';
@@ -1669,22 +1711,36 @@ async function ipcloader() {
         const roll = new DiceRoller().roll(notation);
         const result = roll.total;
 
+        let outcome = null;
         let message = `${creature.name} rolled a Death Saving Throw (${rollType}): **${result}**`;
         if (result === 20) {
             message += " - **Critical Success!** (Regains 1 HP)";
+            outcome = 'crit-success';
             initiativeTracker.updateHp(creatureId, 1);
         } else if (result >= 10) {
             message += " - Success";
             creature.deathSaves.successes = Math.min(3, (creature.deathSaves.successes || 0) + 1);
+            if (creature.deathSaves.successes >= 3) outcome = 'stabilized';
         } else if (result === 1) {
             message += " - **Critical Failure!** (2 failures)";
             creature.deathSaves.failures = Math.min(3, (creature.deathSaves.failures || 0) + 2);
+            if (creature.deathSaves.failures >= 3) outcome = 'dead';
         } else {
             message += " - Failure";
             creature.deathSaves.failures = Math.min(3, (creature.deathSaves.failures || 0) + 1);
+            if (creature.deathSaves.failures >= 3) outcome = 'dead';
         }
 
         logDiceRollToRenderer(message);
+
+        if (outcome === 'crit-success') {
+            dialog.showMessageBox(mainWindow, { type: 'info', title: 'Critical Success!', message: `${creature.name} rolled a natural 20 and regained 1 HP!`, buttons: ['OK'] });
+        } else if (outcome === 'stabilized') {
+            dialog.showMessageBox(mainWindow, { type: 'info', title: 'Creature Stabilized', message: `${creature.name} has stabilized with 3 successes.`, buttons: ['OK'] });
+        } else if (outcome === 'dead') {
+            dialog.showMessageBox(mainWindow, { type: 'error', title: 'Creature Deceased', message: `${creature.name} has died with 3 failures.`, buttons: ['OK'] });
+        }
+
         initiativeTracker._updateFrontend();
         initiativeTracker._saveState();
     });

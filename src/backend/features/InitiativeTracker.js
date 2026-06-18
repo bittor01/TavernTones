@@ -78,7 +78,10 @@ class InitiativeTracker {
                 this.currentTurnIndex = savedState.currentTurnIndex || 0;
 
                 // Reset hidden state on load, in case app crashed during edit
-                this.initiativeOrder.forEach(c => delete c.hidden);
+                this.initiativeOrder.forEach(c => {
+                    delete c.hidden;
+                    if (!c.deathSaves) c.deathSaves = { successes: 0, failures: 0 };
+                });
 
                 this.logToRenderer('Autosaved encounter state loaded.');
             }
@@ -282,7 +285,11 @@ class InitiativeTracker {
             this._saveState();
 
             // Check for death saves requirement
-            if (newCreature.hp <= 0 && !newCreature.noDeathSaves && !newCreature.isMob) {
+            const ds = newCreature.deathSaves || { successes: 0, failures: 0 };
+            const needsSaves = newCreature.hp <= 0 && !newCreature.noDeathSaves && !newCreature.isMob;
+            const notYetFinished = ds.successes < 3 && ds.failures < 3;
+
+            if (needsSaves && notYetFinished) {
                 this.sendInitiativeUpdate(this.initiativeOrder, this.currentTurnIndex, { type: 'death-save-reminder', creatureId: newCreature.id });
             }
 
@@ -345,6 +352,7 @@ class InitiativeTracker {
         const creature = this.getCreature(creatureId);
         let concentrationCheckDC = null;
         if (creature) {
+            const wasAtZero = creature.hp <= 0;
             if (amount < 0) { // Damage
                 let damage = -amount;
                 const tempHpDamage = Math.min(creature.tempHp || 0, damage);
@@ -365,6 +373,11 @@ class InitiativeTracker {
                 } else {
                     // For single creatures, healing can go above maxHP (overhealing).
                     creature.hp += amount;
+                }
+
+                // Reset death saves if creature regained HP
+                if (creature.hp > 0 && !creature.isMob) {
+                    creature.deathSaves = { successes: 0, failures: 0 };
                 }
             }
             this._updateFrontend();
@@ -425,6 +438,7 @@ class InitiativeTracker {
             c.hp = c.maxHp;
             c.tempHp = 0;
             c.conditions = [];
+            c.deathSaves = { successes: 0, failures: 0 };
         });
         this.currentTurnIndex = 0;
         this._updateFrontend();
@@ -487,11 +501,12 @@ class InitiativeTracker {
         return result;
     }
 
-    rollAttack(creatureId, rollType) {
+    rollAttack(creatureId, rollType, modIndex = "1") {
         const creature = this.getCreature(creatureId);
         if (!creature) return null;
 
-        const modifier = parseInt(creature.attackMod, 10) || 0;
+        const modStr = (modIndex === "2" && creature.attackMod2) ? creature.attackMod2 : creature.attackMod;
+        const modifier = parseInt(modStr, 10) || 0;
         const checkType = 'Attack';
 
         let rollNotation = '1d20';

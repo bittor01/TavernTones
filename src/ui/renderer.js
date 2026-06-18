@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     ];
     let currentPanelIndex = 3; // Default to 'Music Library'
     let musicLibrary = { children: [] };
+    let libraryFilter = '';
+    let playlistFilter = '';
     let selectedLibraryPaths = new Set();
     let expandedLibraryPaths = new Set();
     let botStatus = { status: 'offline', message: 'Unknown' };
@@ -44,6 +46,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const musicAutosaveCheck = document.getElementById('music-autosave-check');
     const discordMediaControlToggle = document.getElementById('discord-media-control-toggle');
     const musicStackList = document.getElementById('music-stack-list');
+    const searchLibraryBtn = document.getElementById('search-library-btn');
+    const searchPlaylistBtn = document.getElementById('search-playlist-btn');
     const previewAudioPlayer = document.getElementById('preview-audio-player');
     const addCreatureForm = document.getElementById('add-creature-form');
     const initiativeListDiv = document.getElementById('initiative-list');
@@ -67,6 +71,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Specifically request the initial load after a short delay to ensure the main process is ready.
         setTimeout(() => {
             window.electron.ipcRenderer.send('request-initial-load');
+            window.electron.ipcRenderer.on('discord-config', (event, config) => {
+                // Resolution auto-detection on first run
+                if (!config.leftColumnWidth || !config.audioOnlyCols) {
+                    const width = window.innerWidth;
+                    const height = window.innerHeight;
+                    const updates = {};
+
+                    if (!config.leftColumnWidth) {
+                        updates.leftColumnWidth = Math.floor(width * 0.25);
+                    }
+                    if (!config.audioOnlyCols) {
+                        updates.audioOnlyCols = Math.floor((width * 0.5) / 185);
+                        if (updates.audioOnlyCols < 3) updates.audioOnlyCols = 3;
+                    }
+                    if (!config.audioOnlyRows) {
+                        updates.audioOnlyRows = Math.floor((height * 0.6) / 110);
+                        if (updates.audioOnlyRows < 4) updates.audioOnlyRows = 4;
+                    }
+
+                    if (Object.keys(updates).length > 0) {
+                        window.electron.ipcRenderer.send('set-discord-config', updates);
+                    }
+                }
+
+                // Initial apply
+                if (config.leftColumnWidth) {
+                    document.documentElement.style.setProperty('--left-col-width', `${config.leftColumnWidth}px`);
+                }
+            });
             window.electron.ipcRenderer.send('get-discord-config');
             window.electron.ipcRenderer.invoke('get-music-library').then(library => {
                 musicLibrary = library;
@@ -105,7 +138,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <div class="form-row">
             <div class="form-group"><label for="creature-speed">Speed:</label><input type="text" id="creature-speed" placeholder="30ft"></div>
-            <div class="form-group"><label for="attack-modifier">Atk Mod:</label><input type="text" id="attack-modifier" placeholder="+5"></div>
+            <div class="form-group">
+                <label for="attack-modifier">Atk:</label>
+                <div style="display: flex; align-items: center; gap: 2px;">
+                    <input type="text" id="attack-modifier" placeholder="+5" style="width: 40px;">
+                    <span style="color: #666;">/</span>
+                    <input type="text" id="attack-modifier-2" placeholder="+3" style="width: 40px;">
+                </div>
+            </div>
             <div class="form-group"><label for="save-dc">Save DC:</label><input type="number" id="save-dc" placeholder="13"></div>
         </div>
         <hr>
@@ -552,6 +592,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 creature.ac = getInt('creature-ac');
                 creature.speed = getVal('creature-speed');
                 creature.attackMod = getVal('attack-modifier');
+                creature.attackMod2 = getVal('attack-modifier-2');
                 creature.saveDc = getInt('save-dc');
                 creature.scores = { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), };
                 creature.saves = { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), };
@@ -593,6 +634,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ac: getInt('creature-ac'),
                     speed: getVal('creature-speed'),
                     attackMod: getVal('attack-modifier'),
+                    attackMod2: getVal('attack-modifier-2'),
                     saveDc: getInt('save-dc'),
                     scores: { str: getInt('str-score'), dex: getInt('dex-score'), con: getInt('con-score'), int: getInt('int-score'), wis: getInt('wis-score'), cha: getInt('cha-score'), },
                     saves: { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), },
@@ -697,6 +739,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.documentElement.style.setProperty('--music-player-height', `280px`);
         }
 
+        if (config.leftColumnWidth) {
+            document.documentElement.style.setProperty('--left-col-width', `${config.leftColumnWidth}px`);
+        }
+
         if (config.audioMode) {
             document.body.classList.add('audio-only');
             // Move containers to columns
@@ -704,13 +750,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             const musicControls = document.getElementById('music-controls-container');
             const soundboard = document.getElementById('soundboard-container');
             const musicResizer = document.getElementById('music-player-resizer');
+            const sbResizerTop = document.getElementById('soundboard-resizer-top');
+            const midResizerLeft = document.getElementById('middle-col-resizer-left');
+            const midResizerRight = document.getElementById('middle-col-resizer-right');
+
             if (rightCol && musicControls && soundboard && musicResizer) {
                 rightCol.appendChild(musicControls);
-                // In Audio-Only mode, ensure music-player-resizer is at the top of the right column or removed
-                // Actually we just hide it via CSS, but moving it helps layout flow
                 rightCol.appendChild(musicResizer);
+                if (sbResizerTop) rightCol.appendChild(sbResizerTop);
                 rightCol.appendChild(soundboard);
             }
+            if (midResizerLeft && rightCol) {
+                // In Audio-Only, middle-col-resizer-left acts as the left handle for the right column
+                midResizerLeft.style.gridColumn = '4';
+                midResizerLeft.style.display = 'flex';
+                rightCol.parentNode.insertBefore(midResizerLeft, rightCol);
+            }
+            if (midResizerRight) {
+                midResizerRight.style.display = 'none';
+            }
+
+            // Calculate and set right column width based on columns
+            const colWidth = (audioOnlyCols * 180) + ((audioOnlyCols - 1) * 5) + 16; // slots + gaps + padding
+            document.documentElement.style.setProperty('--right-col-width', `${colWidth}px`);
+
             showPanel('musicLibraryArea');
         } else {
             document.body.classList.remove('audio-only');
@@ -726,6 +789,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const initiativeList = document.getElementById('initiative-list-container');
             const turnControls = document.getElementById('turn-controls-container');
             const combatantWrapper = document.getElementById('combatant-wrapper');
+            const sbResizerTop = document.getElementById('soundboard-resizer-top');
+            const midResizerLeft = document.getElementById('middle-col-resizer-left');
+            const midResizerRight = document.getElementById('middle-col-resizer-right');
 
             if (leftCol && creatureEntry && logWrapper && musicResizer && musicControls) {
                 leftCol.appendChild(creatureEntry);
@@ -736,11 +802,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (midCol && turnControls && initiativeList && soundboard) {
                 midCol.appendChild(turnControls);
                 midCol.appendChild(initiativeList);
+                if (sbResizerTop) midCol.appendChild(sbResizerTop);
                 midCol.appendChild(soundboard);
             }
             if (rightCol && combatantWrapper) {
                 rightCol.appendChild(combatantWrapper);
             }
+            // Restore resizers position in grid
+            if (midResizerLeft) {
+                midResizerLeft.style.gridColumn = '';
+                midResizerLeft.style.display = 'flex';
+            }
+            if (midResizerRight) {
+                midResizerRight.style.display = 'flex';
+            }
+            if (midResizerLeft && midCol) midCol.parentNode.insertBefore(midResizerLeft, midCol);
+            if (midResizerRight && midCol) midCol.parentNode.insertBefore(midResizerRight, midCol.nextSibling);
         }
         renderSoundboard(); // Ensure soundboard layout updates when mode changes
     });
@@ -789,6 +866,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     let renderLibraryTimeout;
+    function normalizeSearchString(s) {
+        if (!s) return '';
+        // treat whitespace, snake_case, kebab-case, dots all the same
+        return s.toLowerCase().replace(/[\s_\-\.]+/g, ' ').trim();
+    }
+
+    function matchesFilter(name, filter) {
+        if (!filter) return true;
+        const normalizedName = normalizeSearchString(name);
+        const normalizedFilter = normalizeSearchString(filter);
+        return normalizedName.includes(normalizedFilter);
+    }
+
     function renderMusicLibrary() {
         if (renderLibraryTimeout) clearTimeout(renderLibraryTimeout);
         renderLibraryTimeout = setTimeout(() => {
@@ -798,7 +888,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (musicLibrary && musicLibrary.children) {
                 const fragment = document.createDocumentFragment();
                 musicLibrary.children.forEach(child => {
-                    fragment.appendChild(createTreeNode(child, true));
+                    const node = createTreeNode(child, true);
+                    if (node) fragment.appendChild(node);
                 });
                 container.appendChild(fragment);
             }
@@ -818,6 +909,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function createTreeNode(node, isRoot = false) {
+        let hasVisibleChild = false;
+        let selfMatches = matchesFilter(node.name, libraryFilter);
+
+        const childrenContainer = document.createElement('div');
+        childrenContainer.className = 'node-children';
+
+        if (node.type === 'directory' && node.children) {
+            node.children.forEach(child => {
+                const childNode = createTreeNode(child);
+                if (childNode) {
+                    childrenContainer.appendChild(childNode);
+                    hasVisibleChild = true;
+                }
+            });
+        }
+
+        // If filtering, hide node if it doesn't match and has no visible children
+        if (libraryFilter && !selfMatches && !hasVisibleChild) {
+            return null;
+        }
+
         const div = document.createElement('div');
         div.className = 'tree-node';
         if (isRoot) div.style.marginLeft = '0';
@@ -887,15 +999,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         div.appendChild(content);
 
         if (node.type === 'directory' && node.children) {
-            const childrenContainer = document.createElement('div');
-            childrenContainer.className = 'node-children';
-            const isExpanded = expandedLibraryPaths.has(node.path);
+            // Expand if filtering and has matches
+            const isExpanded = (libraryFilter && hasVisibleChild) || expandedLibraryPaths.has(node.path);
             childrenContainer.style.display = isExpanded ? 'block' : 'none';
             if (isExpanded) toggle.textContent = '📂';
 
-            node.children.forEach(child => {
-                childrenContainer.appendChild(createTreeNode(child));
-            });
             div.appendChild(childrenContainer);
 
             content.onclick = (e) => {
@@ -1084,21 +1192,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             playPauseButton.disabled = status.stack.length === 0;
 
-            // Update Loop Button
-            const loopEmojis = ['➡️', '🔁', '🔂'];
-            const loopTitles = ['No Loop', 'Loop All', 'Loop Single'];
-            loopModeBtn.textContent = loopEmojis[currentLoopMode];
-            loopModeBtn.title = loopTitles[currentLoopMode];
-
-            // Update Shuffle Button
-            shuffleBtn.classList.toggle('active', currentShuffleMode);
-
             // Render Playlist
-            const stackFingerprint = status.stack.map(t => t.path).join('|');
+            const stackFingerprint = status.stack.map(t => t.path).join('|') + 'search:' + playlistFilter;
             if (stackFingerprint !== lastStackFingerprint) {
                 lastStackFingerprint = stackFingerprint;
                 musicStackList.innerHTML = '';
                 status.stack.forEach((track, index) => {
+                    if (playlistFilter && !matchesFilter(track.name, playlistFilter)) {
+                        return;
+                    }
                     const div = document.createElement('div');
                     div.className = 'music-stack-item';
                     div.dataset.index = index;
@@ -1129,6 +1231,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     musicStackList.appendChild(div);
                 });
             }
+
+            // Update Loop Button
+            const loopEmojis = ['➡️', '🔁', '🔂'];
+            const loopTitles = ['No Loop', 'Loop All', 'Loop Single'];
+            loopModeBtn.textContent = loopEmojis[currentLoopMode];
+            loopModeBtn.title = loopTitles[currentLoopMode];
+
+            // Update Shuffle Button
+            shuffleBtn.classList.toggle('active', currentShuffleMode);
         }
 
         // Lightweight updates for active states on existing elements
@@ -1210,6 +1321,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('creature-ac').value = creature.ac || '';
         document.getElementById('creature-speed').value = creature.speed || '';
         document.getElementById('attack-modifier').value = creature.attackMod || '';
+                document.getElementById('attack-modifier-2').value = creature.attackMod2 || '';
         document.getElementById('save-dc').value = creature.saveDc || '';
 
         // --- Populate stats ---
@@ -1434,12 +1546,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         const atkMatches = [...rawDataString.matchAll(/{@atkr[^}]*?}\s*\(([\+\-]?\d+)\)|{@hit ([\+\-]?\d+)}/g)];
-        const allAtkBonuses = atkMatches.map(match => parseInt(match[1] || match[2], 10));
-        const atkBonus = findMode(allAtkBonuses);
-        if (atkBonus !== null) {
-            document.getElementById('attack-modifier').value = formatModifier(atkBonus);
+        const allAtkBonuses = [...new Set(atkMatches.map(match => parseInt(match[1] || match[2], 10)))].sort((a, b) => b - a);
+
+        if (allAtkBonuses.length > 0) {
+            document.getElementById('attack-modifier').value = formatModifier(allAtkBonuses[0]);
+            if (allAtkBonuses.length > 1) {
+                document.getElementById('attack-modifier-2').value = formatModifier(allAtkBonuses[1]);
+            } else {
+                document.getElementById('attack-modifier-2').value = '';
+            }
         } else {
             document.getElementById('attack-modifier').value = '';
+            document.getElementById('attack-modifier-2').value = '';
         }
 
         const dcMatches = [...rawDataString.matchAll(/{@dc\s+(\d+)}/g)];
@@ -1592,6 +1710,113 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    const soundboardResizerTop = document.getElementById('soundboard-resizer-top');
+    const middleResizerLeft = document.getElementById('middle-col-resizer-left');
+    const middleResizerRight = document.getElementById('middle-col-resizer-right');
+
+    let isResizingSB = false;
+    let isResizingCols = false;
+    let initialX, initialY;
+    let initialLeftColWidth, initialSBRows, initialSBCols;
+
+    function handleSBResize(e) {
+        const isAudioOnly = document.body.classList.contains('audio-only');
+        if (isResizingSB) {
+            const deltaY = initialY - e.clientY;
+            const rowHeight = 110; // Approx height of slot + gaps
+            const threshold = 0.6;
+
+            let newRows;
+            if (isAudioOnly) {
+                // In Audio-Only, it's at the top of the right column
+                const deltaRows = deltaY / rowHeight;
+                newRows = initialSBRows + Math.floor(deltaRows + (1 - threshold));
+                newRows = Math.max(1, Math.min(16, newRows));
+                if (newRows !== audioOnlyRows) {
+                    audioOnlyRows = newRows;
+                    renderSoundboard();
+                }
+            } else {
+                // In Default view, handle is at the top of the middle column
+                const deltaRows = deltaY / rowHeight;
+                newRows = initialSBRows + Math.floor(deltaRows + (1 - threshold));
+                newRows = Math.max(1, Math.min(16, newRows));
+                if (newRows !== soundboardRowCount) {
+                    soundboardRowCount = newRows;
+                    renderSoundboard();
+                }
+            }
+        }
+        if (isResizingCols) {
+            const deltaX = e.clientX - initialX;
+            const colWidth = 180 + 5; // Slot + Gap
+            const threshold = 0.6;
+
+            if (isAudioOnly) {
+                // Resize columns in Audio-Only (handle on the left of right column)
+                const deltaCols = -deltaX / colWidth; // Moving left increases columns
+                const newCols = initialSBCols + Math.floor(deltaCols + (1 - threshold));
+                const clampedCols = Math.max(1, Math.min(12, newCols));
+                if (clampedCols !== audioOnlyCols) {
+                    audioOnlyCols = clampedCols;
+                    renderSoundboard();
+                }
+            } else {
+                // Resize left column in Default view
+                const newWidth = initialLeftColWidth + deltaX;
+                const minWidth = 200;
+                const maxWidth = window.innerWidth * 0.5;
+                const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+                document.documentElement.style.setProperty('--left-col-width', `${clampedWidth}px`);
+                discordConfig.leftColumnWidth = clampedWidth;
+            }
+        }
+    }
+
+    [soundboardResizerTop, middleResizerLeft, middleResizerRight].forEach(resizer => {
+        if (!resizer) return;
+        resizer.addEventListener('mousedown', (e) => {
+            const isAudioOnly = document.body.classList.contains('audio-only');
+            initialX = e.clientX;
+            initialY = e.clientY;
+            initialSBRows = isAudioOnly ? audioOnlyRows : soundboardRowCount;
+            initialSBCols = audioOnlyCols;
+
+            const leftCol = document.querySelector('.column-left');
+            initialLeftColWidth = leftCol ? leftCol.getBoundingClientRect().width : (window.innerWidth * 0.25);
+
+            if (resizer === soundboardResizerTop) {
+                isResizingSB = true;
+            } else {
+                isResizingCols = true;
+            }
+            document.body.style.userSelect = 'none';
+            document.addEventListener('mousemove', handleSBResize);
+        });
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizingSB || isResizingCols) {
+            const isAudioOnly = document.body.classList.contains('audio-only');
+            isResizingSB = false;
+            isResizingCols = false;
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', handleSBResize);
+
+            if (isAudioOnly) {
+                window.electron.ipcRenderer.send('set-discord-config', {
+                    audioOnlyRows: audioOnlyRows,
+                    audioOnlyCols: audioOnlyCols
+                });
+            } else {
+                saveSoundboardState();
+                window.electron.ipcRenderer.send('set-discord-config', {
+                    leftColumnWidth: discordConfig.leftColumnWidth
+                });
+            }
+        }
+    });
+
     if (loadPresetBtn) {
         loadPresetBtn.addEventListener('click', () => {
             window.electron.ipcRenderer.invoke('load-soundboard-preset').then(result => {
@@ -1732,7 +1957,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (creature.isMob) {
                     displayMobRules(creatureId);
                 } else {
-                    createPopup('attack-roll', creatureId, target);
+                    const modIndex = target.dataset.modIndex || "1";
+                    createPopup('attack-roll', creatureId, target, { modIndex });
                 }
             }
         } else if (target.classList.contains('stat-roll-btn')) {
@@ -1863,6 +2089,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         grid.style.setProperty('--sb-rows', rows);
         grid.style.setProperty('--sb-cols', cols);
+
+        if (isAudioOnly) {
+            const colWidth = (cols * 180) + ((cols - 1) * 5) + 16;
+            document.documentElement.style.setProperty('--right-col-width', `${colWidth}px`);
+        }
 
         // Render subset of state based on current layout
         for (let i = 0; i < totalSlotsToRender; i++) {
@@ -2220,7 +2451,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
                 displayName = `${creature.name} (${currentCount})`;
             }
-            const attackButtonHTML = `<span class="header-stat interactive-stat attack-btn" data-id="${creature.id}">Attack: ${creature.attackMod || '+0'}</span>`;
+            const attackButtonHTML = `
+                <div class="header-stat interactive-stat" style="display: flex; align-items: center; gap: 2px;">
+                    <span>Atk:</span>
+                    <span class="attack-btn" data-id="${creature.id}" data-mod-index="1" title="Roll Attack 1">${creature.attackMod || '+0'}</span>
+                    ${creature.attackMod2 ? `
+                        <span style="color: #666; cursor: default;">/</span>
+                        <span class="attack-btn" data-id="${creature.id}" data-mod-index="2" title="Roll Attack 2">${creature.attackMod2}</span>
+                    ` : ''}
+                </div>
+            `;
 
             const hasStatBlock = creature.rawData;
             creatureDiv.innerHTML = `
@@ -2352,7 +2592,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <button class="ds-popup-roll-btn" data-roll="adv">Advantage</button>
                         <button class="ds-popup-roll-btn" data-roll="flat">Flat</button>
                         <button class="ds-popup-roll-btn" data-roll="dis">Disadvantage</button>
-                        <button id="ds-popup-cancel" style="margin-left: auto;">Cancel</button>
+                        <button id="ds-popup-cancel" style="margin-left: auto; background: none; border: none; font-size: 1.2em; cursor: pointer; padding: 0 5px;" title="Close">❌</button>
                     </div>
                 </div>
             `;
@@ -2380,10 +2620,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             inputToFocus.focus();
         }
 
-        const rect = targetElement.getBoundingClientRect();
-        popup.style.top = `${rect.bottom + window.scrollY}px`;
-
-        popup.style.left = `${rect.left + window.scrollX}px`;
+        ensureInViewport(popup, targetElement.getBoundingClientRect());
 
         // Add listeners for popup actions
         if (type === 'hp') {
@@ -2431,6 +2668,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         window.electron.ipcRenderer.send('roll-attack', {
                             creatureId: parseInt(creatureId),
                             rollType: rollType,
+                            modIndex: data.modIndex || "1"
                         });
                     } else {
                         window.electron.ipcRenderer.send('roll-stat', {
@@ -2869,17 +3107,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         function updateTooltipPosition(e) {
             const offset = 15;
+            const padding = 10;
             let x = e.clientX + offset;
             let y = e.clientY + offset;
 
-            // Prevent going off screen (basic check)
+            // Use getBoundingClientRect for accurate dimensions even if hidden
+            // But if it's hidden, width/height might be 0.
+            // Temporarily show it off-screen if needed, but here it's already visible or about to be.
             const rect = globalTooltip.getBoundingClientRect();
-            if (x + rect.width > window.innerWidth) {
-                x = e.clientX - rect.width - offset;
+            const width = rect.width || 200; // Fallback
+            const height = rect.height || 50;
+
+            // Prevent going off screen
+            if (x + width > window.innerWidth - padding) {
+                x = e.clientX - width - offset;
             }
-            if (y + rect.height > window.innerHeight) {
-                y = e.clientY - rect.height - offset;
+            if (x < padding) x = padding;
+
+            if (y + height > window.innerHeight - padding) {
+                y = e.clientY - height - offset;
             }
+            if (y < padding) y = padding;
 
             globalTooltip.style.left = `${x}px`;
             globalTooltip.style.top = `${y}px`;
@@ -2892,6 +3140,123 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.electron.ipcRenderer.send('set-discord-config', {
                 musicAutosave: musicAutosaveCheck.checked
             });
+        });
+    }
+
+    // --- Floating UI Helpers ---
+    function ensureInViewport(element, anchorRect) {
+        const padding = 10;
+        let x = anchorRect.left;
+        let y = anchorRect.bottom + window.scrollY;
+
+        const rect = element.getBoundingClientRect();
+
+        // Check horizontal
+        if (x + rect.width > window.innerWidth - padding) {
+            x = window.innerWidth - rect.width - padding;
+        }
+        if (x < padding) x = padding;
+
+        // Check vertical
+        if (y + rect.height > window.innerHeight - padding) {
+            y = anchorRect.top + window.scrollY - rect.height;
+        }
+        if (y < padding) y = padding;
+
+        element.style.left = `${x}px`;
+        element.style.top = `${y}px`;
+    }
+
+    function createSearchOverlay(anchorBtn, currentFilter, onUpdate) {
+        // Remove existing
+        document.querySelectorAll('.search-overlay').forEach(el => el.remove());
+
+        const overlay = document.createElement('div');
+        overlay.className = 'search-overlay';
+        overlay.innerHTML = `
+            <input type="text" placeholder="Search..." value="${currentFilter}">
+            <button class="small-btn clear-search-btn">❌</button>
+        `;
+
+        document.body.appendChild(overlay);
+        const input = overlay.querySelector('input');
+        const clearBtn = overlay.querySelector('.clear-search-btn');
+
+        ensureInViewport(overlay, anchorBtn.getBoundingClientRect());
+
+        input.focus();
+        input.select();
+
+        input.addEventListener('input', (e) => {
+            onUpdate(e.target.value);
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === 'Escape') {
+                overlay.remove();
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            onUpdate('');
+            overlay.remove();
+        });
+
+        // Close when clicking outside
+        setTimeout(() => {
+            const outsideClick = (e) => {
+                if (!overlay.contains(e.target) && e.target !== anchorBtn) {
+                    overlay.remove();
+                    document.removeEventListener('click', outsideClick);
+                }
+            };
+            document.addEventListener('click', outsideClick);
+        }, 0);
+    }
+
+    if (searchLibraryBtn) {
+        searchLibraryBtn.addEventListener('click', () => {
+            if (libraryFilter) {
+                libraryFilter = '';
+                searchLibraryBtn.textContent = '🔍';
+                renderMusicLibrary();
+            } else {
+                createSearchOverlay(searchLibraryBtn, libraryFilter, (val) => {
+                    libraryFilter = val;
+                    searchLibraryBtn.textContent = val ? '❌' : '🔍';
+                    renderMusicLibrary();
+                });
+            }
+        });
+    }
+
+    if (searchPlaylistBtn) {
+        searchPlaylistBtn.addEventListener('click', () => {
+            if (playlistFilter) {
+                playlistFilter = '';
+                searchPlaylistBtn.textContent = '🔍';
+                if (lastMusicStatus) {
+                    lastStackFingerprint = ''; // Force rerender
+                    window.electron.ipcRenderer.send('request-music-status'); // Simple way to trigger update
+                }
+            } else {
+                createSearchOverlay(searchPlaylistBtn, playlistFilter, (val) => {
+                    playlistFilter = val;
+                    searchPlaylistBtn.textContent = val ? '❌' : '🔍';
+                    lastStackFingerprint = ''; // Force rerender
+                    if (lastMusicStatus) {
+                        // Normally we'd wait for next status, but we want live feedback
+                        // We can manually trigger the UI update if we have lastMusicStatus
+                        const status = { ...lastMusicStatus, isTimeUpdate: false };
+                        window.electron.ipcRenderer.emit('music-player-status', null, status);
+                        // Wait, I can't emit on ipcRenderer from here easily without internal knowledge.
+                        // Better to just call a function that renders the playlist.
+                        // I'll refactor the status-change listener slightly or just trigger a refresh.
+                        window.electron.ipcRenderer.send('request-initial-load'); // This works
+                    }
+                });
+            }
         });
     }
 

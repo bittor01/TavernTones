@@ -41,6 +41,7 @@
           <div class="library-toolbar">
             <button id="rescan-library-btn" class="small-btn" title="Rescan Music Folder">🔄</button>
             <button id="add-loose-btn" class="small-btn" title="Add Loose Files/Folders">➕</button>
+            <button id="search-library-btn" class="small-btn" title="Search Library">🔍</button>
             <div class="bulk-actions" style="margin-left: auto; display: flex; gap: 5px;">
               <button id="bulk-play-now" class="small-btn" title="Play Selected Now">▶️</button>
               <button id="bulk-add-top" class="small-btn" title="Add Selected to Top">⬆️</button>
@@ -65,6 +66,7 @@
             </label>
             <button id="save-music-preset-btn" class="small-btn" title="Save Preset">💾</button>
             <button id="load-music-preset-btn" class="small-btn" title="Load Preset">📂</button>
+            <button id="search-playlist-btn" class="small-btn" title="Search Playlist">🔍</button>
           </div>
         </div>
         <div class="controls music-controls">
@@ -87,7 +89,9 @@
     </div>
 
     <!-- -------------------- MIDDLE COLUMN -------------------- -->
+    <div id="middle-col-resizer-left" class="resizer-h-middle"></div>
     <div class="column column-middle audio-only-middle-column">
+      <div id="soundboard-resizer-top" class="resizer-v-sb"></div>
       <div id="turn-controls-container" class="box">
         <div class="panel-header">
           <h2>Controls</h2>
@@ -136,6 +140,7 @@
         </div>
       </div>
     </div>
+    <div id="middle-col-resizer-right" class="resizer-h-middle"></div>
 
     <!-- -------------------- RIGHT COLUMN -------------------- -->
     <div class="column column-right audio-only-right-column">
