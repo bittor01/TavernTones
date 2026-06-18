@@ -709,12 +709,9 @@ async function ipcloader() {
 
         // Only show dialog and close if it was sent from the settings window
         if (event.sender === (settingsWindow && settingsWindow.webContents)) {
-            await dialog.showMessageBox(null, {
-                type: 'info',
-                title: 'Settings Saved',
-                message: 'Your settings have been saved. Please close and reopen the application to apply all changes.',
-                buttons: ['OK']
-            });
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('discord-config', mergedConfig);
+            }
             if (settingsWindow) {
                 settingsWindow.close();
             }
@@ -1552,6 +1549,10 @@ async function ipcloader() {
 
     ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
         initiativeTracker.updateCreatureFlag(creatureId, flag, value);
+    });
+
+    ipcMain.on('show-emoji-panel', () => {
+        app.showEmojiPanel();
     });
 
     ipcMain.handle('search-monsters', async (event, query) => {

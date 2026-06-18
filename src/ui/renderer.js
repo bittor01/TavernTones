@@ -684,6 +684,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (config.musicPlayerHeight) {
             document.documentElement.style.setProperty('--music-player-height', `${config.musicPlayerHeight}px`);
+        } else if (config.audioMode) {
+            document.documentElement.style.setProperty('--music-player-height', `280px`);
         }
 
         if (config.audioMode) {
@@ -695,6 +697,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const musicResizer = document.getElementById('music-player-resizer');
             if (rightCol && musicControls && soundboard && musicResizer) {
                 rightCol.appendChild(musicControls);
+                // In Audio-Only mode, ensure music-player-resizer is at the top of the right column or removed
+                // Actually we just hide it via CSS, but moving it helps layout flow
                 rightCol.appendChild(musicResizer);
                 rightCol.appendChild(soundboard);
             }
@@ -1395,7 +1399,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let soundboardRowCount = 1; // Resizable rows in Normal mode
     const NORMAL_SLOTS_PER_ROW = 3;
     let audioOnlyCols = 6;
-    let audioOnlyRows = 10;
+    let audioOnlyRows = 8;
 
     // --- Load Soundboard State ---
     window.electron.ipcRenderer.invoke('get-soundboard-state').then(savedState => {
@@ -1510,15 +1514,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 audioOnlyRows++;
                 discordConfig.audioOnlyRows = audioOnlyRows;
 
-                // Add row makes soundboard taller, music player smaller
-                const currentHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--music-player-height')) || 280;
-                const newHeight = Math.max(150, currentHeight - 40);
-                document.documentElement.style.setProperty('--music-player-height', `${newHeight}px`);
-                discordConfig.musicPlayerHeight = newHeight;
-
                 window.electron.ipcRenderer.send('set-discord-config', {
-                    audioOnlyRows: audioOnlyRows,
-                    musicPlayerHeight: newHeight
+                    audioOnlyRows: audioOnlyRows
                 });
                 renderSoundboard();
             }
@@ -1539,15 +1536,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 audioOnlyRows--;
                 discordConfig.audioOnlyRows = audioOnlyRows;
 
-                // Remove row (down) makes music player larger, soundboard smaller
-                const currentHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--music-player-height')) || 280;
-                const newHeight = Math.min(600, currentHeight + 40);
-                document.documentElement.style.setProperty('--music-player-height', `${newHeight}px`);
-                discordConfig.musicPlayerHeight = newHeight;
-
                 window.electron.ipcRenderer.send('set-discord-config', {
-                    audioOnlyRows: audioOnlyRows,
-                    musicPlayerHeight: newHeight
+                    audioOnlyRows: audioOnlyRows
                 });
                 renderSoundboard();
             }
@@ -1567,15 +1557,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 audioOnlyCols++;
                 discordConfig.audioOnlyCols = audioOnlyCols;
 
-                // Left (wider) makes right side wider, left side thinner
-                const currentWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--left-col-width')) || 350;
-                const newWidth = Math.max(200, currentWidth - 100);
-                document.documentElement.style.setProperty('--left-col-width', `${newWidth}px`);
-                discordConfig.leftColumnWidth = newWidth;
-
                 window.electron.ipcRenderer.send('set-discord-config', {
-                    audioOnlyCols: audioOnlyCols,
-                    leftColumnWidth: newWidth
+                    audioOnlyCols: audioOnlyCols
                 });
                 renderSoundboard();
             }
@@ -1589,15 +1572,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 audioOnlyCols--;
                 discordConfig.audioOnlyCols = audioOnlyCols;
 
-                // Right (less wide) makes right side less wide, left side wider
-                const currentWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--left-col-width')) || 350;
-                const newWidth = Math.min(800, currentWidth + 100);
-                document.documentElement.style.setProperty('--left-col-width', `${newWidth}px`);
-                discordConfig.leftColumnWidth = newWidth;
-
                 window.electron.ipcRenderer.send('set-discord-config', {
-                    audioOnlyCols: audioOnlyCols,
-                    leftColumnWidth: newWidth
+                    audioOnlyCols: audioOnlyCols
                 });
                 renderSoundboard();
             }
@@ -1628,6 +1604,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentEditingSlotId = slotId;
             emojiInput.value = soundboardState[slotId].emoji;
             emojiDialog.showModal();
+            // Automatically open OS emoji panel
+            window.electron.ipcRenderer.send('show-emoji-panel');
+            setTimeout(() => {
+                emojiInput.focus();
+                emojiInput.select();
+            }, 100);
         }
     }
 
@@ -1700,8 +1682,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!soundboardContainer) return;
 
         if (document.body.classList.contains('audio-only')) {
-            soundboardContainer.style.flex = '1 1 0';
-            soundboardContainer.style.height = '';
+            soundboardContainer.style.flex = '0 0 auto';
+            soundboardContainer.style.height = 'auto';
             return;
         }
 
@@ -1744,6 +1726,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
+        if (!grid) return;
         grid.innerHTML = '';
 
         const isAudioOnly = document.body.classList.contains('audio-only');
@@ -2668,11 +2651,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     document.addEventListener('mousemove', (e) => {
+        const isAudioOnly = document.body.classList.contains('audio-only');
         if (isResizingColumn) {
+            if (isAudioOnly) return; // Disable manual horizontal resize in audio-only
             const newWidth = Math.max(200, Math.min(600, e.clientX));
             document.documentElement.style.setProperty('--left-col-width', `${newWidth}px`);
             discordConfig.leftColumnWidth = newWidth;
         } else if (isResizingMusicPlayer) {
+            if (isAudioOnly) return; // Disable manual vertical resize in audio-only
             const musicControls = document.getElementById('music-controls-container');
             if (musicControls) {
                 const rect = musicControls.getBoundingClientRect();
