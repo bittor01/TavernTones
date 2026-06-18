@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('electron', {
     basename: path.basename
   },
   ipcRenderer: {
-    send: (channel, data) => {
+    send: (channel, ...args) => {
       const validChannels = [
         'push-initiative',
         'play-music', 'pause-music', 'roll-dice',
@@ -26,13 +26,13 @@ contextBridge.exposeInMainWorld('electron', {
         'roll-attack', 'push-mob-rules-to-discord', 'save-soundboard-state',
         'play-next', 'play-prev', 'set-loop-mode', 'set-shuffle', 'remove-from-stack', 'clear-stack',
         'request-bot-status', 'voice-toggle', 'jump-to-track',
-        'library-action', 'get-discord-config', 'seek-music'
+        'library-action', 'get-discord-config', 'seek-music', 'set-discord-config'
       ];
       if (validChannels.includes(channel)) {
-        ipcRenderer.send(channel, data);
+        ipcRenderer.send(channel, ...args);
       }
     },
-    invoke: (channel, data) => {
+    invoke: (channel, ...args) => {
       const validChannels = [
         'open-file-dialog', 'get-default-local-folder', 'get-dnd-conditions',
         'load-encounter-dialog', 'search-monsters', 'get-monster-details',
@@ -45,7 +45,7 @@ contextBridge.exposeInMainWorld('electron', {
         'get-music-library', 'rescan-music-library'
       ];
       if (validChannels.includes(channel)) {
-        return ipcRenderer.invoke(channel, data);
+        return ipcRenderer.invoke(channel, ...args);
       }
     },
     on: (channel, func) => {

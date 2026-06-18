@@ -82,6 +82,7 @@ let windowloaded = false;
 
 // --- State Management ---
 const autosavePath = path.join(app.getPath('userData'), 'autosave.json');
+const musicAutosavePath = path.join(app.getPath('userData'), 'music-autosave.json');
 
 /**
  * A map of D&D 5e conditions to their emoji, color, and description.
@@ -517,12 +518,25 @@ function setupFilesystemWatchers(config) {
         { name: 'Bestiary', path: bestiaryPath, callback: () => logToRenderer("Bestiary folder changed. Refreshing...") }
     ];
 
+    const watcherTimers = new Map();
+
     watchers.forEach(w => {
         if (w.path && fs.existsSync(w.path)) {
             try {
                 fs.watch(w.path, { recursive: true }, (eventType, filename) => {
-                    logToRenderer(`[Watcher] ${w.name} change detected: ${eventType} ${filename || ''}`);
-                    w.callback();
+                    // Debounce watcher events to prevent spam
+                    const timerKey = `${w.name}:${filename}`;
+                    if (watcherTimers.has(timerKey)) {
+                        clearTimeout(watcherTimers.get(timerKey));
+                    }
+
+                    const timer = setTimeout(() => {
+                        logToRenderer(`[Watcher] ${w.name} change detected: ${eventType} ${filename || ''}`);
+                        w.callback();
+                        watcherTimers.delete(timerKey);
+                    }, 500);
+
+                    watcherTimers.set(timerKey, timer);
                 });
                 logToRenderer(`[Watcher] Started watching ${w.name}: ${w.path}`);
             } catch (err) {
@@ -676,28 +690,34 @@ async function ipcloader() {
     });
 
     ipcMain.on('set-discord-config', async (event, config) => {
-        await setDiscordConfig(config);
+        // Merge with existing config to prevent data loss
+        const existingConfig = await getDiscordConfig();
+        const mergedConfig = { ...existingConfig, ...config };
+
+        await setDiscordConfig(mergedConfig);
 
         // --- Update the live configuration ---
         // The in-memory config needs to be updated to reflect the newly saved settings.
-        discordConfig = config;
+        discordConfig = mergedConfig;
         // The music player instance also needs to be told about the new path.
         if (musicPlayer) {
-            musicPlayer.musicFolder = config.defaultMusicPath;
-            musicPlayer.ffmpegBinFolder = config.ffmpegPath; // Note: config key remains ffmpegPath for compatibility
+            musicPlayer.musicFolder = mergedConfig.defaultMusicPath;
+            musicPlayer.ffmpegBinFolder = mergedConfig.ffmpegPath; // Note: config key remains ffmpegPath for compatibility
             logToRenderer(`[IPC] Updated music player's default folder to: ${musicPlayer.musicFolder}`);
         }
         // --- End of update ---
 
-        await dialog.showMessageBox(null, {
-            type: 'info',
-            title: 'Settings Saved',
-            message: 'Your settings have been saved. Please close and reopen the application to apply all changes.',
-            buttons: ['OK']
-        });
-        // Close the settings window after saving
-        if (settingsWindow) {
-            settingsWindow.close();
+        // Only show dialog and close if it was sent from the settings window
+        if (event.sender === (settingsWindow && settingsWindow.webContents)) {
+            await dialog.showMessageBox(null, {
+                type: 'info',
+                title: 'Settings Saved',
+                message: 'Your settings have been saved. Please close and reopen the application to apply all changes.',
+                buttons: ['OK']
+            });
+            if (settingsWindow) {
+                settingsWindow.close();
+            }
         }
     });
 
@@ -831,6 +851,7 @@ async function ipcloader() {
         if (initiativeTracker) {
             initiativeTracker.sendFullState();
         }
+        autoloadMusic();
         if (discordConfig && discordConfig.enabled) {
             if (client && client.isReady()) {
                 mainWindow.webContents.send('discord-bot-status', { status: 'online', message: 'Connected' });
@@ -845,6 +866,22 @@ async function ipcloader() {
     });
 
     // Music Player IPC Handlers
+    const autoloadMusic = async () => {
+        if (discordConfig && discordConfig.musicAutosave && fs.existsSync(musicAutosavePath)) {
+            try {
+                const data = await fs.promises.readFile(musicAutosavePath, 'utf-8');
+                const stack = JSON.parse(data);
+                if (Array.isArray(stack)) {
+                    musicPlayer.clearStack();
+                    await musicPlayer.addToStack(stack);
+                    logToRenderer(`[Music] Autoloaded ${stack.length} tracks.`);
+                }
+            } catch (e) {
+                console.error("Autoload failed:", e);
+            }
+        }
+    };
+
     ipcMain.on('load-music-file', (event, filePaths) => {
         if (filePaths) {
             musicPlayer.addToStack(filePaths);
@@ -899,7 +936,18 @@ async function ipcloader() {
         }
     });
 
-    ipcMain.handle('save-music-preset', async (event, stack) => {
+    ipcMain.handle('save-music-preset', async (event, stack, isManual = true) => {
+        // Internal call (autosave) or background save
+        if ((!event || isManual === false || isManual === 'false') && stack) {
+            try {
+                await fs.promises.writeFile(musicAutosavePath, JSON.stringify(stack, null, 2));
+                return { success: true };
+            } catch (e) {
+                console.error("Autosave failed:", e);
+                return { success: false, error: e.message };
+            }
+        }
+
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
             title: 'Save Music Stack Preset',
             defaultPath: 'music-preset.json',
@@ -908,6 +956,10 @@ async function ipcloader() {
         if (!canceled && filePath) {
             try {
                 await fs.promises.writeFile(filePath, JSON.stringify(stack, null, 2));
+                // Also update autosave file if enabled
+                if (discordConfig && discordConfig.musicAutosave) {
+                    await fs.promises.writeFile(musicAutosavePath, JSON.stringify(stack, null, 2));
+                }
                 return { success: true };
             } catch (e) {
                 return { success: false, error: e.message };
