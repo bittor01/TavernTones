@@ -11,9 +11,18 @@ class ThreadedAudioMixer extends Readable {
         this.bufferQueue = [];
         this.isReady = false;
         this.BUFFER_TARGET = 20; // Maintain 20 chunks (~400ms) in buffer to smooth jitter
+        this.pendingRequests = 0; // Track outstanding mix requests to prevent explosion
+        this.currentRequestId = 0; // Correlation ID to discard stale audio from previous tracks
 
         this.worker.on('message', (msg) => {
             if (msg.type === 'mixed-chunk') {
+                this.pendingRequests = Math.max(0, this.pendingRequests - 1);
+
+                // Discard stale audio from before the last reset/track change
+                if (msg.requestId !== undefined && msg.requestId !== this.currentRequestId) {
+                    return;
+                }
+
                 const buffer = Buffer.from(msg.data);
                 this.bufferQueue.push(buffer);
                 this._maybeFillTarget();
@@ -66,9 +75,11 @@ class ThreadedAudioMixer extends Readable {
     _maybeFillTarget() {
         // Ensure we always have BUFFER_TARGET chunks requested/available
         // This is a simple look-ahead to keep the pipeline full
-        const chunksNeeded = this.BUFFER_TARGET - this.bufferQueue.length;
+        // We subtract pendingRequests to avoid overwhelming the worker with duplicate requests
+        const chunksNeeded = this.BUFFER_TARGET - (this.bufferQueue.length + this.pendingRequests);
         for (let i = 0; i < chunksNeeded; i++) {
-            this.worker.postMessage({ type: 'request-mix' });
+            this.pendingRequests++;
+            this.worker.postMessage({ type: 'request-mix', requestId: this.currentRequestId });
         }
     }
 
@@ -118,8 +129,10 @@ class ThreadedAudioMixer extends Readable {
             this.removeInput(id);
         }
         this.bufferQueue = [];
-        this.isReading = false;
+        this.pendingRequests = 0;
+        this.currentRequestId++; // Invalidate all pending worker responses
         // The worker queues are cleared by remove-input messages
+        this._maybeFillTarget();
     }
 
     destroy() {

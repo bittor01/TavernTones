@@ -762,8 +762,13 @@ async function ipcloader() {
 
         // --- Update the live configuration ---
         // The in-memory config needs to be updated to reflect the newly saved settings.
+        const oldShowMediaControl = discordConfig ? discordConfig.showMediaControl : true;
         discordConfig = mergedConfig;
         invalidateMusicCache();
+
+        if (oldShowMediaControl !== mergedConfig.showMediaControl) {
+            updateDiscordMediaControl();
+        }
 
         // The music player instance also needs to be told about the new path.
         if (musicPlayer) {
@@ -963,11 +968,11 @@ async function ipcloader() {
     });
 
     ipcMain.on('play-next', (event) => {
-        if (musicPlayer) musicPlayer.next();
+        if (musicPlayer) musicPlayer.next(false, false);
     });
 
     ipcMain.on('play-prev', (event) => {
-        if (musicPlayer) musicPlayer.prev();
+        if (musicPlayer) musicPlayer.prev(false);
     });
 
     ipcMain.on('set-loop-mode', (event, { mode }) => {
@@ -989,14 +994,14 @@ async function ipcloader() {
     ipcMain.on('jump-to-track', async (event, { index }) => {
         if (musicPlayer) {
             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
-            musicPlayer.jumpTo(index);
+            musicPlayer.jumpTo(index, true);
         }
     });
 
     ipcMain.on('play-now', async (event, { index }) => {
         if (musicPlayer) {
             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
-            musicPlayer.jumpTo(index);
+            musicPlayer.jumpTo(index, true);
         }
     });
 
@@ -1147,7 +1152,7 @@ async function ipcloader() {
                 const currentStack = [...musicPlayer.stack];
                 musicPlayer.stack = [...resolvedPaths, ...currentStack];
                 if (voiceStatus !== 'connected') await joinVoiceChannelAction();
-                musicPlayer.jumpTo(0);
+                musicPlayer.jumpTo(0, true);
                 break;
             case 'add-top':
                 if (musicPlayer.currentIndex === -1) {
@@ -2065,6 +2070,20 @@ client.once(Events.ClientReady, async () => {
     updateDiscordMediaControl();
 
     async function updateDiscordMediaControl(disabled = false) {
+        if (isShuttingDown) return;
+
+        if (discordConfig.showMediaControl === false) {
+            if (client.lastMediaMessage) {
+                try {
+                    await client.lastMediaMessage.delete().catch(() => {});
+                    client.lastMediaMessage = null;
+                } catch (e) {
+                    console.error("Error deleting media control:", e);
+                }
+            }
+            return;
+        }
+
         if (!discordConfig.textChannel) {
             logToRenderer('[Discord] No text channel configured for media controls.');
             return;
@@ -2073,7 +2092,6 @@ client.once(Events.ClientReady, async () => {
             pendingMediaUpdate = true;
             return;
         }
-        if (isShuttingDown) return;
 
         let targetChannel = client.channels.cache.get(discordConfig.textChannel);
         if (!targetChannel) {
