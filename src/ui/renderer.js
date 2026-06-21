@@ -1,62 +1,103 @@
-// Performance and security update
+/**
+ * @file renderer.js
+ * The core frontend logic for the TavernTones dashboard.
+ * Handles initiative tracking, music library management, soundboard interactions,
+ * and real-time state synchronization with the backend process.
+ */
+
+// Initialize all UI logic once the DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
-    // --- State ---
+    // --- Global Application State ---
+    // Tracks if music is currently playing
     let isPlaying = false;
+    // Current list of combatants sorted by initiative
     let initiativeOrder = [];
-    let combatantPanelOrder = []; // For custom sorting of the right-hand panel
+    // Stores custom ordering of the combatant detail panel (for drag-and-drop support)
+    let combatantPanelOrder = [];
+    // Pointer to the index of the creature whose turn it is
     let currentTurnIndex = 0;
+
+    // Configuration for the tabbed middle panel (Log, Dice, Stats, Library)
     const logPanels = [
         { id: 'logArea', title: 'Log', mode: 'log' },
         { id: 'diceLog', title: 'Dice Log', mode: 'dice' },
         { id: 'statBlockArea', title: 'Stat Block', mode: 'stats' },
         { id: 'musicLibraryArea', title: 'Music Library', mode: 'library' }
     ];
-    let currentPanelIndex = 3; // Default to 'Music Library'
+    // Start on the Music Library tab by default
+    let currentPanelIndex = 3;
+    // Tree structure of the user's music folder
     let musicLibrary = { children: [] };
+    // Active search filter for the music library
     let libraryFilter = '';
+    // Active search filter for the current playlist (stack)
     let playlistFilter = '';
+    // Set of file paths currently selected in the library UI
     let selectedLibraryPaths = new Set();
+    // Set of folder paths currently expanded in the library tree
     let expandedLibraryPaths = new Set();
+    // Current connectivity status of the Discord bot
     let botStatus = { status: 'offline', message: 'Unknown' };
+    // Flag if bot is enabled in user settings
     let isBotEnabled = false;
-    let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
+    // Holds JSON data for the monster stat block currently being displayed
+    let currentStatBlockData = null;
+    // Cached map of D&D 5e conditions (Blinded, etc.) fetched from backend
     let DND_CONDITIONS = {};
+    // Cached rules for mob combat fetched from backend
     let MOB_RULES_DATA = {};
+    // Tracking for scroll-into-view logic when turns change
     let lastScrolledIndex = -1;
+    // Local copy of the full application configuration
     let discordConfig = {};
 
-    // --- Form State ---
+    // --- Add/Edit Creature Form State ---
+    // Whether the 'Mob' checkbox is checked
     let isMobMode = false;
-    let singleCreatureHPForMob = '10'; // Can be a dice formula string or a number
-    let calculatedSingleCreatureHP = 10; // Is always the calculated number
+    // Raw HP input for a single member of a mob (e.g. "2d6+2")
+    let singleCreatureHPForMob = '10';
+    // Evaluated numeric HP for a single mob member
+    let calculatedSingleCreatureHP = 10;
+    // The ID of the creature currently being edited in the modal
     let creatureBeingEdited = null;
 
-    // --- Element Refs ---
+    // --- Cached DOM Element References ---
+    // Text area for general application logging
     const logArea = document.getElementById('logArea');
+    // Helper to format numeric modifiers with leading plus sign (e.g. 2 -> +2)
     const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
+    // Container for dice roll history
     const diceLog = document.getElementById('diceLog');
+    // Main playback control buttons
     const playPauseButton = document.getElementById('playPauseButton');
     const playPrevButton = document.getElementById('playPrevButton');
     const playNextButton = document.getElementById('playNextButton');
+    // Secondary music player settings
     const loopModeBtn = document.getElementById('loop-mode-btn');
     const shuffleBtn = document.getElementById('shuffle-btn');
     const clearStackBtn = document.getElementById('clear-stack-btn');
+    // Music stack persistence controls
     const saveMusicPresetBtn = document.getElementById('save-music-preset-btn');
     const loadMusicPresetBtn = document.getElementById('load-music-preset-btn');
     const musicAutosaveCheck = document.getElementById('music-autosave-check');
+    // Discord-specific settings toggle
     const discordMediaControlToggle = document.getElementById('discord-media-control-toggle');
+    // UI lists
     const musicStackList = document.getElementById('music-stack-list');
     const searchLibraryBtn = document.getElementById('search-library-btn');
     const searchPlaylistBtn = document.getElementById('search-playlist-btn');
+    // Local HTML5 audio player for previews
     const previewAudioPlayer = document.getElementById('preview-audio-player');
+    // Combat management containers
     const addCreatureForm = document.getElementById('add-creature-form');
     const initiativeListDiv = document.getElementById('initiative-list');
     const combatantDetailsListDiv = document.getElementById('combatant-details-list');
+    // Limit for the scrolling log areas to prevent DOM bloat
     const maxLogEntries = 50;
 
-    // --- Initial Load (Non-blocking) ---
-    // Fetch initial data without blocking the UI rendering.
+    // --- Initial Data Loading (Non-blocking) ---
     if (window.electron && window.electron.ipcRenderer) {
+        // Fetch static D&D data from the backend store
         window.electron.ipcRenderer.invoke('get-dnd-conditions').then(conditions => {
             DND_CONDITIONS = conditions;
         });
@@ -65,46 +106,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Send a signal to the main process that the window is ready for data.
+    // Trigger the startup synchronization sequence
     if (window.electron && window.electron.ipcRenderer) {
+        // Notify main process that the renderer is initialized
         window.electron.ipcRenderer.send('window-ready');
-        // Specifically request the initial load after a short delay to ensure the main process is ready.
+
+        // Wait a short duration before requesting stateful data
         setTimeout(() => {
+            // Fetch initial initiative and music state
             window.electron.ipcRenderer.send('request-initial-load');
+
+            // Handle configuration loading and auto-resolution detection
             window.electron.ipcRenderer.on('discord-config', (event, config) => {
-                // Resolution auto-detection on first run
+                // If it's the first run (missing dimensions), detect screen size and set appropriate defaults
                 if (!config.leftColumnWidth || !config.audioOnlyCols) {
                     const width = window.innerWidth;
                     const height = window.innerHeight;
                     const updates = {};
 
+                    // Use 25% of screen width for the left column
                     if (!config.leftColumnWidth) {
                         updates.leftColumnWidth = Math.floor(width * 0.25);
                     }
+                    // Calculate optimal soundboard columns based on width
                     if (!config.audioOnlyCols) {
                         updates.audioOnlyCols = Math.floor((width * 0.5) / 185);
                         if (updates.audioOnlyCols < 3) updates.audioOnlyCols = 3;
                     }
+                    // Calculate soundboard rows based on height
                     if (!config.audioOnlyRows) {
                         updates.audioOnlyRows = Math.floor((height * 0.6) / 110);
                         if (updates.audioOnlyRows < 4) updates.audioOnlyRows = 4;
                     }
 
+                    // Save the auto-detected defaults to persistent storage
                     if (Object.keys(updates).length > 0) {
                         window.electron.ipcRenderer.send('set-discord-config', updates);
                     }
                 }
 
-                // Initial apply
+                // Apply the left column width to CSS variables for dynamic resizing
                 if (config.leftColumnWidth) {
                     document.documentElement.style.setProperty('--left-col-width', `${config.leftColumnWidth}px`);
                 }
             });
+
+            // Fetch current app configuration
             window.electron.ipcRenderer.send('get-discord-config');
+            // Load and render the initial music library state
             window.electron.ipcRenderer.invoke('get-music-library').then(library => {
                 musicLibrary = library;
                 renderMusicLibrary();
             });
+            // Show the default tab
             showPanel('musicLibraryArea');
         }, 100);
     }
@@ -228,40 +282,58 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Panel Switching Logic ---
+    // --- Central Panel Navigation Logic ---
+
+    /**
+     * Switches the active view in the central multi-purpose dashboard panel.
+     * @param {string} panelId - The HTML ID of the panel to display.
+     * @param {string} [title] - Optional override for the panel's header title.
+     */
     function showPanel(panelId, title) {
+        // Elements for 'Push to Discord' and header title
         const pushButton = document.getElementById('push-panel-btn');
         const titleEl = document.getElementById('pane-mode-title');
         let foundPanel = false;
 
-        // Panels that need flex layout instead of block
+        // List of panels that require CSS 'flex' for proper child alignment
         const flexPanels = new Set(['musicLibraryArea']);
+
+        // Iterate through all possible panels to toggle visibility
         logPanels.forEach((panel, index) => {
             const panelEl = document.getElementById(panel.id);
             const modeBtn = document.getElementById(`mode-${panel.mode}`);
+
+            // If this is the requested panel
             if (panel.id === panelId) {
+                // Use flex or block based on configuration
                 panelEl.style.display = flexPanels.has(panel.id) ? 'flex' : 'block';
+                // Sync the global panel index
                 currentPanelIndex = index;
                 foundPanel = true;
+                // Visually highlight the active tab button
                 if (modeBtn) modeBtn.classList.add('active');
+                // Update the header text
                 if (titleEl) titleEl.textContent = title || panel.title;
-            } else {
+            }
+            // Hide all other panels
+            else {
                 panelEl.style.display = 'none';
                 if (modeBtn) modeBtn.classList.remove('active');
             }
         });
 
-        // Show push button only for certain panels
+        // The 'Push' button is only relevant for the Dice Log and Stat Block views
         if (panelId === 'diceLog' || panelId === 'statBlockArea') {
             pushButton.style.display = 'inline-block';
         } else {
             pushButton.style.display = 'none';
         }
 
-        if (!foundPanel) showPanel('logArea', 'Log'); // Fallback
+        // Emergency fallback if an invalid ID was requested
+        if (!foundPanel) showPanel('logArea', 'Log');
     }
 
-    // Mode button listeners
+    // --- Tab Button Click Listeners ---
     document.getElementById('mode-log').addEventListener('click', () => showPanel('logArea'));
     document.getElementById('mode-dice').addEventListener('click', () => showPanel('diceLog'));
     document.getElementById('mode-stats').addEventListener('click', () => {
@@ -879,27 +951,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         return normalizedName.includes(normalizedFilter);
     }
 
+    /**
+     * Re-renders the music library tree view.
+     * Uses debouncing and DocumentFragment for optimal performance with large libraries.
+     */
     function renderMusicLibrary() {
+        // Debounce to prevent multiple renders if multiple updates arrive in a single frame
         if (renderLibraryTimeout) clearTimeout(renderLibraryTimeout);
         renderLibraryTimeout = setTimeout(() => {
             const container = document.getElementById('library-tree-container');
             if (!container) return;
+
+            // Clear existing content
             container.innerHTML = '';
             if (musicLibrary && musicLibrary.children) {
+                // Use a fragment to perform all DOM insertions in one batch (minimizes layout thrashing)
                 const fragment = document.createDocumentFragment();
                 musicLibrary.children.forEach(child => {
+                    // Recursively create nodes for each file/folder
                     const node = createTreeNode(child, true);
                     if (node) fragment.appendChild(node);
                 });
+                // Finalize the update
                 container.appendChild(fragment);
             }
-        }, 50); // Small debounce to prevent multiple immediate renders
+        }, 50);
     }
 
+    /**
+     * Updates the 'selected' CSS class on library nodes without a full re-render.
+     */
     function updateSelectionUI() {
         const nodes = document.querySelectorAll('#library-tree-container .tree-node-content');
         nodes.forEach(content => {
             const path = content.getAttribute('data-path');
+            // Toggle class based on whether the path is in the selection set
             if (selectedLibraryPaths.has(path)) {
                 content.classList.add('selected');
             } else {
@@ -908,16 +994,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    /**
+     * Recursively constructs the DOM for a single music library node (file or folder).
+     * Handles filtering and contextual action buttons.
+     */
     function createTreeNode(node, isRoot = false) {
+        // Track if any children of this folder are visible (match the search filter)
         let hasVisibleChild = false;
+        // Check if this specific node name matches the search filter
         let selfMatches = matchesFilter(node.name, libraryFilter);
 
+        // Prepare a container for child nodes
         const childrenContainer = document.createElement('div');
         childrenContainer.className = 'node-children';
 
+        // Recurse into subdirectories
         if (node.type === 'directory' && node.children) {
             node.children.forEach(child => {
                 const childNode = createTreeNode(child);
+                // If the child was returned (meaning it matched the filter or has matching descendants)
                 if (childNode) {
                     childrenContainer.appendChild(childNode);
                     hasVisibleChild = true;
@@ -925,24 +1020,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        // If filtering, hide node if it doesn't match and has no visible children
+        // --- Search Filtering Logic ---
+        // If a filter is active, hide this node if:
+        // 1. It doesn't match the query AND 2. None of its children match the query.
         if (libraryFilter && !selfMatches && !hasVisibleChild) {
             return null;
         }
 
+        // Create the primary node container
         const div = document.createElement('div');
         div.className = 'tree-node';
+        // Remove left margin for top-level root folders
         if (isRoot) div.style.marginLeft = '0';
 
+        // Create the row content (icon + name)
         const content = document.createElement('div');
         content.className = 'tree-node-content';
         content.setAttribute('data-path', node.path);
+        // Apply selection highlight if needed
         if (selectedLibraryPaths.has(node.path)) content.classList.add('selected');
 
+        // Folder/File icon
         const toggle = document.createElement('span');
         toggle.className = 'folder-toggle';
         toggle.textContent = node.type === 'directory' ? '📁' : '📄';
 
+        // Filename/Folder name label
         const name = document.createElement('span');
         name.className = 'node-name';
         name.textContent = node.name;
@@ -1059,9 +1162,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderMusicLibrary();
     }
 
+    /**
+     * Recursively traverses a library node and gathers all absolute file paths.
+     * Used when adding an entire folder to the playback stack.
+     * @param {object} node - The tree node to process.
+     * @returns {string[]} Flat array of file paths.
+     */
     function getAllFiles(node) {
+        // Base case: if it's a file, return its path in a single-element array
         if (node.type === 'file') return [node.path];
         let files = [];
+        // Recursive step: if it's a folder, process all children
         if (node.children) {
             node.children.forEach(c => {
                 files = files.concat(getAllFiles(c));
@@ -1070,13 +1181,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         return files;
     }
 
+    // --- Music Library Global Actions ---
+
+    // Button: Triggers a full backend scan of the configured music directory
     document.getElementById('rescan-library-btn').onclick = () => {
         window.electron.ipcRenderer.invoke('rescan-music-library');
     };
 
+    // Button: Opens a dialog to pick external files/folders to add to 'Loose Files'
     document.getElementById('add-loose-btn').onclick = () => {
+        // Request folder/file selection from the backend
         window.electron.ipcRenderer.invoke('open-file-dialog', { multi: true, folders: true }).then(filePaths => {
             if (filePaths && filePaths.length > 0) {
+                // Add the resolved paths to the loose files collection
                 window.electron.ipcRenderer.send('library-action', { action: 'add-loose', paths: filePaths });
             }
         });
@@ -1274,57 +1391,79 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // --- Global IPC Update Listeners ---
+
+    /**
+     * Listener: Processes full initiative and turn state updates from the backend.
+     * Triggers a re-render of both the list and detail views.
+     */
     window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {
+        // Sync local state with the backend payload
         initiativeOrder = data.initiativeOrder;
         currentTurnIndex = data.currentTurnIndex;
+        // Default the detail panel sort order to match the initiative order
         combatantPanelOrder = [...initiativeOrder];
+        // Re-render both views
         renderInitiativeList(initiativeOrder, currentTurnIndex);
         renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
 
+        // Handle automated reminders (e.g. death saves) sent in the 'extra' metadata
         if (data.extra && data.extra.type === 'death-save-reminder') {
             const creature = initiativeOrder.find(c => c.id === data.extra.creatureId);
             if (creature) {
+                // Show a visual popup reminder over the creature's detail entry
                 createPopup('death-save-reminder', creature.id, document.querySelector(`.combatant-details-entry[data-id='${creature.id}']`) || document.body);
             }
         }
     });
 
+    /**
+     * Listener: Updates the soundboard UI when a slot's playback state changes.
+     */
     window.electron.ipcRenderer.on('soundboard-state-change', (event, { slotId, isPlaying, file, emoji }) => {
         const slot = soundboardState[slotId];
         if (slot) {
+            // Update individual slot state
             slot.isPlaying = isPlaying;
+            // Optionally update configuration if file/emoji info was included
             if (file !== undefined) slot.file = file;
             if (emoji !== undefined) slot.emoji = emoji;
+            // Full soundboard re-render
             renderSoundboard();
         }
     });
 
+    /**
+     * Listener: Receives creature data to populate the editing modal.
+     * Maps creature properties to the corresponding form input elements.
+     */
     window.electron.ipcRenderer.on('populate-edit-form', (event, creature) => {
         if (!creature) return;
 
-        // Auto-expand form
+        // Auto-expand the form container if it was collapsed
         const content = document.getElementById('add-creature-form-content');
         const btn = document.getElementById('toggle-add-form-btn');
         if (content) content.style.display = 'block';
         if (btn) btn.textContent = '➖';
 
-        // --- Store the creature for submission ---
+        // --- Store the creature context ---
         creatureBeingEdited = creature;
-        addCreatureForm.dataset.editingId = creature.id; // Store ID in dataset for robust state tracking
+        // Record the ID in the DOM for state tracking during form submission
+        addCreatureForm.dataset.editingId = creature.id;
 
-        // --- Populate basic fields ---
+        // --- Populate basic descriptive fields ---
         document.getElementById('creature-name').value = creature.name || '';
         document.getElementById('creature-initiative').value = creature.initiative || '';
-        // When editing, show the CURRENT HP so the user can edit the value directly.
-        // We do store the formula separately if needed, but the user requested editing current values.
+        // Map the current numeric HP to the input field
         document.getElementById('creature-hp').value = creature.hp || '';
         document.getElementById('creature-ac').value = creature.ac || '';
         document.getElementById('creature-speed').value = creature.speed || '';
+        // Map primary and secondary attack modifiers
         document.getElementById('attack-modifier').value = creature.attackMod || '';
-                document.getElementById('attack-modifier-2').value = creature.attackMod2 || '';
+        document.getElementById('attack-modifier-2').value = creature.attackMod2 || '';
         document.getElementById('save-dc').value = creature.saveDc || '';
 
-        // --- Populate stats ---
+        // --- Populate ability scores (STR, DEX, etc.) ---
         const scores = creature.scores || {};
         document.getElementById('str-score').value = scores.str || '';
         document.getElementById('dex-score').value = scores.dex || '';
@@ -1332,6 +1471,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('int-score').value = scores.int || '';
         document.getElementById('wis-score').value = scores.wis || '';
         document.getElementById('cha-score').value = scores.cha || '';
+
+        // --- Populate saving throw modifiers ---
         const saves = creature.saves || {};
         document.getElementById('str-save').value = saves.str || '';
         document.getElementById('dex-save').value = saves.dex || '';
@@ -1340,33 +1481,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('wis-save').value = saves.wis || '';
         document.getElementById('cha-save').value = saves.cha || '';
 
-        // --- Handle Death Saves State ---
+        // --- Configure Death Save preferences ---
         document.getElementById('creature-no-death-saves').checked = !!creature.noDeathSaves;
 
-        // --- Handle Mob State ---
+        // --- Handle Mob UI State ---
         isMobMode = creature.isMob || false;
         const mobControls = document.getElementById('mob-controls');
         const convertToMobBtn = document.getElementById('convert-to-mob-btn');
         if (isMobMode) {
+            // Calculate current mob size based on HP ratio
             const mobSize = Math.ceil(creature.hp / creature.singleCreatureHP) || 1;
             document.getElementById('mob-size').value = mobSize;
-            // Always store the base formula for potential conversion back to single
+            // Backup the HP formula used for the mob
             singleCreatureHPForMob = creature.hpFormula || creature.singleCreatureHP;
-            calculatedSingleCreatureHP = creature.singleCreatureHP; // Store the already calculated value
+            calculatedSingleCreatureHP = creature.singleCreatureHP;
+            // Show mob-specific inputs
             mobControls.style.display = 'flex';
             convertToMobBtn.textContent = 'Convert to Single';
         } else {
+            // Hide mob-specific inputs
             mobControls.style.display = 'none';
             convertToMobBtn.textContent = 'Convert to Mob';
-            // Store the formula (or maxHP if no formula) for potential conversion
+            // Default formula for conversion is the creature's current max HP
             singleCreatureHPForMob = creature.hpFormula || creature.maxHp;
         }
 
-        // --- Handle imported monster data ---
+        // --- Handle 5eTools integration data ---
         if (creature.rawData) {
+            // Store raw JSON for the stat block viewer
             addCreatureForm.dataset.monsterRawData = creature.rawData;
+            // Reveal the 'View Original' button
             document.getElementById('imported-monster-info-btn').style.display = 'inline-block';
         } else {
+            // Clean up state if this wasn't an imported monster
             delete addCreatureForm.dataset.monsterRawData;
             document.getElementById('imported-monster-info-btn').style.display = 'none';
         }
@@ -2077,29 +2224,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    /**
+     * Renders the soundboard grid based on current configuration and UI mode.
+     * Re-calculates dimensions and recreates all slot elements.
+     */
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
         if (!grid) return;
+        // Clear existing grid DOM
         grid.innerHTML = '';
 
+        // Determine grid dimensions based on layout mode
         const isAudioOnly = document.body.classList.contains('audio-only');
         const rows = isAudioOnly ? audioOnlyRows : soundboardRowCount;
         const cols = isAudioOnly ? audioOnlyCols : NORMAL_SLOTS_PER_ROW;
         const totalSlotsToRender = isAudioOnly ? (audioOnlyRows * audioOnlyCols) : (soundboardRowCount * NORMAL_SLOTS_PER_ROW);
 
+        // Update CSS grid properties
         grid.style.setProperty('--sb-rows', rows);
         grid.style.setProperty('--sb-cols', cols);
 
+        // In Audio-Only mode, dynamically adjust the column width to match the grid content
         if (isAudioOnly) {
             const colWidth = (cols * 180) + ((cols - 1) * 5) + 16;
             document.documentElement.style.setProperty('--right-col-width', `${colWidth}px`);
         }
 
-        // Render subset of state based on current layout
+        // Construct each soundboard slot (button)
         for (let i = 0; i < totalSlotsToRender; i++) {
             let slot = soundboardState[i];
             if (!slot) {
-                // Should not happen if padded correctly
+                // Initialize default slot state if missing from persistent storage
                 slot = { id: i, tracks: [], currentTrackIndex: 0, emoji: '🎨', isPlaying: false, loop: 'none', playMode: 'sequential' };
             }
             const slotDiv = document.createElement('div');
@@ -2107,23 +2262,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const trackCount = slot.tracks.length;
 
-            // --- Icon Logic ---
+            // --- Visual State Logic ---
             const loopIcon = '🔁';
             const loopClass = slot.loop === 'stack' ? 'active' : '';
             const shuffleIcon = '🔀';
             const shuffleClass = slot.playMode === 'shuffle' ? 'active' : '';
             const playIcon = slot.isPlaying ? '⏹️' : '⏯️';
 
+            // Determine what to show for the 'Count' indicator
             let addOrCountIcon;
             if (trackCount === 0) {
                 addOrCountIcon = '➕';
             } else if (trackCount > 9) {
-                addOrCountIcon = '♾️';
+                addOrCountIcon = '♾️'; // "Many" sounds
             } else {
                 addOrCountIcon = trackCount.toString();
             }
 
-
+            // Construct the inner HTML for the slot
             const currentTrackName = slot.tracks[slot.currentTrackIndex]?.name || (trackCount > 0 ? '---' : 'Empty');
             slotDiv.innerHTML = `
                 <div class="stack-header">
@@ -2142,7 +2298,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             grid.appendChild(slotDiv);
         }
 
+        // Re-attach event listeners to the new DOM elements
         attachSoundboardListeners();
+        // Update height variables for resizing handles
         updateSoundboardContainerHeight();
     }
 
@@ -2281,27 +2439,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderSoundboard();
     });
 
+    /**
+     * Renders the simplified initiative list in the left-hand panel.
+     * Displays turn order, health bars, and condition icons.
+     */
     function renderInitiativeList(initiativeOrder, currentTurnIndex) {
+        // Clear existing DOM
         initiativeListDiv.innerHTML = '';
+        // Abort if no creatures
         if (!initiativeOrder || initiativeOrder.length === 0) return;
 
+        // Use a document fragment to Batch DOM updates
         const fragment = document.createDocumentFragment();
 
         initiativeOrder.forEach((creature, index) => {
-            if (creature.hidden) return; // Skip hidden creatures (e.g. being edited)
+            // Hide creatures that are currently being edited to avoid duplicate IDs in the DOM
+            if (creature.hidden) return;
 
+            // Highlight the creature whose turn it is
             const isActive = index === currentTurnIndex;
             const creatureDiv = document.createElement('div');
             creatureDiv.className = 'initiative-entry' + (isActive ? ' active-turn' : '');
             creatureDiv.dataset.id = creature.id;
 
+            // --- HP Bar Logic ---
             const hp = creature.hp || 0;
             const maxHp = creature.maxHp || 1;
             const tempHp = creature.tempHp || 0;
+            // Calculate width percentages for current and temp HP
             const hpPercentage = Math.min(100, (hp / maxHp) * 100);
             const tempHpPercentage = (tempHp / maxHp) * 100;
+            // Determine bar color (Green -> Yellow -> Red)
             const hpColor = getHpColor(hp, maxHp);
 
+            // Construct the layered HP bar HTML
             const hpBarHTML = `
                 <div class="initiative-hp-bar-container">
                     <div class="hp-bar-temp" style="width: ${tempHpPercentage}%;"></div>
@@ -2309,15 +2480,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
 
+            // --- Condition Icons Logic ---
             let conditionHTML = '';
             const allConditionNames = creature.conditions || [];
 
-            // Render up to 3, plus an indicator if more
+            // Display up to 3 condition emojis to save horizontal space
             const visibleConditions = allConditionNames.slice(0, 3);
-
             visibleConditions.forEach(name => {
                 const cond = DND_CONDITIONS[name];
                 if (cond) {
+                    // Add emoji with a hover tooltip containing the full description
                     conditionHTML += `
                     <span class="has-tooltip" data-tooltip="${name}: ${cond.text}">
                         ${cond.emoji}
@@ -2325,6 +2497,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
+            // If more than 3 conditions, show an infinity icon with a consolidated tooltip
             if (allConditionNames.length > 3) {
                 const tooltipText = allConditionNames.slice(3).map(name => {
                     const c = DND_CONDITIONS[name];
@@ -2337,16 +2510,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             let conditionStr = conditionHTML;
 
+            // --- Display Name Logic ---
             let displayName = creature.name;
             if (creature.isMob) {
+                // If a mob, include the remaining count in brackets
                 const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
                 displayName = `${creature.name} (${currentCount})`;
             }
 
+            // --- Final Row Construction ---
             let content = '';
+            // Show a chevron marker for the active turn
             if (isActive) {
                 content += '<span class="active-chevron">></span>';
             }
+            // Initiative score, Name, Icons, and finally the HP bar
             content += `<span class="initiative-score" data-id="${creature.id}">${creature.initiative}</span>`;
             content += `<span class="creature-name">${displayName}</span>`;
             content += `<span class="initiative-conditions">${conditionStr}</span>`;
@@ -2371,34 +2549,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         initiativeListDiv.appendChild(fragment);
     }
 
+    /**
+     * Helper: Returns a CSS color code based on a creature's current health percentage.
+     */
     function getHpColor(current, max) {
-        if (current <= 0) return '#6c757d'; // Grey (dead/0 HP)
-        if (current > max) return '#8a2be2'; // Purple (overhealed/temp HP)
+        // Grey for dead creatures
+        if (current <= 0) return '#6c757d';
+        // Purple for creatures with temporary HP exceeding their max (or simple overheal)
+        if (current > max) return '#8a2be2';
 
         const percentage = (current / max) * 100;
-        if (percentage >= 100) return '#007bff'; // Blue (full HP)
-        if (percentage >= 50) return '#28a745'; // Green (50-99%)
-        if (percentage >= 25) return '#ffc107'; // Yellow (25-49%)
-        return '#dc3545'; // Red (<25%)
+        // Standard health color tiers
+        if (percentage >= 100) return '#007bff'; // Blue (Perfect)
+        if (percentage >= 50) return '#28a745';  // Green (Good)
+        if (percentage >= 25) return '#ffc107';  // Yellow (Injured)
+        return '#dc3545'; // Red (Critical)
     }
 
+    /**
+     * Renders the detailed combatant view in the right-hand panel.
+     * Includes ability scores, saving throws, death saves, and health controls.
+     * @param {object[]} orderToRender - The list of creatures in the desired display order.
+     * @param {number} currentTurnIndex - The index of the active creature in the initiative list.
+     */
     function renderCombatantDetailsList(orderToRender, currentTurnIndex) {
+        // Clear the detailed panel
         combatantDetailsListDiv.innerHTML = '';
+        // Exit if no creatures present
         if (!orderToRender || orderToRender.length === 0) return;
 
+        // Use fragment for performance
         const fragment = document.createDocumentFragment();
+        // Determine the ID of the creature whose turn it is
         const activeCreatureId = initiativeOrder.length > 0 ? initiativeOrder[currentTurnIndex]?.id : null;
 
         orderToRender.forEach((creature) => {
-            if (creature.hidden) return; // Skip hidden creatures (e.g. being edited)
+            // Respect the 'hidden' flag to avoid UI conflicts during edits
+            if (creature.hidden) return;
 
+            // Create the master entry container
             const creatureDiv = document.createElement('div');
+            // Apply turn highlight if this creature is currently acting
             const isActive = activeCreatureId === creature.id;
             creatureDiv.className = 'combatant-details-entry' + (isActive ? ' active-turn' : '');
             creatureDiv.dataset.id = creature.id;
 
+            // --- Saving Throw Grid ---
             const saves = creature.saves || {};
-            const scores = creature.scores || {};
             const savesHTML = `
                 <div class="saves-grid">
                     <button class="stat-roll-btn" data-id="${creature.id}" data-type="save" data-stat="str">STR: ${saves.str || '+0'}</button>
@@ -2409,6 +2606,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button class="stat-roll-btn" data-id="${creature.id}" data-type="save" data-stat="cha">CHA: ${saves.cha || '+0'}</button>
                 </div>
             `;
+
+            // --- Ability Score Grid ---
+            const scores = creature.scores || {};
             const scoresHTML = `
                 <div class="scores-grid">
                     <button class="stat-roll-btn" data-id="${creature.id}" data-type="check" data-stat="str">STR: ${scores.str || '10'}</button>
@@ -2420,6 +2620,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
 
+            // --- Death Saving Throw Tracker ---
+            // Only show if the creature is at 0 HP and is NOT a mob
             const ds = creature.deathSaves || { successes: 0, failures: 0 };
             const deathSavesHTML = (creature.hp <= 0 && !creature.isMob) ? `
                 <div class="death-saves-container" style="display: flex; align-items: center; gap: 8px;">
@@ -2439,6 +2641,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             ` : '';
 
+            // --- Header HP and Display Name Logic ---
             const hp = creature.hp || 0;
             const maxHp = creature.maxHp || 1;
             const tempHp = creature.tempHp || 0;
@@ -2448,9 +2651,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let displayName = creature.name;
             if (creature.isMob) {
+                // For mobs, show the current count of living members
                 const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
                 displayName = `${creature.name} (${currentCount})`;
             }
+
+            // --- Attack Modifier Buttons ---
+            // Supports dual modifiers (displayed as X / Y)
             const attackButtonHTML = `
                 <div class="header-stat interactive-stat" style="display: flex; align-items: center; gap: 2px;">
                     <span>Atk:</span>

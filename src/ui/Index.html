@@ -6,27 +6,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TavernTones</title>
+  <!-- Primary stylesheet for the application layout and theme -->
   <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
+  <!-- The main-grid defines the 3-column layout (Standard mode) or 5-column layout (Audio-Only mode) -->
   <div class="main-grid">
-    <!-- -------------------- LEFT COLUMN -------------------- -->
+
+    <!-- -------------------- LEFT COLUMN: Entry, Logs, and Music Library -------------------- -->
     <div class="column column-left audio-only-left-column">
+
+      <!-- Container for the 'Add Combatant' form -->
       <div id="creature-entry-container" class="box">
         <form id="add-creature-form">
-          <!-- Form fields will be added here via JS or next step -->
+          <!-- Form fields are dynamically injected here by renderer.js for better control over layout -->
         </form>
       </div>
+
+      <!-- Wrapper for the tabbed information panel (Log, Dice, Stats, Library) -->
       <div id="log-wrapper" class="box">
         <div class="panel-header" style="flex-direction: column; align-items: stretch; gap: 10px;">
+          <!-- Top row: Header title and primary actions -->
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <h2 id="pane-mode-title" style="margin: 0; border: none; padding: 0;">Log</h2>
             <div class="panel-header-controls">
+              <!-- Special button to push the active panel content to Discord -->
               <button id="push-panel-btn" class="small-btn" title="Push to Chat" style="display: none;">🖨️</button>
+              <!-- Opens the global settings window -->
               <button id="main-settings-btn" class="small-btn" title="Settings">⚙️</button>
             </div>
           </div>
+          <!-- Bottom row: Tab buttons for switching panels -->
           <div class="panel-modes" style="justify-content: space-around; border-top: 1px solid #333; padding-top: 5px;">
             <button id="mode-log" class="mode-btn active" title="Application Log">🪵</button>
             <button id="mode-dice" class="mode-btn" title="Dice Log">🎲</button>
@@ -34,32 +45,45 @@
             <button id="mode-library" class="mode-btn" title="Music Library">🎶</button>
           </div>
         </div>
-        <div class="log-area" id="logArea"></div>
-        <div class="log-area" id="diceLog" style="display: none;"></div>
-        <div class="log-area" id="statBlockArea" style="display: none;"></div>
+
+        <!-- The individual log/content areas, toggled via display: block/none -->
+        <div class="log-area" id="logArea"></div> <!-- App messages -->
+        <div class="log-area" id="diceLog" style="display: none;"></div> <!-- Roll history -->
+        <div class="log-area" id="statBlockArea" style="display: none;"></div> <!-- Monster details -->
+
+        <!-- Music Library View with Toolbar -->
         <div class="log-area" id="musicLibraryArea" style="display: none;">
           <div class="library-toolbar">
             <button id="rescan-library-btn" class="small-btn" title="Rescan Music Folder">🔄</button>
             <button id="add-loose-btn" class="small-btn" title="Add Loose Files/Folders">➕</button>
             <button id="search-library-btn" class="small-btn" title="Search Library">🔍</button>
+            <!-- Bulk actions for multiple selections -->
             <div class="bulk-actions" style="margin-left: auto; display: flex; gap: 5px;">
               <button id="bulk-play-now" class="small-btn" title="Play Selected Now">▶️</button>
               <button id="bulk-add-top" class="small-btn" title="Add Selected to Top">⬆️</button>
               <button id="bulk-add-bottom" class="small-btn" title="Add Selected to Bottom">⬇️</button>
             </div>
           </div>
+          <!-- The dynamic folder tree is rendered inside this container -->
           <div id="library-tree-container"></div>
         </div>
       </div>
+
+      <!-- Vertical resizer handle for adjusting the height of the music player below -->
       <div id="music-player-resizer" class="resizer-v"></div>
+
+      <!-- The Music Player and Playlist Stack -->
       <div id="music-controls-container" class="box music-controls-container">
         <div class="panel-header">
           <div style="display: flex; align-items: center; gap: 8px;">
             <h2>Music Player</h2>
+            <!-- Discord Bot status indicator (Green/Red/Yellow emoji) -->
             <button id="bot-status-indicator" class="small-btn status-indicator" title="Voice Status: Unknown" style="font-size: 1em; padding: 2px 4px;">🟥</button>
+            <!-- Checkbox to show/hide the control message in Discord -->
             <input type="checkbox" id="discord-media-control-toggle" title="Toggle Discord Media Control Embed" checked>
           </div>
           <div class="panel-header-controls" style="display: flex; align-items: center; gap: 5px;">
+            <!-- Toggle for automatic playlist persistence -->
             <label class="autosave-label" title="Auto-save/load playlist">
               <input type="checkbox" id="music-autosave-check">
               Auto
@@ -69,6 +93,8 @@
             <button id="search-playlist-btn" class="small-btn" title="Search Playlist">🔍</button>
           </div>
         </div>
+
+        <!-- Core Playback Controls -->
         <div class="controls music-controls">
           <button id="playPrevButton">⏮️</button>
           <button id="playPauseButton">▶️</button>
@@ -78,20 +104,28 @@
           <button id="selectFileButton" title="Open Music Library">➕</button>
           <button id="clear-stack-btn" title="Clear Playlist">🗑️</button>
         </div>
+
+        <!-- Playback progress bar and timestamp -->
         <div class="progress-container">
           <div id="music-progress-bar" class="progress-bar"></div>
           <span id="music-time-display">0:00 / 0:00</span>
         </div>
-        <div id="music-stack-list">
-          <!-- Playlist items will be rendered here -->
-        </div>
+
+        <!-- The scrollable list of tracks currently in the playlist -->
+        <div id="music-stack-list"></div>
       </div>
     </div>
 
-    <!-- -------------------- MIDDLE COLUMN -------------------- -->
+    <!-- -------------------- MIDDLE COLUMN: Encounter Controls & Soundboard -------------------- -->
+
+    <!-- Left-side horizontal resizer for the middle column -->
     <div id="middle-col-resizer-left" class="resizer-h-middle"></div>
+
     <div class="column column-middle audio-only-middle-column">
+      <!-- Top-side vertical resizer for the soundboard grid -->
       <div id="soundboard-resizer-top" class="resizer-v-sb"></div>
+
+      <!-- Turn management and encounter file operations -->
       <div id="turn-controls-container" class="box">
         <div class="panel-header">
           <h2>Controls</h2>
@@ -110,6 +144,8 @@
           <button id="load-button">Load Encounter</button>
         </div>
       </div>
+
+      <!-- Simplified horizontal initiative order preview -->
       <div id="initiative-list-container" class="box">
         <div class="panel-header">
           <h2>Initiative Order</h2>
@@ -118,31 +154,36 @@
           </div>
         </div>
         <div id="initiative-list">
-          <!-- Simple initiative list will be rendered here -->
+          <!-- Populated by renderer.js -->
         </div>
       </div>
+
+      <!-- Soundboard grid and layout management -->
       <div id="soundboard-container" class="box soundboard-container">
         <div class="panel-header">
           <h2>Soundboard</h2>
           <div class="panel-header-controls">
+            <!-- Buttons to add/remove rows and columns -->
             <button id="add-col-btn" class="small-btn" title="Add Column">◀️</button>
             <button id="add-row-btn" class="small-btn" title="Add Row">🔼</button>
             <button id="remove-row-btn" class="small-btn" title="Remove Row">🔽</button>
             <button id="remove-col-btn" class="small-btn" title="Remove Column">▶️</button>
+            <!-- Preset persistence -->
             <button id="save-preset-btn" class="small-btn" title="Save Preset">💾</button>
             <button id="load-preset-btn" class="small-btn" title="Load Preset">📂</button>
             <label for="soundboard-volume">Vol:</label>
             <input type="range" id="soundboard-volume" min="0" max="1" step="0.05" value="0.5">
           </div>
         </div>
-        <div id="soundboard-grid">
-          <!-- 3x3 grid of soundboard controls will be rendered here -->
-        </div>
+        <!-- The grid of sound buttons, dynamically sized via CSS variables -->
+        <div id="soundboard-grid"></div>
       </div>
     </div>
+
+    <!-- Right-side horizontal resizer for the middle column -->
     <div id="middle-col-resizer-right" class="resizer-h-middle"></div>
 
-    <!-- -------------------- RIGHT COLUMN -------------------- -->
+    <!-- -------------------- RIGHT COLUMN: Detailed Combatant List -------------------- -->
     <div class="column column-right audio-only-right-column">
       <div id="combatant-wrapper" class="box" style="flex-grow: 1; display: flex; flex-direction: column; min-height: 0;">
         <div class="panel-header">
@@ -152,14 +193,16 @@
             <button id="clear-encounter-right" class="small-btn" title="Clear Encounter">🗑️</button>
           </div>
         </div>
-        <div id="combatant-details-list" style="flex-grow: 1; overflow-y: auto;">
-          <!-- Full interactive list of all combatants rendered here -->
-        </div>
+        <!-- Scrollable list of detailed monster/player cards -->
+        <div id="combatant-details-list" style="flex-grow: 1; overflow-y: auto;"></div>
       </div>
     </div>
   </div>
+
+  <!-- Hidden audio element used for local playback of song previews -->
   <audio id="preview-audio-player" style="display: none;"></audio>
 
+  <!-- Modal: Manual Emoji selection for soundboard slots -->
   <dialog id="emoji-picker-dialog">
     <form method="dialog">
       <h3>Select Emoji</h3>
@@ -172,6 +215,7 @@
     </form>
   </dialog>
 
+  <!-- Modal: Selection of which creatures to import from a JSON bestiary file -->
   <dialog id="import-selection-dialog">
     <form method="dialog">
       <h3>Select Combatants to Import</h3>
@@ -180,7 +224,7 @@
         <button id="import-clear-all" type="button" class="small-btn">Clear All</button>
       </div>
       <div id="import-list-container" style="max-height: 300px; overflow-y: auto; margin-bottom: 10px;">
-        <!-- Checkboxes will be added here -->
+        <!-- Checkboxes added here -->
       </div>
       <div class="dialog-actions">
         <button value="cancel">Cancel</button>
@@ -189,8 +233,11 @@
     </form>
   </dialog>
 
+  <!-- Overlay: Toast notifications for background tasks like library scanning -->
   <div id="library-notification" class="notification-toast"></div>
+  <!-- Dynamic floating tooltip managed by renderer.js -->
   <div id="global-tooltip"></div>
+  <!-- Primary application logic -->
   <script src="renderer.js"></script>
 </body>
 

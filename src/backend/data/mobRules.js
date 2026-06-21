@@ -1,5 +1,12 @@
+/**
+ * mobRules.js contains the configuration and content for the 'Mob Rules' helper.
+ * This is used to speed up combat when dealing with large groups of identical monsters.
+ */
 const mobRules = {
+    // Relative path to the image containing the Mob Results lookup table
     imagePath: "resources/MobRules/MobRules.png",
+
+    // Content used for rendering the information within the application's local UI
     ui: {
         text: `
     <p>
@@ -22,6 +29,8 @@ const mobRules = {
     </ol>
         `
     },
+
+    // Content used for constructing the Discord embed when pushing rules to the chat
     discord: {
         title: "Mob Rules",
         description: "**Mobs**\nThis section can help you speed up play when resolving outcomes with large groups of monsters, also known as mobs.",
@@ -50,4 +59,5 @@ const mobRules = {
     }
 };
 
+// Export the rules for use in both the main process and UI-related logic
 module.exports = { mobRules };

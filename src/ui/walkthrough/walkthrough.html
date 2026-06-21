@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Discord Bot Setup Guide</title>
     <style>
+        /* Compact dark-themed styling for the walkthrough utility window */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #1a1a1a;
@@ -15,7 +16,9 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            /* Prevent text selection */
             user-select: none;
+            /* Allow the window to be dragged by clicking anywhere on the body */
             -webkit-app-region: drag;
         }
         .container {
@@ -23,6 +26,7 @@
             flex-direction: column;
             flex: 1;
             padding: 20px;
+            /* Restore normal cursor and interaction for the inner container */
             -webkit-app-region: no-drag;
             box-sizing: border-box;
             min-height: 0;
@@ -41,19 +45,24 @@
         button:hover { background-color: #4c4c4c; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
         .step-indicator { font-size: 0.85em; color: #888; }
+        /* Style for IDs and scope keys */
         code { background-color: #2d2d2d; padding: 2px 4px; border-radius: 3px; color: #56b6c2; }
         a { color: #58a6ff; text-decoration: none; }
         a:hover { text-decoration: underline; }
+        /* Highlight boxes for critical selection steps */
         .highlight { border: 2px solid #007bff; border-radius: 4px; padding: 10px; background: rgba(0, 123, 255, 0.1); margin: 10px 0; }
         .highlight ul { margin: 5px 0; padding-left: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Dynamic header for the current step -->
         <h2 id="step-title">Step 1</h2>
+        <!-- Scrollable instructions area -->
         <div class="content" id="step-content">
             <!-- Content filled by JS -->
         </div>
+        <!-- Pagination controls -->
         <div class="footer">
             <button id="prev-btn">Previous</button>
             <span class="step-indicator" id="step-indicator">Step 1 of 5</span>
@@ -61,6 +70,7 @@
         </div>
     </div>
     <script>
+        // Array of configuration steps for the walkthrough
         const steps = [
             {
                 title: "Introduction & Prerequisites",
@@ -137,6 +147,7 @@
             }
         ];
 
+        // --- View Controller State ---
         let currentStep = 0;
         const titleEl = document.getElementById('step-title');
         const contentEl = document.getElementById('step-content');
@@ -144,15 +155,21 @@
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
 
+        /**
+         * Re-renders the walkthrough UI based on the currentStep index.
+         */
         function updateUI() {
             const step = steps[currentStep];
             if (titleEl) titleEl.textContent = step.title;
             if (contentEl) contentEl.innerHTML = step.content;
             if (indicatorEl) indicatorEl.textContent = `Step ${currentStep + 1} of ${steps.length}`;
+            // Disable 'Previous' on the first step
             if (prevBtn) prevBtn.disabled = currentStep === 0;
+            // Change 'Next' text on the final step
             if (nextBtn) nextBtn.textContent = currentStep === steps.length - 1 ? 'Finish' : 'Next';
         }
 
+        // Navigate back
         prevBtn.onclick = () => {
             if (currentStep > 0) {
                 currentStep--;
@@ -160,15 +177,18 @@
             }
         };
 
+        // Navigate forward or close the window
         nextBtn.onclick = () => {
             if (currentStep < steps.length - 1) {
                 currentStep++;
                 updateUI();
             } else {
+                // 'Finish' clicked
                 window.close();
             }
         };
 
+        // Perform initial render
         updateUI();
     </script>
 </body>
