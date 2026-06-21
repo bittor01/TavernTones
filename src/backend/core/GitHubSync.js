@@ -17,7 +17,18 @@ function calculateGitSha(buffer) {
     return hash.digest('hex');
 }
 
+/**
+ * Manages synchronization of D&D 5e Bestiary data from a GitHub repository.
+ * Detects changes and allows the user to update their local monster files.
+ */
 class GitHubSync {
+    /**
+     * Initializes the synchronization service.
+     * @param {function} logCallback - Logger for progress updates.
+     * @param {object} dialog - Electron dialog module for user prompts.
+     * @param {BrowserWindow} mainWindow - Reference to the main window.
+     * @param {string} githubToken - Optional Personal Access Token for higher rate limits.
+     */
     constructor(logCallback, dialog, mainWindow, githubToken) {
         this.log = logCallback || console.log;
         this.dialog = dialog;
@@ -25,51 +36,56 @@ class GitHubSync {
         this.githubToken = githubToken;
     }
 
+    /**
+     * Synchronizes the local bestiary folder with a remote GitHub repository.
+     * @param {string} repoUrl - URL of the source repository.
+     * @param {string} localPath - Directory to store JSON files.
+     */
     async syncBestiary(repoUrl, localPath) {
         try {
-            // Extract owner and repo from URL (e.g. https://github.com/5etools-mirror-3/5etools-src)
+            // Parse the owner and repository name from the GitHub URL
             const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-            if (!match) {
-                throw new Error("Invalid GitHub repository URL.");
-            }
+            if (!match) throw new Error("Invalid GitHub repository URL.");
             const [_, owner, repo] = match;
+            // Build the GitHub API URL for the bestiary directory
             const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/data/bestiary`;
 
+            // Configure headers for the API request
             const headers = { 'User-Agent': 'TavernTones-App' };
-            if (this.githubToken) {
-                headers['Authorization'] = `token ${this.githubToken}`;
-            }
-
+            if (this.githubToken) headers['Authorization'] = `token ${this.githubToken}`;
             this.log(`Fetching file list from: ${apiUrl}`);
+            // Retrieve list of files from GitHub
             const response = await axios.get(apiUrl, { headers });
+            // Only process JSON data files
             const remoteFiles = response.data.filter(f => f.type === 'file' && f.name.endsWith('.json'));
 
-            // Ensure local path exists
+            // Ensure the local target directory exists
             const stats = await fs.stat(localPath).catch(() => null);
             if (!stats) {
                 this.log(`Creating local directory: ${localPath}`);
                 await fs.mkdir(localPath, { recursive: true });
             }
 
+            // Lists to track different categories of files
             const filesToDownload = [];
             const filesToConfirm = [];
 
+            // Compare remote files against local versions
             for (const remoteFile of remoteFiles) {
                 const targetPath = path.join(localPath, remoteFile.name);
                 const localData = await fs.readFile(targetPath).catch(() => null);
 
+                // Mark for download if file doesn't exist locally
                 if (!localData) {
                     filesToDownload.push(remoteFile);
                     continue;
                 }
 
+                // Use Git-style SHA to detect content changes efficiently
                 const localSha = calculateGitSha(localData);
                 if (localSha !== remoteFile.sha) {
-                    // Difference found.
                     const localStat = await fs.stat(targetPath);
-
-                    // We need remote last commit date to compare properly.
-                    // To avoid hitting rate limits, we'll collect these for a separate confirmation step.
+                    // Add to confirmation list if SHA mismatch detected
                     filesToConfirm.push({
                         remote: remoteFile,
                         localSha,
@@ -79,70 +95,64 @@ class GitHubSync {
                 }
             }
 
+            // Return early if everything is in sync
             if (filesToDownload.length === 0 && filesToConfirm.length === 0) {
                 return { success: true, message: "Bestiary data is already up to date." };
             }
-
-            // If we have diffs, we might want to fetch remote dates for THEM specifically.
-            // But let's simplify: offer a choice based on size and the fact they are different.
-
             let finalDownloadList = [...filesToDownload];
 
+            // If existing files have changed, prompt the user for action
             if (filesToConfirm.length > 0) {
                 const { response: userChoice } = await this.dialog.showMessageBox(this.mainWindow, {
                     type: 'question',
                     title: 'Update Bestiary Data',
-                    message: `Found ${filesToConfirm.length} modified files and ${filesToDownload.length} new files. How would you like to proceed?`,
+                    message: `Found ${filesToConfirm.length} modified and ${filesToDownload.length} new files.`,
                     buttons: ['Download Newer/Larger Only', 'Overwrite All', 'Cancel'],
-                    defaultId: 0,
-                    cancelId: 2
+                    defaultId: 0, cancelId: 2
                 });
-
-                if (userChoice === 2) return { success: false, message: "Sync cancelled by user." };
-
+                if (userChoice === 2) return { success: false, message: "Sync cancelled." };
                 if (userChoice === 1) {
-                    // Overwrite All
+                    // Option: Overwrite all modified files
                     finalDownloadList = [...finalDownloadList, ...filesToConfirm.map(f => f.remote)];
                 } else {
-                    // Download Newer/Larger Only
-                    this.log("Fetching commit dates for modified files...");
+                    // Option: Intelligent update (check commit dates)
+                    this.log("Checking commit dates for modified files...");
                     for (const item of filesToConfirm) {
                         const commitUrl = `https://api.github.com/repos/${owner}/${repo}/commits?path=${item.remote.path}&page=1&per_page=1`;
                         const commitResponse = await axios.get(commitUrl, { headers });
                         const remoteDate = new Date(commitResponse.data[0].commit.committer.date);
 
+                        // Download only if remote is newer or file size increased
                         if (remoteDate > item.localMtime || item.remote.size > item.localSize) {
                             finalDownloadList.push(item.remote);
                         } else {
-                            this.log(`Skipping ${item.remote.name} (Local is newer or larger)`);
+                            this.log(`Skipping ${item.remote.name} (Local is newer)`);
                         }
                     }
                 }
             }
 
-            // Perform downloads
+            // Execute the batch download
             this.log(`Downloading ${finalDownloadList.length} files...`);
             let count = 0;
-            for (const fileToDownload of finalDownloadList) {
-                const fileData = await axios.get(fileToDownload.download_url, { headers });
-                const targetPath = path.join(localPath, fileToDownload.name);
+            for (const file of finalDownloadList) {
+                // Fetch raw JSON content from GitHub
+                const fileData = await axios.get(file.download_url, { headers });
+                const targetPath = path.join(localPath, file.name);
+                // Save formatted JSON to local disk
                 await fs.writeFile(targetPath, JSON.stringify(fileData.data, null, 2));
                 count++;
-                if (count % 10 === 0) this.log(`Downloaded ${count}/${finalDownloadList.length} files...`);
+                // Progress logging
+                if (count % 10 === 0) this.log(`Progress: ${count}/${finalDownloadList.length} files.`);
             }
-
-            return { success: true, message: `Successfully updated ${count} files.` };
-
+            return { success: true, message: `Successfully updated ${count} monster data files.` };
         } catch (error) {
-            if (error.response && error.response.status === 403) {
-                this.log("GitHub API Error: 403 Forbidden. This is likely a rate limit issue.");
-                return { success: false, error: "GitHub rate limit exceeded. Please provide a Personal Access Token in settings to continue." };
+            // Handle specific GitHub API errors
+            if (error.response?.status === 403) {
+                return { success: false, error: "GitHub rate limit exceeded. Please use a PAT in settings." };
             }
-            const errorMessage = `Error syncing Bestiary data: ${error.message}`;
-            this.log(errorMessage);
             return { success: false, error: error.message };
         }
     }
 }
-
 module.exports = GitHubSync;

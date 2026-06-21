@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-
 async function main() {
     try {
         const rootDir = path.join(__dirname, '../../../');
@@ -8,19 +7,16 @@ async function main() {
         const packageLockJsonPath = path.join(rootDir, 'package-lock.json');
         const outputPath = path.join(__dirname, 'licenses.json');
         const nodeModulesPath = path.join(rootDir, 'node_modules');
-
         const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
         let lockPkg = {};
         if (fs.existsSync(packageLockJsonPath)) {
             lockPkg = JSON.parse(fs.readFileSync(packageLockJsonPath, 'utf8'));
         }
-
         const templatesPath = path.join(__dirname, 'license-templates.json');
         let templates = {};
         if (fs.existsSync(templatesPath)) {
             templates = JSON.parse(fs.readFileSync(templatesPath, 'utf8'));
         }
-
         const manualPath = path.join(rootDir, 'resources/manual-licenses');
         const manualDeps = [];
         if (fs.existsSync(manualPath)) {
@@ -40,13 +36,11 @@ async function main() {
                 }
             });
         }
-
         const deps = { ...pkg.dependencies, ...pkg.devDependencies };
         const licenses = [];
 
         // Track seen dependencies to merge manual ones
         const seen = new Set();
-
         for (const name of Object.keys(deps)) {
             seen.add(name);
             let licenseType = 'Unknown';
@@ -92,7 +86,6 @@ async function main() {
             if (!licenseText && templates[licenseType]) {
                 licenseText = templates[licenseType];
             }
-
             licenses.push({
                 name,
                 version: deps[name],
@@ -112,14 +105,11 @@ async function main() {
                 });
             }
         }
-
         fs.writeFileSync(outputPath, JSON.stringify(licenses, null, 2));
         console.log(`Generated licenses for ${licenses.length} packages to ${outputPath}`);
-
     } catch (error) {
         console.error('Failed to generate licenses:', error);
         process.exit(1);
     }
 }
-
 main();

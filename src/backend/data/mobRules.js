@@ -1,5 +1,13 @@
+/**
+ * Mob Rules Reference Data
+ * This object contains metadata, UI text, and Discord formatting for
+ * large-scale combat resolution rules.
+ */
 const mobRules = {
+    // Relative path to the visual reference table image
     imagePath: "resources/MobRules/MobRules.png",
+
+    // UI-specific content for the Electron application
     ui: {
         text: `
     <p>
@@ -7,7 +15,6 @@ const mobRules = {
         **🎲 Tips for Smooth Mob Combat**: Use **average damage** from a stat block. If an attack reduces a monster to a handful of Hit Points, **assume the monster is killed**. **Divide a large number** of identical monsters into smaller mobs (5 to 8 creatures works well) and spread their turns out between character turns; **don't have more mobs than there are characters.**
         **📊 Average Mob Results**: To determine successful D20 Tests without rolling, use the **Mob Results table** by following these steps:
     </p>
-
     <ol>
         <li>
             **Determine the Roll Needed**: Calculate the minimum d20 roll for success:
@@ -22,6 +29,7 @@ const mobRules = {
     </ol>
         `
     },
+    // Discord-specific formatting for the help embed
     discord: {
         title: "Mob Rules",
         description: "**Mobs**\nThis section can help you speed up play when resolving outcomes with large groups of monsters, also known as mobs.",
@@ -49,5 +57,4 @@ const mobRules = {
         ]
     }
 };
-
 module.exports = { mobRules };

@@ -4,16 +4,34 @@ const path = require('path');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 const { EmbedBuilder } = require('discord.js');
 
+/**
+ * Formats a D&D roll result into a readable message and Discord embed.
+ * @param {string} creatureName - Name of the rolling combatant.
+ * @param {string} rollType - 'adv', 'dis', or 'flat'.
+ * @param {string} checkType - Description of the roll (e.g., 'STR Check').
+ * @param {object} roll - The roll result object from rpg-dice-roller.
+ * @param {number} modifier - Total modifier applied to the roll.
+ * @returns {object} Object with 'message' (string) and 'embed' (EmbedBuilder).
+ */
+/**
+ * Transforms a raw dice roll result into a standardized log message and Discord embed.
+ * This ensures that players can see both the total and the math behind the roll.
+ */
 function formatRoll(creatureName, rollType, checkType, roll, modifier) {
+    // Calculate the final sum including any modifiers.
     const total = roll.total + modifier;
+
+    // Extract each individual d20 result for transparency (critical for adv/dis verification).
     const rawRolls = roll.rolls[0].rolls.map(r => r.value);
     const rollDetails = rawRolls.join(', ');
 
-    // Bold the chosen roll for advantage/disadvantage
+    // In advantage/disadvantage rolls, bold the value that was actually used.
     const detailedRolls = rawRolls.map(r => (r === roll.total) ? `**${r}**` : r).join(', ');
 
+    // Construct a human-readable text string for the Electron app's internal log.
     const message = `${creatureName}'s ${checkType} (${rollType}): ${total} ⟵ [${rollDetails}] + ${modifier}`;
 
+    // Build a rich embed for Discord, using color themes to make combat results easy to spot.
     const embed = new EmbedBuilder()
         .setColor(0x0099FF)
         .setTitle(`${creatureName}'s ${checkType}`)
@@ -28,22 +46,35 @@ function formatRoll(creatureName, rollType, checkType, roll, modifier) {
     return { message, embed };
 }
 
+/**
+ * Manages the initiative order, turn tracking, and combatant state.
+ * Handles persistence and communication with the Discord bot.
+ */
 class InitiativeTracker {
+    /**
+     * Initializes the tracker with logging and update callbacks.
+     */
     constructor(logToRenderer, logDiceRoll, sendInitiativeUpdate, autosavePath) {
         this.logToRenderer = logToRenderer;
         this.logDiceRoll = logDiceRoll;
         this.sendInitiativeUpdate = sendInitiativeUpdate;
         this.autosavePath = autosavePath;
+
+        // Master list of combatants
         this.initiativeOrder = [];
         this.currentTurnIndex = 0;
 
-        // Debounced methods to optimize performance during rapid updates
+        // Initialize debounced persistence and UI update methods for efficiency
         this._debouncedSave = this._debounce(this._performSave.bind(this), 1000);
         this._debouncedUpdate = this._debounce(this._performUpdate.bind(this), 100);
 
+        // Restore state from disk on startup
         this.loadState();
     }
 
+    /**
+     * Utility to limit function execution frequency.
+     */
     _debounce(fn, delay) {
         let timeoutId;
         return (...args) => {
@@ -55,10 +86,16 @@ class InitiativeTracker {
         };
     }
 
+    /**
+     * Triggers a debounced save to the autosave file.
+     */
     _saveState() {
         this._debouncedSave();
     }
 
+    /**
+     * Internal method to write current state to JSON.
+     */
     _performSave() {
         const state = {
             initiativeOrder: this.initiativeOrder,
@@ -70,6 +107,9 @@ class InitiativeTracker {
             });
     }
 
+    /**
+     * Loads the previous session's encounter state from disk.
+     */
     loadState() {
         try {
             if (fs.existsSync(this.autosavePath)) {
@@ -77,13 +117,12 @@ class InitiativeTracker {
                 this.initiativeOrder = savedState.initiativeOrder || [];
                 this.currentTurnIndex = savedState.currentTurnIndex || 0;
 
-                // Reset hidden state on load, in case app crashed during edit
+                // Scrub state for robustness: clear temporary hidden flags and ensure death save object exists
                 this.initiativeOrder.forEach(c => {
                     delete c.hidden;
                     if (!c.deathSaves) c.deathSaves = { successes: 0, failures: 0 };
                 });
-
-                this.logToRenderer('Autosaved encounter state loaded.');
+                this.logToRenderer('Restored encounter state from autosave.');
             }
         } catch (error) {
             this.logToRenderer(`Error loading state: ${error.message}`);
@@ -94,37 +133,58 @@ class InitiativeTracker {
         // The frontend will request the state when it's ready.
     }
 
+    /**
+     * Sends the current full initiative state to the renderer process immediately.
+     */
     sendFullState() {
         // Immediate update for explicit requests
         this.sendInitiativeUpdate(this.initiativeOrder, this.currentTurnIndex);
     }
 
+    /**
+     * Schedules a debounced update to the frontend UI.
+     */
     _updateFrontend() {
         this._debouncedUpdate();
     }
 
+    /**
+     * Internal method to dispatch state to renderer via callback.
+     */
     _performUpdate() {
         this.sendInitiativeUpdate(this.initiativeOrder, this.currentTurnIndex);
     }
 
+    /**
+     * Adds a new combatant to the encounter, handling HP calculations and initiative rolls.
+     * @param {object} creature - Raw creature data from the form.
+     * @returns {string|null} Log message if a die roll occurred.
+     */
+    /**
+     * Integrates a new combatant into the initiative order.
+     * This handles HP parsing (including dice rolling), mob initialization, and initiative rolls.
+     */
     addCreature(creature) {
+        // TavernTones uses a 'Mob' system to track groups of identical enemies (like a swarm of goblins).
         if (creature.isMob) {
-            const hpFormula = creature.hp.toString().toLowerCase().replace(/\s/g, ''); // clean string
-            creature.hpFormula = creature.hp.toString(); // save original formula
+            // Cleanup the formula string for parsing.
+            const hpFormula = creature.hp.toString().toLowerCase().replace(/\s/g, '');
+            creature.hpFormula = creature.hp.toString();
+
             try {
                 let formulaToParse = hpFormula;
                 if (formulaToParse.startsWith('d')) {
                     formulaToParse = '1' + formulaToParse;
                 }
 
-                // Replace 'd' with '*' to make it a mathematical expression
+                // Convert 'd' notation to '*' to facilitate a basic mathematical evaluation.
                 const expression = formulaToParse.replace('d', '*');
 
-                // Super simple, safe evaluator for expressions like "A*B+C" or "A*B-C" or "A*B" or "C"
+                // We use a safe, regex-based evaluator to avoid 'eval' and protect against RCE.
                 let singleCreatureHp;
-                const parts = expression.split(/([+-])/); // Split by operator, keeping the operator
+                const parts = expression.split(/([+-])/);
 
-                // Evaluate the first part, which could be "A*B" or just "C"
+                // Determine the base health of a single member of the mob.
                 const basePart = parts[0];
                 if (basePart.includes('*')) {
                     const [numDice, sides] = basePart.split('*').map(s => parseInt(s, 10));
@@ -133,7 +193,7 @@ class InitiativeTracker {
                     singleCreatureHp = parseInt(basePart, 10);
                 }
 
-                // Apply modifier if it exists
+                // Add or subtract static modifiers (e.g., 2d6 + 4).
                 if (parts.length > 1) {
                     const operator = parts[1];
                     const modifier = parseInt(parts[2], 10);
@@ -143,11 +203,9 @@ class InitiativeTracker {
                         singleCreatureHp -= modifier;
                     }
                 }
-
                 if (isNaN(singleCreatureHp)) {
                     throw new Error("HP formula resulted in NaN.");
                 }
-
                 creature.singleCreatureHP = singleCreatureHp;
                 creature.hp = singleCreatureHp * creature.mobInitialCount;
                 creature.maxHp = creature.hp;
@@ -158,18 +216,22 @@ class InitiativeTracker {
                 creature.maxHp = creature.hp;
             }
         } else if (!creature.maxHp) {
+            // For standard single creatures, we evaluate the HP formula using the dice roller.
             const hpInput = creature.hp.toString();
-            creature.hpFormula = hpInput; // Save the original formula
-            if (hpInput.match(/d/i)) { // It's a dice roll
+            creature.hpFormula = hpInput;
+
+            if (hpInput.match(/d/i)) {
                 try {
                     const roll = new DiceRoller().roll(hpInput);
                     creature.hp = roll.total;
                     this.logDiceRoll(`${creature.name} rolled HP: ${hpInput} = ${roll.total}`);
                 } catch (e) {
+                    // Fallback to a sensible default if the user provided an invalid dice string.
                     this.logToRenderer(`Invalid HP dice notation "${hpInput}". Defaulting to 10.`);
                     creature.hp = 10;
                 }
-            } else { // It's a number
+            } else {
+                // If it's a plain integer, use it directly.
                 creature.hp = parseInt(hpInput, 10) || 10;
             }
             creature.maxHp = creature.hp;
@@ -179,7 +241,6 @@ class InitiativeTracker {
         if (creature.isMob === undefined) {
             creature.isMob = false;
         }
-
         if (!creature.isMob) {
             creature.singleCreatureHP = creature.maxHp;
             delete creature.mobInitialCount;
@@ -195,12 +256,13 @@ class InitiativeTracker {
         // For mobs, we trust the renderer to have set hp, maxHp, singleCreatureHP, and mobInitialCount correctly.
 
 
-        // Calculate saves from scores if not provided
+        // Populate missing saving throw modifiers based on raw ability scores.
         const stats = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
         stats.forEach(stat => {
             if (!creature.saves[stat] || creature.saves[stat].trim() === '') {
                 const score = creature.scores[stat];
                 if (score) {
+                    // Apply standard D&D 5e modifier calculation: floor((score - 10) / 2)
                     const modifier = Math.floor((score - 10) / 2);
                     creature.saves[stat] = modifier >= 0 ? `+${modifier}` : `${modifier}`;
                 } else {
@@ -208,14 +270,11 @@ class InitiativeTracker {
                 }
             }
         });
-
         const initiativeInput = creature.initiative.toString().trim().toLowerCase();
         creature.initiativeFormula = creature.initiative.toString(); // Save the original formula/input
         let rollLogMessage = null;
-
         let rollType = 'flat';
         let initiativeString = initiativeInput;
-
         if (initiativeInput.endsWith(' adv')) {
             rollType = 'adv';
             initiativeString = initiativeInput.slice(0, -4).trim();
@@ -229,15 +288,12 @@ class InitiativeTracker {
             let notation = '1d20';
             if (rollType === 'adv') notation = '2d20kh1';
             if (rollType === 'dis') notation = '2d20kl1';
-
             const modifier = parseInt(initiativeString, 10) || 0;
             const roll = new DiceRoller().roll(notation);
             creature.initiative = roll.total + modifier;
-
             const rawRolls = roll.rolls[0].rolls.map(r => r.value);
             const chosenRoll = roll.rolls[0].value;
             const detailedRolls = rawRolls.map(r => (r === chosenRoll) ? `**${r}**` : r).join(', ');
-
             rollLogMessage = `${creature.name} rolled initiative (${rollType}): ${creature.initiative} ⟵ [${detailedRolls}] ${modifier >= 0 ? '+' : ''} ${Math.abs(modifier)}`;
             this.logDiceRoll(rollLogMessage);
         }
@@ -258,7 +314,6 @@ class InitiativeTracker {
         else {
             creature.initiative = parseFloat(initiativeString) || 0;
         }
-
         this.initiativeOrder.push(creature);
         this.initiativeOrder.sort((a, b) => b.initiative - a.initiative);
         this._updateFrontend();
@@ -266,6 +321,9 @@ class InitiativeTracker {
         return rollLogMessage;
     }
 
+    /**
+     * Manually updates a creature's initiative score and re-sorts the list.
+     */
     updateInitiative(creatureId, initiative) {
         const creature = this.initiativeOrder.find(c => c.id === creatureId);
         if (creature) {
@@ -276,6 +334,10 @@ class InitiativeTracker {
         }
     }
 
+    /**
+     * Advances to the next combatant's turn, issuing reminders for downed creatures.
+     * @returns {object|null} Turn info including old and new creatures.
+     */
     nextTurn() {
         if (this.initiativeOrder.length > 0) {
             const oldCreature = this.initiativeOrder[this.currentTurnIndex];
@@ -284,20 +346,21 @@ class InitiativeTracker {
             this._updateFrontend();
             this._saveState();
 
-            // Check for death saves requirement
+            // Issue death save reminder if next creature is downed and requires them
             const ds = newCreature.deathSaves || { successes: 0, failures: 0 };
             const needsSaves = newCreature.hp <= 0 && !newCreature.noDeathSaves && !newCreature.isMob;
             const notYetFinished = ds.successes < 3 && ds.failures < 3;
-
             if (needsSaves && notYetFinished) {
                 this.sendInitiativeUpdate(this.initiativeOrder, this.currentTurnIndex, { type: 'death-save-reminder', creatureId: newCreature.id });
             }
-
             return { oldCreature, newCreature };
         }
         return null;
     }
 
+    /**
+     * Reverts to the previous combatant's turn.
+     */
     previousTurn() {
         if (this.initiativeOrder.length > 0) {
             const oldCreature = this.initiativeOrder[this.currentTurnIndex];
@@ -309,11 +372,9 @@ class InitiativeTracker {
         }
         return null;
     }
-
     getCreature(creatureId) {
         return this.initiativeOrder.find(c => c.id === creatureId);
     }
-
     editCreature(creatureId) {
         const creature = this.initiativeOrder.find(c => c.id === creatureId);
         if (creature) {
@@ -325,13 +386,11 @@ class InitiativeTracker {
         }
         return null;
     }
-
     updateCreature(updatedCreature) {
         const index = this.initiativeOrder.findIndex(c => c.id === updatedCreature.id);
         if (index !== -1) {
             // Unhide the creature upon update
             updatedCreature.hidden = false;
-
             this.initiativeOrder[index] = updatedCreature;
             this.initiativeOrder.sort((a, b) => b.initiative - a.initiative);
             this._updateFrontend();
@@ -341,18 +400,22 @@ class InitiativeTracker {
             this.logToRenderer(`Error: Could not find creature with ID ${updatedCreature.id} to update.`);
         }
     }
-
     removeCreature(creatureId) {
         this.initiativeOrder = this.initiativeOrder.filter(c => c.id !== creatureId);
         this._updateFrontend();
         this._saveState();
     }
 
+    /**
+     * Updates HP and handles concentration check calculations.
+     * @param {number} creatureId - Creature ID.
+     * @param {number} amount - Damage (negative) or healing (positive).
+     * @returns {object} Updated creature and DC for concentration check.
+     */
     updateHp(creatureId, amount) {
         const creature = this.getCreature(creatureId);
         let concentrationCheckDC = null;
         if (creature) {
-            const wasAtZero = creature.hp <= 0;
             if (amount < 0) { // Damage
                 let damage = -amount;
                 const tempHpDamage = Math.min(creature.tempHp || 0, damage);
@@ -360,7 +423,6 @@ class InitiativeTracker {
                 damage -= tempHpDamage;
                 creature.hp -= damage;
                 creature.hp = Math.max(0, creature.hp); // Prevent negative HP
-
                 if (creature.isConcentrating) {
                     concentrationCheckDC = Math.max(10, Math.floor(-amount / 2));
                 }
@@ -385,7 +447,6 @@ class InitiativeTracker {
         }
         return { creature, concentrationCheckDC };
     }
-
     addTempHp(creatureId, amount) {
         const creature = this.getCreature(creatureId);
         if (creature) {
@@ -394,7 +455,6 @@ class InitiativeTracker {
             this._saveState();
         }
     }
-
     addCondition(creatureId, condition) {
         const creature = this.getCreature(creatureId);
         if (creature) {
@@ -406,7 +466,6 @@ class InitiativeTracker {
             }
         }
     }
-
     removeCondition(creatureId, condition) {
         const creature = this.getCreature(creatureId);
         if (creature && creature.conditions) {
@@ -415,7 +474,6 @@ class InitiativeTracker {
             this._saveState();
         }
     }
-
     updateCreatureFlag(creatureId, flag, value) {
         const creature = this.getCreature(creatureId);
         if (creature) {
@@ -424,7 +482,6 @@ class InitiativeTracker {
             this._saveState();
         }
     }
-
     updateReminders(creatureId, reminders) {
         const creature = this.getCreature(creatureId);
         if (creature) {
@@ -433,6 +490,9 @@ class InitiativeTracker {
         }
     }
 
+    /**
+     * Resets all combatants to full health and clears conditions.
+     */
     resetEncounter() {
         this.initiativeOrder.forEach(c => {
             c.hp = c.maxHp;
@@ -445,13 +505,15 @@ class InitiativeTracker {
         this._saveState();
     }
 
+    /**
+     * Wipe all combatants from encounter.
+     */
     clearEncounter() {
         this.initiativeOrder = [];
         this.currentTurnIndex = 0;
         this._updateFrontend();
         this._saveState();
     }
-
     saveEncounterToFile(filePath) {
         try {
             const state = { initiativeOrder: this.initiativeOrder, currentTurnIndex: this.currentTurnIndex };
@@ -461,7 +523,6 @@ class InitiativeTracker {
             this.logToRenderer(`Error saving encounter: ${error.message}`);
         }
     }
-
     loadEncounterFromFile(filePath) {
         try {
             const savedState = JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -475,13 +536,14 @@ class InitiativeTracker {
         }
     }
 
+    /**
+     * Executes a stat check or saving throw roll.
+     */
     rollStat(creatureId, rollType, stat, type) {
         const creature = this.getCreature(creatureId);
         if (!creature) return null;
-
         let modifier = 0;
         let checkType = '';
-
         if (type === 'check') {
             const score = creature.scores ? (creature.scores[stat] || 10) : 10;
             modifier = Math.floor((score - 10) / 2);
@@ -490,38 +552,32 @@ class InitiativeTracker {
             modifier = creature.saves ? (parseInt(creature.saves[stat], 10) || 0) : 0;
             checkType = `${stat.toUpperCase()} Save`;
         }
-
         let rollNotation = '1d20';
         if (rollType === 'adv') rollNotation = '2d20kh1';
         if (rollType === 'dis') rollNotation = '2d20kl1';
-
         const roll = new DiceRoller().roll(rollNotation);
         const result = formatRoll(creature.name, rollType, checkType, roll, modifier);
-
         return result;
     }
 
+    /**
+     * Executes an attack roll for a combatant.
+     */
     rollAttack(creatureId, rollType, modIndex = "1") {
         const creature = this.getCreature(creatureId);
         if (!creature) return null;
-
         const modStr = (modIndex === "2" && creature.attackMod2) ? creature.attackMod2 : creature.attackMod;
         const modifier = parseInt(modStr, 10) || 0;
         const checkType = 'Attack';
-
         let rollNotation = '1d20';
         if (rollType === 'adv') rollNotation = '2d20kh1';
         if (rollType === 'dis') rollNotation = '2d20kl1';
-
         const roll = new DiceRoller().roll(rollNotation);
         const result = formatRoll(creature.name, rollType, checkType, roll, modifier);
-
         return result;
     }
-
     getInitiativeOrder() {
         return this.initiativeOrder;
     }
 }
-
 module.exports = InitiativeTracker;

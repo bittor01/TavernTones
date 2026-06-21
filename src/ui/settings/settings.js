@@ -1,6 +1,10 @@
 // Performance and security update
+/**
+ * Settings window renderer script.
+ * Manages application configuration, bot setup, and path selection.
+ */
 document.addEventListener('DOMContentLoaded', () => {
-    // Discord settings
+    // --- UI Element References: Discord Bot ---
     const enableDiscordBotCheckbox = document.getElementById('enableDiscordBot');
     const discordFieldsContainer = document.getElementById('discord-fields');
     const tokenInput = document.getElementById('token');
@@ -8,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const textChannelInput = document.getElementById('textChannel');
     const botRoleIdInput = document.getElementById('botRoleId');
 
-    // Settings fields
+    // --- UI Element References: Application Paths ---
     const ffmpegPathInput = document.getElementById('ffmpegPath');
     const bestiaryPathInput = document.getElementById('bestiaryPath');
     const gitRepoUrlInput = document.getElementById('gitRepoUrl');
@@ -17,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const defaultMusicPathInput = document.getElementById('defaultMusicPath');
     const audioModeToggle = document.getElementById('audioModeToggle');
 
-    // Buttons
+    // --- UI Element References: Control Buttons ---
     const browseFfmpegBtn = document.getElementById('browse-ffmpeg');
     const browseBestiaryBtn = document.getElementById('browse-bestiary');
     const fetchBestiaryBtn = document.getElementById('fetch-bestiary-btn');
@@ -29,9 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const walkthroughBtn = document.getElementById('walkthrough-btn');
     const saveButton = document.getElementById('save-button');
 
+    // Store for tracking unsaved changes
     let originalConfig = {};
 
+    /**
+     * Compares current form state against the original configuration.
+     * Highlights the save button if changes are detected and valid.
+     */
     const checkDirty = () => {
+        // Collect current values from the form
         const currentConfig = {
             enabled: enableDiscordBotCheckbox.checked,
             token: tokenInput.value,
@@ -47,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
             audioMode: audioModeToggle.checked
         };
 
+        // Determine if any value differs from the original
         const isDirty = Object.keys(currentConfig).some(key => {
             const val = currentConfig[key];
             const orig = originalConfig[key];
@@ -54,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return val !== (orig || '');
         });
 
-        // Validation: If bot enabled, all 4 fields must be present
+        // Basic validation: ensure all Discord fields are filled if bot is enabled
         let isValid = true;
         if (enableDiscordBotCheckbox.checked) {
             if (!tokenInput.value || !voiceChannelInput.value || !textChannelInput.value || !botRoleIdInput.value) {
@@ -62,13 +73,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Toggle visual state of the save button
         if (isDirty && isValid) {
             saveButton.classList.add('dirty');
         } else {
             saveButton.classList.remove('dirty');
         }
     };
-
     enableDiscordBotCheckbox.addEventListener('change', () => {
         discordFieldsContainer.style.opacity = enableDiscordBotCheckbox.checked ? '1' : '0.5';
         discordFieldsContainer.style.pointerEvents = enableDiscordBotCheckbox.checked ? 'auto' : 'none';
@@ -81,8 +92,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     audioModeToggle.addEventListener('change', checkDirty);
 
-    // Function to handle browsing for a folder
+    /**
+     * Common handler for folder selection buttons.
+     */
     const handleBrowse = async (ipcChannel, inputElement) => {
+        // Trigger OS directory picker via preload API
         const path = await window.settings.selectFolder(ipcChannel);
         if (path) {
             inputElement.value = path;
@@ -97,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
             checkDirty();
         }
     });
-
     browseBestiaryBtn.addEventListener('click', () => handleBrowse('select-bestiary-folder', bestiaryPathInput).then(checkDirty));
     browseRandomTablesBtn.addEventListener('click', () => handleBrowse('select-random-tables-folder', randomTablesPathInput).then(checkDirty));
     browseMusicBtn.addEventListener('click', () => handleBrowse('select-music-folder', defaultMusicPathInput).then(checkDirty));
@@ -112,7 +125,6 @@ document.addEventListener('DOMContentLoaded', () => {
             checkDirty();
         }
     });
-
     fetchBestiaryBtn.addEventListener('click', async () => {
         if (!bestiaryPathInput.value) {
             alert("Please set a Bestiary Data Path first.");
@@ -130,32 +142,29 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchBestiaryBtn.textContent = "Fetch/Update Bestiary Data";
     });
 
-    // --- Slash Commands ---
+    /**
+     * Updates the UI based on real-time bot connectivity status.
+     */
     const updateBotStatusUI = (status) => {
         const isOnline = status && status.status === 'online';
         const isConnecting = status && status.status === 'offline' && status.message === 'Connecting...';
 
-        // Update Buttons
+        // Enable Slash Command registration only if bot is online
         [registerSlashBtn, unregisterSlashBtn].forEach(btn => {
             btn.disabled = !isOnline;
             btn.style.opacity = isOnline ? '1' : '0.5';
             btn.title = isOnline ? "" : "The bot must be connected to register slash commands.";
         });
 
-        // Update Status Indicator
+        // Update the visual status LED emoji
         const indicator = document.getElementById('bot-status-indicator');
         if (indicator) {
-            if (isOnline) {
-                indicator.textContent = '🟩';
-            } else if (isConnecting) {
-                indicator.textContent = '🟨';
-            } else {
-                indicator.textContent = '🟥';
-            }
+            if (isOnline) indicator.textContent = '🟩';
+            else if (isConnecting) indicator.textContent = '🟨';
+            else indicator.textContent = '🟥';
             indicator.title = `Bot Status: ${status.message}`;
         }
     };
-
     registerSlashBtn.addEventListener('click', async () => {
         registerSlashBtn.disabled = true;
         const result = await window.settings.registerSlashCommands();
@@ -163,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
         else alert("Error: " + result.error);
         registerSlashBtn.disabled = false;
     });
-
     unregisterSlashBtn.addEventListener('click', async () => {
         unregisterSlashBtn.disabled = true;
         const result = await window.settings.unregisterSlashCommands();
@@ -171,7 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
         else alert("Error: " + result.error);
         unregisterSlashBtn.disabled = false;
     });
-
     if (walkthroughBtn) {
         walkthroughBtn.addEventListener('click', () => {
             window.settings.openWalkthrough();
@@ -188,7 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const licenseTextDialog = document.getElementById('license-text-dialog');
     const licenseTextTitle = document.getElementById('license-text-title');
     const licenseTextContent = document.getElementById('license-text-content');
-
     helpButton.addEventListener('click', async () => {
         const content = await window.settings.getHelpContent();
         // Basic Markdown-ish parsing for better display
@@ -200,11 +206,9 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/^- (.*$)/gm, '<li>$1</li>')
             .replace(/\[(.*?)\]\((.*?)\)/g, (m, text, url) => `<a href="#" onclick="window.settings.openExternal('${url}')">${text}</a>`)
             .replace(/\n\n/g, '<br><br>');
-
         helpContent.innerHTML = parsed;
         helpDialog.showModal();
     });
-
     licenseButton.addEventListener('click', async () => {
         const result = await window.settings.getLicenses();
         if (result.success) {
@@ -212,15 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
             result.licenses.forEach(pkg => {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #333';
-
                 const nameTd = document.createElement('td');
                 nameTd.style.padding = '8px';
                 nameTd.textContent = pkg.name;
-
                 const versionTd = document.createElement('td');
                 versionTd.style.padding = '8px';
                 versionTd.textContent = pkg.version;
-
                 const licenseTd = document.createElement('td');
                 licenseTd.style.padding = '8px';
                 const licenseSpan = document.createElement('span');
@@ -229,18 +230,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 licenseSpan.style.textDecoration = 'underline';
                 licenseSpan.style.color = '#a0c8ff';
                 licenseSpan.title = 'Click to view full license text';
-
                 licenseSpan.onclick = () => {
                     licenseTextTitle.textContent = `${pkg.name} - ${licenseSpan.textContent} License`;
                     licenseTextContent.textContent = pkg.licenseText || 'No license text available.';
                     licenseTextDialog.showModal();
                 };
-
                 licenseTd.appendChild(licenseSpan);
                 tr.appendChild(nameTd);
                 tr.appendChild(versionTd);
                 tr.appendChild(licenseTd);
-
                 licenseTableBody.appendChild(tr);
             });
             licenseDialog.showModal();
@@ -248,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Error fetching licenses: " + result.error);
         }
     });
-
     window.settings.onBotStatus(updateBotStatusUI);
 
     // Request existing config from main process when window loads
@@ -262,7 +259,6 @@ document.addEventListener('DOMContentLoaded', () => {
             enableDiscordBotCheckbox.checked = !!config.enabled;
             discordFieldsContainer.style.opacity = enableDiscordBotCheckbox.checked ? '1' : '0.5';
             discordFieldsContainer.style.pointerEvents = enableDiscordBotCheckbox.checked ? 'auto' : 'none';
-
             tokenInput.value = config.token || '';
             voiceChannelInput.value = config.voiceChannel || '';
             textChannelInput.value = config.textChannel || '';
@@ -287,7 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
             checkDirty();
         }
     });
-
     saveButton.addEventListener('click', () => {
         if (enableDiscordBotCheckbox.checked) {
             if (!tokenInput.value || !voiceChannelInput.value || !textChannelInput.value || !botRoleIdInput.value) {
@@ -295,7 +290,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
         }
-
         const newConfig = {
             enabled: enableDiscordBotCheckbox.checked,
             token: tokenInput.value,

@@ -1,15 +1,25 @@
-// Performance and security update
+// Initialize the core application components and environment.
+// Performance and security updates are prioritized here.
+
+// Electron modules facilitate window management, IPC, and secure OS integration.
 const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } = require('electron');
 
+// Register a custom 'safe-media' protocol to allow the UI to stream local audio
+// files without violating restrictive Content Security Policies (CSP).
 protocol.registerSchemesAsPrivileged([
     { scheme: 'safe-media', privileges: { secure: true, standard: true, supportFetchAPI: true, bypassCSP: true, stream: true } }
 ]);
 
 const path = require('path');
 const { pathToFileURL } = require('url');
+
+// Discord.js and Voice modules provide the backbone for bot interaction and audio streaming.
 const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder, Events, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+// Import Discord voice modules for audio streaming
 const { joinVoiceChannel, entersState, VoiceConnectionStatus, getVoiceConnection } = require('@discordjs/voice');
 
+// Instantiate the Discord client with intents required to listen for commands
+// and manage voice connections across servers.
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -17,12 +27,14 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.DirectMessages
     ],
+    // Partials enable the bot to handle interactions in DMs or with older messages.
     partials: [Partials.Channel, Partials.Message]
 });
+// Store active dropdown handlers directly on the client for easy access during interactions.
 client.npcDropdownHandlers = new Map();
-console.log('Discord client instantiated.');
+
+// External dependencies for network requests, audio processing, and data parsing.
 const axios = require('axios');
-console.log('Axios loaded.');
 const BackendAudioPlayer = require('./BackendAudioPlayer.js');
 const CommandHandler = require('../../discord/CommandHandler.js');
 const FiveEToolsParser = require('./5eParser.js');
@@ -33,8 +45,9 @@ const DropdownHandler = require('../../discord/DropdownHandler.js');
 const fs = require('fs');
 const { DiceRoller } = require('@dice-roller/rpg-dice-roller');
 const GitHubSync = require('./GitHubSync.js');
-const { Worker } = require('worker_threads');
 
+// Use Worker threads to keep the main process responsive during heavy disk scans.
+const { Worker } = require('worker_threads');
 let discordConfig;
 
 // Caching for music library
@@ -42,42 +55,63 @@ let cachedMusicLibrary = null;
 let cachedFlatMusicList = null;
 let cachedDiscordSongOptions = null;
 
+/**
+ * Retrieves and formats the music library structure.
+ * It combines the disk-scanned library with "loose" files added manually.
+ * @returns {object} The music library object.
+ */
 const getMusicLibrary = () => {
+    // Fail-safe for initialization race conditions where config isn't yet loaded.
     if (!discordConfig) return { children: [] };
+
+    // Memoize the library structure to prevent expensive re-parsing on every UI update.
     if (cachedMusicLibrary) return cachedMusicLibrary;
 
-    // Use a simpler copy instead of full deep clone if we don't modify it much
-    // Or just return it if we trust consumers not to mutate.
-    // For safety, we'll do a light clone of the top level and 'Loose Files'
+    // Start with the base scanned library from disk.
     const library = { ...(discordConfig.musicLibrary || { children: [] }) };
     library.children = library.children ? [...library.children] : [];
 
+    // Loose files are audio tracks added outside the primary music directory.
+    // They are grouped into a virtual "Loose Files" folder for a cleaner UI.
     const looseFiles = discordConfig.looseFiles || [];
     if (looseFiles.length > 0) {
         let looseFolder = library.children.find(c => c.name === 'Loose Files');
         if (looseFolder) {
-            // Clone loose folder to avoid mutating discordConfig
+            // Clone the existing virtual folder to avoid direct mutation of the config object.
             looseFolder = { ...looseFolder };
             const idx = library.children.findIndex(c => c.name === 'Loose Files');
             library.children[idx] = looseFolder;
         } else {
+            // Create the virtual folder if this is the first loose file being added.
             looseFolder = { name: 'Loose Files', type: 'directory', children: [], path: 'loose' };
             library.children.push(looseFolder);
         }
+
+        // Convert raw file paths into the structured node format used by the tree view.
         looseFolder.children = looseFiles.map(p => ({
             name: path.basename(p),
             path: p,
             type: 'file'
         }));
     }
+
     cachedMusicLibrary = library;
     return library;
 };
 
+/**
+ * Returns a flat array of all music file paths in the library.
+ * Useful for index-based selection and fuzzy searching.
+ * @returns {string[]}
+ */
 const getFlatMusicList = () => {
+    // Return the cached flattened list if the library hasn't changed.
     if (cachedFlatMusicList) return cachedFlatMusicList;
 
     const list = [];
+    /**
+     * Recursive helper to traverse the library tree and harvest all file nodes.
+     */
     const traverse = (node) => {
         if (node.type === 'file') {
             list.push(node.path);
@@ -85,18 +119,25 @@ const getFlatMusicList = () => {
             node.children.forEach(traverse);
         }
     };
+
+    // Flatten the library starting from the root of the hierarchy.
     const library = getMusicLibrary();
     traverse(library);
+
     cachedFlatMusicList = list;
     return list;
 };
 
+/**
+ * Invalidates all music-related caches.
+ */
 function invalidateMusicCache() {
+    // Reset library and list caches
     cachedMusicLibrary = null;
     cachedFlatMusicList = null;
+    // Reset Discord dropdown options cache
     cachedDiscordSongOptions = null;
 }
-
 let connection;
 let voiceStatus = 'disconnected'; // disconnected, connecting, connected
 let isJoiningVoice = false; // Prevents race conditions during knocking/joining
@@ -108,13 +149,14 @@ let fiveEToolsParser;
 // Anti-collision state
 let isSoftLocked = false;
 
-// Local Instance Lock
+// Implement a Single Instance Lock to prevent database or audio port collisions.
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
+    // If another instance is already running, exit immediately.
     app.quit();
 } else {
     app.on('second-instance', (event, commandLine, workingDirectory) => {
-        // Someone tried to run a second instance, we should focus our window.
+        // If a user tries to launch TavernTones again, bring the existing window to the front.
         if (mainWindow) {
             if (mainWindow.isMinimized()) mainWindow.restore();
             mainWindow.focus();
@@ -166,7 +208,6 @@ const DND_CONDITIONS = {
     "Stunned": { emoji: "😵‍💫", color: "#ffc107", text: "You are Incapacitated, can't move, and can speak only falteringly. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack roll that hits you is a Critical Hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.)" },
     "Unconscious": { emoji: "😴", color: "#343a40", text: "You are Incapacitated, can't move or speak, and are unaware of your surroundings. You drop whatever you're holding and fall prone. You automatically fail Strength and Dexterity saving throws. Attack rolls against you have Advantage. Any attack that hits you is a critical hit if the attacker is within 5 feet of you. (Incapacitated: You can't take actions or reactions. Your Concentration in broken. You can't speak.) (Prone: Your only movement option is to crawl, unless you stand up and thereby end the condition. You have Disadvantage on attack rolls. An attack roll against you has Advantage if the attacker is within 5 feet of you. Otherwise, the attack roll has Disadvantage.)" }
 };
-
 const hpBarEmojiMap = {
     '#007bff': '🟦',      // Blue (100%)
     '#28a745': '🟩',     // Green (50-99%)
@@ -177,27 +218,46 @@ const hpBarEmojiMap = {
     'empty': '⬛'
 };
 
+/**
+ * Sends updated initiative data to the renderer process.
+ * @param {object[]} initiativeOrder - The current initiative order.
+ * @param {number} currentTurnIndex - Index of the current turn.
+ * @param {any} [extra=null] - Optional additional data.
+ */
 async function sendInitiativeUpdate(initiativeOrder, currentTurnIndex, extra = null) {
+    // Only send if app is ready and window exists
     if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send('update-initiative-list', { initiativeOrder, currentTurnIndex, extra });
     }
     else if (!isAppReady) {
+        // Wait and retry if app is not yet initialized
         await sleep(100);
         sendInitiativeUpdate(initiativeOrder, currentTurnIndex, extra);
     }
 }
 
-// Function to send dice roll log messages to the renderer
+/**
+ * Sends a dice roll log entry to the renderer.
+ * @param {string} message - The roll description.
+ */
 async function logDiceRollToRenderer(message) {
+    // Verify window state before sending
     if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send('dice-log', message);
     } else if (!isAppReady) {
+        // Retry loop if app is starting up
         await sleep(100);
         logDiceRollToRenderer(message);
     }
 }
 
+/**
+ * Utility to pause execution.
+ * @param {number} ms - Time in milliseconds.
+ * @returns {Promise}
+ */
 function sleep(ms) {
+    // Clamp to minimum 0
     const safeMs = Math.max(0, Number(ms) || 0);
     return new Promise(resolve => setTimeout(resolve, safeMs));
 }
@@ -220,7 +280,6 @@ async function createWindow(showWindow = true) {
             nodeIntegration: true
         }
     });
-
     if (showWindow) {
         mainWindow.maximize();
         mainWindow.show();
@@ -228,7 +287,6 @@ async function createWindow(showWindow = true) {
     } else {
         console.log('Window created minimized.');
     }
-
     await mainWindow.loadFile(path.join(__dirname, '../../ui/Index.html'));
     console.log('index.html loaded.');
     windowloaded = true;
@@ -242,7 +300,6 @@ function createSettingsWindow() {
         settingsWindow.focus();
         return;
     }
-
     settingsWindow = new BrowserWindow({
         width: 900,
         height: 700,
@@ -253,27 +310,29 @@ function createSettingsWindow() {
             nodeIntegration: true
         }
     });
-
     settingsWindow.loadFile(path.join(__dirname, '../../ui/settings/settings.html'));
-
     settingsWindow.on('closed', () => {
         settingsWindow = null;
     });
 }
 
 /**
- * The main application loader. This function is responsible for initializing the application,
- * creating the main window, checking for necessary configurations, and setting up all
- * backend services and IPC handlers. It runs once the Electron app is ready.
+ * The core application bootstrapper. It coordinates configuration loading,
+ * protocol registration, service initialization, and window creation.
  */
 async function apploader() {
     await app.whenReady().then(async () => {
+        // Load persistent settings from Electron-store.
         discordConfig = await getDiscordConfig();
+
+        // Implement the custom 'safe-media' protocol to bypass CORS/CSP
+        // restrictions when the UI needs to play local audio files.
         protocol.handle('safe-media', async (request) => {
             try {
                 const url = new URL(request.url);
                 const absolutePath = url.searchParams.get('path');
 
+                // Security check: Verify file exists before attempting to read.
                 if (!absolutePath || !fs.existsSync(absolutePath)) {
                     console.error(`[safe-media] File not found or invalid: ${absolutePath}`);
                     return new Response('File not found', { status: 404 });
@@ -287,13 +346,12 @@ async function apploader() {
                 };
                 const contentType = mimeTypes[ext] || 'audio/mpeg';
 
-                // Reading file into memory for the Response.
-                // This is less efficient but avoids many issues with custom protocols and Range requests.
+                // We load the file into a buffer to ensure compatibility with various browser
+                // fetching strategies, even if it's slightly more memory-intensive for large files.
                 const buffer = await fs.promises.readFile(absolutePath);
                 return new Response(buffer, {
                     headers: { 'Content-Type': contentType }
                 });
-
             } catch (error) {
                 console.error('[safe-media] Protocol error:', error);
                 return new Response('Error: ' + error.message, { status: 500 });
@@ -301,27 +359,29 @@ async function apploader() {
         });
         console.log('App is ready.');
 
-        // Initialize components
+        // Instantiate core logic handlers for audio, filesystem watching, and 5e data parsing.
         musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, discordConfig.ffmpegPath);
         setupFilesystemWatchers(discordConfig);
 
-        // --- Start Music Library Scan ---
+        // Initiate a background scan of the music library.
         if (discordConfig.defaultMusicPath) {
-            // Load from cache immediately for speed
+            // Use existing cached library metadata if available for instant UI responsiveness.
             if (discordConfig.musicLibrary) {
-                ipcMain.handleOnce('get-music-library-ready', () => true); // Signal that initial data is there
+                ipcMain.handleOnce('get-music-library-ready', () => true);
             }
             scanMusicLibrary();
         }
-        ipcloader(); // Load all IPC handlers BEFORE creating window
+
+        // Map all IPC events. This must happen before window creation to avoid race conditions.
+        ipcloader();
         fiveEToolsParser = new FiveEToolsParser(logToRenderer, app, discordConfig);
 
-        // Check for folder configuration first
+        // Verify that critical data directories are configured.
         const { bestiaryPath, randomTablesPath } = discordConfig;
         const pathsConfigured = bestiaryPath && randomTablesPath;
-
         if (!pathsConfigured) {
             logToRenderer("Essential data folders are not configured.");
+            // Blocking dialog to force user configuration before the app continues.
             await dialog.showMessageBox(null, {
                 type: 'warning',
                 title: 'Configuration Required',
@@ -329,10 +389,10 @@ async function apploader() {
                 buttons: ['Go to Settings']
             });
             createSettingsWindow();
-            return; // Halt further initialization.
+            return;
         }
 
-        // If we've reached here, paths are configured, so we can show the main window.
+        // Configuration is valid, proceed to launch the primary interface.
         await createWindow(true);
         isAppReady = true;
 
@@ -348,7 +408,6 @@ async function apploader() {
             logToRenderer("Discord bot is disabled in settings.");
             mainWindow.webContents.send('discord-bot-status', { status: 'offline', message: 'Disabled' });
         }
-
         app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length === 0) {
                 // Re-check config on activate, in case it was the only window.
@@ -361,29 +420,28 @@ async function apploader() {
         });
     });
 }
-
 ipcMain.handle('get-dnd-conditions', async () => {
     return DND_CONDITIONS;
 });
-
 ipcMain.handle('get-mob-rules-data', async () => {
     return mobRules;
 });
-
 ipcMain.handle('get-image-as-data-url', async (event, relativePath) => {
-    logToRenderer(`[IPC] Received 'get-image-as-data-url' request with relative path: ${relativePath}`);
+    // Determine the base path for assets, which varies depending on whether the app is packaged.
     const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-    logToRenderer(`[IPC] Determined base path: ${basePath} (isPackaged: ${app.isPackaged})`);
 
-    const absoluteImagePath = app.isPackaged ? path.join(basePath, 'MobRules', 'MobRules.png') : path.join(basePath, relativePath);
-    logToRenderer(`[IPC] Constructed absolute image path: ${absoluteImagePath}`);
+    // Resolve the full filesystem path for the requested image.
+    const absoluteImagePath = app.isPackaged
+        ? path.join(basePath, 'MobRules', 'MobRules.png')
+        : path.join(basePath, relativePath);
 
     try {
-        logToRenderer(`[IPC] Attempting to read file at: ${absoluteImagePath}`);
+        // Read the image file directly from disk.
         const data = await fs.readFile(absoluteImagePath);
         const extension = path.extname(absoluteImagePath).substring(1);
+
+        // Convert to Base64 Data URL so the UI can display it without worrying about file protocol security.
         const dataUrl = `data:image/${extension};base64,${data.toString('base64')}`;
-        logToRenderer(`[IPC] Successfully read and encoded image.`);
         return { success: true, dataUrl: dataUrl, absolutePath: absoluteImagePath };
     } catch (error) {
         const errorMessage = `Failed to read image file. Error: ${error.message}`;
@@ -405,29 +463,36 @@ process.on('uncaughtException', (error) => {
     }
     console.error('Uncaught Exception in Main Process:', error);
 });
-
 apploader();
 
 
 
+/**
+ * Creates a visual HP bar using emojis.
+ * @param {object} creature - The combatant object.
+ * @returns {string} Emoji string.
+ */
 function createEmojiHpBar(creature) {
     const BAR_LENGTH = 8;
     const hp = creature.hp || 0;
     const maxHp = creature.maxHp || 1;
     const tempHp = creature.tempHp || 0;
 
+    // Return dead blocks if HP is 0 or less
     if (hp <= 0) {
-        return hpBarEmojiMap['#6c757d'].repeat(BAR_LENGTH); // All dead blocks
+        return hpBarEmojiMap['#6c757d'].repeat(BAR_LENGTH);
     }
 
+    // Calculate number of blocks for HP and Temp HP
     const hpBlocks = Math.round((hp / maxHp) * BAR_LENGTH);
-    const tempHpBlocks = Math.min(BAR_LENGTH, Math.round((tempHp / maxHp) * BAR_LENGTH)); // Cap at bar length
+    const tempHpBlocks = Math.min(BAR_LENGTH, Math.round((tempHp / maxHp) * BAR_LENGTH));
 
+    // Get color theme for HP
     const hpColorEmoji = hpBarEmojiMap[getHpColor(hp, maxHp)] || hpBarEmojiMap['#007bff'];
     const tempHpEmoji = hpBarEmojiMap['#8a2be2'];
     const emptyEmoji = hpBarEmojiMap['empty'];
-
     let bar = '';
+    // Build bar string block by block
     for (let i = 0; i < BAR_LENGTH; i++) {
         if (i < tempHpBlocks) {
             bar += tempHpEmoji;
@@ -440,28 +505,40 @@ function createEmojiHpBar(creature) {
     return bar;
 }
 
+/**
+ * Formats a monster's stat block for Discord display.
+ * @param {object} monster - Monster data.
+ * @returns {object} Object containing mainEmbed and longFields.
+ */
 function formatStatBlockForDiscord(monster) {
     // Part 1: Create the main embed with core stats
     const mainEmbed = new EmbedBuilder()
         .setColor(0x0099FF);
 
+    // Build the header and core stats description
     let description = `# ${monster.name}\n*${monster.size} ${typeof monster.type === 'object' ? monster.type.type : monster.type}, ${monster.alignment}*\n\n`;
     const ac = monster.ac.map(a => (a.ac || a) + (a.from ? ` (${a.from.join(', ')})` : '')).join(', ');
     description += `**Armor Class** ${ac}\n`;
     description += `**Hit Points** ${monster.hp.average} (${monster.hp.formula})\n`;
     description += `**Speed** ${Object.entries(monster.speed).map(([type, val]) => `${type} ${val.number || val} ft.`).join(', ')}\n\n`;
 
+    /**
+     * Helper to format ability modifiers.
+     */
     const formatMod = (score) => {
         const mod = Math.floor(((score || 10) - 10) / 2);
         return mod >= 0 ? `+${mod}` : `${mod}`;
     };
+    // Add ability scores
     description += `**STR** ${monster.str} (${formatMod(monster.str)}) | **DEX** ${monster.dex} (${formatMod(monster.dex)}) | **CON** ${monster.con} (${formatMod(monster.con)})\n`;
     description += `**INT** ${monster.int} (${formatMod(monster.int)}) | **WIS** ${monster.wis} (${formatMod(monster.wis)}) | **CHA** ${monster.cha} (${formatMod(monster.cha)})`;
-
     mainEmbed.setDescription(description);
 
     // Part 2: Prepare long fields for separate messages
     const longFields = [];
+    /**
+     * Helper to process nested entry arrays into strings.
+     */
     const processEntries = (entries) => {
         if (!entries) return '';
         return entries.map(e => {
@@ -474,6 +551,7 @@ function formatStatBlockForDiscord(monster) {
         }).join('\n\n');
     };
 
+    // Separate long content into dedicated fields for threads
     if (monster.trait && monster.trait.length > 0) {
         longFields.push({ name: 'Traits', value: processEntries(monster.trait) });
     }
@@ -486,32 +564,42 @@ function formatStatBlockForDiscord(monster) {
     if (monster.reaction && monster.reaction.length > 0) {
         longFields.push({ name: 'Reactions', value: processEntries(monster.reaction) });
     }
-
     return { mainEmbed, longFields };
 }
 
+/**
+ * Prepares the Mob Rules reference embed for Discord.
+ * @param {string} creatureName - Name of the mob.
+ * @returns {object} Embed and image path.
+ */
 function formatMobRulesForDiscord(creatureName) {
     const { discord: discordData, imagePath } = mobRules;
 
+    // Create the rule reference embed
     const mainEmbed = new EmbedBuilder()
-        .setColor(0xFFA500) // Orange for rules
+        .setColor(0xFFA500) // Use orange theme
         .setTitle(`${discordData.title}: ${creatureName}`)
         .setDescription(discordData.description)
         .addFields(...discordData.fields)
-        .setImage(`attachment://${path.basename(imagePath)}`); // Set the image to be an attachment
-
+        // Reference the attached image file
+        .setImage(`attachment://${path.basename(imagePath)}`);
     return { mainEmbed, imagePath };
 }
 
+/**
+ * Splits a long string into chunks for Discord.
+ * @param {string} text - Input text.
+ * @param {number} [maxLength=1024] - Max length per chunk.
+ * @returns {string[]}
+ */
 function splitText(text, maxLength = 1024) {
     const chunks = [];
     if (!text) return chunks;
-
     let currentChunk = "";
+    // Split by line to avoid breaking words where possible
     const lines = text.split('\n');
-
     for (const line of lines) {
-        // If a single line is longer than the max length, split it forcefully
+        // Forcefully split lines that are too long
         if (line.length > maxLength) {
             if (currentChunk) {
                 chunks.push(currentChunk);
@@ -522,7 +610,7 @@ function splitText(text, maxLength = 1024) {
             continue;
         }
 
-        // If adding the next line exceeds max length, push the current chunk
+        // Buffer the next line
         if (currentChunk.length + line.length + 1 > maxLength) {
             chunks.push(currentChunk);
             currentChunk = "";
@@ -532,29 +620,33 @@ function splitText(text, maxLength = 1024) {
         currentChunk += (currentChunk ? '\n' : '') + line;
     }
 
-    // Push the last remaining chunk
+    // Add final chunk
     if (currentChunk) {
         chunks.push(currentChunk);
     }
-
     return chunks;
 }
 
+/**
+ * Shows turn-based reminders in an Electron dialog.
+ * @param {object} creature - The active combatant.
+ * @param {string} turnEvent - 'start' or 'end'.
+ */
 async function checkAndShowReminders(creature, turnEvent) {
     if (!creature) return;
-
     let reminderMessages = [];
-    // Check for text reminders
+    // Check for user-defined reminders
     const reminderText = creature.reminders ? creature.reminders[turnEvent] : '';
     if (reminderText) {
         reminderMessages.push(reminderText);
     }
 
-    // Check for legendary action reminder on turn end
+    // Auto-reminder for legendary actions
     if (turnEvent === 'end' && creature.isFriendly) {
         reminderMessages.push(`Legendary Action Reminder: End of ${creature.name}'s turn.`);
     }
 
+    // Show popup if any reminders were found
     if (reminderMessages.length > 0) {
         const message = reminderMessages.join('\n\n');
         await dialog.showMessageBox(mainWindow, {
@@ -566,36 +658,40 @@ async function checkAndShowReminders(creature, turnEvent) {
         });
     }
 }
-
 const InitiativeTracker = require('../features/InitiativeTracker.js');
 
+/**
+ * Initializes OS-level file watchers for data directories.
+ * @param {object} config - Configuration object.
+ */
 function setupFilesystemWatchers(config) {
     const { defaultMusicPath, randomTablesPath, bestiaryPath } = config;
 
+    // Define folders to watch and their update callbacks
     const watchers = [
         { name: 'Music', path: defaultMusicPath, callback: () => musicPlayer && musicPlayer._emitStatusUpdate() },
         { name: 'Random Tables', path: randomTablesPath, callback: () => logToRenderer("Random tables folder changed. Refreshing...") },
         { name: 'Bestiary', path: bestiaryPath, callback: () => logToRenderer("Bestiary folder changed. Refreshing...") }
     ];
-
     const watcherTimers = new Map();
-
     watchers.forEach(w => {
+        // Verify path existence before watching
         if (w.path && fs.existsSync(w.path)) {
             try {
+                // Watch for changes recursively
                 fs.watch(w.path, { recursive: true }, (eventType, filename) => {
-                    // Debounce watcher events to prevent spam
+                    // Debounce watcher events to prevent system spam
                     const timerKey = `${w.name}:${filename}`;
                     if (watcherTimers.has(timerKey)) {
                         clearTimeout(watcherTimers.get(timerKey));
                     }
 
+                    // Execute callback after 500ms of stability
                     const timer = setTimeout(() => {
                         logToRenderer(`[Watcher] ${w.name} change detected: ${eventType} ${filename || ''}`);
                         w.callback();
                         watcherTimers.delete(timerKey);
                     }, 500);
-
                     watcherTimers.set(timerKey, timer);
                 });
                 logToRenderer(`[Watcher] Started watching ${w.name}: ${w.path}`);
@@ -639,20 +735,16 @@ async function ipcloader() {
             defaultPath: app.getPath('documents'),
             properties: ['openDirectory']
         });
-
         if (!filePaths || filePaths.length === 0) {
             return null; // User cancelled
         }
-
         const parentDir = filePaths[0];
         const dataDir = path.join(parentDir, 'Tavern Tones');
-
         try {
             // Ensure the main data directory exists
             if (!fs.existsSync(dataDir)) {
                 await fs.promises.mkdir(dataDir, { recursive: true });
             }
-
             const paths = {
                 bestiaryPath: path.join(dataDir, 'bestiary'),
                 randomTablesPath: path.join(dataDir, 'randomtables'),
@@ -669,7 +761,6 @@ async function ipcloader() {
             // Copy default data (random tables) from the application package
             const sourcePath = app.getAppPath();
             const sourceTables = path.join(sourcePath, 'randomtables');
-
             if (fs.existsSync(sourceTables)) {
                 // Use a more compatible copy approach if cp is missing or fails
                 if (fs.promises.cp) {
@@ -681,14 +772,12 @@ async function ipcloader() {
                     throw new Error("fs.promises.cp is required for folder copying.");
                 }
             }
-
             await dialog.showMessageBox(mainWindow, {
                 type: 'info',
                 title: 'Success',
                 message: `Default folders created inside:\n${dataDir}\n\nYou can now fetch bestiary data from the settings.`,
                 buttons: ['OK']
             });
-
             return paths;
         } catch (error) {
             console.error('Failed to create default folders:', error);
@@ -702,17 +791,14 @@ async function ipcloader() {
             return null;
         }
     });
-
     ipcMain.handle('fetch-bestiary-data', async (event, { repoUrl, localPath, githubToken }) => {
         const sync = new GitHubSync(logToRenderer, dialog, mainWindow, githubToken);
         return await sync.syncBestiary(repoUrl, localPath);
     });
-
     ipcMain.handle('detect-ffmpeg', async () => {
         const { exec } = require('child_process');
         const isWin = process.platform === 'win32';
         const cmd = isWin ? 'where ffmpeg' : 'which ffmpeg';
-
         const foundPath = await new Promise(resolve => {
             exec(cmd, (error, stdout) => {
                 if (!error && stdout) {
@@ -723,24 +809,20 @@ async function ipcloader() {
                 }
             });
         });
-
         if (foundPath && fs.existsSync(foundPath)) return path.dirname(foundPath);
 
         // Check for bundled ffmpeg
         const exeName = isWin ? 'ffmpeg.exe' : 'ffmpeg';
         const bundledPath = path.join(process.resourcesPath, 'ffmpeg', exeName);
         if (fs.existsSync(bundledPath)) return path.dirname(bundledPath);
-
         const appDirFfmpeg = path.join(path.dirname(process.execPath), 'ffmpeg', exeName);
         if (fs.existsSync(appDirFfmpeg)) return path.dirname(appDirFfmpeg);
 
         // Check same directory as executable
         const sameDirFfmpeg = path.join(path.dirname(process.execPath), exeName);
         if (fs.existsSync(sameDirFfmpeg)) return path.dirname(sameDirFfmpeg);
-
         const localFfmpeg = path.join(app.getAppPath(), 'ffmpeg', exeName);
         if (fs.existsSync(localFfmpeg)) return path.dirname(localFfmpeg);
-
         return null;
     });
 
@@ -752,12 +834,10 @@ async function ipcloader() {
             event.sender.send('discord-config', config);
         }
     });
-
     ipcMain.on('set-discord-config', async (event, config) => {
         // Merge with existing config to prevent data loss
         const existingConfig = await getDiscordConfig();
         const mergedConfig = { ...existingConfig, ...config };
-
         await setDiscordConfig(mergedConfig);
 
         // --- Update the live configuration ---
@@ -765,7 +845,6 @@ async function ipcloader() {
         const oldShowMediaControl = discordConfig ? discordConfig.showMediaControl : true;
         discordConfig = mergedConfig;
         invalidateMusicCache();
-
         if (oldShowMediaControl !== mergedConfig.showMediaControl) {
             updateDiscordMediaControl();
         }
@@ -788,9 +867,7 @@ async function ipcloader() {
             }
         }
     });
-
     ipcMain.on('open-settings-window', createSettingsWindow);
-
     ipcMain.on('open-walkthrough', () => {
         let walkthroughWindow = new BrowserWindow({
             width: 600,
@@ -804,7 +881,6 @@ async function ipcloader() {
         });
         walkthroughWindow.loadFile(path.join(__dirname, '../../ui/walkthrough/walkthrough.html'));
     });
-
     ipcMain.handle('register-slash-commands', async () => {
         if (!discordConfig.token) return { success: false, error: 'No bot token' };
         try {
@@ -867,7 +943,6 @@ async function ipcloader() {
                     ]
                 }
             ];
-
             const guildIds = new Set();
             const channelsToTry = [discordConfig.textChannel, discordConfig.voiceChannel].filter(id => !!id);
             for (const id of channelsToTry) {
@@ -877,7 +952,6 @@ async function ipcloader() {
                 }
                 if (chan && chan.guild) guildIds.add(chan.guild.id);
             }
-
             if (guildIds.size === 0) {
                 // Fallback to global if no channels configured
                 await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
@@ -891,7 +965,6 @@ async function ipcloader() {
             return { success: false, error: e.message };
         }
     });
-
     ipcMain.handle('unregister-slash-commands', async () => {
         if (!discordConfig.token) return { success: false, error: 'No bot token' };
         try {
@@ -905,7 +978,6 @@ async function ipcloader() {
                 }
                 if (chan && chan.guild) guildIds.add(chan.guild.id);
             }
-
             await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
             for (const guildId of guildIds) {
                 await rest.put(Routes.applicationGuildCommands(client.user.id, guildId), { body: [] });
@@ -929,11 +1001,19 @@ async function ipcloader() {
     });
     initiativeTracker = new InitiativeTracker(logToRenderer, logDiceRollToRenderer, sendInitiativeUpdate, autosavePath);
     // --- All core IPC listeners should be registered after the app is ready ---
+
+    // The 'request-initial-load' signal is sent by the UI once it has finished its
+    // internal DOM setup and is ready to receive state data.
     ipcMain.on('request-initial-load', () => {
+        // Sync the initiative tracker state (combatants, turns, etc.)
         if (initiativeTracker) {
             initiativeTracker.sendFullState();
         }
+
+        // Restore the last active playlist if autosave is enabled.
         autoloadMusic();
+
+        // Push the current connection status of the Discord bot so the UI indicators match.
         if (discordConfig && discordConfig.enabled) {
             if (client && client.isReady()) {
                 mainWindow.webContents.send('discord-bot-status', { status: 'online', message: 'Connected' });
@@ -963,70 +1043,57 @@ async function ipcloader() {
             }
         }
     };
-
     ipcMain.on('load-music-file', (event, filePaths) => {
         if (filePaths) {
             musicPlayer.addToStack(filePaths);
         }
     });
-
     ipcMain.on('play-music', async () => {
-        logToRenderer(`IPC 'play-music' (command) received.`);
+        // Intercept play requests to ensure we are connected to voice before streaming starts.
         if (voiceStatus !== 'connected') await joinVoiceChannelAction();
         musicPlayer.play();
     });
-
     ipcMain.on('pause-music', () => {
         logToRenderer(`IPC 'pause-music' received.`);
         musicPlayer.pause();
     });
-
     ipcMain.on('play-next', (event) => {
         if (musicPlayer) musicPlayer.next(false, false);
     });
-
     ipcMain.on('play-prev', (event) => {
         if (musicPlayer) musicPlayer.prev(false);
     });
-
     ipcMain.on('set-loop-mode', (event, { mode }) => {
         if (musicPlayer) musicPlayer.setLoopMode(mode);
     });
-
     ipcMain.on('set-shuffle', (event, { enabled }) => {
         if (musicPlayer) musicPlayer.setShuffle(enabled);
     });
-
     ipcMain.on('remove-from-stack', (event, { index }) => {
         if (musicPlayer) musicPlayer.removeFromStack(index);
     });
-
     ipcMain.on('clear-stack', (event) => {
         if (musicPlayer) musicPlayer.clearStack();
     });
-
     ipcMain.on('jump-to-track', async (event, { index }) => {
         if (musicPlayer) {
             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
             musicPlayer.jumpTo(index, true);
         }
     });
-
     ipcMain.on('play-now', async (event, { index }) => {
         if (musicPlayer) {
             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
             musicPlayer.jumpTo(index, true);
         }
     });
-
     ipcMain.on('seek-music', (event, { time }) => {
         if (musicPlayer) {
             musicPlayer.seek(time);
         }
     });
-
     ipcMain.handle('save-music-preset', async (event, stack, isManual = true) => {
-        // Internal call (autosave) or background save
+        // Handle background autosave requests which don't require user interaction.
         if ((!event || isManual === false || isManual === 'false') && stack) {
             try {
                 await fs.promises.writeFile(musicAutosavePath, JSON.stringify(stack, null, 2));
@@ -1037,6 +1104,7 @@ async function ipcloader() {
             }
         }
 
+        // Handle manual user requests via a standard system Save dialog.
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
             title: 'Save Music Stack Preset',
             defaultPath: 'music-preset.json',
@@ -1056,7 +1124,6 @@ async function ipcloader() {
         }
         return { canceled: true };
     });
-
     ipcMain.handle('load-music-preset', async () => {
         const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
             title: 'Load Music Stack Preset',
@@ -1079,7 +1146,6 @@ async function ipcloader() {
         }
         return { canceled: true };
     });
-
     ipcMain.handle('get-preview-audio-data', async (event, { index = -1 } = {}) => {
         let filePath;
         if (index >= 0 && index < musicPlayer.stack.length) {
@@ -1087,7 +1153,6 @@ async function ipcloader() {
         } else {
             filePath = musicPlayer.getPreviewFilePath();
         }
-
         if (!filePath) {
             return { success: false, error: 'No file available for preview.' };
         }
@@ -1095,13 +1160,11 @@ async function ipcloader() {
         const safeUrl = `safe-media://local/?path=${encodeURIComponent(filePath)}`;
         return { success: true, url: safeUrl };
     });
-
     ipcMain.handle('show-confirm-dialog', async (event, options) => {
         const focusedWindow = BrowserWindow.getFocusedWindow();
         if (!focusedWindow) return { response: options.cancelId || 1 }; // Default to cancel if no window
         return await dialog.showMessageBox(focusedWindow, options);
     });
-
     ipcMain.on('voice-toggle', async () => {
         if (voiceStatus === 'connected') {
             leaveVoiceChannelAction();
@@ -1109,21 +1172,16 @@ async function ipcloader() {
             joinVoiceChannelAction();
         }
     });
-
     ipcMain.on('request-bot-status', () => {
         broadcastBotStatus();
     });
-
-
     ipcMain.handle('get-music-library', async () => {
         return getMusicLibrary();
     });
-
     ipcMain.handle('rescan-music-library', async () => {
         scanMusicLibrary();
         return { success: true };
     });
-
     ipcMain.handle('get-licenses', async () => {
         try {
             const licensesPath = path.join(__dirname, '../data/licenses.json');
@@ -1139,7 +1197,6 @@ async function ipcloader() {
             return { success: false, error: e.message };
         }
     });
-
     const resolveLibraryPaths = (paths) => {
         return paths.map(p => {
             if (path.extname(p).toLowerCase() === '.lnk') {
@@ -1155,11 +1212,9 @@ async function ipcloader() {
             return p;
         });
     };
-
     ipcMain.on('library-action', async (event, { action, paths }) => {
         if (!musicPlayer) return;
         const resolvedPaths = resolveLibraryPaths(paths);
-
         switch (action) {
             case 'play-now':
                 // For 'play now' from library, we insert at the very top (index 0) and play.
@@ -1196,7 +1251,6 @@ async function ipcloader() {
                 break;
         }
     });
-
     ipcMain.handle('read-combat-file', async () => {
         const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
             properties: ['openFile'],
@@ -1214,7 +1268,6 @@ async function ipcloader() {
                 const monster = data;
                 const calculateModifier = (score) => Math.floor(((score || 10) - 10) / 2);
                 const formatModifier = (mod) => (mod >= 0 ? `+${mod}` : `${mod}`);
-
                 const dexMod = calculateModifier(monster.stats.DEX);
                 const hpFormula = `${monster.HP.HD}d${monster.HP.type}${monster.HP.modifier >= 0 ? '+' : ''}${monster.HP.modifier}`;
 
@@ -1234,12 +1287,10 @@ async function ipcloader() {
                     }
                     ttSaves[s.toLowerCase()] = formatModifier(mod);
                 });
-
                 const ttScores = {};
                 stats.forEach(s => {
                     ttScores[s.toLowerCase()] = monster.stats[s];
                 });
-
                 const parseSpeed = (speedObj) => {
                     if (!speedObj) return '30ft';
                     if (typeof speedObj === 'string') {
@@ -1256,7 +1307,6 @@ async function ipcloader() {
                     }
                     return '30ft';
                 };
-
                 const ttCombatant = {
                     name: monster.name,
                     hp: hpFormula,
@@ -1271,7 +1321,6 @@ async function ipcloader() {
                     deathSaves: { successes: 0, failures: 0 },
                     noDeathSaves: false
                 };
-
                 return [ttCombatant];
             }
 
@@ -1283,7 +1332,6 @@ async function ipcloader() {
             return null;
         }
     });
-
     const getAudioFilesRecursive = async (paths) => {
         let results = [];
         const extensions = ['.mp3', '.wav', '.ogg', '.lnk'];
@@ -1305,11 +1353,9 @@ async function ipcloader() {
         }
         return results;
     };
-
     ipcMain.handle('open-file-dialog', async (event, options = {}) => {
         const properties = options.folders ? ['openDirectory'] : ['openFile'];
         if (options.multi) properties.push('multiSelections');
-
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
             title: options.folders ? 'Select Music Folder(s)' : 'Select Music File(s)',
             defaultPath: discordConfig.defaultMusicPath,
@@ -1318,7 +1364,6 @@ async function ipcloader() {
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
             ]
         });
-
         if (filePaths && filePaths.length > 0) {
             return await getAudioFilesRecursive(filePaths);
         }
@@ -1329,7 +1374,6 @@ async function ipcloader() {
     ipcMain.handle('load-sound', async (event, { slotId, multi = false, folders = false } = {}) => {
         const properties = folders ? ['openDirectory'] : ['openFile'];
         if (multi) properties.push('multiSelections');
-
         const { filePaths } = await dialog.showOpenDialog(mainWindow, {
             title: folders ? `Select Folder(s) for Slot ${slotId + 1}` : `Select Sound(s) for Slot ${slotId + 1}`,
             defaultPath: discordConfig.defaultMusicPath,
@@ -1338,14 +1382,12 @@ async function ipcloader() {
                 { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }
             ]
         });
-
         if (filePaths && filePaths.length > 0) {
             const allFiles = await getAudioFilesRecursive(filePaths);
             return allFiles.map(p => ({ path: p, name: path.basename(p) }));
         }
         return [];
     });
-
     ipcMain.on('play-sound', async (event, { slotId, filePath }) => {
         logToRenderer(`IPC 'play-sound' slot ${slotId}, file: ${filePath}`);
         if (filePath && musicPlayer) {
@@ -1356,7 +1398,6 @@ async function ipcloader() {
             mainWindow.webContents.send('soundboard-state-change', { slotId, isPlaying: true });
         }
     });
-
     ipcMain.on('stop-sound', (event, { slotId }) => {
         logToRenderer(`IPC 'stop-sound' slot ${slotId}`);
         if (musicPlayer) {
@@ -1364,7 +1405,6 @@ async function ipcloader() {
             mainWindow.webContents.send('soundboard-state-change', { slotId, isPlaying: false });
         }
     });
-
     ipcMain.on('set-soundboard-volume', (event, { volume }) => {
         if (musicPlayer) {
             musicPlayer.setSoundboardVolume(volume);
@@ -1373,7 +1413,6 @@ async function ipcloader() {
 
     // --- Soundboard Persistence ---
     const soundboardConfigPath = path.join(app.getPath('userData'), 'soundboard.json');
-
     ipcMain.handle('get-soundboard-state', async () => {
         try {
             if (fs.existsSync(soundboardConfigPath)) {
@@ -1386,7 +1425,6 @@ async function ipcloader() {
         }
         return null;
     });
-
     ipcMain.on('save-soundboard-state', (event, state) => {
         try {
             fs.promises.writeFile(soundboardConfigPath, JSON.stringify(state, null, 2))
@@ -1395,14 +1433,12 @@ async function ipcloader() {
             console.error('Error initiating save soundboard:', error);
         }
     });
-
     ipcMain.handle('save-soundboard-preset', async (event, state) => {
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
             title: 'Save Soundboard Preset',
             defaultPath: 'soundboard-preset.json',
             filters: [{ name: 'JSON', extensions: ['json'] }]
         });
-
         if (!canceled && filePath) {
             try {
                 await fs.promises.writeFile(filePath, JSON.stringify(state, null, 2));
@@ -1414,14 +1450,12 @@ async function ipcloader() {
         }
         return { canceled: true };
     });
-
     ipcMain.handle('get-help-content', async () => {
         const paths = [
             path.join(__dirname, '../../../docs/HELP.md'),
             path.join(app.getAppPath(), 'docs/HELP.md'),
             path.join(process.resourcesPath, 'docs/HELP.md')
         ];
-
         for (const helpPath of paths) {
             try {
                 if (fs.existsSync(helpPath)) {
@@ -1431,14 +1465,12 @@ async function ipcloader() {
         }
         return "Help file not found. Checked: " + paths.join(', ');
     });
-
     ipcMain.handle('load-soundboard-preset', async () => {
         const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
             title: 'Load Soundboard Preset',
             filters: [{ name: 'JSON', extensions: ['json'] }],
             properties: ['openFile']
         });
-
         if (!canceled && filePaths.length > 0) {
             try {
                 const data = await fs.promises.readFile(filePaths[0], 'utf-8');
@@ -1450,44 +1482,41 @@ async function ipcloader() {
         }
         return { canceled: true };
     });
-
-
-
     ipcMain.on('update-initiative', (event, { creatureId, initiative }) => {
         initiativeTracker.updateInitiative(creatureId, initiative);
     });
-
     ipcMain.on('push-initiative', async () => {
-        logToRenderer(`'push-initiative-to-chat' invoked.`);
         const initiativeOrder = initiativeTracker.getInitiativeOrder();
         const currentTurnIndex = initiativeTracker.currentTurnIndex;
+
+        // Guard against empty combat lists or unconfigured channels.
         if (initiativeOrder.length === 0) {
             logToRenderer('[push-initiative] Cannot push, initiative is empty.');
             return;
         }
-
         if (!discordConfig.textChannel) {
             logToRenderer('[push-initiative] No text channel configured.');
             return;
         }
 
+        // Attempt to resolve the configured text channel from the Discord cache.
         const channel = client.channels.cache.get(discordConfig.textChannel);
         if (!channel) {
             logToRenderer(`[push-initiative] FAILED to find channel with ID: ${discordConfig.textChannel}`);
             return;
         }
         logToRenderer(`[push-initiative] Found channel: ${channel.name}`);
-
         try {
             const embed = new EmbedBuilder()
                 .setColor(0x0099FF)
                 .setTitle('Initiative Order')
                 .setTimestamp();
-
             let description = '';
             initiativeOrder.forEach((creature, index) => {
+                // Convert numeric HP into a visual emoji-based health bar.
                 const hpBar = createEmojiHpBar(creature);
 
+                // Harvest condition emojis, capping at 3 to prevent message clutter.
                 let conditionEmojis = (creature.conditions || []).map(c => DND_CONDITIONS[c]?.emoji || '');
                 let conditionStr;
                 if (conditionEmojis.length > 3) {
@@ -1496,21 +1525,21 @@ async function ipcloader() {
                     conditionStr = conditionEmojis.join('');
                 }
 
+                // Use a marker to highlight whose turn it currently is.
                 const activeMarker = index === currentTurnIndex ? '`➤`' : '` `';
-                const initiativeStr = creature.initiative.toString();
+
+                // Handle Mob names by calculating the surviving count from remaining total HP.
                 let nameStr = creature.name || '';
                 if (creature.isMob) {
                     const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
                     nameStr = `Mob of ${currentCount} ${creature.name}`;
                 }
 
-                // New layout: Init | HP Bar | Name | Conditions
+                // Format each line for the Discord embed.
                 const line = `${activeMarker}${hpBar}${conditionStr} ${nameStr}`;
                 description += line + '\n';
             });
-
             embed.setDescription(description);
-
             logToRenderer(`[push-initiative] Attempting to send embed...`);
             await channel.send({ embeds: [embed] });
             logToRenderer('[push-initiative] Successfully pushed initiative to chat.');
@@ -1518,7 +1547,6 @@ async function ipcloader() {
             logToRenderer(`[push-initiative] FAILED to send embed: ${error}`);
         }
     });
-
     ipcMain.on('next-turn', async () => {
         const turnInfo = initiativeTracker.nextTurn();
         if (turnInfo) {
@@ -1526,7 +1554,6 @@ async function ipcloader() {
             await checkAndShowReminders(turnInfo.newCreature, 'start');
         }
     });
-
     ipcMain.on('save-encounter', async () => {
         try {
             const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
@@ -1534,7 +1561,6 @@ async function ipcloader() {
                 defaultPath: app.getPath('userData'),
                 filters: [{ name: 'JSON Files', extensions: ['json'] }]
             });
-
             if (!canceled && filePath) {
                 initiativeTracker.saveEncounterToFile(filePath);
             }
@@ -1542,7 +1568,6 @@ async function ipcloader() {
             logToRenderer(`Error saving encounter: ${error.message}`);
         }
     });
-
     ipcMain.handle('load-encounter-dialog', async () => {
         const confirmResult = await dialog.showMessageBox(mainWindow, {
             type: 'warning',
@@ -1553,36 +1578,29 @@ async function ipcloader() {
             defaultId: 0,
             cancelId: 1
         });
-
         if (confirmResult.response === 1) { // User clicked 'Cancel'
             return;
         }
-
         const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
             title: 'Load Encounter',
             defaultPath: app.getPath('userData'),
             properties: ['openFile'],
             filters: [{ name: 'JSON Files', extensions: ['json'] }]
         });
-
         if (!canceled && filePaths && filePaths.length > 0) {
             const filePath = filePaths[0];
             initiativeTracker.loadEncounterFromFile(filePath);
         }
     });
-
     ipcMain.on('add-creature', (event, creature) => {
         initiativeTracker.addCreature(creature);
     });
-
     ipcMain.on('update-creature', (event, creature) => {
         initiativeTracker.updateCreature(creature);
     });
-
     ipcMain.on('update-reminders', (event, { creatureId, reminders }) => {
         initiativeTracker.updateReminders(creatureId, reminders);
     });
-
     ipcMain.on('roll-stat', (event, { creatureId, rollType, stat, type }) => {
         const result = initiativeTracker.rollStat(creatureId, rollType, stat, type);
         if (result) {
@@ -1596,7 +1614,6 @@ async function ipcloader() {
             }
         }
     });
-
     ipcMain.on('roll-attack', (event, { creatureId, rollType, modIndex }) => {
         const result = initiativeTracker.rollAttack(creatureId, rollType, modIndex);
         if (result) {
@@ -1610,11 +1627,9 @@ async function ipcloader() {
             }
         }
     });
-
     ipcMain.on('reset-encounter', () => {
         initiativeTracker.resetEncounter();
     });
-
     ipcMain.on('clear-encounter', async () => {
         const result = await dialog.showMessageBox(mainWindow, {
             type: 'warning',
@@ -1629,26 +1644,21 @@ async function ipcloader() {
             initiativeTracker.clearEncounter();
         }
     });
-
     ipcMain.on('edit-creature', (event, { creatureId }) => {
         const creature = initiativeTracker.editCreature(creatureId);
         if (creature) {
             mainWindow.webContents.send('populate-edit-form', creature);
         }
     });
-
     ipcMain.on('remove-creature', (event, { creatureId }) => {
         initiativeTracker.removeCreature(creatureId);
     });
-
     ipcMain.on('copy-creature', (event, { creatureId }) => {
         const creature = initiativeTracker.getCreature(creatureId);
         if (creature) {
             mainWindow.webContents.send('populate-add-form', creature);
         }
     });
-
-
     ipcMain.on('previous-turn', async () => {
         const turnInfo = initiativeTracker.previousTurn();
         if (turnInfo) {
@@ -1656,31 +1666,32 @@ async function ipcloader() {
             await checkAndShowReminders(turnInfo.newCreature, 'start');
         }
     });
-
     ipcMain.on('add-temp-hp', (event, { creatureId, amount }) => {
         initiativeTracker.addTempHp(creatureId, amount);
     });
-
     ipcMain.on('update-hp', (event, { creatureId, amount }) => {
         const result = initiativeTracker.updateHp(creatureId, amount);
+        // If the creature was concentrating and took damage, trigger a UI popup reminder
+        // for the Dungeon Master to roll a Concentration Check.
         if (result && result.concentrationCheckDC) {
-            dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Concentration Check', message: `${result.creature.name} must make a DC ${result.concentrationCheckDC} Constitution saving throw.`, buttons: ['OK'] });
+            dialog.showMessageBox(mainWindow, {
+                type: 'warning',
+                title: 'Concentration Check',
+                message: `${result.creature.name} must make a DC ${result.concentrationCheckDC} Constitution saving throw.`,
+                buttons: ['OK']
+            });
         }
     });
-
     ipcMain.on('add-condition', (event, { creatureId, condition }) => {
         logToRenderer(`Adding condition ${condition} to creature ${creatureId}`);
         initiativeTracker.addCondition(creatureId, condition);
     });
-
     ipcMain.on('remove-condition', (event, { creatureId, condition }) => {
         initiativeTracker.removeCondition(creatureId, condition);
     });
-
     ipcMain.on('update-creature-flag', (event, { creatureId, flag, value }) => {
         initiativeTracker.updateCreatureFlag(creatureId, flag, value);
     });
-
     ipcMain.on('update-death-saves', (event, { creatureId, deathSaves }) => {
         const creature = initiativeTracker.getCreature(creatureId);
         if (creature) {
@@ -1693,26 +1704,27 @@ async function ipcloader() {
             } else if (deathSaves.failures >= 3 && oldSaves.failures < 3) {
                 dialog.showMessageBox(mainWindow, { type: 'error', title: 'Creature Deceased', message: `${creature.name} has died.`, buttons: ['OK'] });
             }
-
             initiativeTracker._updateFrontend();
             initiativeTracker._saveState();
         }
     });
-
     ipcMain.on('roll-death-save', (event, { creatureId, rollType }) => {
+        // Automation for D&D 5e Death Saving Throws.
         const creature = initiativeTracker.getCreature(creatureId);
         if (!creature) return;
         if (!creature.deathSaves) creature.deathSaves = { successes: 0, failures: 0 };
 
+        // Determine dice notation based on advantage/disadvantage toggles.
         let notation = '1d20';
         if (rollType === 'adv') notation = '2d20kh1';
         if (rollType === 'dis') notation = '2d20kl1';
 
         const roll = new DiceRoller().roll(notation);
         const result = roll.total;
-
         let outcome = null;
         let message = `${creature.name} rolled a Death Saving Throw (${rollType}): **${result}**`;
+
+        // Apply rules for criticals, successes, and failures.
         if (result === 20) {
             message += " - **Critical Success!** (Regains 1 HP)";
             outcome = 'crit-success';
@@ -1731,8 +1743,8 @@ async function ipcloader() {
             if (creature.deathSaves.failures >= 3) outcome = 'dead';
         }
 
+        // Log result to UI and trigger blocking alerts for terminal states (stabilized/dead).
         logDiceRollToRenderer(message);
-
         if (outcome === 'crit-success') {
             dialog.showMessageBox(mainWindow, { type: 'info', title: 'Critical Success!', message: `${creature.name} rolled a natural 20 and regained 1 HP!`, buttons: ['OK'] });
         } else if (outcome === 'stabilized') {
@@ -1744,22 +1756,18 @@ async function ipcloader() {
         initiativeTracker._updateFrontend();
         initiativeTracker._saveState();
     });
-
     ipcMain.on('show-emoji-panel', () => {
         app.showEmojiPanel();
     });
-
     ipcMain.handle('search-monsters', async (event, query) => {
-        logToRenderer(`[IPC] Received "search-monsters" with query: "${query}"`);
+        // Expose the 5eTools bestiary search to the UI.
         if (!fiveEToolsParser) {
             logToRenderer('[IPC] Parser not available.');
             return [];
         }
         const results = await fiveEToolsParser.searchByName('bestiary', query);
-        logToRenderer(`[IPC] Found ${results.length} monsters, returning to renderer.`);
         return results;
     });
-
     ipcMain.handle('get-monster-details', async (event, { name, source }) => {
         logToRenderer(`[IPC] Received "get-monster-details" for: ${name} (${source})`);
         if (!fiveEToolsParser) {
@@ -1770,7 +1778,6 @@ async function ipcloader() {
         logToRenderer(`[IPC] Found monster details, returning to renderer.`);
         return monster;
     });
-
     ipcMain.on('push-dicelog-to-discord', async (event, logContent) => {
         if (!discordConfig.textChannel) {
             logToRenderer('[push-dicelog] No text channel configured.');
@@ -1793,7 +1800,6 @@ async function ipcloader() {
             logToRenderer(`[push-dicelog] FAILED to send embed: ${error}`);
         }
     });
-
     ipcMain.on('push-statblock-to-discord', async (event, rawDataString) => {
         if (!discordConfig.textChannel) {
             logToRenderer('[push-statblock] No text channel configured.');
@@ -1818,7 +1824,6 @@ async function ipcloader() {
                     name: `${monster.name} - Details`,
                     autoArchiveDuration: 60,
                 });
-
                 for (const field of longFields) {
                     const chunks = splitText(field.value, 1024);
                     for (let i = 0; i < chunks.length; i++) {
@@ -1835,7 +1840,6 @@ async function ipcloader() {
             logToRenderer(`[push-statblock] FAILED to send embed: ${error}`);
         }
     });
-
     ipcMain.on('push-mob-rules-to-discord', async (event, { creatureName, absoluteImagePath }) => {
         if (!creatureName || !absoluteImagePath) {
             const errorMsg = `[push-mob-rules] Error: Missing creatureName or absoluteImagePath.`;
@@ -1843,7 +1847,6 @@ async function ipcloader() {
             dialog.showErrorBox('Discord Error', `Could not push mob rules. Data from UI was incomplete.`);
             return;
         }
-
         if (!discordConfig.textChannel) {
             logToRenderer('[push-mob-rules] No text channel configured.');
             return;
@@ -1853,14 +1856,11 @@ async function ipcloader() {
             logToRenderer(`[push-mob-rules] FAILED to find channel with ID: ${discordConfig.textChannel}`);
             return;
         }
-
         try {
             logToRenderer(`[push-mob-rules] Reading image file into buffer from: ${absoluteImagePath}`);
             const imageBuffer = await fs.readFile(absoluteImagePath);
             logToRenderer(`[push-mob-rules] Successfully read image into buffer (${imageBuffer.length} bytes).`);
-
             const { mainEmbed } = formatMobRulesForDiscord(creatureName);
-
             await channel.send({
                 embeds: [mainEmbed],
                 files: [{
@@ -1882,13 +1882,17 @@ async function ipcloader() {
  * It waits until the app is ready before sending the message.
  * @param {string} message - The message to log.
  */
+/**
+ * Sends a log message to the renderer process to be displayed in the UI.
+ * It waits until the app is ready before sending the message.
+ * @param {string} message - The message to log.
+ */
 async function logToRenderer(...args) {
     const message = args.map(arg => {
         if (arg instanceof Error) return arg.stack || arg.message;
         if (typeof arg === 'object') return JSON.stringify(arg);
         return arg;
     }).join(' ');
-
     if (isAppReady && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
         mainWindow.webContents.send('log-message', message);
     }
@@ -1908,12 +1912,15 @@ client.on('error', error => {
  * Initializes and logs in the Discord bot using the token from the configuration.
  * Handles login errors and notifies the user.
  */
+/**
+ * Initializes and logs in the Discord bot using the token from the configuration.
+ * Handles login errors and notifies the user.
+ */
 function initializeDiscordBot() {
     if (!discordConfig || !discordConfig.token) {
         logToRenderer('Discord token not found. Bot not started.');
         return;
     }
-
     client.login(discordConfig.token).catch(error => {
         logToRenderer(`Discord login failed: ${error.message}`);
         dialog.showErrorBox('Discord Login Failed', `Could not log in to Discord. Please check your token in the settings.\n\n${error.message}`);
@@ -1921,17 +1928,18 @@ function initializeDiscordBot() {
     });
 }
 
+/**
+ * Broadcasts the current bot status to the renderer process.
+ */
 function broadcastBotStatus() {
     const status = client.isReady() ? (isSoftLocked ? 'soft-locked' : 'online') : 'offline';
     const message = isSoftLocked ? 'Busy (Occupied)' : (client.isReady() ? 'Connected' : (discordConfig.token ? 'Connecting...' : 'Not Configured'));
-
     const payload = {
         status,
         message,
         voiceStatus,
         isSoftLocked
     };
-
     if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('discord-bot-status', payload);
     }
@@ -1939,7 +1947,6 @@ function broadcastBotStatus() {
         settingsWindow.webContents.send('discord-bot-status', payload);
     }
 }
-
 let isShuttingDown = false;
 const shutdown = async () => {
     if (isShuttingDown) return;
@@ -1983,7 +1990,6 @@ const shutdown = async () => {
                 console.error("Error destroying discord client:", e);
             }
         }
-
         console.log('Final exit.');
         app.exit(0);
     }
@@ -1992,14 +1998,12 @@ const shutdown = async () => {
         process.exit(1);
     }
 };
-
 app.on('before-quit', (e) => {
     if (!isShuttingDown) {
         e.preventDefault();
         shutdown();
     }
 });
-
 app.on('window-all-closed', () => {
     // Standard behavior: quit when all windows are closed,
     // unless on macOS where apps typically stay active.
@@ -2008,6 +2012,10 @@ app.on('window-all-closed', () => {
     }
 });
 
+/**
+ * Joins a voice channel based on the configuration.
+ * Implements a "knock" protocol to prevent multiple instances from joining the same channel.
+ */
 async function joinVoiceChannelAction() {
     if (isJoiningVoice) return;
 
@@ -2016,23 +2024,19 @@ async function joinVoiceChannelAction() {
         logToRenderer("[Discord] Client not ready for voice join.");
         return;
     }
-
     const isActive = connection && (
         connection.state.status !== VoiceConnectionStatus.Disconnected &&
         connection.state.status !== VoiceConnectionStatus.Destroyed
     );
     if (isActive) return;
-
     isJoiningVoice = true;
     isSoftLocked = false;
-
     const voiceChannelId = discordConfig.voiceChannel;
     if (voiceChannelId && discordConfig.textChannel) {
         let textChannel = client.channels.cache.get(discordConfig.textChannel);
         if (!textChannel) {
             try { textChannel = await client.channels.fetch(discordConfig.textChannel); } catch (e) {}
         }
-
         if (textChannel && textChannel.isTextBased()) {
             logToRenderer(`[Anti-Collision] Knocking on voice channel ${voiceChannelId}...`);
             const knockMsg = await textChannel.send(`||~~TT_KNOCK:${voiceChannelId}~~||`);
@@ -2044,7 +2048,6 @@ async function joinVoiceChannelAction() {
                 filter: m => m.content.includes(`TT_OCCUPIED:${voiceChannelId}`) && m.author.id === client.user.id,
                 time: 1000
             });
-
             await new Promise(resolve => {
                 collector.on('collect', () => {
                     isOccupied = true;
@@ -2052,7 +2055,6 @@ async function joinVoiceChannelAction() {
                 });
                 collector.on('end', resolve);
             });
-
             if (isOccupied) {
                 logToRenderer(`[Anti-Collision] Voice channel ${voiceChannelId} is occupied. Join cancelled.`);
                 isSoftLocked = true;
@@ -2062,18 +2064,15 @@ async function joinVoiceChannelAction() {
             }
         }
     }
-
     const voiceChannel = client.channels.cache.get(voiceChannelId);
     if (voiceChannel && voiceChannel.isVoiceBased()) {
         try {
             voiceStatus = 'connecting';
             broadcastBotStatus();
-
             const existingConnection = getVoiceConnection(voiceChannel.guild.id);
             if (existingConnection) {
                 existingConnection.destroy();
             }
-
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
@@ -2081,14 +2080,12 @@ async function joinVoiceChannelAction() {
                 selfDeaf: false,
                 selfMute: false
             });
-
             connection.on(VoiceConnectionStatus.Ready, () => {
                 voiceStatus = 'connected';
                 broadcastBotStatus();
                 logToRenderer('The bot has connected to the channel!');
                 musicPlayer.setConnection(connection);
             });
-
             connection.on(VoiceConnectionStatus.Disconnected, async () => {
                 voiceStatus = 'connecting';
                 broadcastBotStatus();
@@ -2101,12 +2098,10 @@ async function joinVoiceChannelAction() {
                     leaveVoiceChannelAction();
                 }
             });
-
             connection.on(VoiceConnectionStatus.Destroyed, () => {
                 voiceStatus = 'disconnected';
                 broadcastBotStatus();
             });
-
             await entersState(connection, VoiceConnectionStatus.Ready, 30000);
         } catch (error) {
             logToRenderer('Error joining voice channel: ', error.message || error);
@@ -2120,6 +2115,9 @@ async function joinVoiceChannelAction() {
     }
 }
 
+/**
+ * Leaves the current voice channel and destroys the connection.
+ */
 function leaveVoiceChannelAction() {
     if (connection) {
         connection.destroy();
@@ -2128,7 +2126,6 @@ function leaveVoiceChannelAction() {
     voiceStatus = 'disconnected';
     broadcastBotStatus();
 }
-
 client.once(Events.ClientReady, async () => {
     logToRenderer('TavernTones is online!');
 
@@ -2137,7 +2134,6 @@ client.once(Events.ClientReady, async () => {
         try {
             let channel = client.channels.cache.get(discordConfig.textChannel);
             if (!channel) channel = await client.channels.fetch(discordConfig.textChannel);
-
             if (channel && channel.isTextBased()) {
                 // Listen for knocks from other instances
                 client.on('messageCreate', async (m) => {
@@ -2153,7 +2149,6 @@ client.once(Events.ClientReady, async () => {
                             connection.state.status === VoiceConnectionStatus.Connecting ||
                             connection.state.status === VoiceConnectionStatus.Signalling
                         );
-
                         if (me && me.voice.channelId === targetId && isActivelyConnected) {
                             logToRenderer(`[Anti-Collision] Responding to knock for channel ${targetId}`);
                             const occMsg = await m.channel.send(`||~~TT_OCCUPIED:${targetId}~~||`);
@@ -2166,31 +2161,23 @@ client.once(Events.ClientReady, async () => {
             logToRenderer("[Anti-Collision] Error setting up listener: " + e.message);
         }
     }
-
     broadcastBotStatus();
     // updateDiscordMediaControl(); // MOVED DOWN
-
-
     logToRenderer(`Logged in as ${client.user.tag}`);
-
     client.on('messageCreate', async message => {
         if (client.commandHandler) client.commandHandler.handleMessage(message);
     });
-
     const basePath = app.isPackaged
         ? path.dirname(app.getPath('exe'))
         : app.getAppPath();
-
     const extendedConfig = {
         ...discordConfig,
         joinVoiceCallback: async () => {
             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
         }
     };
-
     const commandHandler = new CommandHandler(client, logToRenderer, musicPlayer, extendedConfig, fiveEToolsParser);
     client.commandHandler = commandHandler;
-
     client.lastMediaMessage = null;
     let isUpdatingMediaControl = false;
     let pendingMediaUpdate = false;
@@ -2202,7 +2189,6 @@ client.once(Events.ClientReady, async () => {
     const songPathToIdMap = new Map();
     const idToSongPathMap = new Map();
     let songIdCounter = 0;
-
     function getSongId(filePath) {
         if (songPathToIdMap.has(filePath)) return songPathToIdMap.get(filePath);
         const id = `s_${songIdCounter++}`;
@@ -2214,9 +2200,14 @@ client.once(Events.ClientReady, async () => {
     // Now call it once defined
     updateDiscordMediaControl();
 
+    /**
+     * Updates the media control message in the Discord text channel.
+     * @param {boolean} [disabled=false] - Whether to show the controls as disabled.
+     */
     async function updateDiscordMediaControl(disabled = false) {
         if (isShuttingDown) return;
 
+        // Delete the message if media controls are disabled in settings
         if (discordConfig.showMediaControl === false) {
             if (client.lastMediaMessage) {
                 try {
@@ -2229,15 +2220,19 @@ client.once(Events.ClientReady, async () => {
             return;
         }
 
+        // Validate text channel configuration
         if (!discordConfig.textChannel) {
             logToRenderer('[Discord] No text channel configured for media controls.');
             return;
         }
+
+        // Handle concurrent update requests
         if (isUpdatingMediaControl) {
             pendingMediaUpdate = true;
             return;
         }
 
+        // Fetch the target Discord channel
         let targetChannel = client.channels.cache.get(discordConfig.textChannel);
         if (!targetChannel) {
             try {
@@ -2247,14 +2242,13 @@ client.once(Events.ClientReady, async () => {
                 return;
             }
         }
-
         if (!targetChannel) {
             logToRenderer(`[Discord] Channel ${discordConfig.textChannel} not found.`);
             return;
         }
-
         isUpdatingMediaControl = true;
 
+        // Compile current playback status for the embed
         const status = {
             isPlaying: musicPlayer.isPlaying,
             loopMode: musicPlayer.loopMode,
@@ -2265,9 +2259,11 @@ client.once(Events.ClientReady, async () => {
             currentTime: musicPlayer.currentTime,
             duration: musicPlayer.duration
         };
-
         const loopIcons = ['➡️', '🔁', '🔂'];
 
+        /**
+         * Generates a visual progress bar string.
+         */
         function createProgressString(current, total) {
             const size = 10;
             if (total <= 0) return '⬛'.repeat(size);
@@ -2275,12 +2271,16 @@ client.once(Events.ClientReady, async () => {
             return '🟩'.repeat(Math.min(size, progress)) + '⬛'.repeat(Math.max(0, size - progress));
         }
 
+        /**
+         * Formats seconds into MM:SS.
+         */
         const formatTime = (s) => {
             const mins = Math.floor(s / 60);
             const secs = Math.floor(s % 60);
             return `${mins}:${secs.toString().padStart(2, '0')}`;
         };
 
+        // Construct the media control embed
         const embed = new EmbedBuilder()
             .setTitle('🎵 Music Player Control')
             .setColor(status.isPlaying ? 0x00FF00 : 0xFF0000)
@@ -2295,6 +2295,7 @@ client.once(Events.ClientReady, async () => {
             .setTimestamp();
 
         // --- Row 1: Song Selector Dropdown ---
+        // Cache song options for performance
         if (!cachedDiscordSongOptions) {
             cachedDiscordSongOptions = getFlatMusicList().map(p => ({
                 label: path.basename(p).substring(0, 100),
@@ -2303,18 +2304,20 @@ client.once(Events.ClientReady, async () => {
         }
         const songs = cachedDiscordSongOptions;
 
+        // Calculate pagination for the song selector
         const totalPages = Math.ceil(songs.length / PAGE_SIZE);
         const start = currentDropdownPage * PAGE_SIZE;
         const end = start + PAGE_SIZE;
         const pageSongs = songs.slice(start, end);
 
+        // Map song paths to selection options
         const songOptions = pageSongs.map(s => ({
             label: s.label,
             value: s.value,
             default: selectedSongInDropdown === idToSongPathMap.get(s.value)
         }));
 
-        // Add pagination options if needed
+        // Inject pagination controls into the dropdown
         if (totalPages > 1) {
             if (currentDropdownPage > 0) {
                 songOptions.unshift({ label: '⬅️ Previous Page', value: 'prev_page' });
@@ -2324,10 +2327,12 @@ client.once(Events.ClientReady, async () => {
             }
         }
 
+        // Handle empty library state
         if (songOptions.length === 0) {
             songOptions.push({ label: 'No music found', value: 'none' });
         }
 
+        // Create the selection menu row
         const songSelector = new ActionRowBuilder().addComponents(
             new StringSelectMenuBuilder()
                 .setCustomId('media-song-select')
@@ -2351,32 +2356,30 @@ client.once(Events.ClientReady, async () => {
             new ButtonBuilder().setCustomId('media-loop').setLabel(loopIcons[status.loopMode]).setStyle(ButtonStyle.Secondary).setDisabled(disabled),
             new ButtonBuilder().setCustomId('media-shuffle').setLabel('🔀').setStyle(status.shuffleMode ? ButtonStyle.Success : ButtonStyle.Secondary).setDisabled(disabled)
         );
-
         const components = [songSelector, selectionActions, playbackControls];
-
         try {
+            // Edit existing message or send a new one
             if (client.lastMediaMessage) {
-                // Check if message still exists by fetching or just trying to edit
                 await client.lastMediaMessage.edit({ embeds: [embed], components });
             } else {
                 client.lastMediaMessage = await targetChannel.send({ embeds: [embed], components });
             }
         } catch (e) {
             try {
-                // If edit fails, it might be deleted. Send new one.
+                // If edit fails (e.g. message deleted), resend
                 client.lastMediaMessage = await targetChannel.send({ embeds: [embed], components });
             } catch (err) {
                 logToRenderer(`Failed to send Discord media control: ${err.message}`);
             }
         } finally {
             isUpdatingMediaControl = false;
+            // Execute any pending updates that arrived during processing
             if (pendingMediaUpdate) {
                 pendingMediaUpdate = false;
                 updateDiscordMediaControl(disabled);
             }
         }
     }
-
     let lastDiscordMediaUpdate = 0;
     musicPlayer.on('status-change', (status) => {
         const now = Date.now();
@@ -2392,11 +2395,9 @@ client.once(Events.ClientReady, async () => {
             updateDiscordMediaControl();
         }
     });
-
     client.on('interactionCreate', async interaction => {
         if (interaction.isChatInputCommand()) {
             const { commandName, options } = interaction;
-
             if (commandName === 'roll') {
                 const notation = options.getString('notation');
                 try {
@@ -2519,10 +2520,8 @@ client.once(Events.ClientReady, async () => {
                 await client.commandHandler.handleMessage(msg);
             }
         }
-
         if (interaction.isStringSelectMenu()) {
             const { customId, values } = interaction;
-
             if (customId === '5e-result-select') {
                 await interaction.deferUpdate();
                 const [category, source, name] = values[0].split('__');
@@ -2546,7 +2545,6 @@ client.once(Events.ClientReady, async () => {
                 updateDiscordMediaControl();
             }
         }
-
         if (interaction.isButton()) {
             const { customId } = interaction;
             if (customId.startsWith('media-')) {
@@ -2597,10 +2595,12 @@ client.once(Events.ClientReady, async () => {
 // }, 60000);
 
 
+/**
+ * Calculates a hex color for the HP bar based on the current health percentage.
+ */
 function getHpColor(current, max) {
     if (current <= 0) return '#6c757d'; // Dead
-    if (current > max) return '#007bff'; // Overhealed? Treat as blue/100% or purple? Sticking to blue for base HP.
-
+    if (current > max) return '#007bff'; // Overhealed
     const percentage = (current / max) * 100;
     if (percentage >= 100) return '#007bff'; // Blue
     if (percentage >= 50) return '#28a745'; // Green
@@ -2608,13 +2608,16 @@ function getHpColor(current, max) {
     return '#dc3545'; // Red (< 25%)
 }
 
+/**
+ * Dispatches a music library scan to a background worker.
+ */
 function scanMusicLibrary() {
     if (!discordConfig.defaultMusicPath || !fs.existsSync(discordConfig.defaultMusicPath)) {
         logToRenderer("[Library] No music folder configured or path invalid.");
         return;
     }
-
     logToRenderer("[Library] Scanning music folder...");
+    // Spawn worker thread for disk scanning
     const worker = new Worker(path.join(__dirname, 'MusicScannerWorker.js'), {
         workerData: {
             musicFolder: discordConfig.defaultMusicPath,
@@ -2622,35 +2625,31 @@ function scanMusicLibrary() {
         }
     });
 
+    // Handle scan results
     worker.on('message', async (result) => {
         if (result.success) {
             const oldLibrary = discordConfig.musicLibrary || { children: [] };
             const newLibrary = result.library;
 
-            // --- Diff logic for modal ---
-            const oldFiles = new Set();
-            const newFiles = new Set();
-            const oldFolders = new Set();
-            const newFolders = new Set();
-
-            const collectMetadata = (node, fileSet, folderSet) => {
+            // --- Calculate Diffs for UI notification ---
+            const oldFiles = new Set(), newFiles = new Set(), oldFolders = new Set(), newFolders = new Set();
+            const collect = (node, fileSet, folderSet) => {
                 if (node.type === 'file') fileSet.add(node.path);
                 else {
                     folderSet.add(node.path);
-                    if (node.children) node.children.forEach(c => collectMetadata(c, fileSet, folderSet));
+                    if (node.children) node.children.forEach(c => collect(c, fileSet, folderSet));
                 }
             };
-
-            collectMetadata(oldLibrary, oldFiles, oldFolders);
-            collectMetadata(newLibrary, newFiles, newFolders);
-
+            collect(oldLibrary, oldFiles, oldFolders);
+            collect(newLibrary, newFiles, newFolders);
             const addedSongs = [...newFiles].filter(f => !oldFiles.has(f)).length;
             const removedSongs = [...oldFiles].filter(f => !newFiles.has(f)).length;
             const addedFolders = [...newFolders].filter(f => !oldFolders.has(f)).length;
             const removedFolders = [...oldFolders].filter(f => !newFolders.has(f)).length;
 
+            // Report changes to UI
             if (addedSongs > 0 || removedSongs > 0 || addedFolders > 0 || removedFolders > 0) {
-                logToRenderer(`[Library] Scan complete: ${addedSongs} songs, ${addedFolders} folders added; ${removedSongs} songs, ${removedFolders} folders removed.`);
+                logToRenderer(`[Library] Scan complete with changes.`);
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('music-library-update', {
                         library: newLibrary,
@@ -2664,15 +2663,14 @@ function scanMusicLibrary() {
                 }
             }
 
+            // Save new library state
             discordConfig.musicLibrary = newLibrary;
             invalidateMusicCache();
             await setDiscordConfig(discordConfig);
-
         } else {
             logToRenderer(`[Library] Scan failed: ${result.error}`);
         }
     });
-
     worker.on('error', (err) => {
         logToRenderer(`[Library] Worker error: ${err.message}`);
     });

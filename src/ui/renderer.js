@@ -1,38 +1,71 @@
 // Performance and security update
+/**
+ * Main renderer process script for TavernTones.
+ * Handles UI interactions, state management, and communication with the main process.
+ */
 document.addEventListener('DOMContentLoaded', async () => {
-    // --- State ---
+    // --- Application State ---
+
+    // Tracks whether music is currently playing in the backend
     let isPlaying = false;
+    // The master list of all combatants in the current encounter
     let initiativeOrder = [];
-    let combatantPanelOrder = []; // For custom sorting of the right-hand panel
+    // A secondary list for the right-hand panel, allowing for independent sorting/filtering
+    let combatantPanelOrder = [];
+    // Index of the creature whose turn it currently is
     let currentTurnIndex = 0;
+    // Configuration for the different informational panels in the bottom-left
     const logPanels = [
         { id: 'logArea', title: 'Log', mode: 'log' },
         { id: 'diceLog', title: 'Dice Log', mode: 'dice' },
         { id: 'statBlockArea', title: 'Stat Block', mode: 'stats' },
         { id: 'musicLibraryArea', title: 'Music Library', mode: 'library' }
     ];
-    let currentPanelIndex = 3; // Default to 'Music Library'
+    // Track which panel is currently visible (defaults to Music Library)
+    let currentPanelIndex = 3;
+    // The hierarchical structure of music files on disk
     let musicLibrary = { children: [] };
+    // Current filter string for the music library search
     let libraryFilter = '';
+    // Current filter string for the music playlist search
     let playlistFilter = '';
+    // Set of file paths currently selected in the library UI
     let selectedLibraryPaths = new Set();
+    // Set of folder paths currently expanded in the library tree
     let expandedLibraryPaths = new Set();
+    // Current connectivity status of the Discord bot
     let botStatus = { status: 'offline', message: 'Unknown' };
+    // Flag indicating if the bot has been enabled in settings
     let isBotEnabled = false;
-    let currentStatBlockData = null; // To hold the raw data of the currently viewed stat block
+    // Holds metadata about the currently displayed stat block for Discord integration
+    let currentStatBlockData = null;
+    // Map of D&D 5e condition definitions (emoji, text, color)
     let DND_CONDITIONS = {};
+    // Data for the mob rule reference guide
     let MOB_RULES_DATA = {};
+    // Track the last index auto-scrolled in the playlist to prevent scrolling loops
     let lastScrolledIndex = -1;
+    // Local copy of the full application configuration
     let discordConfig = {};
 
     // --- Form State ---
+
+    // Flag for the "Add Combatant" form's current mode
     let isMobMode = false;
-    let singleCreatureHPForMob = '10'; // Can be a dice formula string or a number
-    let calculatedSingleCreatureHP = 10; // Is always the calculated number
+    // User-provided HP for a single member of a mob
+    let singleCreatureHPForMob = '10';
+    // The evaluated integer HP for a single mob member
+    let calculatedSingleCreatureHP = 10;
+    // Reference to the creature object currently being edited in the form
     let creatureBeingEdited = null;
 
-    // --- Element Refs ---
+    // --- DOM Element References ---
+
+    // Main system log area
     const logArea = document.getElementById('logArea');
+    /**
+     * Formats numeric values into standard D&D modifier strings (e.g., 2 becomes "+2").
+     */
     const formatModifier = (mod) => mod >= 0 ? `+${mod}` : `${mod}`;
     const diceLog = document.getElementById('diceLog');
     const playPauseButton = document.getElementById('playPauseButton');
@@ -54,57 +87,73 @@ document.addEventListener('DOMContentLoaded', async () => {
     const combatantDetailsListDiv = document.getElementById('combatant-details-list');
     const maxLogEntries = 50;
 
-    // --- Initial Load (Non-blocking) ---
-    // Fetch initial data without blocking the UI rendering.
+    // --- Initial Data Load ---
+
+    // Request static reference data from the Main process once the DOM is ready.
     if (window.electron && window.electron.ipcRenderer) {
+        // Load the condition dictionary used for tooltips and effects.
         window.electron.ipcRenderer.invoke('get-dnd-conditions').then(conditions => {
             DND_CONDITIONS = conditions;
         });
+        // Fetch mob rule reference data
         window.electron.ipcRenderer.invoke('get-mob-rules-data').then(rules => {
             MOB_RULES_DATA = rules;
         });
     }
 
-    // Send a signal to the main process that the window is ready for data.
+    // Initialize synchronization with the main process
     if (window.electron && window.electron.ipcRenderer) {
+        // Signal that the renderer is ready to receive data
         window.electron.ipcRenderer.send('window-ready');
-        // Specifically request the initial load after a short delay to ensure the main process is ready.
+
+        // Delay initial data request slightly to ensure backend handles the signal
         setTimeout(() => {
+            // Trigger the initial load of encounter and player state
             window.electron.ipcRenderer.send('request-initial-load');
+
+            // Listen for configuration updates
             window.electron.ipcRenderer.on('discord-config', (event, config) => {
-                // Resolution auto-detection on first run
+                // Resolution auto-detection on first run: set defaults based on window size
                 if (!config.leftColumnWidth || !config.audioOnlyCols) {
                     const width = window.innerWidth;
                     const height = window.innerHeight;
                     const updates = {};
 
+                    // Default left column to 25% of width
                     if (!config.leftColumnWidth) {
                         updates.leftColumnWidth = Math.floor(width * 0.25);
                     }
+                    // Calculate reasonable soundboard columns for current resolution
                     if (!config.audioOnlyCols) {
                         updates.audioOnlyCols = Math.floor((width * 0.5) / 185);
                         if (updates.audioOnlyCols < 3) updates.audioOnlyCols = 3;
                     }
+                    // Calculate reasonable soundboard rows
                     if (!config.audioOnlyRows) {
                         updates.audioOnlyRows = Math.floor((height * 0.6) / 110);
                         if (updates.audioOnlyRows < 4) updates.audioOnlyRows = 4;
                     }
 
+                    // Save the auto-detected defaults
                     if (Object.keys(updates).length > 0) {
                         window.electron.ipcRenderer.send('set-discord-config', updates);
                     }
                 }
 
-                // Initial apply
+                // Apply the left column width from configuration to CSS
                 if (config.leftColumnWidth) {
                     document.documentElement.style.setProperty('--left-col-width', `${config.leftColumnWidth}px`);
                 }
             });
+
+            // Request the current Discord configuration
             window.electron.ipcRenderer.send('get-discord-config');
+            // Load and render the music library tree
             window.electron.ipcRenderer.invoke('get-music-library').then(library => {
                 musicLibrary = library;
                 renderMusicLibrary();
             });
+            // Ensure the library panel is the first thing the user sees
             showPanel('musicLibraryArea');
         }, 100);
     }
@@ -157,7 +206,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="grid-header">INT</div>
             <div class="grid-header">WIS</div>
             <div class="grid-header">CHA</div>
-
             <div class="grid-label">Score</div>
             <input type="number" id="str-score" placeholder="12">
             <input type="number" id="dex-score" placeholder="12">
@@ -165,7 +213,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             <input type="number" id="int-score" placeholder="12">
             <input type="number" id="wis-score" placeholder="12">
             <input type="number" id="cha-score" placeholder="12">
-
             <div class="grid-label">Save</div>
             <input type="text" id="str-save" placeholder="+1">
             <input type="text" id="dex-save" placeholder="+1">
@@ -193,22 +240,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mobSizeInput = document.getElementById('mob-size');
     const creatureHpInput = document.getElementById('creature-hp');
 
-    // This function is no longer needed, as the backend will handle all HP calculations.
-    // We keep the logic for converting back to a single creature.
+    // Handler for toggling between single creature and mob modes
     convertToMobBtn.addEventListener('click', () => {
+        // Toggle the local boolean state
         isMobMode = !isMobMode;
         if (isMobMode) {
-            // When converting TO a mob, we just show the controls.
-            // The HP input now holds the dice formula for a single creature.
+            // Store the current HP formula as the base for the mob members
             singleCreatureHPForMob = creatureHpInput.value || '10';
+            // Show the mob-specific count control
             mobControls.style.display = 'flex';
+            // Update button text to reflect the toggle action
             convertToMobBtn.textContent = 'Convert to Single';
+            // Default mob size to 5 if empty
             if (!mobSizeInput.value) mobSizeInput.value = 5;
-            // We don't change the HP input value anymore. It stays as the formula.
         } else {
-            // When converting FROM a mob, restore the single creature HP formula.
+            // Hide mob controls and revert button text
             mobControls.style.display = 'none';
             convertToMobBtn.textContent = 'Convert to Mob';
+            // Restore the HP formula from before conversion
             creatureHpInput.value = singleCreatureHPForMob;
         }
     });
@@ -217,48 +266,72 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     // --- Logging ---
+
+    /**
+     * Formats and appends a message to the system log area.
+     * @param {string|object} message - The data to log.
+     */
     function logMessage(message) {
+        // Stringify objects for logging
         if (typeof message !== 'string') message = JSON.stringify(message);
         const logEntry = document.createElement('div');
+        // Add a prompt character for visual style
         logEntry.textContent = `> ${message}`;
         if (logArea) {
+            // Append the new entry
             logArea.appendChild(logEntry);
+            // Enforce log history limit to prevent DOM bloat
             if (logArea.children.length > maxLogEntries) logArea.removeChild(logArea.firstChild);
+            // Auto-scroll to the newest entry
             logArea.scrollTop = logArea.scrollHeight;
         }
     }
 
     // --- Panel Switching Logic ---
+
+    /**
+     * Toggles visibility between the bottom-left informational panels.
+     * @param {string} panelId - ID of the panel element to show.
+     * @param {string} [title] - Optional title override for the header.
+     */
     function showPanel(panelId, title) {
         const pushButton = document.getElementById('push-panel-btn');
         const titleEl = document.getElementById('pane-mode-title');
         let foundPanel = false;
 
-        // Panels that need flex layout instead of block
+        // List of panels that require Flexbox for their internal layout
         const flexPanels = new Set(['musicLibraryArea']);
+
+        // Iterate through all defined panels
         logPanels.forEach((panel, index) => {
             const panelEl = document.getElementById(panel.id);
             const modeBtn = document.getElementById(`mode-${panel.mode}`);
+            // Check if this is the target panel
             if (panel.id === panelId) {
+                // Set appropriate display style
                 panelEl.style.display = flexPanels.has(panel.id) ? 'flex' : 'block';
                 currentPanelIndex = index;
                 foundPanel = true;
+                // Highlight the active mode button
                 if (modeBtn) modeBtn.classList.add('active');
+                // Update the pane header title
                 if (titleEl) titleEl.textContent = title || panel.title;
             } else {
+                // Hide all non-target panels
                 panelEl.style.display = 'none';
                 if (modeBtn) modeBtn.classList.remove('active');
             }
         });
 
-        // Show push button only for certain panels
+        // Show the "Push to Discord" button only for panels with sharable content
         if (panelId === 'diceLog' || panelId === 'statBlockArea') {
             pushButton.style.display = 'inline-block';
         } else {
             pushButton.style.display = 'none';
         }
 
-        if (!foundPanel) showPanel('logArea', 'Log'); // Fallback
+        // Fallback to the log area if requested panel doesn't exist
+        if (!foundPanel) showPanel('logArea', 'Log');
     }
 
     // Mode button listeners
@@ -273,52 +346,73 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('mode-library').addEventListener('click', () => showPanel('musicLibraryArea'));
 
+    /**
+     * Parses and displays a monster stat block in the designated panel.
+     * @param {string} rawDataString - JSON string of the monster data.
+     */
+    /**
+     * Renders a monster's full stat block into the UI and prepares it for Discord sharing.
+     */
     function displayStatBlock(rawDataString) {
         const statBlockArea = document.getElementById('statBlockArea');
-        currentStatBlockData = null; // Reset first
+        // Reset the sharable data cache to ensure we don't push the previous creature by mistake.
+        currentStatBlockData = null;
+
         if (!rawDataString) {
             statBlockArea.innerHTML = '<p>No data available for this creature.</p>';
             showPanel('statBlockArea', 'Stat Block');
             return;
         }
+
         try {
             const monster = JSON.parse(rawDataString);
+            // Transform the raw JSON into a formatted HTML stat block using the local renderer.
             statBlockArea.innerHTML = renderStatBlock(rawDataString);
-            showPanel('statBlockArea', monster.name || 'Stat Block'); // Update title and show panel
-            currentStatBlockData = { type: 'statblock', data: rawDataString }; // Set the data for the push button
+
+            // Navigate the user to the stats panel and update the header with the monster's name.
+            showPanel('statBlockArea', monster.name || 'Stat Block');
+
+            // Preserve the raw JSON so it can be sent to Discord as a rich embed if requested.
+            currentStatBlockData = { type: 'statblock', data: rawDataString };
         } catch (e) {
             statBlockArea.innerHTML = '<p>Error: Could not parse creature data.</p>';
             showPanel('statBlockArea', 'Error');
         }
     }
 
+    /**
+     * Displays the mob rules reference guide and current mob name.
+     * @param {number} creatureId - ID of the mob creature.
+     */
     async function displayMobRules(creatureId) {
         const statBlockArea = document.getElementById('statBlockArea');
 
+        // Safety check for rule data existence
         if (!MOB_RULES_DATA) {
             logMessage('[UI] Error: MOB_RULES_DATA is null or undefined.');
             statBlockArea.innerHTML = '<p>Fatal Error: Mob rules data object is not available.</p>';
             showPanel('statBlockArea', 'Error');
             return;
         }
-
         const { ui, imagePath } = MOB_RULES_DATA;
 
+        // Verify rule content and image path
         if (!ui || !ui.text || !imagePath) {
-            logMessage(`[UI] Error: Mob rules data is missing or malformed. UI: ${!!ui}, Text: ${!!ui.text}, Path: ${!!imagePath}`);
+            logMessage(`[UI] Error: Mob rules data is missing or malformed.`);
             statBlockArea.innerHTML = '<p>Mob rules data is missing or malformed.</p>';
             showPanel('statBlockArea', 'Error');
             return;
         }
 
+        // Fetch the reference image as a Base64 data URL for local display
         const result = await window.electron.ipcRenderer.invoke('get-image-as-data-url', imagePath);
-
         if (!result.success) {
             statBlockArea.innerHTML = `<p>Failed to load mob rules image. See log for details.</p>`;
             showPanel('statBlockArea', 'Error');
             return;
         }
 
+        // Build the HTML content for the rules panel
         const contentHTML = `
             <style>
                 .mob-rules-container h3, .mob-rules-container p, .mob-rules-container ul {
@@ -330,21 +424,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 #image-overlay {
                     position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
+                    top: 0; left: 0; width: 100%; height: 100%;
                     background-color: rgba(0, 0, 0, 0.8);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 1000;
-                    cursor: pointer;
+                    display: flex; justify-content: center; align-items: center;
+                    z-index: 1000; cursor: pointer;
                 }
                 #image-overlay img {
-                    max-width: 90%;
-                    max-height: 90%;
-                    object-fit: contain;
+                    max-width: 90%; max-height: 90%; object-fit: contain;
                 }
             </style>
             <div class="mob-rules-container">
@@ -353,8 +439,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         `;
 
+        // Update the panel content
         statBlockArea.innerHTML = contentHTML;
 
+        // Handle image zoom overlay click
         document.getElementById('mob-rules-image').addEventListener('click', () => {
             const overlay = document.createElement('div');
             overlay.id = 'image-overlay';
@@ -366,9 +454,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             document.body.appendChild(overlay);
         });
+
+        // Show the panel
         showPanel('statBlockArea', 'Mob Rules');
+        // Find creature name for Discord context
         const creature = initiativeOrder.find(c => c.id === creatureId);
         const creatureName = creature ? creature.name : 'Unknown Mob';
+        // Cache data for Discord sharing
         currentStatBlockData = { type: 'mob-rules', data: { creatureName, absoluteImagePath: result.absolutePath } };
     }
 
@@ -384,7 +476,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             btn.textContent = '➕';
         }
     });
-
     document.addEventListener('click', (event) => {
         const target = event.target;
         const targetId = target.id;
@@ -399,13 +490,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const creature = initiativeOrder.find(c => c.id === creatureId);
                 if (creature) rawDataString = creature.rawData;
             }
-
             if (rawDataString) {
                 displayStatBlock(rawDataString);
             }
             return; // Done with this click event
         }
-
         switch (targetId) {
             case 'import-monster-btn':
                 createPopup('monster-search', null, event.target);
@@ -433,15 +522,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showPanel(logPanels[currentPanelIndex].id);
                 break;
             case 'push-panel-btn': {
+                // The "Push to Discord" button sends the content of the active panel
+                // (Dice Log or Stat Block) to the configured Discord text channel.
                 const activePanelId = logPanels[currentPanelIndex].id;
+
                 if (activePanelId === 'diceLog') {
                     const diceLog = document.getElementById('diceLog');
-                    const entries = Array.from(diceLog.children).slice(-12); // Get last 12 entries
+                    // We only push the most recent 12 entries to avoid hitting Discord's message size limit.
+                    const entries = Array.from(diceLog.children).slice(-12);
                     const logContent = entries.map(entry => entry.textContent).join('\n');
                     if (logContent) {
                         window.electron.ipcRenderer.send('push-dicelog-to-discord', logContent);
                     }
                 } else if (activePanelId === 'statBlockArea' && currentStatBlockData) {
+                    // Logic for sharing creature stats or mob rules via rich embeds.
                     if (currentStatBlockData.type === 'statblock') {
                         window.electron.ipcRenderer.send('push-statblock-to-discord', currentStatBlockData.data);
                     } else if (currentStatBlockData.type === 'mob-rules') {
@@ -535,7 +629,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Soundboard Listeners (placeholders for now) ---
     // --- Soundboard Listeners ---
     const soundboardVolumeSlider = document.getElementById('soundboard-volume');
-
     soundboardVolumeSlider.addEventListener('input', (e) => {
         const sliderValue = parseFloat(e.target.value);
         // Scale: 0-1 slider maps to 0-1.5 actual volume (150%)
@@ -547,41 +640,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Save state (debounced ideally, but on input for now is fine for local app)
         saveSoundboardState();
     });
-
+    // Handle the submission of the "Add Combatant" form.
+    // This supports both creating new combatants and updating existing ones.
     addCreatureForm.addEventListener('submit', (event) => {
         event.preventDefault();
         try {
+            // Helpers to quickly extract and type-cast form values.
             const getVal = (id) => document.getElementById(id).value;
             const getInt = (id) => getVal(id) ? parseInt(getVal(id), 10) : null;
 
-            // Use dataset ID as primary source of truth, fallback to global variable if needed
+            // Identify if we are in 'Edit Mode' based on whether an ID was stored on the form element.
             const editingId = addCreatureForm.dataset.editingId ? parseInt(addCreatureForm.dataset.editingId, 10) : null;
             const isEditing = !!editingId || !!creatureBeingEdited;
 
-            // console.log('[Form Submit] Editing ID:', editingId, 'Is Editing:', isEditing);
-
             let creature;
-
             if (isEditing) {
-                // alert(`[DEBUG] Entering Edit Mode Logic`);
-                // If we have an ID but lost the object (due to reload/race condition),
-                // we reconstruct a partial object with the ID. 
-                // Ideally we have the full object in creatureBeingEdited.
+                // To maintain data integrity during an update, we first try to find the existing
+                // combatant object in our local initiative list.
                 if (creatureBeingEdited && creatureBeingEdited.id === editingId) {
                     creature = { ...creatureBeingEdited };
                 } else if (editingId) {
-                    // Fallback: create object with just ID so backend can find it
-                    creature = { id: editingId };
-                    // We might miss some hidden fields here (like reminders), 
-                    // but backend merge logic usually replaces the whole object.
-                    // IMPORTANT: To avoid data loss, we should try to fetch it from the initiativeOrder if possible,
-                    // but renderer doesn't have direct access.
-                    // However, since we populate from initiativeOrder, we can find it in the local global var.
                     const existing = initiativeOrder.find(c => c.id === editingId);
                     if (existing) {
                         creature = { ...existing };
                     } else if (creatureBeingEdited) {
                         creature = { ...creatureBeingEdited };
+                    } else {
+                        // Fallback to a bare object with the ID if synchronization fails.
+                        creature = { id: editingId };
                     }
                 } else {
                     creature = { ...creatureBeingEdited };
@@ -604,7 +690,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Parse initiative as a number for updates (it's already been rolled)
                 const initVal = getVal('creature-initiative');
                 creature.initiative = parseFloat(initVal) || creature.initiative;
-
                 if (isMobMode) {
                     const newMobSize = getInt('mob-size');
                     // Preserve the original hpFormula if converting, otherwise it's already there.
@@ -624,7 +709,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // console.log('[Form Submit] Sending update-creature', creature);
                 window.electron.ipcRenderer.send('update-creature', creature);
-
             } else { // This is a new creature
                 creature = {
                     id: Date.now(),
@@ -643,7 +727,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     noDeathSaves: document.getElementById('creature-no-death-saves').checked,
                     deathSaves: { successes: 0, failures: 0 }
                 };
-
                 if (isMobMode) {
                     // The 'hp' field now contains the dice formula for a single creature.
                     // The backend will handle the calculation.
@@ -652,7 +735,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // No need to set maxHp, singleCreatureHP, or hpFormula here.
                     // The backend will derive everything from the .hp formula and mobInitialCount.
                 }
-
                 if (addCreatureForm.dataset.monsterRawData) {
                     creature.rawData = addCreatureForm.dataset.monsterRawData;
                 }
@@ -679,7 +761,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- IPC Listeners ---
     window.electron.ipcRenderer.on('log-message', (event, message) => logMessage(message));
-
     window.electron.ipcRenderer.on('dice-log', (event, message) => {
         const logEntry = document.createElement('div');
         logEntry.textContent = message;
@@ -688,23 +769,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         diceLog.scrollTop = diceLog.scrollHeight;
         showPanel('diceLog');
     });
-
     const showBotNag = () => {
         let message = "The Discord bot is currently disabled. You need to enable and configure it in settings to use audio features on Discord. Open settings now?";
-
         if (botStatus.message === 'Not Configured') {
             message = "The Discord bot is enabled but not fully configured. Would you like to open settings to finish setup?";
         }
-
         if (confirm(message)) {
             window.electron.ipcRenderer.send('open-settings-window');
         }
     };
-
     window.electron.ipcRenderer.on('discord-bot-status', (event, status) => {
         botStatus = status;
         isBotEnabled = status.status !== 'offline';
-
         const indicator = document.getElementById('bot-status-indicator');
         if (indicator) {
             if (status.voiceStatus === 'connected') {
@@ -722,7 +798,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
-
     window.electron.ipcRenderer.on('discord-config', (event, config) => {
         discordConfig = config;
         if (musicAutosaveCheck) {
@@ -738,11 +813,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (config.audioMode) {
             document.documentElement.style.setProperty('--music-player-height', `280px`);
         }
-
         if (config.leftColumnWidth) {
             document.documentElement.style.setProperty('--left-col-width', `${config.leftColumnWidth}px`);
         }
-
         if (config.audioMode) {
             document.body.classList.add('audio-only');
             // Move containers to columns
@@ -753,7 +826,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const sbResizerTop = document.getElementById('soundboard-resizer-top');
             const midResizerLeft = document.getElementById('middle-col-resizer-left');
             const midResizerRight = document.getElementById('middle-col-resizer-right');
-
             if (rightCol && musicControls && soundboard && musicResizer) {
                 rightCol.appendChild(musicControls);
                 rightCol.appendChild(musicResizer);
@@ -773,7 +845,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Calculate and set right column width based on columns
             const colWidth = (audioOnlyCols * 180) + ((audioOnlyCols - 1) * 5) + 16; // slots + gaps + padding
             document.documentElement.style.setProperty('--right-col-width', `${colWidth}px`);
-
             showPanel('musicLibraryArea');
         } else {
             document.body.classList.remove('audio-only');
@@ -792,7 +863,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const sbResizerTop = document.getElementById('soundboard-resizer-top');
             const midResizerLeft = document.getElementById('middle-col-resizer-left');
             const midResizerRight = document.getElementById('middle-col-resizer-right');
-
             if (leftCol && creatureEntry && logWrapper && musicResizer && musicControls) {
                 leftCol.appendChild(creatureEntry);
                 leftCol.appendChild(logWrapper);
@@ -821,7 +891,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         renderSoundboard(); // Ensure soundboard layout updates when mode changes
     });
-
     window.electron.ipcRenderer.on('switch-panel', (event, panelId) => {
         // Map old panel IDs to new ones if necessary
         const map = {
@@ -832,7 +901,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
         showPanel(map[panelId] || panelId);
     });
-
     function showNotification(message) {
         const toast = document.getElementById('library-notification');
         if (!toast) return;
@@ -842,11 +910,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             toast.style.display = 'none';
         }, 5000);
     }
-
     window.electron.ipcRenderer.on('music-library-update', (event, { library, diff }) => {
         musicLibrary = library;
         renderMusicLibrary();
-
         if (diff) {
             let msg = "Library Update: ";
             const parts = [];
@@ -854,7 +920,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (diff.addedFolders > 0) parts.push(`${diff.addedFolders} folders added`);
             if (diff.removed > 0) parts.push(`${diff.removed} songs removed`);
             if (diff.removedFolders > 0) parts.push(`${diff.removedFolders} folders removed`);
-
             msg += parts.join(", ") + ".";
             logMessage(msg);
 
@@ -864,21 +929,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
-
     let renderLibraryTimeout;
     function normalizeSearchString(s) {
         if (!s) return '';
         // treat whitespace, snake_case, kebab-case, dots all the same
         return s.toLowerCase().replace(/[\s_\-\.]+/g, ' ').trim();
     }
-
     function matchesFilter(name, filter) {
         if (!filter) return true;
         const normalizedName = normalizeSearchString(name);
         const normalizedFilter = normalizeSearchString(filter);
         return normalizedName.includes(normalizedFilter);
     }
-
     function renderMusicLibrary() {
         if (renderLibraryTimeout) clearTimeout(renderLibraryTimeout);
         renderLibraryTimeout = setTimeout(() => {
@@ -895,7 +957,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }, 50); // Small debounce to prevent multiple immediate renders
     }
-
     function updateSelectionUI() {
         const nodes = document.querySelectorAll('#library-tree-container .tree-node-content');
         nodes.forEach(content => {
@@ -907,14 +968,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-
     function createTreeNode(node, isRoot = false) {
         let hasVisibleChild = false;
         let selfMatches = matchesFilter(node.name, libraryFilter);
-
         const childrenContainer = document.createElement('div');
         childrenContainer.className = 'node-children';
-
         if (node.type === 'directory' && node.children) {
             node.children.forEach(child => {
                 const childNode = createTreeNode(child);
@@ -929,31 +987,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (libraryFilter && !selfMatches && !hasVisibleChild) {
             return null;
         }
-
         const div = document.createElement('div');
         div.className = 'tree-node';
         if (isRoot) div.style.marginLeft = '0';
-
         const content = document.createElement('div');
         content.className = 'tree-node-content';
         content.setAttribute('data-path', node.path);
         if (selectedLibraryPaths.has(node.path)) content.classList.add('selected');
-
         const toggle = document.createElement('span');
         toggle.className = 'folder-toggle';
         toggle.textContent = node.type === 'directory' ? '📁' : '📄';
-
         const name = document.createElement('span');
         name.className = 'node-name';
         name.textContent = node.name;
-
         content.appendChild(toggle);
         content.appendChild(name);
 
         // Actions
         const actions = document.createElement('div');
         actions.className = 'tree-node-actions';
-
         const playNow = document.createElement('button');
         playNow.className = 'small-btn';
         playNow.innerHTML = '▶️';
@@ -970,7 +1022,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('library-action', { action: 'play-now', paths: files });
             }
         };
-
         const addTop = document.createElement('button');
         addTop.className = 'small-btn';
         addTop.innerHTML = '⬆️';
@@ -980,7 +1031,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const files = getAllFiles(node);
             window.electron.ipcRenderer.send('library-action', { action: 'add-top', paths: files });
         };
-
         const addBottom = document.createElement('button');
         addBottom.className = 'small-btn';
         addBottom.innerHTML = '⬇️';
@@ -990,22 +1040,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const files = getAllFiles(node);
             window.electron.ipcRenderer.send('library-action', { action: 'add-bottom', paths: files });
         };
-
         actions.appendChild(playNow);
         actions.appendChild(addTop);
         actions.appendChild(addBottom);
         content.appendChild(actions);
-
         div.appendChild(content);
-
         if (node.type === 'directory' && node.children) {
             // Expand if filtering and has matches
             const isExpanded = (libraryFilter && hasVisibleChild) || expandedLibraryPaths.has(node.path);
             childrenContainer.style.display = isExpanded ? 'block' : 'none';
             if (isExpanded) toggle.textContent = '📂';
-
             div.appendChild(childrenContainer);
-
             content.onclick = (e) => {
                 if (e.ctrlKey) {
                     toggleSelection(node.path);
@@ -1038,7 +1083,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             };
         }
-
         content.ondblclick = (e) => {
             e.stopPropagation();
             const files = getAllFiles(node);
@@ -1046,10 +1090,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.electron.ipcRenderer.send('library-action', { action: 'play-now', paths: files });
             }
         };
-
         return div;
     }
-
     function toggleSelection(path) {
         if (selectedLibraryPaths.has(path)) {
             selectedLibraryPaths.delete(path);
@@ -1058,7 +1100,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         renderMusicLibrary();
     }
-
     function getAllFiles(node) {
         if (node.type === 'file') return [node.path];
         let files = [];
@@ -1069,11 +1110,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         return files;
     }
-
     document.getElementById('rescan-library-btn').onclick = () => {
         window.electron.ipcRenderer.invoke('rescan-music-library');
     };
-
     document.getElementById('add-loose-btn').onclick = () => {
         window.electron.ipcRenderer.invoke('open-file-dialog', { multi: true, folders: true }).then(filePaths => {
             if (filePaths && filePaths.length > 0) {
@@ -1081,7 +1120,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     };
-
     function getSelectedFiles() {
         const files = new Set();
         // Traverse the musicLibrary tree to find nodes whose path is in selectedLibraryPaths
@@ -1095,33 +1133,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         traverse(musicLibrary);
         return [...files];
     }
-
     document.getElementById('bulk-play-now').onclick = () => {
         const files = getSelectedFiles();
         if (files.length > 0) {
             window.electron.ipcRenderer.send('library-action', { action: 'play-now', paths: files });
         }
     };
-
     document.getElementById('bulk-add-top').onclick = () => {
         const files = getSelectedFiles();
         if (files.length > 0) {
             window.electron.ipcRenderer.send('library-action', { action: 'add-top', paths: files });
         }
     };
-
     document.getElementById('bulk-add-bottom').onclick = () => {
         const files = getSelectedFiles();
         if (files.length > 0) {
             window.electron.ipcRenderer.send('library-action', { action: 'add-bottom', paths: files });
         }
     };
-
     let currentLoopMode = 1;
     let currentShuffleMode = false;
     let lastMusicStatus = null;
     let lastStackFingerprint = '';
-
     function togglePreview(index = -1) {
         if (!previewAudioPlayer.paused) {
             previewAudioPlayer.pause();
@@ -1131,7 +1164,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
         }
-
         window.electron.ipcRenderer.invoke('get-preview-audio-data', { index }).then(result => {
             if (result.success) {
                 previewAudioPlayer.src = result.url;
@@ -1145,9 +1177,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-
+    // Handle status updates from the backend music player.
+    // This listener manages the playlist UI, progress bars, and autosave.
     window.electron.ipcRenderer.on('music-player-status', (event, status) => {
-        // Update basic state
         isPlaying = status.isPlaying;
         if (status.currentIndex === -1) {
             lastScrolledIndex = -1;
@@ -1159,7 +1191,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (progressBar && timeDisplay) {
             const percent = status.duration > 0 ? (status.currentTime / status.duration) * 100 : 0;
             progressBar.style.width = `${percent}%`;
-
             const formatTime = (s) => {
                 const mins = Math.floor(s / 60);
                 const secs = Math.floor(s % 60);
@@ -1167,12 +1198,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
             timeDisplay.textContent = `${formatTime(status.currentTime)} / ${formatTime(status.duration)}`;
         }
-
         playPauseButton.textContent = isPlaying ? '⏸️' : '▶️';
 
-        // Heavy updates (Only if not a simple time update)
+        // Structural updates (e.g. playlist changes) are only processed when isTimeUpdate is false
+        // to avoid freezing the UI thread every second during playback progress.
         if (!status.isTimeUpdate && status.stack) {
-            // Handle Autosave
+            // Check if the current playlist needs to be persisted to disk.
             if (musicAutosaveCheck && musicAutosaveCheck.checked) {
                 const oldStack = (lastMusicStatus && lastMusicStatus.stack) ? lastMusicStatus.stack : [];
                 const newStack = status.stack;
@@ -1180,16 +1211,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Check if stack content changed (simplified check: length and paths)
                 const changed = oldStack.length !== newStack.length ||
                     newStack.some((track, i) => !oldStack[i] || track.path !== oldStack[i].path);
-
                 if (changed && newStack.length > 0) {
                     window.electron.ipcRenderer.invoke('save-music-preset', newStack.map(t => t.path), false);
                 }
             }
-
             lastMusicStatus = status;
             currentLoopMode = status.loopMode;
             currentShuffleMode = status.shuffleMode;
-
             playPauseButton.disabled = status.stack.length === 0;
 
             // Render Playlist
@@ -1204,7 +1232,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const div = document.createElement('div');
                     div.className = 'music-stack-item';
                     div.dataset.index = index;
-
                     div.innerHTML = `
                         <span class="track-name">${track.name}</span>
                         <div class="item-actions">
@@ -1246,7 +1273,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const items = musicStackList.querySelectorAll('.music-stack-item');
         items.forEach((div, index) => {
             const isActive = index === status.currentIndex;
-
             div.classList.toggle('active', isActive);
 
             // Auto-scroll to active track
@@ -1273,14 +1299,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
     });
-
     window.electron.ipcRenderer.on('update-initiative-list', (event, data) => {
         initiativeOrder = data.initiativeOrder;
         currentTurnIndex = data.currentTurnIndex;
         combatantPanelOrder = [...initiativeOrder];
         renderInitiativeList(initiativeOrder, currentTurnIndex);
         renderCombatantDetailsList(combatantPanelOrder, currentTurnIndex);
-
         if (data.extra && data.extra.type === 'death-save-reminder') {
             const creature = initiativeOrder.find(c => c.id === data.extra.creatureId);
             if (creature) {
@@ -1288,7 +1312,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
-
     window.electron.ipcRenderer.on('soundboard-state-change', (event, { slotId, isPlaying, file, emoji }) => {
         const slot = soundboardState[slotId];
         if (slot) {
@@ -1298,7 +1321,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderSoundboard();
         }
     });
-
     window.electron.ipcRenderer.on('populate-edit-form', (event, creature) => {
         if (!creature) return;
 
@@ -1371,7 +1393,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('imported-monster-info-btn').style.display = 'none';
         }
     });
-
     window.electron.ipcRenderer.on('populate-add-form', (event, creature) => {
         if (!creature) return;
 
@@ -1444,7 +1465,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.scrollTo(0, 0);
         document.getElementById('creature-name').focus();
     });
-
     function populateMonsterForm(monster) {
         if (!monster) return;
 
@@ -1452,26 +1472,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (monster.saveVersion && monster.stats && monster.HP) {
             const calculateModifier = (score) => Math.floor(((score || 10) - 10) / 2);
             const formatModifier = (mod) => (mod >= 0 ? `+${mod}` : `${mod}`);
-
             document.getElementById('imported-monster-info-btn').style.display = 'inline-block';
             document.getElementById('creature-name').value = monster.name || '';
             document.getElementById('creature-hp').value = `${monster.HP.HD}d${monster.HP.type}${monster.HP.modifier >= 0 ? '+' : ''}${monster.HP.modifier}`;
             document.getElementById('creature-ac').value = monster.AC;
-
             let highestSpeed = 0;
             if (monster.speeds && monster.speeds.length > 0) {
                 highestSpeed = Math.max(...monster.speeds.map(s => s.speed));
             }
             document.getElementById('creature-speed').value = highestSpeed > 0 ? `${highestSpeed}ft` : '30ft';
             document.getElementById('creature-initiative').value = formatModifier(calculateModifier(monster.stats.DEX));
-
             document.getElementById('str-score').value = monster.stats.STR || 10;
             document.getElementById('dex-score').value = monster.stats.DEX || 10;
             document.getElementById('con-score').value = monster.stats.CON || 10;
             document.getElementById('int-score').value = monster.stats.INT || 10;
             document.getElementById('wis-score').value = monster.stats.WIS || 10;
             document.getElementById('cha-score').value = monster.stats.CHA || 10;
-
             const stats = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
             stats.forEach(s => {
                 const save = monster.saves[s];
@@ -1494,7 +1510,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (match) document.getElementById('save-dc').value = match[1];
                 }
             }
-
             addCreatureForm.dataset.monsterRawData = JSON.stringify(monster);
             const content = document.getElementById('add-creature-form-content');
             if (content.style.display === 'none') {
@@ -1502,17 +1517,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             return;
         }
-
         document.getElementById('imported-monster-info-btn').style.display = 'inline-block';
         document.getElementById('creature-name').value = monster.name || '';
         document.getElementById('creature-hp').value = monster.hp.formula || monster.hp.average || '';
-
         if (monster.ac && monster.ac[0]) {
             document.getElementById('creature-ac').value = monster.ac[0].ac || monster.ac[0];
         } else {
             document.getElementById('creature-ac').value = '';
         }
-
         let highestSpeed = 0;
         if (monster.speed) {
             if (typeof monster.speed === 'number') {
@@ -1525,15 +1537,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         document.getElementById('creature-speed').value = highestSpeed > 0 ? `${highestSpeed}ft` : '30ft';
-
         const calculateModifier = (score) => Math.floor(((score || 10) - 10) / 2);
-
         const dexMod = calculateModifier(monster.dex);
         document.getElementById('creature-initiative').value = formatModifier(dexMod);
 
         // --- Auto-parsing for Atk Mod and Save DC ---
         const rawDataString = JSON.stringify(monster);
-
         const findMode = (arr) => {
             if (!arr.length) return null;
             const counts = arr.reduce((acc, val) => {
@@ -1544,10 +1553,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const modes = Object.keys(counts).filter(key => counts[key] === maxCount);
             return Math.max(...modes.map(m => parseInt(m, 10))); // Return highest in case of a tie
         };
-
         const atkMatches = [...rawDataString.matchAll(/{@atkr[^}]*?}\s*\(([\+\-]?\d+)\)|{@hit ([\+\-]?\d+)}/g)];
         const allAtkBonuses = [...new Set(atkMatches.map(match => parseInt(match[1] || match[2], 10)))].sort((a, b) => b - a);
-
         if (allAtkBonuses.length > 0) {
             document.getElementById('attack-modifier').value = formatModifier(allAtkBonuses[0]);
             if (allAtkBonuses.length > 1) {
@@ -1559,7 +1566,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('attack-modifier').value = '';
             document.getElementById('attack-modifier-2').value = '';
         }
-
         const dcMatches = [...rawDataString.matchAll(/{@dc\s+(\d+)}/g)];
         const allDcs = dcMatches.map(match => parseInt(match[1], 10));
         const saveDc = findMode(allDcs);
@@ -1568,14 +1574,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             document.getElementById('save-dc').value = '';
         }
-
         document.getElementById('str-score').value = monster.str || 10;
         document.getElementById('dex-score').value = monster.dex || 10;
         document.getElementById('con-score').value = monster.con || 10;
         document.getElementById('int-score').value = monster.int || 10;
         document.getElementById('wis-score').value = monster.wis || 10;
         document.getElementById('cha-score').value = monster.cha || 10;
-
         const saves = monster.save || {};
         document.getElementById('str-save').value = saves.str || formatModifier(calculateModifier(monster.str));
         document.getElementById('dex-save').value = saves.dex || formatModifier(calculateModifier(monster.dex));
@@ -1583,13 +1587,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('int-save').value = saves.int || formatModifier(calculateModifier(monster.int));
         document.getElementById('wis-save').value = saves.wis || formatModifier(calculateModifier(monster.wis));
         document.getElementById('cha-save').value = saves.cha || formatModifier(calculateModifier(monster.cha));
-
         const fullStatBlock = JSON.stringify(monster);
         addCreatureForm.dataset.monsterRawData = fullStatBlock;
     }
 
     // --- Soundboard State ---
-
     function migrateSoundboardState(savedState) {
         if (!savedState || !Array.isArray(savedState)) return [];
         return savedState.map((slot, index) => {
@@ -1610,7 +1612,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return { ...slot, isPlaying: false };
         });
     }
-
     let soundboardState = [];
     let soundboardRowCount = 1; // Resizable rows in Normal mode
     const NORMAL_SLOTS_PER_ROW = 3;
@@ -1622,7 +1623,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         let slotsToLoad = [];
         let volumeToLoad = 0.5;
         let rowsToLoad = 1;
-
         if (savedState) {
             if (Array.isArray(savedState)) {
                 slotsToLoad = savedState;
@@ -1633,13 +1633,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (savedState.rows !== undefined) rowsToLoad = savedState.rows;
             }
         }
-
         soundboardRowCount = rowsToLoad;
         soundboardState = migrateSoundboardState(slotsToLoad);
 
         // Ensure we always have enough for the largest layout (72 slots for 12 rows of 6)
         const totalNeeded = 72;
-
         if (soundboardState.length < totalNeeded) {
             for (let i = soundboardState.length; i < totalNeeded; i++) {
                 soundboardState.push({
@@ -1653,20 +1651,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
         }
-
         const soundboardVolumeSlider = document.getElementById('soundboard-volume');
         if (soundboardVolumeSlider) {
             soundboardVolumeSlider.value = volumeToLoad;
             const effectiveVolume = volumeToLoad * 1.5;
             window.electron.ipcRenderer.send('set-soundboard-volume', { volume: effectiveVolume });
         }
-
         renderSoundboard();
     });
 
     // Expose for verification/IPC
     window.renderSoundboard = renderSoundboard;
-
     let saveSoundboardStateTimeout;
     function saveSoundboardState() {
         const volumeEl = document.getElementById('soundboard-volume');
@@ -1679,7 +1674,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 isPlaying: false // Don't save playing state
             }))
         };
-
         if (saveSoundboardStateTimeout) clearTimeout(saveSoundboardStateTimeout);
         saveSoundboardStateTimeout = setTimeout(() => {
             window.electron.ipcRenderer.send('save-soundboard-state', stateToSave);
@@ -1691,7 +1685,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Preset Buttons ---
     const savePresetBtn = document.getElementById('save-preset-btn');
     const loadPresetBtn = document.getElementById('load-preset-btn');
-
     if (savePresetBtn) {
         savePresetBtn.addEventListener('click', () => {
             window.electron.ipcRenderer.invoke('save-soundboard-preset', soundboardState).then(result => {
@@ -1701,7 +1694,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
     }
-
     if (discordMediaControlToggle) {
         discordMediaControlToggle.addEventListener('change', () => {
             window.electron.ipcRenderer.send('set-discord-config', {
@@ -1709,23 +1701,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
     }
-
     const soundboardResizerTop = document.getElementById('soundboard-resizer-top');
     const middleResizerLeft = document.getElementById('middle-col-resizer-left');
     const middleResizerRight = document.getElementById('middle-col-resizer-right');
-
     let isResizingSB = false;
     let isResizingCols = false;
     let initialX, initialY;
     let initialLeftColWidth, initialSBRows, initialSBCols;
-
     function handleSBResize(e) {
         const isAudioOnly = document.body.classList.contains('audio-only');
         if (isResizingSB) {
             const deltaY = initialY - e.clientY;
             const rowHeight = 110; // Approx height of slot + gaps
             const threshold = 0.6;
-
             let newRows;
             if (isAudioOnly) {
                 // In Audio-Only, it's at the top of the right column
@@ -1751,7 +1739,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const deltaX = e.clientX - initialX;
             const colWidth = 180 + 5; // Slot + Gap
             const threshold = 0.6;
-
             if (isAudioOnly) {
                 // Resize columns in Audio-Only (handle on the left of right column)
                 const deltaCols = -deltaX / colWidth; // Moving left increases columns
@@ -1772,7 +1759,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     }
-
     [soundboardResizerTop, middleResizerLeft, middleResizerRight].forEach(resizer => {
         if (!resizer) return;
         resizer.addEventListener('mousedown', (e) => {
@@ -1781,10 +1767,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             initialY = e.clientY;
             initialSBRows = isAudioOnly ? audioOnlyRows : soundboardRowCount;
             initialSBCols = audioOnlyCols;
-
             const leftCol = document.querySelector('.column-left');
             initialLeftColWidth = leftCol ? leftCol.getBoundingClientRect().width : (window.innerWidth * 0.25);
-
             if (resizer === soundboardResizerTop) {
                 isResizingSB = true;
             } else {
@@ -1794,7 +1778,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.addEventListener('mousemove', handleSBResize);
         });
     });
-
     document.addEventListener('mouseup', () => {
         if (isResizingSB || isResizingCols) {
             const isAudioOnly = document.body.classList.contains('audio-only');
@@ -1802,7 +1785,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             isResizingCols = false;
             document.body.style.userSelect = '';
             document.removeEventListener('mousemove', handleSBResize);
-
             if (isAudioOnly) {
                 window.electron.ipcRenderer.send('set-discord-config', {
                     audioOnlyRows: audioOnlyRows,
@@ -1816,7 +1798,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
-
     if (loadPresetBtn) {
         loadPresetBtn.addEventListener('click', () => {
             window.electron.ipcRenderer.invoke('load-soundboard-preset').then(result => {
@@ -1837,14 +1818,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
     }
-
     document.getElementById('add-row-btn').addEventListener('click', () => {
         const isAudioOnly = document.body.classList.contains('audio-only');
         if (isAudioOnly) {
             if (audioOnlyRows < 12) {
                 audioOnlyRows++;
                 discordConfig.audioOnlyRows = audioOnlyRows;
-
                 window.electron.ipcRenderer.send('set-discord-config', {
                     audioOnlyRows: audioOnlyRows
                 });
@@ -1859,14 +1838,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
-
     document.getElementById('remove-row-btn').addEventListener('click', () => {
         const isAudioOnly = document.body.classList.contains('audio-only');
         if (isAudioOnly) {
             if (audioOnlyRows > 1) {
                 audioOnlyRows--;
                 discordConfig.audioOnlyRows = audioOnlyRows;
-
                 window.electron.ipcRenderer.send('set-discord-config', {
                     audioOnlyRows: audioOnlyRows
                 });
@@ -1880,14 +1857,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
-
     document.getElementById('add-col-btn').addEventListener('click', () => {
         const isAudioOnly = document.body.classList.contains('audio-only');
         if (isAudioOnly) {
             if (audioOnlyCols < 12) {
                 audioOnlyCols++;
                 discordConfig.audioOnlyCols = audioOnlyCols;
-
                 window.electron.ipcRenderer.send('set-discord-config', {
                     audioOnlyCols: audioOnlyCols
                 });
@@ -1895,14 +1870,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
-
     document.getElementById('remove-col-btn').addEventListener('click', () => {
         const isAudioOnly = document.body.classList.contains('audio-only');
         if (isAudioOnly) {
             if (audioOnlyCols > 1) {
                 audioOnlyCols--;
                 discordConfig.audioOnlyCols = audioOnlyCols;
-
                 window.electron.ipcRenderer.send('set-discord-config', {
                     audioOnlyCols: audioOnlyCols
                 });
@@ -1915,7 +1888,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const emojiDialog = document.getElementById('emoji-picker-dialog');
     const emojiInput = document.getElementById('emoji-input');
     let currentEditingSlotId = null;
-
     if (emojiDialog) {
         emojiDialog.addEventListener('close', () => {
             if (emojiDialog.returnValue === 'default') {
@@ -1929,7 +1901,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentEditingSlotId = null;
         });
     }
-
     function openEmojiPicker(slotId) {
         if (emojiDialog && soundboardState[slotId]) {
             currentEditingSlotId = slotId;
@@ -1949,9 +1920,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const target = e.target;
         const creatureId = parseInt(target.dataset.id, 10);
         if (isNaN(creatureId)) return;
-
         const creature = initiativeOrder.find(c => c.id === creatureId);
-
         if (target.classList.contains('attack-btn')) {
             if (creature) {
                 if (creature.isMob) {
@@ -1997,7 +1966,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const { index } = target.dataset;
             const isSuccess = target.classList.contains('ds-success');
             const ds = creature.deathSaves || { successes: 0, failures: 0 };
-
             if (isSuccess) {
                 ds.successes = parseInt(index);
                 if (target.classList.contains('filled') && ds.successes === 1 && (creature.deathSaves.successes === 1)) {
@@ -2014,12 +1982,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             createPopup('death-save-reminder', creatureId, target);
         }
     });
-
     combatantDetailsListDiv.addEventListener('change', (e) => {
         const target = e.target;
         const creatureId = parseInt(target.dataset.id, 10);
         if (isNaN(creatureId)) return;
-
         if (target.classList.contains('concentration-cb')) {
             window.electron.ipcRenderer.send('update-creature-flag', { creatureId, flag: 'isConcentrating', value: e.target.checked });
         } else if (target.classList.contains('friendly-cb')) {
@@ -2033,16 +1999,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updateSoundboardContainerHeight() {
         const soundboardContainer = document.getElementById('soundboard-container');
         if (!soundboardContainer) return;
-
         if (document.body.classList.contains('audio-only')) {
             soundboardContainer.style.flex = '0 0 auto';
             soundboardContainer.style.height = 'auto';
             return;
         }
-
         const grid = document.getElementById('soundboard-grid');
         const header = soundboardContainer.querySelector('.panel-header');
-
         if (grid && grid.firstElementChild) {
             const slotHeight = grid.firstElementChild.getBoundingClientRect().height;
             const style = window.getComputedStyle(grid);
@@ -2051,7 +2014,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const padding = (parseInt(containerStyle.paddingTop) || 0) + (parseInt(containerStyle.paddingBottom) || 0);
             const headerHeight = header ? header.getBoundingClientRect().height : 0;
             const headerMargin = header ? (parseInt(window.getComputedStyle(header).marginBottom) || 0) : 0;
-
             const newHeight = (soundboardRowCount * slotHeight) + ((soundboardRowCount - 1) * gap) + padding + headerHeight + headerMargin + 4;
 
             // Respect parent height constraints
@@ -2064,7 +2026,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
             }
-
             soundboardContainer.style.flex = `0 0 ${newHeight}px`;
             soundboardContainer.style.height = `${newHeight}px`;
         } else {
@@ -2076,26 +2037,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             soundboardContainer.style.height = `${newHeight}px`;
         }
     }
-
+    /**
+     * Renders the soundboard grid based on the current layout mode (Standard vs Audio-Only).
+     * Adjusts column widths and grid properties dynamically to match the user's resizing preferences.
+     */
     function renderSoundboard() {
         const grid = document.getElementById('soundboard-grid');
         if (!grid) return;
+
+        // Clear previous grid elements to prevent duplication on re-render.
         grid.innerHTML = '';
 
         const isAudioOnly = document.body.classList.contains('audio-only');
         const rows = isAudioOnly ? audioOnlyRows : soundboardRowCount;
         const cols = isAudioOnly ? audioOnlyCols : NORMAL_SLOTS_PER_ROW;
+
+        // Calculate the total number of slots needed to fill the requested grid dimensions.
         const totalSlotsToRender = isAudioOnly ? (audioOnlyRows * audioOnlyCols) : (soundboardRowCount * NORMAL_SLOTS_PER_ROW);
 
+        // Update CSS variables so the layout engine matches our logical grid.
         grid.style.setProperty('--sb-rows', rows);
         grid.style.setProperty('--sb-cols', cols);
 
         if (isAudioOnly) {
+            // In Audio-Only mode, the right column width is locked to the soundboard content width.
             const colWidth = (cols * 180) + ((cols - 1) * 5) + 16;
             document.documentElement.style.setProperty('--right-col-width', `${colWidth}px`);
         }
 
-        // Render subset of state based on current layout
+        // Iterate and render each slot button.
         for (let i = 0; i < totalSlotsToRender; i++) {
             let slot = soundboardState[i];
             if (!slot) {
@@ -2104,7 +2074,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             const slotDiv = document.createElement('div');
             slotDiv.className = 'soundboard-stack-slot';
-
             const trackCount = slot.tracks.length;
 
             // --- Icon Logic ---
@@ -2113,7 +2082,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const shuffleIcon = '🔀';
             const shuffleClass = slot.playMode === 'shuffle' ? 'active' : '';
             const playIcon = slot.isPlaying ? '⏹️' : '⏯️';
-
             let addOrCountIcon;
             if (trackCount === 0) {
                 addOrCountIcon = '➕';
@@ -2122,8 +2090,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 addOrCountIcon = trackCount.toString();
             }
-
-
             const currentTrackName = slot.tracks[slot.currentTrackIndex]?.name || (trackCount > 0 ? '---' : 'Empty');
             slotDiv.innerHTML = `
                 <div class="stack-header">
@@ -2141,11 +2107,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
             grid.appendChild(slotDiv);
         }
-
         attachSoundboardListeners();
         updateSoundboardContainerHeight();
     }
-
     function attachSoundboardListeners() {
         // Emoji
         document.querySelectorAll('.stack-emoji-btn').forEach(btn => {
@@ -2226,7 +2190,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
     }
-
     function togglePlay(slotId) {
         if (!isBotEnabled) {
             showBotNag();
@@ -2234,7 +2197,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         const slot = soundboardState[slotId];
         if (slot.tracks.length === 0) return;
-
         if (slot.isPlaying) {
             // Stop
             window.electron.ipcRenderer.send('stop-sound', { slotId });
@@ -2256,8 +2218,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const slotId = parseInt(finishedSlotId, 10);
         const slot = soundboardState[slotId];
         if (!slot) return;
-
-        // Logic:
         // 1. Mark current not playing
         slot.isPlaying = false;
 
@@ -2280,41 +2240,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         renderSoundboard();
     });
-
+    /**
+     * Renders the compact vertical list of combatants (the Initiative Order).
+     * This panel shows health bars, status conditions, and current turn indicators.
+     */
     function renderInitiativeList(initiativeOrder, currentTurnIndex) {
         initiativeListDiv.innerHTML = '';
         if (!initiativeOrder || initiativeOrder.length === 0) return;
 
+        // Use a DocumentFragment to minimize browser reflows during batch DOM updates.
         const fragment = document.createDocumentFragment();
 
         initiativeOrder.forEach((creature, index) => {
-            if (creature.hidden) return; // Skip hidden creatures (e.g. being edited)
+            // Creatures are temporarily hidden from the list when they are being edited.
+            if (creature.hidden) return;
 
             const isActive = index === currentTurnIndex;
             const creatureDiv = document.createElement('div');
             creatureDiv.className = 'initiative-entry' + (isActive ? ' active-turn' : '');
             creatureDiv.dataset.id = creature.id;
-
             const hp = creature.hp || 0;
             const maxHp = creature.maxHp || 1;
             const tempHp = creature.tempHp || 0;
             const hpPercentage = Math.min(100, (hp / maxHp) * 100);
             const tempHpPercentage = (tempHp / maxHp) * 100;
             const hpColor = getHpColor(hp, maxHp);
-
             const hpBarHTML = `
                 <div class="initiative-hp-bar-container">
                     <div class="hp-bar-temp" style="width: ${tempHpPercentage}%;"></div>
                     <div class="hp-bar-current" style="width: ${hpPercentage}%; background-color: ${hpColor};"></div>
                 </div>
             `;
-
             let conditionHTML = '';
             const allConditionNames = creature.conditions || [];
 
             // Render up to 3, plus an indicator if more
             const visibleConditions = allConditionNames.slice(0, 3);
-
             visibleConditions.forEach(name => {
                 const cond = DND_CONDITIONS[name];
                 if (cond) {
@@ -2324,7 +2285,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </span>`;
                 }
             });
-
             if (allConditionNames.length > 3) {
                 const tooltipText = allConditionNames.slice(3).map(name => {
                     const c = DND_CONDITIONS[name];
@@ -2336,13 +2296,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                  </span>`;
             }
             let conditionStr = conditionHTML;
-
             let displayName = creature.name;
             if (creature.isMob) {
                 const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
                 displayName = `${creature.name} (${currentCount})`;
             }
-
             let content = '';
             if (isActive) {
                 content += '<span class="active-chevron">></span>';
@@ -2351,52 +2309,41 @@ document.addEventListener('DOMContentLoaded', async () => {
             content += `<span class="creature-name">${displayName}</span>`;
             content += `<span class="initiative-conditions">${conditionStr}</span>`;
             content += hpBarHTML;
-
             creatureDiv.innerHTML = content;
-
             creatureDiv.querySelector('.initiative-score').addEventListener('click', (e) => {
                 e.stopPropagation();
                 createPopup('edit-initiative', creature.id, e.target);
             });
-
             creatureDiv.addEventListener('click', () => {
                 const targetPanel = document.querySelector(`.combatant-details-entry[data-id='${creature.id}']`);
                 if (targetPanel) {
                     targetPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             });
-
             fragment.appendChild(creatureDiv);
         });
         initiativeListDiv.appendChild(fragment);
     }
-
     function getHpColor(current, max) {
         if (current <= 0) return '#6c757d'; // Grey (dead/0 HP)
         if (current > max) return '#8a2be2'; // Purple (overhealed/temp HP)
-
         const percentage = (current / max) * 100;
         if (percentage >= 100) return '#007bff'; // Blue (full HP)
         if (percentage >= 50) return '#28a745'; // Green (50-99%)
         if (percentage >= 25) return '#ffc107'; // Yellow (25-49%)
         return '#dc3545'; // Red (<25%)
     }
-
     function renderCombatantDetailsList(orderToRender, currentTurnIndex) {
         combatantDetailsListDiv.innerHTML = '';
         if (!orderToRender || orderToRender.length === 0) return;
-
         const fragment = document.createDocumentFragment();
         const activeCreatureId = initiativeOrder.length > 0 ? initiativeOrder[currentTurnIndex]?.id : null;
-
         orderToRender.forEach((creature) => {
             if (creature.hidden) return; // Skip hidden creatures (e.g. being edited)
-
             const creatureDiv = document.createElement('div');
             const isActive = activeCreatureId === creature.id;
             creatureDiv.className = 'combatant-details-entry' + (isActive ? ' active-turn' : '');
             creatureDiv.dataset.id = creature.id;
-
             const saves = creature.saves || {};
             const scores = creature.scores || {};
             const savesHTML = `
@@ -2419,7 +2366,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button class="stat-roll-btn" data-id="${creature.id}" data-type="check" data-stat="cha">CHA: ${scores.cha || '10'}</button>
                 </div>
             `;
-
             const ds = creature.deathSaves || { successes: 0, failures: 0 };
             const deathSavesHTML = (creature.hp <= 0 && !creature.isMob) ? `
                 <div class="death-saves-container" style="display: flex; align-items: center; gap: 8px;">
@@ -2438,14 +2384,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button class="ds-roll-btn small-btn" data-id="${creature.id}" title="Roll Death Save">🎲</button>
                 </div>
             ` : '';
-
             const hp = creature.hp || 0;
             const maxHp = creature.maxHp || 1;
             const tempHp = creature.tempHp || 0;
             const hpPercentage = Math.min(100, (hp / maxHp) * 100);
             const tempHpPercentage = (tempHp / maxHp) * 100;
             const hpColor = getHpColor(hp, maxHp);
-
             let displayName = creature.name;
             if (creature.isMob) {
                 const currentCount = (creature.singleCreatureHP > 0) ? Math.ceil(creature.hp / creature.singleCreatureHP) : 0;
@@ -2461,7 +2405,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ` : ''}
                 </div>
             `;
-
             const hasStatBlock = creature.rawData;
             creatureDiv.innerHTML = `
                 <div class="combatant-header">
@@ -2523,14 +2466,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         combatantDetailsListDiv.appendChild(fragment);
     }
-
     function createPopup(type, creatureId, targetElement, data = {}) {
         // Close any existing popups
         document.querySelectorAll('.popup-dialog').forEach(p => p.remove());
-
         const popup = document.createElement('div');
         popup.className = 'popup-dialog';
-
         let contentHTML = '';
         if (type === 'hp') {
             contentHTML = `
@@ -2541,7 +2481,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const creature = initiativeOrder.find(c => c.id === parseInt(creatureId));
             const existingConditions = creature ? (creature.conditions || []) : [];
             const availableConditions = Object.keys(DND_CONDITIONS).filter(c => !existingConditions.includes(c));
-
             if (availableConditions.length === 0) {
                 contentHTML = `<p style="padding: 10px; margin: 0; font-size: 0.9em; color: #666;">All conditions applied.</p>`;
             } else {
@@ -2610,16 +2549,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 contentHTML = `<div class="popup-results-list">${itemsHTML}</div>`;
             }
         }
-
-
         popup.innerHTML = contentHTML;
         document.body.appendChild(popup);
-
         const inputToFocus = popup.querySelector('input[type="text"], input[type="number"], textarea');
         if (inputToFocus) {
             inputToFocus.focus();
         }
-
         ensureInViewport(popup, targetElement.getBoundingClientRect());
 
         // Add listeners for popup actions
@@ -2715,13 +2650,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const searchBtn = document.getElementById('popup-monster-search');
             const queryInput = document.getElementById('popup-monster-query');
             const addCreatureBtn = document.querySelector('.add-creature-button');
-
             const handleSearch = async () => {
                 const query = queryInput.value;
                 if (!query || searchBtn.disabled) return;
-
                 const originalButtonText = searchBtn.innerHTML;
-
                 try {
                     // --- Enter loading state ---
                     searchBtn.disabled = true;
@@ -2733,7 +2665,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const results = await window.electron.ipcRenderer.invoke('search-monsters', query);
                     // On success, create a new popup with results. The old one is discarded.
                     createPopup('monster-results', null, targetElement, { results });
-
                 } catch (error) {
                     console.error("Error searching for monster:", error);
                 } finally {
@@ -2746,7 +2677,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     searchBtn.innerHTML = originalButtonText;
                 }
             };
-
             searchBtn.addEventListener('click', handleSearch);
             queryInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -2780,7 +2710,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Stat Block Rendering (for panel) ---
     function renderStatBlock(rawDataString) {
         if (!rawDataString) return 'No data available.';
-
         try {
             const monster = JSON.parse(rawDataString);
 
@@ -2788,16 +2717,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (monster.saveVersion && monster.stats && monster.HP) {
                 const calculateModifier = (score) => Math.floor(((score || 10) - 10) / 2);
                 const formatModifier = (mod) => (mod >= 0 ? `+${mod}` : `${mod}`);
-
                 let html = `<h3>${monster.name || 'Unknown Creature'}</h3>`;
                 html += `<p><em>${monster.size || ''} ${monster.type || ''}, ${monster.alignment || ''}</em></p><hr>`;
-
                 const hpFormula = `${monster.HP.HD}d${monster.HP.type}${monster.HP.modifier >= 0 ? '+' : ''}${monster.HP.modifier}`;
                 const avgHp = Math.floor(monster.HP.HD * (monster.HP.type + 1) / 2) + monster.HP.modifier;
-
                 html += `<div class="property-line"><strong>Armor Class</strong> <span>${monster.AC} ${monster.ACType ? `(${monster.ACType})` : ''}</span></div>`;
                 html += `<div class="property-line"><strong>Hit Points</strong> <span>${avgHp} (${hpFormula})</span></div>`;
-
                 const speedStr = (monster.speeds || []).map(s => `${s.type} ${s.speed} ft.${s.note ? ` (${s.note})` : ''}`).join(', ');
                 html += `<div class="property-line"><strong>Speed</strong> <span>${speedStr || 'N/A'}</span></div><hr>`;
 
@@ -2818,15 +2743,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         return `${stat} ${formatModifier(mod)}`;
                     }).join(', ');
                 if (saves) html += `<div class="property-line"><strong>Saving Throws</strong> <span>${saves}</span></div>`;
-
                 const skills = (monster.skills || []).map(s => `${s.skill.label} ${formatModifier(s.override ? s.overrideValue : (calculateModifier(monster.stats[s.skill.stat]) + (s.proficient ? monster.proficiency : 0) * (s.expertise ? 2 : 1)))}`).join(', ');
                 if (skills) html += `<div class="property-line"><strong>Skills</strong> <span>${skills}</span></div>`;
-
                 if (monster.resistances?.length) html += `<div class="property-line"><strong>Damage Resistances</strong> <span>${monster.resistances.join(', ')}</span></div>`;
                 if (monster.immunities?.length) html += `<div class="property-line"><strong>Damage Immunities</strong> <span>${monster.immunities.join(', ')}</span></div>`;
                 if (monster.vulnerabilities?.length) html += `<div class="property-line"><strong>Damage Vulnerabilities</strong> <span>${monster.vulnerabilities.join(', ')}</span></div>`;
                 if (monster.conditions?.length) html += `<div class="property-line"><strong>Condition Immunities</strong> <span>${monster.conditions.join(', ')}</span></div>`;
-
                 const senses = Object.entries(monster.senses || {}).filter(([k, v]) => v > 0).map(([k, v]) => `${k} ${v} ft.`).join(', ');
                 html += `<div class="property-line"><strong>Senses</strong> <span>${senses}${monster.sensesNotes ? (senses ? ', ' : '') + monster.sensesNotes : ''}${senses || monster.sensesNotes ? ', ' : ''}passive Perception ${monster.passivePerception?.override ? monster.passivePerception.overrideValue : (10 + calculateModifier(monster.stats.WIS) + ((monster.skills || []).find(s => s.key === 'PERCEPTION')?.proficient ? monster.proficiency : 0))}</span></div>`;
                 if (monster.languages) html += `<div class="property-line"><strong>Languages</strong> <span>${monster.languages || '—'}</span></div>`;
@@ -2834,9 +2756,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Traits & Actions
                 const renderFalindrithEntry = (e) => `<div class="trait-block"><strong><em>${e.name}.</em></strong> ${e.description.replace(/\n/g, '<br>')}</div>`;
-
                 if (monster.traits?.length) html += monster.traits.map(renderFalindrithEntry).join('');
-
                 if (monster.multiattacks?.length) {
                     html += `<h3>Actions</h3>`;
                     monster.multiattacks.forEach(ma => {
@@ -2847,15 +2767,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else if (monster.attacks?.length || monster.actions?.length) {
                     html += `<h3>Actions</h3>`;
                 }
-
                 if (monster.attacks?.length) html += monster.attacks.map(renderFalindrithEntry).join('');
                 if (monster.actions?.length) html += monster.actions.filter(a => !a.legendaryOnly).map(renderFalindrithEntry).join('');
-
                 if (monster.legendaryActions?.actions?.length) {
                     html += `<h3>Legendary Actions</h3>`;
                     if (monster.legendaryActions.customPreamble) html += `<p>${monster.legendaryActions.customPreamble}</p>`;
                     else html += `<p>The creature can take ${monster.legendaryActions.count} legendary action(s), choosing from the options below. Only one legendary action option can be used at a time and only at the end of another creature's turn. The creature regains spent legendary actions at the start of its turn.</p>`;
-
                     monster.legendaryActions.actions.forEach(la => {
                         const action = monster.actions.find(a => a.id === la.actionId) || monster.attacks.find(a => a.id === la.actionId);
                         if (action) {
@@ -2863,12 +2780,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     });
                 }
-
                 if (monster.reactions?.length) {
                     html += `<h3>Reactions</h3>`;
                     html += monster.reactions.map(renderFalindrithEntry).join('');
                 }
-
                 return html;
             }
 
@@ -2884,7 +2799,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return val.toString();
                 }).join(', ');
             };
-
             const renderSpeed = (speed) => {
                 if (!speed) return 'N/A';
                 return Object.entries(speed).map(([type, val]) => {
@@ -2899,7 +2813,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return `${type} ${speedVal} ft.${condition}`;
                 }).join(', ');
             };
-
             const renderCr = (cr) => {
                 if (!cr) return 'N/A';
                 if (typeof cr === 'object' && cr.cr) {
@@ -2907,7 +2820,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 return cr.toString();
             };
-
             const renderEntries = (entries) => {
                 if (!entries || !Array.isArray(entries)) return '';
                 return entries.map(entry => {
@@ -2932,10 +2844,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // --- HTML Construction ---
             let html = `<h3>${monster.name || 'Unknown Creature'}</h3>`;
-
             const type = monster.type ? (typeof monster.type === 'object' ? monster.type.type : monster.type) : 'unknown';
             html += `<p><em>${monster.size || ''} ${type}, ${monster.alignment || ''}</em></p><hr>`;
-
             html += `<div class="property-line"><strong>Armor Class</strong> <span>${renderAc(monster.ac)}</span></div>`;
             html += `<div class="property-line"><strong>Hit Points</strong> <span>${monster.hp ? `${monster.hp.average} (${monster.hp.formula})` : 'N/A'}</span></div>`;
             html += `<div class="property-line"><strong>Speed</strong> <span>${renderSpeed(monster.speed)}</span></div><hr>`;
@@ -2967,9 +2877,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (monster.reaction) {
                 html += `<h3>Reactions</h3>${renderEntries(monster.reaction)}`;
             }
-
             return html;
-
         } catch (e) {
             console.error("Failed to parse or render stat block:", e);
             return "Error: Could not display stat block. Data might be malformed.";
@@ -3004,21 +2912,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const confirmImportBtn = document.getElementById('confirm-import-btn');
     const importSelectAllBtn = document.getElementById('import-select-all');
     const importClearAllBtn = document.getElementById('import-clear-all');
-
     if (importSelectAllBtn) {
         importSelectAllBtn.addEventListener('click', () => {
             const checkboxes = importListContainer.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(cb => cb.checked = true);
         });
     }
-
     if (importClearAllBtn) {
         importClearAllBtn.addEventListener('click', () => {
             const checkboxes = importListContainer.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(cb => cb.checked = false);
         });
     }
-
     if (importBtn) {
         importBtn.addEventListener('click', async () => {
             const combatants = await window.electron.ipcRenderer.invoke('read-combat-file');
@@ -3028,18 +2933,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const div = document.createElement('div');
                     div.style.padding = '5px';
                     div.style.borderBottom = '1px solid #ddd';
-
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
                     checkbox.id = `import-check-${index}`;
                     checkbox.value = index;
                     checkbox.checked = false; // Default to UNCHECKED per user request
-
                     const label = document.createElement('label');
                     label.htmlFor = `import-check-${index}`;
                     label.textContent = ` ${c.name} (Init: ${c.initiativeFormula || c.initiative || '?'}, HP: ${c.hpFormula || c.hp || '?'})`;
                     label.style.marginLeft = '10px';
-
                     div.appendChild(checkbox);
                     div.appendChild(label);
                     importListContainer.appendChild(div);
@@ -3050,17 +2952,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-
     if (confirmImportBtn) {
         confirmImportBtn.addEventListener('click', (e) => {
             if (importDialog.returnValue === 'cancel') return;
-
             const combatants = JSON.parse(importDialog.dataset.combatants || '[]');
             const checkedBoxes = importListContainer.querySelectorAll('input[type="checkbox"]:checked');
 
             // Use a base timestamp that is definitely unique for this batch
             const baseTimestamp = Date.now();
-
             checkedBoxes.forEach((box, i) => {
                 const index = parseInt(box.value);
                 const c = combatants[index];
@@ -3069,7 +2968,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Ensure unique ID by adding loop index to timestamp.
                     // This guarantees they are distinct and integers.
                     newCreature.id = baseTimestamp + i;
-
                     window.electron.ipcRenderer.send('add-creature', newCreature);
                 }
             });
@@ -3079,7 +2977,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Global Tooltip Logic ---
     const globalTooltip = document.getElementById('global-tooltip');
-
     if (globalTooltip) {
         document.addEventListener('mouseover', (e) => {
             const target = e.target.closest('.has-tooltip');
@@ -3090,13 +2987,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateTooltipPosition(e);
             }
         });
-
         document.addEventListener('mousemove', (e) => {
             if (globalTooltip.style.visibility === 'visible') {
                 updateTooltipPosition(e);
             }
         });
-
         document.addEventListener('mouseout', (e) => {
             const target = e.target.closest('.has-tooltip');
             if (target) {
@@ -3104,7 +2999,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 globalTooltip.style.opacity = '0';
             }
         });
-
         function updateTooltipPosition(e) {
             const offset = 15;
             const padding = 10;
@@ -3123,12 +3017,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 x = e.clientX - width - offset;
             }
             if (x < padding) x = padding;
-
             if (y + height > window.innerHeight - padding) {
                 y = e.clientY - height - offset;
             }
             if (y < padding) y = padding;
-
             globalTooltip.style.left = `${x}px`;
             globalTooltip.style.top = `${y}px`;
         }
@@ -3148,7 +3040,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const padding = 10;
         let x = anchorRect.left;
         let y = anchorRect.bottom + window.scrollY;
-
         const rect = element.getBoundingClientRect();
 
         // Check horizontal
@@ -3162,41 +3053,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             y = anchorRect.top + window.scrollY - rect.height;
         }
         if (y < padding) y = padding;
-
         element.style.left = `${x}px`;
         element.style.top = `${y}px`;
     }
-
     function createSearchOverlay(anchorBtn, currentFilter, onUpdate) {
         // Remove existing
         document.querySelectorAll('.search-overlay').forEach(el => el.remove());
-
         const overlay = document.createElement('div');
         overlay.className = 'search-overlay';
         overlay.innerHTML = `
             <input type="text" placeholder="Search..." value="${currentFilter}">
             <button class="small-btn clear-search-btn">❌</button>
         `;
-
         document.body.appendChild(overlay);
         const input = overlay.querySelector('input');
         const clearBtn = overlay.querySelector('.clear-search-btn');
-
         ensureInViewport(overlay, anchorBtn.getBoundingClientRect());
-
         input.focus();
         input.select();
-
         input.addEventListener('input', (e) => {
             onUpdate(e.target.value);
         });
-
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === 'Escape') {
                 overlay.remove();
             }
         });
-
         clearBtn.addEventListener('click', () => {
             input.value = '';
             onUpdate('');
@@ -3214,7 +3096,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.addEventListener('click', outsideClick);
         }, 0);
     }
-
     if (searchLibraryBtn) {
         searchLibraryBtn.addEventListener('click', () => {
             if (libraryFilter) {
@@ -3230,7 +3111,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-
     if (searchPlaylistBtn) {
         searchPlaylistBtn.addEventListener('click', () => {
             if (playlistFilter) {
@@ -3260,41 +3140,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- Resizing Logic ---
+    // --- UI Resizing Logic ---
+    // Handles vertical resizing of the music player / playlist panel.
     const musicPlayerResizer = document.getElementById('music-player-resizer');
     let isResizingMusicPlayer = false;
 
     if (musicPlayerResizer) {
         musicPlayerResizer.addEventListener('mousedown', (e) => {
             isResizingMusicPlayer = true;
+            // Provide visual feedback for the drag operation.
             document.body.style.cursor = 'row-resize';
             e.preventDefault();
         });
     }
-
     document.addEventListener('mousemove', (e) => {
         const isAudioOnly = document.body.classList.contains('audio-only');
+
         if (isResizingMusicPlayer) {
-            if (isAudioOnly) return; // Disable manual vertical resize in audio-only
+            // Manual vertical resizing is disabled in Audio-Only mode to maintain layout stability.
+            if (isAudioOnly) return;
+
             const musicControls = document.getElementById('music-controls-container');
             if (musicControls) {
                 const rect = musicControls.getBoundingClientRect();
-                const isAudioOnly = document.body.classList.contains('audio-only');
                 let newHeight;
-                if (isAudioOnly) {
-                    // music player is at the top of the right column
-                    newHeight = Math.max(150, Math.min(600, e.clientY - rect.top));
-                } else {
-                    // music player is at the bottom of the left column
-                    // The resizer is ABOVE it
-                    newHeight = Math.max(150, Math.min(600, rect.bottom - e.clientY));
-                }
+
+                // Calculate the new height based on mouse position relative to the panel.
+                // In standard mode, the panel is at the bottom of the left column.
+                newHeight = Math.max(150, Math.min(600, rect.bottom - e.clientY));
+
+                // Apply the new height to CSS and local config for persistence.
                 document.documentElement.style.setProperty('--music-player-height', `${newHeight}px`);
                 discordConfig.musicPlayerHeight = newHeight;
             }
         }
     });
-
     document.addEventListener('mouseup', () => {
         if (isResizingMusicPlayer) {
             isResizingMusicPlayer = false;
@@ -3305,5 +3185,4 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
     });
-
 });
