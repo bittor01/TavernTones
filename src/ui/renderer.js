@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <button type="button" id="import-monster-btn">Import Combatant</button>
             </div>
             <div style="display: flex; gap: 5px; align-items: center;">
-                <label style="font-size: 0.85em; cursor: pointer; user-select: none;"><input type="checkbox" id="creature-no-death-saves"> No Death Saves</label>
+                <!-- No Death Saves checkbox removed from form; now managed in the combatant list -->
                 <button type="submit" class="add-creature-button">Add Combatant</button>
                 <button type="button" id="clear-form-btn">Clear</button>
             </div>
@@ -670,7 +670,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 creature.saves = { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), };
                 creature.isMob = isMobMode;
                 creature.hp = getInt('creature-hp'); // Always take current HP from form for edits
-                creature.noDeathSaves = document.getElementById('creature-no-death-saves').checked;
+                // preserve existing noDeathSaves value during edit
                 creature.hidden = false; // Ensure creature is visible after update
 
                 // Parse initiative as a number for updates (it's already been rolled)
@@ -712,7 +712,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     saves: { str: getVal('str-save'), dex: getVal('dex-save'), con: getVal('con-save'), int: getVal('int-save'), wis: getVal('wis-save'), cha: getVal('cha-save'), },
                     tempHp: 0, conditions: [], isConcentrating: false, isFriendly: false, reminders: { start: '', end: '' },
                     isMob: isMobMode,
-                    noDeathSaves: document.getElementById('creature-no-death-saves').checked,
+                    noDeathSaves: false, // Default to allowing death saves for new creatures
                     deathSaves: { successes: 0, failures: 0 }
                 };
 
@@ -1481,9 +1481,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('wis-save').value = saves.wis || '';
         document.getElementById('cha-save').value = saves.cha || '';
 
-        // --- Configure Death Save preferences ---
-        document.getElementById('creature-no-death-saves').checked = !!creature.noDeathSaves;
-
         // --- Handle Mob UI State ---
         isMobMode = creature.isMob || false;
         const mobControls = document.getElementById('mob-controls');
@@ -1527,9 +1524,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const btn = document.getElementById('toggle-add-form-btn');
         if (content) content.style.display = 'block';
         if (btn) btn.textContent = '➖';
-
-        // --- Handle Death Saves State ---
-        document.getElementById('creature-no-death-saves').checked = !!creature.noDeathSaves;
 
         // This is for "Copying" a creature. It populates the form but doesn't
         // put the form into "edit mode".
@@ -3216,6 +3210,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         importSelectAllBtn.addEventListener('click', () => {
             const checkboxes = importListContainer.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(cb => cb.checked = true);
+            // Refresh button state after bulk change
+            updateImportButtonState();
         });
     }
 
@@ -3223,14 +3219,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         importClearAllBtn.addEventListener('click', () => {
             const checkboxes = importListContainer.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(cb => cb.checked = false);
+            // Refresh button state after bulk change
+            updateImportButtonState();
         });
     }
 
+    /**
+     * Listener: Handles the 'Import from File' action.
+     * Reads a combat file and populates the import selection dialog.
+     */
     if (importBtn) {
         importBtn.addEventListener('click', async () => {
+            // Request the backend to read and parse a combat JSON file
             const combatants = await window.electron.ipcRenderer.invoke('read-combat-file');
             if (combatants && combatants.length > 0) {
+                // Clear any previous entries from the dialog container
                 importListContainer.innerHTML = '';
+
+                // Build a selectable row for each combatant found in the file
                 combatants.forEach((c, index) => {
                     const div = document.createElement('div');
                     div.style.padding = '5px';
@@ -3240,7 +3246,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     checkbox.type = 'checkbox';
                     checkbox.id = `import-check-${index}`;
                     checkbox.value = index;
-                    checkbox.checked = false; // Default to UNCHECKED per user request
+                    // AUTO-SELECT: If only one creature was found, check it by default for convenience
+                    checkbox.checked = (combatants.length === 1);
+
+                    // Watch for changes to update the 'Import' button state
+                    checkbox.addEventListener('change', updateImportButtonState);
 
                     const label = document.createElement('label');
                     label.htmlFor = `import-check-${index}`;
@@ -3251,11 +3261,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                     div.appendChild(label);
                     importListContainer.appendChild(div);
                 });
-                // Store the combatants temporarily on the dialog
+
+                // Store the raw combatants list on the dialog element for easy retrieval on confirm
                 importDialog.dataset.combatants = JSON.stringify(combatants);
+
+                // Refresh the 'Import' button state before showing the modal
+                updateImportButtonState();
+                // Show the selection modal
                 importDialog.showModal();
             }
         });
+    }
+
+    /**
+     * Helper: Enables or disables the 'Import' button based on whether any checkboxes are checked.
+     */
+    function updateImportButtonState() {
+        const checkedCount = importListContainer.querySelectorAll('input[type="checkbox"]:checked').length;
+        if (confirmImportBtn) {
+            confirmImportBtn.disabled = (checkedCount === 0);
+            // Visual feedback: grey out the button if disabled
+            confirmImportBtn.style.opacity = (checkedCount === 0) ? '0.5' : '1';
+        }
     }
 
     if (confirmImportBtn) {
