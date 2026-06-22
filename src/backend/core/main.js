@@ -1605,14 +1605,28 @@ async function ipcloader() {
                     ttScores[s.toLowerCase()] = monster.stats[s];
                 });
 
-                // Robust speed parser to extract numeric feet from various string/object formats
-                const parseSpeed = (speedObj) => {
+                // --- Speed Parsing ---
+                /**
+                 * Robust speed parser to extract numeric feet from various string/object formats.
+                 * Now supports both the 'speed' object and 'speeds' array from Falindrith.
+                 */
+                const parseSpeed = (monster) => {
+                    const speedObj = monster.speed;
+                    const speedsArr = monster.speeds;
+
+                    // Priority 1: Check the 'speeds' array of objects
+                    if (Array.isArray(speedsArr)) {
+                        const speeds = speedsArr.map(s => parseInt(s.speed, 10)).filter(s => !isNaN(s));
+                        if (speeds.length > 0) return Math.max(...speeds) + 'ft';
+                    }
+
+                    // Priority 2: Fallback to the 'speed' property (string or object)
                     if (!speedObj) return '30ft';
                     if (typeof speedObj === 'string') {
                         const matches = speedObj.match(/(\d+)\s*ft/g);
                         if (matches) {
                             const speeds = matches.map(m => parseInt(m, 10));
-                            return Math.max(...speeds) + 'ft'; // Use the highest speed found (e.g. fly vs walk)
+                            return Math.max(...speeds) + 'ft';
                         }
                         return speedObj;
                     }
@@ -1623,17 +1637,98 @@ async function ipcloader() {
                     return '30ft';
                 };
 
+                // --- Attack Bonus Extraction ---
+                /**
+                 * Scans the attacks and spellcasting to find the two highest unique attack bonuses.
+                 */
+                const attackBonuses = [];
+                // 1. Check weapon/ability attacks
+                if (Array.isArray(monster.attacks)) {
+                    monster.attacks.forEach(atk => {
+                        let bonus;
+                        // Use override value if explicitly set
+                        if (atk.modifier && atk.modifier.override) {
+                            bonus = atk.modifier.overrideValue;
+                        }
+                        // Otherwise calculate from stat + proficiency
+                        else if (atk.modifier) {
+                            const stat = atk.modifier.stat ? atk.modifier.stat.toLowerCase() : 'str';
+                            bonus = calculateModifier(monster.stats[stat.toUpperCase()]);
+                            if (atk.modifier.proficient) {
+                                bonus += (monster.proficiency || 0);
+                            }
+                        }
+                        if (bonus !== undefined && !isNaN(bonus)) attackBonuses.push(bonus);
+                    });
+                }
+                // 2. Check spellcasting attack bonus
+                if (monster.spellcasting && monster.spellcasting.attack) {
+                    if (monster.spellcasting.attack.override) {
+                        attackBonuses.push(monster.spellcasting.attack.overrideValue);
+                    } else {
+                        const stat = monster.spellcasting.stat ? monster.spellcasting.stat.toUpperCase() : 'CHA';
+                        const bonus = calculateModifier(monster.stats[stat]) + (monster.proficiency || 0);
+                        attackBonuses.push(bonus);
+                    }
+                }
+
+                // Sort unique bonuses in descending order
+                const uniqueBonuses = [...new Set(attackBonuses)].sort((a, b) => b - a);
+                // Use DEX mod as fallback for the first bonus if none found
+                const atk1 = uniqueBonuses[0] !== undefined ? formatModifier(uniqueBonuses[0]) : formatModifier(dexMod);
+                const atk2 = uniqueBonuses[1] !== undefined ? formatModifier(uniqueBonuses[1]) : '';
+
+                // --- Difficulty Class (DC) Extraction ---
+                /**
+                 * Scans spellcasting, actions, and weapon properties to find the highest relevant DC.
+                 */
+                let maxDc = 10;
+                // 1. Check spellcasting save DC
+                if (monster.spellcasting && monster.spellcasting.save) {
+                    // Check overrideValue regardless of override flag if it contains a valid number
+                    if (monster.spellcasting.save.overrideValue > 0) {
+                        maxDc = Math.max(maxDc, monster.spellcasting.save.overrideValue);
+                    }
+                    // Also check standard calculation
+                    const stat = monster.spellcasting.stat ? monster.spellcasting.stat.toUpperCase() : 'CHA';
+                    const calcDc = calculateModifier(monster.stats[stat]) + (monster.proficiency || 0) + 8;
+                    maxDc = Math.max(maxDc, calcDc);
+                }
+                // 2. Scan action descriptions and metadata for DC mentions
+                if (Array.isArray(monster.actions)) {
+                    monster.actions.forEach(act => {
+                        // Match strings like "DC 15"
+                        const matches = act.description ? act.description.match(/DC\s*(\d+)/i) : null;
+                        if (matches) maxDc = Math.max(maxDc, parseInt(matches[1], 10));
+                        // Check CR annotation metadata
+                        if (act.crAnnotation && act.crAnnotation.maxSave) {
+                            maxDc = Math.max(maxDc, act.crAnnotation.maxSave);
+                        }
+                    });
+                }
+                // 3. Scan attacks for save DCs (e.g. Poison or Grapple DCs)
+                if (Array.isArray(monster.attacks)) {
+                    monster.attacks.forEach(atk => {
+                        const matches = atk.description ? atk.description.match(/DC\s*(\d+)/i) : null;
+                        if (matches) maxDc = Math.max(maxDc, parseInt(matches[1], 10));
+                        if (atk.save && atk.save > 0) maxDc = Math.max(maxDc, atk.save);
+                    });
+                }
+
                 // Build a TavernTones-compatible combatant object
                 const ttCombatant = {
                     name: monster.name,
                     hp: hpFormula,
-                    maxHp: null, // Will be calculated by the initiative tracker on add
+                    maxHp: null, // Calculated on add
                     ac: monster.AC,
-                    speed: parseSpeed(monster.speed),
+                    speed: parseSpeed(monster),
                     initiative: formatModifier(dexMod),
+                    attackMod: atk1,
+                    attackMod2: atk2,
+                    saveDc: maxDc,
                     scores: ttScores,
                     saves: ttSaves,
-                    rawData: JSON.stringify(monster), // Store original data for the Discord stat block view
+                    rawData: JSON.stringify(monster), // Full JSON for reference
                     conditions: [],
                     deathSaves: { successes: 0, failures: 0 },
                     noDeathSaves: false
