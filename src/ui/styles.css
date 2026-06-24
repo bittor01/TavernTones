@@ -1,15 +1,19 @@
 /* Performance and security update */
-/* --- Global Styles --- */
+/* --- Global Styles: Body and Common Elements --- */
 html,
 body {
     height: 100%;
     margin: 0;
+    /* Use standard system fonts for a native desktop application feel */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    /* Dark theme background and text colors */
     background-color: #1a1a1a;
     color: #d4d4d4;
+    /* Prevent overall page scrollbars; internal containers handle their own scrolling */
     overflow: hidden;
 }
 
+/* Ensure padding and border are included in element's total width/height */
 * {
     box-sizing: border-box;
 }
@@ -23,6 +27,7 @@ h2 {
     color: #cccccc;
 }
 
+/* --- Base Button Styles --- */
 button {
     padding: 8px 12px;
     border-radius: 5px;
@@ -30,6 +35,7 @@ button {
     background-color: #3c3c3c;
     color: #f0f0f0;
     cursor: pointer;
+    /* Smooth transition for hover effects */
     transition: background-color 0.2s;
 }
 
@@ -37,6 +43,7 @@ button:hover {
     background-color: #4c4c4c;
 }
 
+/* Blue styling for active toggles or primary actions */
 button.active {
     background-color: #007bff;
     border-color: #0056b3;
@@ -49,33 +56,34 @@ button:disabled {
     cursor: not-allowed;
 }
 
-/* --- Main Layout --- */
+/* --- Main Layout: 3-Column Grid System --- */
 .main-grid {
     display: grid;
-    /* Left panel flexible, Middle panel fixed, Right fills rest */
-    /* Resizers are 8px each */
+    /* Columns: Left(Flex) | Resizer(8px) | Middle(Fixed 568px) | Resizer(8px) | Right(Rest) */
     grid-template-columns: var(--left-col-width, 25%) 8px 568px 8px 1fr;
     height: 100vh;
     gap: 0;
     padding: 10px;
 }
 
+/* --- Layout Override: Audio-Only Mode --- */
 body.audio-only .main-grid {
-    /* Left side is flexible, right side (soundboard) snaps to content width */
+    /* Hides middle panel and first two resizers by setting their width to 0 */
     grid-template-columns: 1fr 0px 0px 8px var(--right-col-width, min-content);
     gap: 0;
-    padding-right: 0; /* Abut the right edge */
+    padding-right: 0;
 }
 
+/* Shared column container properties */
 .column {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    /* overflow-y: auto;  <-- REMOVED to allow inner containers to handle scrolling and keeping footer visible */
+    /* Prevent the column itself from scrolling; inner boxes should scroll */
     overflow: hidden;
-    /* Force content to fit or scroll internally */
 }
 
+/* Generic container 'box' used for most UI panels */
 .box {
     background-color: #252526;
     border-radius: 8px;
@@ -83,15 +91,17 @@ body.audio-only .main-grid {
     border: 1px solid #333;
 }
 
-/* --- Left Column --- */
+/* --- Left Column Content --- */
 .column-left {
     justify-content: space-between;
 }
 
+/* Add creature form: keeps its natural height */
 #creature-entry-container {
     flex-shrink: 0;
 }
 
+/* Log and Tabbed area: grows to fill available space */
 #log-wrapper {
     flex-grow: 1;
     display: flex;
@@ -99,6 +109,7 @@ body.audio-only .main-grid {
     min-height: 100px;
 }
 
+/* The scrollable text areas for logs and libraries */
 .log-area {
     flex-grow: 1;
     overflow-y: auto;
@@ -107,11 +118,12 @@ body.audio-only .main-grid {
     border-radius: 4px;
     font-size: 0.9em;
     line-height: 1.4;
+    /* Preserve whitespace for dice roll formatting */
     white-space: pre-wrap;
-    /* Ensures text wraps */
     word-wrap: break-word;
 }
 
+/* Music player container: height is adjustable via a resizer handle */
 #music-controls-container {
     flex-shrink: 0;
     display: flex;
@@ -119,17 +131,19 @@ body.audio-only .main-grid {
     height: var(--music-player-height, auto);
 }
 
+/* Parts of the music player that shouldn't shrink when height is reduced */
 #music-controls-container .panel-header,
 #music-controls-container .music-controls,
 #music-controls-container .progress-container {
     flex-shrink: 0;
 }
 
-/* --- Middle Column --- */
+/* --- Middle Column Content --- */
 .column-middle {
     min-width: 300px;
 }
 
+/* Flex rows for turn and file controls */
 #turn-controls-container .controls {
     display: flex;
     justify-content: space-between;
@@ -144,13 +158,12 @@ body.audio-only .main-grid {
     flex-grow: 1;
 }
 
+/* Initiative list container: takes up available middle-column space */
 #initiative-list-container {
     flex: 1 1 auto;
     display: flex;
-    /* Add flex to make list itself grow */
     flex-direction: column;
-    min-height: 0;
-    /* IMPORTANT: Allows the container to shrink below its content size, enabling scrolling */
+    min-height: 0; /* Required to allow the container to shrink and show scrollbars */
 }
 
 #initiative-list {
@@ -158,7 +171,7 @@ body.audio-only .main-grid {
     overflow-y: auto;
 }
 
-
+/* Individual rows in the initiative list */
 .initiative-entry {
     display: flex;
     align-items: center;
@@ -166,15 +179,15 @@ body.audio-only .main-grid {
     border-radius: 4px;
     cursor: pointer;
     gap: 10px;
-    /* Add gap for spacing */
 }
 
+/* Highlight for the active combatant */
 .initiative-entry.active-turn {
     background-color: #4f5b66;
     font-weight: bold;
 }
 
-/* Reorder elements visually using flexbox 'order' property */
+/* CSS Flex Order is used here to reorder elements without changing the DOM structure */
 .active-chevron {
     color: #a0c8ff;
     order: 1;
@@ -191,20 +204,17 @@ body.audio-only .main-grid {
 
 .initiative-hp-bar-container {
     width: 120px;
-    /* Fixed width for alignment */
     height: 12px;
     background-color: #1e1e1e;
     border-radius: 4px;
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
-    /* Prevent from shrinking */
     order: 3;
 }
 
 .initiative-entry .creature-name {
     flex-grow: 1;
-    /* Name takes up available space */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -213,15 +223,13 @@ body.audio-only .main-grid {
 
 .initiative-conditions {
     flex-shrink: 0;
-    /* Prevent emojis from shrinking */
     font-size: 0.9em;
     width: 80px;
-    /* Fixed width for alignment */
     text-align: left;
-    /* Align left now that it's at the end */
     order: 5;
 }
 
+/* --- Panel Header Components --- */
 .panel-header {
     display: flex;
     justify-content: space-between;
@@ -242,6 +250,7 @@ body.audio-only .main-grid {
     gap: 5px;
 }
 
+/* Styling for the small emoji buttons used to switch views */
 .mode-btn {
     background: none;
     border: 1px solid transparent;
@@ -263,6 +272,7 @@ body.audio-only .main-grid {
     opacity: 1;
 }
 
+/* Small square/circle indicator for bot online status */
 .status-indicator {
     cursor: help;
     font-size: 1.1em;
@@ -276,6 +286,7 @@ body.audio-only .main-grid {
     gap: 5px;
 }
 
+/* Invisible button background for tool-like icons */
 .small-btn {
     background: none;
     border: none;
@@ -284,7 +295,7 @@ body.audio-only .main-grid {
     padding: 2px;
 }
 
-/* --- Add Creature Form --- */
+/* --- Add Creature Form: Specialized Layout --- */
 #add-creature-form {
     display: flex;
     flex-direction: column;
@@ -302,7 +313,6 @@ body.audio-only .main-grid {
     align-items: center;
     gap: 5px;
     flex: 1 1 0;
-    /* Allow groups to grow and shrink */
 }
 
 .form-group label {
@@ -312,16 +322,16 @@ body.audio-only .main-grid {
 
 .form-group input {
     width: 100%;
-    /* Make input fill the group */
 }
 
 .name-group {
     flex-grow: 1;
-    /* Allow name to take full width */
 }
 
+/* Grid layout for the 6 core D&D stats */
 .stats-grid {
     display: grid;
+    /* Label | STR | DEX | CON | INT | WIS | CHA */
     grid-template-columns: 50px repeat(6, 1fr);
     gap: 5px;
     align-items: center;
@@ -344,6 +354,7 @@ body.audio-only .main-grid {
     text-align: center;
 }
 
+/* Consistent styling for all text and numeric inputs */
 input[type="text"],
 input[type="password"],
 input[type="number"] {
@@ -366,12 +377,13 @@ input[type="number"] {
 }
 
 
-/* --- Right Column --- */
+/* --- Right Column: Combatant Details --- */
 .column-right {
     overflow-y: auto;
     min-width: 300px;
 }
 
+/* Individual monster/player card */
 .combatant-details-entry {
     background-color: #333;
     border: 1px solid #444;
@@ -382,6 +394,7 @@ input[type="number"] {
 }
 
 .combatant-details-entry.active-turn {
+    /* Blue left-border highlight to indicate turn */
     border-left: 5px solid #a0c8ff;
     background-color: #4f5b66;
 }
@@ -413,6 +426,7 @@ input[type="number"] {
     flex-shrink: 0;
 }
 
+/* Pills used for AC, Speed, and Save DC in the header */
 .header-right-group .header-stat {
     font-size: 0.9em;
     background-color: #5a5a5a;
@@ -452,6 +466,7 @@ input[type="number"] {
     margin-bottom: 8px;
 }
 
+/* Flowing list of colored tags for active conditions */
 .condition-tags {
     display: flex;
     gap: 5px;
@@ -478,6 +493,7 @@ input[type="number"] {
     margin-left: 4px;
 }
 
+/* Floating custom tooltip styled to match the dark theme */
 #global-tooltip {
     position: fixed;
     visibility: hidden;
@@ -495,14 +511,13 @@ input[type="number"] {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
     transition: opacity 0.15s ease-in-out;
     font-family: inherit;
-    /* Inherit app font */
 }
 
 .has-tooltip {
     cursor: help;
 }
 
-/* Ensure no horizontal scrollbar in initiative list */
+/* Prevent horizontal scroll leakage in initiative list */
 #initiative-list {
     overflow-x: hidden;
 }
@@ -526,6 +541,7 @@ input[type="number"] {
     margin-bottom: 10px;
 }
 
+/* Styling for the small interactive stat buttons */
 .stat-roll-btn {
     background-color: #3c3c3c;
     border: 1px solid #555;
@@ -535,7 +551,7 @@ input[type="number"] {
     border-radius: 4px;
 }
 
-/* HP Bar Styles */
+/* --- Large HP Bar (Combatant Cards) --- */
 .hp-bar-container {
     flex-grow: 1;
     height: 24px;
@@ -553,13 +569,13 @@ input[type="number"] {
     position: absolute;
     left: 0;
     top: 0;
+    /* Smooth width changes for animated HP loss/gain */
     transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out;
 }
 
 .hp-bar-temp {
     background-color: rgba(108, 117, 125, 0.7);
-    /* A semi-transparent grey for temp hp */
-    z-index: 2;
+    z-index: 2; /* Sits on top of current HP */
 }
 
 .hp-bar-current {
@@ -575,7 +591,7 @@ input[type="number"] {
     text-shadow: 1px 1px 2px black;
 }
 
-/* --- Dialog & Popup Styles --- */
+/* --- Native HTML5 Dialog and Modal Styles --- */
 dialog {
     background-color: #252526;
     color: #d4d4d4;
@@ -585,6 +601,7 @@ dialog {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
+/* Backdrop dimming for modals */
 dialog::backdrop {
     background-color: rgba(0, 0, 0, 0.7);
 }
@@ -609,6 +626,7 @@ dialog h3 {
     margin-top: 20px;
 }
 
+/* --- Dynamic Popup (Non-Modal) Dialogs --- */
 .popup-dialog {
     position: absolute;
     background-color: #444;
@@ -644,12 +662,11 @@ dialog h3 {
     background-color: #5a5a5a;
 }
 
-/* Mob Rules Popup */
+/* --- Specialized Mob Rules Reference Styles --- */
 .mob-rules-popup {
     padding: 10px;
     max-width: 500px;
     position: relative;
-    /* For positioning the push button */
 }
 
 .mob-rules-popup h4 {
@@ -689,16 +706,15 @@ dialog h3 {
     right: 5px;
 }
 
-/* --- Soundboard Styles --- */
+/* --- Soundboard Component Styles --- */
 #soundboard-container {
-    flex: 0 0 170px;
-    /* Prevent it from shrinking */
+    flex: 0 0 170px; /* Standard mode height */
     min-height: 100px;
-    /* Ensure sufficient space for buttons and text */
 }
 
 #soundboard-grid {
     display: grid;
+    /* Grid columns and rows are dynamic based on configuration */
     grid-template-columns: repeat(var(--sb-cols, 3), 180px);
     grid-template-rows: repeat(var(--sb-rows, 1), auto);
     gap: 5px;
@@ -709,6 +725,7 @@ dialog h3 {
 }
 
 body.audio-only #soundboard-grid {
+    /* More columns allowed in audio-only mode */
     grid-template-columns: repeat(var(--sb-cols, 6), 180px);
     align-content: start;
     overflow: auto;
@@ -717,6 +734,7 @@ body.audio-only #soundboard-grid {
     justify-content: start;
 }
 
+/* --- Drag-to-Resize Handle UI --- */
 .resize-handle {
     height: 6px;
     background: #333;
@@ -730,6 +748,7 @@ body.audio-only #soundboard-grid {
     background: #007bff;
 }
 
+/* Vertical resizer for standard layout music player */
 .resizer-v {
     height: 8px;
     background: transparent;
@@ -741,6 +760,7 @@ body.audio-only #soundboard-grid {
     align-items: center;
 }
 
+/* Visual 'handle' text for the resizers */
 .resizer-v::after {
     content: '---';
     font-size: 14px;
@@ -759,14 +779,11 @@ body.audio-only #soundboard-grid {
     background: rgba(0, 123, 255, 0.1);
 }
 
-.resizer-h {
-    display: none !important;
-}
+/* Unused or legacy resizers */
+.resizer-h { display: none !important; }
+#column-resizer { display: none !important; }
 
-#column-resizer {
-    display: none !important;
-}
-
+/* Horizontal resizer for standard layout middle column */
 .resizer-h-middle {
     width: 8px;
     background: transparent;
@@ -795,6 +812,7 @@ body.audio-only #soundboard-grid {
     color: #007bff;
 }
 
+/* Vertical resizer for the soundboard grid */
 .resizer-v-sb {
     height: 8px;
     background: transparent;
@@ -823,6 +841,7 @@ body.audio-only #soundboard-grid {
     background: rgba(0, 123, 255, 0.1);
 }
 
+/* Hide manual col/row increment buttons in favor of drag handles */
 #add-col-btn,
 #remove-col-btn,
 #add-row-btn,
@@ -834,6 +853,7 @@ body.audio-only .resize-handle {
     display: none !important;
 }
 
+/* --- Legacy Soundboard Slot Styles --- */
 .soundboard-slot {
     display: flex;
     flex-direction: column;
@@ -842,7 +862,6 @@ body.audio-only .resize-handle {
     border-radius: 6px;
     padding: 8px;
     overflow: hidden;
-    /* Contain text */
     height: fit-content;
 }
 
@@ -868,33 +887,18 @@ body.audio-only .resize-handle {
     max-width: 100%;
     text-align: center;
     height: 1.2em;
-    /* fixed height to avoid layout shift */
 }
 
 .soundboard-slot-controls {
     display: flex;
     justify-content: flex-end;
-    /* Align delete button to right */
     align-items: center;
     width: 100%;
     margin-top: 5px;
     font-size: 0.8em;
 }
 
-.soundboard-unload-btn {
-    background: none;
-    border: none;
-    color: #ff4d4d;
-    font-size: 1.2em;
-    cursor: pointer;
-    padding: 2px;
-}
-
-.soundboard-unload-btn:disabled {
-    color: #555;
-    cursor: default;
-}
-
+/* --- Creature Detail Modal Styles --- */
 .reminders-popup {
     display: flex;
     flex-direction: column;
@@ -916,7 +920,7 @@ body.audio-only .resize-handle {
     gap: 10px;
 }
 
-/* --- Info Button --- */
+/* --- Generic UI Helpers --- */
 .info-btn {
     cursor: pointer;
     font-size: 1.2em;
@@ -925,25 +929,20 @@ body.audio-only .resize-handle {
     margin-left: 5px;
 }
 
-.info-btn:hover {
-    color: #d0e8ff;
-}
+.info-btn:hover { color: #d0e8ff; }
 
-/* --- Disabled Input State --- */
 input:disabled {
     background-color: #2a2a2a;
     color: #666;
     cursor: not-allowed;
 }
 
-/* --- Combatant Header Name Group --- */
 .combatant-name-group {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-grow: 1;
     min-width: 0;
-    /* Ensures text-overflow works correctly in a flex container */
 }
 
 .combatant-name-group h4 {
@@ -953,40 +952,34 @@ input:disabled {
     text-overflow: ellipsis;
 }
 
-/* Override for existing h4 to remove flex-grow */
-/* .combatant-header .combatant-name-group+.header-right-group {} - Removed empty rule */
+.combatant-header h4 { flex-grow: 0; }
 
-.combatant-header h4 {
-    flex-grow: 0;
-    /* Remove grow from h4 itself */
-}
-
+/* Styling for attack buttons to make them look distinct and clickable */
 .interactive-stat {
     background-color: #007bff;
-    /* A distinct blue color */
     cursor: pointer;
     transition: background-color 0.2s;
 }
 
 .interactive-stat:hover {
     background-color: #0056b3;
-    /* A darker blue on hover */
 }
 
-/* --- Death Saves --- */
+/* --- Death Saving Throw Indicators --- */
 .death-save-track {
     display: flex;
     align-items: center;
     gap: 4px;
 }
 
+/* Individual circles for death saves */
 .ds-dot {
     width: 12px;
     height: 12px;
     border-radius: 50%;
     border: 1px solid #666;
     cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s;
+    transition: background-color 0.2, border-color 0.2s;
 }
 
 .ds-success.filled {
@@ -999,7 +992,7 @@ input:disabled {
     border-color: #dc3545;
 }
 
-/* --- Stat Block Table --- */
+/* --- Stat Block Layout --- */
 .stat-block-table {
     width: 100%;
     text-align: center;
@@ -1013,12 +1006,9 @@ input:disabled {
     padding: 5px;
 }
 
-.stat-block-table th {
-    background-color: #333;
-}
+.stat-block-table th { background-color: #333; }
 
-/* --- Soundboard Stack Styles --- */
-
+/* --- Modern Soundboard Stack/Slot Styles --- */
 .soundboard-stack-slot {
     background-color: #2b3035;
     border: 1px solid #444;
@@ -1032,6 +1022,7 @@ input:disabled {
     height: fit-content;
 }
 
+/* Ultra-compact soundboard slots for audio-only mode */
 body.audio-only .soundboard-stack-slot {
     padding: 2px;
     gap: 1px;
@@ -1064,9 +1055,7 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     text-align: left;
 }
 
-.stack-emoji-btn:hover {
-    transform: scale(1.1);
-}
+.stack-emoji-btn:hover { transform: scale(1.1); }
 
 .stack-info {
     font-size: 0.8rem;
@@ -1088,16 +1077,13 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     font-size: 0.9rem;
     cursor: pointer;
     flex: 1;
-    /* Distribute space evenly */
     display: flex;
     justify-content: center;
     align-items: center;
     min-width: 0;
 }
 
-.stack-btn:hover:not(:disabled) {
-    background-color: #4e555b;
-}
+.stack-btn:hover:not(:disabled) { background-color: #4e555b; }
 
 .stack-btn:disabled {
     opacity: 0.5;
@@ -1106,7 +1092,6 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
 
 .stack-btn.active {
     background-color: #28a745;
-    /* Green for active toggle */
     border-color: #28a745;
     color: white;
 }
@@ -1125,7 +1110,7 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     margin-top: 2px;
 }
 
-/* --- Music Library Styles --- */
+/* --- Music Library Tree Styling --- */
 #musicLibraryArea {
     display: flex;
     flex-direction: column;
@@ -1148,9 +1133,7 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     min-height: 0;
 }
 
-.tree-node {
-    margin-left: 15px;
-}
+.tree-node { margin-left: 15px; }
 
 .tree-node-content {
     display: flex;
@@ -1162,13 +1145,8 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     user-select: none;
 }
 
-.tree-node-content:hover {
-    background-color: #333;
-}
-
-.tree-node-content.selected {
-    background-color: #004d99;
-}
+.tree-node-content:hover { background-color: #333; }
+.tree-node-content.selected { background-color: #004d99; }
 
 .tree-node-content .node-name {
     flex-grow: 1;
@@ -1177,14 +1155,13 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     text-overflow: ellipsis;
 }
 
+/* Action buttons for library items appear only on hover */
 .tree-node-actions {
     display: none;
     gap: 2px;
 }
 
-.tree-node-content:hover .tree-node-actions {
-    display: flex;
-}
+.tree-node-content:hover .tree-node-actions { display: flex; }
 
 .tree-node-actions .small-btn {
     font-size: 0.9em;
@@ -1203,7 +1180,7 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     font-family: monospace;
 }
 
-/* --- Music Stack Styles --- */
+/* --- Music Playlist (Stack) Styling --- */
 .autosave-label {
     font-size: 0.75em;
     display: flex;
@@ -1241,9 +1218,7 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     cursor: default;
 }
 
-.music-stack-item:hover {
-    background-color: #333;
-}
+.music-stack-item:hover { background-color: #333; }
 
 .music-stack-item.active {
     background-color: #4f5b66;
@@ -1297,9 +1272,7 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     text-shadow: 1px 1px 1px #000;
 }
 
-.music-stack-item:hover .item-actions {
-    opacity: 1;
-}
+.music-stack-item:hover .item-actions { opacity: 1; }
 
 #music-stack-list {
     flex: 1 1 0%;
@@ -1323,10 +1296,8 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     min-width: 0;
 }
 
-/* --- Audio Only Mode --- */
-body.audio-only .box {
-    padding-top: 5px;
-}
+/* --- Global Audio-Only Layout Polish --- */
+body.audio-only .box { padding-top: 5px; }
 
 body.audio-only .panel-header {
     margin-bottom: 5px;
@@ -1334,9 +1305,7 @@ body.audio-only .panel-header {
 }
 
 body.audio-only #musicLibraryArea,
-body.audio-only #logArea {
-    padding-top: 0;
-}
+body.audio-only #logArea { padding-top: 0; }
 
 body.audio-only .column-middle,
 body.audio-only #creature-entry-container,
@@ -1355,15 +1324,10 @@ body.audio-only .column-right {
     overflow: hidden;
 }
 
-body.audio-only .audio-only-left-column #log-wrapper {
-    height: 100%;
-}
+body.audio-only .audio-only-left-column #log-wrapper { height: 100%; }
+body.audio-only .audio-only-left-column #musicLibraryArea { height: 100%; }
 
-body.audio-only .audio-only-left-column #musicLibraryArea {
-    height: 100%;
-}
-
-/* Audio Only Right Column Layout */
+/* Redefinition of right column for Audio-Only mode */
 body.audio-only .audio-only-right-column {
     display: flex;
     flex-direction: column;
@@ -1373,19 +1337,17 @@ body.audio-only .audio-only-right-column {
     min-width: 350px;
 }
 
-/* Clear display:none for relevant children inside the right column */
 body.audio-only .audio-only-right-column #music-controls-container,
 body.audio-only .audio-only-right-column #soundboard-container {
     display: flex !important;
     background-color: #252526;
     border: 1px solid #333;
     border-radius: 8px;
-    padding: 4px; /* Even tighter padding */
+    padding: 4px;
     width: fit-content;
     min-width: 100%;
 }
 
-/* Music Player at the top, now flexible to fill remaining space */
 body.audio-only .audio-only-right-column #music-controls-container {
     height: auto;
     max-height: none;
@@ -1394,17 +1356,9 @@ body.audio-only .audio-only-right-column #music-controls-container {
     overflow: hidden;
 }
 
-body.audio-only .resizer-v {
-    display: none !important;
-}
-
-body.audio-only .resizer-h-middle {
-    cursor: col-resize;
-}
-
-body.audio-only .resizer-v-sb {
-    cursor: row-resize;
-}
+body.audio-only .resizer-v { display: none !important; }
+body.audio-only .resizer-h-middle { cursor: col-resize; }
+body.audio-only .resizer-v-sb { cursor: row-resize; }
 
 body.audio-only .audio-only-right-column #music-stack-list {
     flex-grow: 1;
@@ -1413,7 +1367,6 @@ body.audio-only .audio-only-right-column #music-stack-list {
     overflow-y: auto;
 }
 
-/* Soundboard takes only the space it needs at the bottom */
 body.audio-only .audio-only-right-column #soundboard-container {
     flex: 0 0 auto;
     height: auto;
@@ -1467,26 +1420,18 @@ body.audio-only #soundboard-container .panel-header {
     padding-bottom: 2px;
 }
 
-body.audio-only #soundboard-container .panel-header h2 {
-    font-size: 1rem;
-}
+body.audio-only #soundboard-container .panel-header h2 { font-size: 1rem; }
 
-/* Compact tweaks */
+/* Tighter spacing for list items in compact modes */
 #music-stack-list {
     background-color: #1e1e1e;
     border-radius: 4px;
 }
 
-.music-stack-item {
-    padding: 2px 8px;
-    border-bottom: 1px solid #2d2d2d;
-}
+.music-stack-item { padding: 2px 8px; border-bottom: 1px solid #2d2d2d; }
+.tree-node-content { padding: 1px 5px; }
 
-.tree-node-content {
-    padding: 1px 5px;
-}
-
-/* --- Notification Toasts --- */
+/* --- Search and Feedback Overlays --- */
 .search-overlay {
     position: absolute;
     background-color: #252526;
@@ -1500,10 +1445,9 @@ body.audio-only #soundboard-container .panel-header h2 {
     align-items: center;
 }
 
-.search-overlay input {
-    width: 200px;
-}
+.search-overlay input { width: 200px; }
 
+/* Toast notification styling with slide-up animation */
 .notification-toast {
     position: fixed;
     bottom: 20px;
@@ -1525,10 +1469,8 @@ body.audio-only #soundboard-container .panel-header h2 {
     to { transform: translateY(0); opacity: 1; }
 }
 
-/* --- Import Selection Dialog --- */
-#import-selection-dialog {
-    min-width: 300px;
-}
+/* --- Import Selection Dialog List Styling --- */
+#import-selection-dialog { min-width: 300px; }
 
 #import-list-container {
     background-color: #2a2a2a;
@@ -1537,9 +1479,7 @@ body.audio-only #soundboard-container .panel-header h2 {
     padding: 5px;
 }
 
-#import-list-container div:hover {
-    background-color: #383838;
-}
+#import-list-container div:hover { background-color: #383838; }
 
 .dialog-actions {
     display: flex;
