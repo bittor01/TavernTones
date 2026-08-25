@@ -75,9 +75,11 @@ async function getStore() {
         }
     };
 
-    // Instantiate the store with the schema for type checking and defaults
+    // Instantiate the store with the schema and the legacy encryption key
+    // so existing user configuration files on disk deserialize without JSON parse errors
     store = new Store({
-        schema
+        schema,
+        encryptionKey: 'a-bad-secret-key-for-taverntones'
     });
 
     return store;
