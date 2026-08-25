@@ -812,6 +812,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (crossfadeDurInput) {
             crossfadeDurInput.value = config.crossfadeDuration !== undefined ? config.crossfadeDuration : 2.0;
         }
+        const duckingToggleBtn = document.getElementById('ducking-toggle-btn');
+        if (duckingToggleBtn) {
+            duckingToggleBtn.classList.toggle('active', config.duckingEnabled !== false);
+        }
         const duckingVolSlider = document.getElementById('ducking-volume');
         if (duckingVolSlider) {
             duckingVolSlider.value = config.duckingVolume !== undefined ? config.duckingVolume : 0.3;
@@ -1897,16 +1901,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Soundboard Ducking Controls Event Listeners ---
+    const duckingToggleBtn = document.getElementById('ducking-toggle-btn');
     const duckingVolumeSlider = document.getElementById('ducking-volume');
     const duckingFadeInput = document.getElementById('ducking-fade-input');
 
     const updateDuckingConfig = () => {
+        const enabled = duckingToggleBtn ? duckingToggleBtn.classList.contains('active') : true;
         const duckingVolume = parseFloat(duckingVolumeSlider ? duckingVolumeSlider.value : 0.3) || 0.3;
         let duckingFadeDuration = parseFloat(duckingFadeInput ? duckingFadeInput.value : 0.2);
         if (isNaN(duckingFadeDuration) || duckingFadeDuration < 0.0) duckingFadeDuration = 0.0;
         if (duckingFadeDuration > 10.0) duckingFadeDuration = 10.0;
-        window.electron.ipcRenderer.send('set-ducking-config', { duckingVolume, duckingFadeDuration });
+        window.electron.ipcRenderer.send('set-ducking-config', { enabled, duckingVolume, duckingFadeDuration });
     };
+
+    if (duckingToggleBtn) {
+        duckingToggleBtn.addEventListener('click', () => {
+            const isCurrentlyActive = duckingToggleBtn.classList.contains('active');
+            duckingToggleBtn.classList.toggle('active', !isCurrentlyActive);
+            updateDuckingConfig();
+        });
+    }
 
     if (duckingVolumeSlider) {
         duckingVolumeSlider.addEventListener('input', updateDuckingConfig);

@@ -401,8 +401,8 @@ async function apploader() {
         if (discordConfig.crossfadeEnabled !== undefined || discordConfig.crossfadeDuration !== undefined) {
             musicPlayer.setCrossfadeConfig(discordConfig.crossfadeEnabled ?? false, discordConfig.crossfadeDuration ?? 2.0);
         }
-        if (discordConfig.duckingVolume !== undefined || discordConfig.duckingFadeDuration !== undefined) {
-            musicPlayer.setDuckingConfig(discordConfig.duckingVolume ?? 0.3, discordConfig.duckingFadeDuration ?? 0.2);
+        if (discordConfig.duckingEnabled !== undefined || discordConfig.duckingVolume !== undefined || discordConfig.duckingFadeDuration !== undefined) {
+            musicPlayer.setDuckingConfig(discordConfig.duckingEnabled ?? true, discordConfig.duckingVolume ?? 0.3, discordConfig.duckingFadeDuration ?? 0.2);
         }
         // Start watching data folders for external changes
         setupFilesystemWatchers(discordConfig);
@@ -1905,12 +1905,13 @@ async function ipcloader() {
         }
     });
 
-    // Updates soundboard ducking volume/fade duration and persists to disk
-    ipcMain.on('set-ducking-config', async (event, { duckingVolume, duckingFadeDuration }) => {
+    // Updates soundboard ducking enabled/volume/fade duration and persists to disk
+    ipcMain.on('set-ducking-config', async (event, { enabled, duckingVolume, duckingFadeDuration }) => {
         if (musicPlayer) {
-            musicPlayer.setDuckingConfig(duckingVolume, duckingFadeDuration);
+            musicPlayer.setDuckingConfig(enabled, duckingVolume, duckingFadeDuration);
         }
         if (discordConfig) {
+            discordConfig.duckingEnabled = enabled;
             discordConfig.duckingVolume = duckingVolume;
             discordConfig.duckingFadeDuration = duckingFadeDuration;
             await setDiscordConfig(discordConfig);

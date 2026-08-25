@@ -65,6 +65,8 @@ async function getStore() {
                 crossfadeEnabled: { type: 'boolean', default: false },
                 // Duration of crossfading in seconds (0.1 to 60.0, step 0.1)
                 crossfadeDuration: { type: 'number', default: 2.0 },
+                // Whether soundboard music ducking is enabled
+                duckingEnabled: { type: 'boolean', default: true },
                 // Music volume multiplier during soundboard ducking (0.0 to 1.0)
                 duckingVolume: { type: 'number', default: 0.3 },
                 // Duration of ducking fade in/out in seconds

@@ -50,7 +50,8 @@ button.active {
     color: white;
 }
 
-#crossfade-toggle-btn.active {
+#crossfade-toggle-btn.active,
+#ducking-toggle-btn.active {
     background-color: #28a745;
     border-color: #1e7e34;
     color: white;

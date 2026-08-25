@@ -79,6 +79,8 @@ class BackendAudioPlayer extends EventEmitter {
         this.playbackVolume = 1.0;
         // Master volume for the soundboard sound effects
         this.soundboardVolume = 0.5;
+        // Whether soundboard music ducking is active
+        this.duckingEnabled = true;
         // Volume multiplier for music when SFX are playing (ducking)
         this.duckingVolume = 0.3;
         // Ducking fade in/out duration in seconds
@@ -274,13 +276,15 @@ class BackendAudioPlayer extends EventEmitter {
 
     /**
      * Configures soundboard ducking parameters.
+     * @param {boolean} enabled - Whether ducking is enabled.
      * @param {number} volume - Ducking multiplier (0.0 to 1.0).
      * @param {number} duration - Ducking fade duration in seconds (0.0 to 10.0).
      */
-    setDuckingConfig(volume, duration) {
+    setDuckingConfig(enabled, volume, duration) {
+        this.duckingEnabled = !!enabled;
         this.duckingVolume = Math.max(0.0, Math.min(1.0, parseFloat(volume) ?? 0.3));
         this.duckingFadeDuration = Math.max(0.0, Math.min(10.0, parseFloat(duration) ?? 0.2));
-        this.log(`[AudioPlayer] Ducking set to: volume=${this.duckingVolume}, fadeDuration=${this.duckingFadeDuration}s`);
+        this.log(`[AudioPlayer] Ducking set to: enabled=${this.duckingEnabled}, volume=${this.duckingVolume}, fadeDuration=${this.duckingFadeDuration}s`);
     }
 
     /**
@@ -1041,49 +1045,60 @@ class BackendAudioPlayer extends EventEmitter {
         // Ensure only one sound plays per slot at a time
         this.stopSound(slotId);
 
-        try {
-            // Spawn FFmpeg to stream the SFX
-            const ffmpegProcess = this._createFfmpegStream(filePath);
-            const stream = ffmpegProcess.stdout;
+        const startSfx = () => {
+            try {
+                // Spawn FFmpeg to stream the SFX
+                const ffmpegProcess = this._createFfmpegStream(filePath);
+                const stream = ffmpegProcess.stdout;
 
-            // Apply music ducking if this is the first SFX to start
-            if (this.activeSfxCount === 0) {
-                this._fadeDuckingMultiplier(1.0, this.duckingVolume, this.duckingFadeDuration);
-            }
-            this.activeSfxCount++;
+                this.activeSfxCount++;
 
-            // Clean up when the SFX finishes
-            stream.once('close', () => {
-                if (this.activeStreams.has(id)) {
-                    this.activeStreams.delete(id);
-                    this.mixer.removeInput(id);
-                    // Notify UI that the slot is now free
-                    this.emit('sound-finished', slotId);
-                    this.activeSfxCount = Math.max(0, this.activeSfxCount - 1);
-                    // Restore music volume if all SFX have finished
-                    if (this.activeSfxCount === 0) {
-                        this._fadeDuckingMultiplier(this.currentDuckMultiplier, 1.0, this.duckingFadeDuration);
+                // Clean up when the SFX finishes
+                stream.once('close', () => {
+                    if (this.activeStreams.has(id)) {
+                        this.activeStreams.delete(id);
+                        this.mixer.removeInput(id);
+                        // Notify UI that the slot is now free
+                        this.emit('sound-finished', slotId);
+                        this.activeSfxCount = Math.max(0, this.activeSfxCount - 1);
+                        // Restore music volume if all SFX have finished
+                        if (this.activeSfxCount === 0) {
+                            this._fadeDuckingMultiplier(this.currentDuckMultiplier, 1.0, this.duckingFadeDuration);
+                        }
                     }
-                }
-            });
+                });
 
-            // Add the SFX stream to the mixer
-            this.mixer.addInput(stream, id, this.soundboardVolume);
-            this.activeStreams.set(id, { process: ffmpegProcess, stream });
-        } catch (error) {
-            this.log(`[AudioPlayer] SFX Error: ${error.message}`);
+                // Add the SFX stream to the mixer
+                this.mixer.addInput(stream, id, this.soundboardVolume);
+                this.activeStreams.set(id, { process: ffmpegProcess, stream });
+            } catch (error) {
+                this.log(`[AudioPlayer] SFX Error: ${error.message}`);
+            }
+        };
+
+        // If ducking is enabled, music is playing, and fade duration > 0, fade music down FIRST before starting SFX
+        if (this.duckingEnabled && this.activeSfxCount === 0 && this.duckingFadeDuration > 0 && this.isPlaying) {
+            this._fadeDuckingMultiplier(this.currentDuckMultiplier, this.duckingVolume, this.duckingFadeDuration, () => {
+                startSfx();
+            });
+        } else {
+            if (this.duckingEnabled && this.activeSfxCount === 0) {
+                this._fadeDuckingMultiplier(1.0, this.duckingVolume, 0);
+            }
+            startSfx();
         }
     }
 
     /**
      * Smoothly fades the music ducking multiplier from startVal to endVol over durationSec.
      */
-    _fadeDuckingMultiplier(startVal, endVal, durationSec) {
+    _fadeDuckingMultiplier(startVal, endVal, durationSec, onComplete) {
         if (this.duckingFadeInterval) clearInterval(this.duckingFadeInterval);
 
         if (durationSec <= 0) {
             this.currentDuckMultiplier = endVal;
             this.setVolume(this.playbackVolume);
+            if (onComplete) onComplete();
             return;
         }
 
@@ -1102,6 +1117,7 @@ class BackendAudioPlayer extends EventEmitter {
                 this.duckingFadeInterval = null;
                 this.currentDuckMultiplier = endVal;
                 this.setVolume(this.playbackVolume);
+                if (onComplete) onComplete();
             }
         }, stepTime);
     }
