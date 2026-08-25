@@ -1049,6 +1049,10 @@ class BackendAudioPlayer extends EventEmitter {
                     }
                 }
             });
+
+            // Add the SFX stream to the mixer
+            this.mixer.addInput(stream, id, this.soundboardVolume);
+            this.activeStreams.set(id, { process: ffmpegProcess, stream });
         } catch (error) {
             this.log(`[AudioPlayer] SFX Error: ${error.message}`);
         }
@@ -1083,14 +1087,6 @@ class BackendAudioPlayer extends EventEmitter {
                 this.setVolume(this.playbackVolume);
             }
         }, stepTime);
-    }
-
-            // Add the SFX stream to the mixer
-            this.mixer.addInput(stream, id, this.soundboardVolume);
-            this.activeStreams.set(id, { process: ffmpegProcess, stream });
-        } catch (error) {
-            this.log(`[AudioPlayer] SFX Error: ${error.message}`);
-        }
     }
 
     /**
