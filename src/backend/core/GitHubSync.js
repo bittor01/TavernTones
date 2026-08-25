@@ -32,17 +32,15 @@ function calculateGitSha(buffer) {
  */
 class GitHubSync {
     /**
-     * Initializes the sync service with necessary UI hooks and authentication.
+     * Initializes the sync service with necessary UI hooks.
      */
-    constructor(logCallback, dialog, mainWindow, githubToken) {
+    constructor(logCallback, dialog, mainWindow) {
         // Callback to log progress messages back to the renderer UI
         this.log = logCallback || console.log;
         // Electron dialog module for showing prompts to the user
         this.dialog = dialog;
         // Reference to the main BrowserWindow for parented dialogs
         this.mainWindow = mainWindow;
-        // Optional GitHub Personal Access Token to increase API rate limits
-        this.githubToken = githubToken;
     }
 
     /**
@@ -65,10 +63,6 @@ class GitHubSync {
 
             // Set up common headers for GitHub API requests
             const headers = { 'User-Agent': 'TavernTones-App' };
-            // Include authentication if a token is provided by the user
-            if (this.githubToken) {
-                headers['Authorization'] = `token ${this.githubToken}`;
-            }
 
             this.log(`Fetching file list from: ${apiUrl}`);
             // Fetch the list of files in the remote bestiary directory
@@ -181,8 +175,8 @@ class GitHubSync {
         } catch (error) {
             // Special handling for GitHub rate limit errors (HTTP 403)
             if (error.response && error.response.status === 403) {
-                this.log("GitHub API Error: 403 Forbidden. This is likely a rate limit issue.");
-                return { success: false, error: "GitHub rate limit exceeded. Please provide a Personal Access Token in settings to continue." };
+                this.log("GitHub API Error: 403 Forbidden. Public rate limit exceeded.");
+                return { success: false, error: "GitHub public rate limit exceeded. Please try again later." };
             }
             // Log and return any other general errors
             const errorMessage = `Error syncing Bestiary data: ${error.message}`;

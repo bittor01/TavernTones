@@ -50,6 +50,12 @@ button.active {
     color: white;
 }
 
+#crossfade-toggle-btn.active {
+    background-color: #28a745;
+    border-color: #1e7e34;
+    color: white;
+}
+
 button:disabled {
     background-color: #2a2a2a;
     color: #666;

@@ -4,17 +4,9 @@ const fs = require('fs').promises;
 // Import the path module to resolve file and directory locations consistently across platforms
 const path = require('path');
 
-// Configuration for various 5e data categories, defining their storage type, path, and JSON keys
+// Configuration for 5e bestiary data category
 const categorySources = {
-    'spells': { type: 'directory', path: 'spells', key: 'spell' },
-    'items': { type: 'file', path: 'items.json', key: 'item' },
-    'classes': { type: 'directory', path: 'class', key: ['class', 'subclass'] },
-    'bestiary': { type: 'directory', path: 'bestiary', key: 'monster' },
-    'feats': { type: 'file', path: 'feats.json', key: 'feat' },
-    'backgrounds': { type: 'file', path: 'backgrounds.json', key: 'background' },
-    'races': { type: 'file', path: 'races.json', key: ['race', 'subrace'] },
-    'traps': { type: 'file', path: 'trapshazards.json', key: 'trap' },
-    'vehicles': { type: 'file', path: 'vehicles.json', key: 'vehicle' },
+    'bestiary': { type: 'directory', path: 'bestiary', key: 'monster' }
 };
 // Array of keys derived from categorySources for iteration and validation
 const searchableCategories = Object.keys(categorySources);

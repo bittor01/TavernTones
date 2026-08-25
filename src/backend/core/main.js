@@ -396,6 +396,14 @@ async function apploader() {
 
         // Initialize the backend audio player with logging and shell access
         musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, discordConfig.ffmpegPath);
+        // Apply persisted volume, crossfade, and ducking settings to the player
+        if (discordConfig.playbackVolume !== undefined) musicPlayer.setVolume(discordConfig.playbackVolume);
+        if (discordConfig.crossfadeEnabled !== undefined || discordConfig.crossfadeDuration !== undefined) {
+            musicPlayer.setCrossfadeConfig(discordConfig.crossfadeEnabled ?? false, discordConfig.crossfadeDuration ?? 2.0);
+        }
+        if (discordConfig.duckingVolume !== undefined || discordConfig.duckingFadeDuration !== undefined) {
+            musicPlayer.setDuckingConfig(discordConfig.duckingVolume ?? 0.3, discordConfig.duckingFadeDuration ?? 0.2);
+        }
         // Start watching data folders for external changes
         setupFilesystemWatchers(discordConfig);
 
@@ -918,8 +926,8 @@ async function ipcloader() {
     });
 
     // Triggers the GitHub sync process to fetch monster data
-    ipcMain.handle('fetch-bestiary-data', async (event, { repoUrl, localPath, githubToken }) => {
-        const sync = new GitHubSync(logToRenderer, dialog, mainWindow, githubToken);
+    ipcMain.handle('fetch-bestiary-data', async (event, { repoUrl, localPath }) => {
+        const sync = new GitHubSync(logToRenderer, dialog, mainWindow);
         return await sync.syncBestiary(repoUrl, localPath);
     });
 
@@ -1871,6 +1879,41 @@ async function ipcloader() {
     ipcMain.on('set-soundboard-volume', (event, { volume }) => {
         if (musicPlayer) {
             musicPlayer.setSoundboardVolume(volume);
+        }
+    });
+
+    // Updates master music playback volume and persists to config
+    ipcMain.on('set-playback-volume', async (event, { volume }) => {
+        if (musicPlayer) {
+            musicPlayer.setVolume(volume);
+        }
+        if (discordConfig) {
+            discordConfig.playbackVolume = volume;
+            await setDiscordConfig(discordConfig);
+        }
+    });
+
+    // Updates crossfade enabled/duration config and persists to disk
+    ipcMain.on('set-crossfade-config', async (event, { enabled, duration }) => {
+        if (musicPlayer) {
+            musicPlayer.setCrossfadeConfig(enabled, duration);
+        }
+        if (discordConfig) {
+            discordConfig.crossfadeEnabled = enabled;
+            discordConfig.crossfadeDuration = duration;
+            await setDiscordConfig(discordConfig);
+        }
+    });
+
+    // Updates soundboard ducking volume/fade duration and persists to disk
+    ipcMain.on('set-ducking-config', async (event, { duckingVolume, duckingFadeDuration }) => {
+        if (musicPlayer) {
+            musicPlayer.setDuckingConfig(duckingVolume, duckingFadeDuration);
+        }
+        if (discordConfig) {
+            discordConfig.duckingVolume = duckingVolume;
+            discordConfig.duckingFadeDuration = duckingFadeDuration;
+            await setDiscordConfig(discordConfig);
         }
     });
 
