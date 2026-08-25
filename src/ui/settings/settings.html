@@ -4,8 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Settings</title>
+    <!-- Use shared application styles -->
     <link rel="stylesheet" href="../styles.css">
     <style>
+        /* Specific overrides for the settings window layout */
         body {
             padding: 20px;
             display: flex;
@@ -21,6 +23,7 @@
             flex-direction: column;
             gap: 20px;
         }
+        /* 2-column layout for settings: Discord vs Paths */
         .settings-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -35,6 +38,7 @@
             color: #ccc;
             font-size: 0.9em;
         }
+        /* Input + Button row for path selection */
         .path-input-group {
             display: flex;
             align-items: center;
@@ -43,6 +47,7 @@
             flex-grow: 1;
             margin-right: 5px;
         }
+        /* Prominent styling for the setup wizard button */
         #setup-default-folders {
             width: 100%;
             padding: 10px;
@@ -51,6 +56,7 @@
             color: #212529;
             font-weight: bold;
         }
+        /* Primary save button */
         #save-button {
             width: 100%;
             padding: 12px;
@@ -59,6 +65,7 @@
             font-size: 1.1em;
             font-weight: bold;
         }
+        /* Green highlight when unsaved changes exist */
         #save-button.dirty {
             background-color: #28a745;
             border-color: #218838;
@@ -79,11 +86,13 @@
 <body>
     <div class="settings-container box">
         <div class="settings-grid">
-            <!-- Left Column: Discord -->
+
+            <!-- --- Left Column: Discord Bot Configuration --- -->
             <div class="settings-column">
                 <div class="panel-header">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <h2>Discord Bot</h2>
+                        <!-- Visual status indicator from backend -->
                         <span id="bot-status-indicator" class="status-indicator" title="Bot Status: Unknown">🟥</span>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 5px;">
@@ -91,6 +100,7 @@
                             <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;" title="Enable Discord Bot">
                                 <input type="checkbox" id="enableDiscordBot" style="margin-right: 5px; width: auto;"> Enable Bot
                             </label>
+                            <!-- Detailed setup guide link -->
                             <button id="walkthrough-btn" class="small-btn" title="Discord Bot Setup Guide" style="font-size: 1em; padding: 2px 6px;">📖 Guide</button>
                         </div>
                         <label style="display: flex; align-items: center; font-size: 0.9em; cursor: pointer;">
@@ -98,6 +108,8 @@
                         </label>
                     </div>
                 </div>
+
+                <!-- These fields are toggleable via the Enable Bot checkbox -->
                 <div id="discord-fields">
                     <div class="form-group">
                         <label for="token">Bot Token</label>
@@ -120,6 +132,7 @@
                 <hr>
                 <h2>Discord Slash Commands</h2>
                 <div class="slash-commands-row">
+                    <!-- Buttons to register/unregister commands on the Discord API -->
                     <button id="register-slash-btn">Register</button>
                     <button id="unregister-slash-btn">Unregister</button>
                 </div>
@@ -132,12 +145,13 @@
                 </div>
             </div>
 
-            <!-- Right Column: Paths & Dependencies -->
+            <!-- --- Right Column: Paths, External Tools & Data --- -->
             <div class="settings-column">
                 <h2>External Dependencies</h2>
                 <div class="form-group">
                     <label for="ffmpegPath">FFmpeg Binaries Folder</label>
                     <div class="path-input-group">
+                        <!-- Points to folder containing ffmpeg and ffprobe -->
                         <input type="text" id="ffmpegPath" placeholder="Folder containing ffmpeg and ffprobe">
                         <button id="browse-ffmpeg">Browse</button>
                     </div>
@@ -167,9 +181,11 @@
                     </div>
                 </div>
 
+                <!-- The automated setup wizard button -->
                 <button id="setup-default-folders">Setup Default Folders</button>
 
                 <hr>
+                <!-- GitHub Sync configuration for bestiary data -->
                 <div class="form-group">
                     <label for="gitRepoUrl">Bestiary Source (Git Repo)</label>
                     <input type="text" id="gitRepoUrl" placeholder="https://github.com/.../5etools-src">
@@ -178,11 +194,13 @@
                     <label for="githubToken">GitHub Token (Optional)</label>
                     <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx">
                 </div>
+                <!-- Manual trigger for bestiary sync -->
                 <button id="fetch-bestiary-btn" style="width: 100%;">Fetch/Update Bestiary</button>
 
             </div>
         </div>
 
+        <!-- Global Action Row -->
         <div style="display: flex; gap: 10px;">
             <button id="help-button" style="width: 100px;">Help</button>
             <button id="license-button" style="width: 100px;">Licenses</button>
@@ -190,6 +208,9 @@
         </div>
     </div>
 
+    <!-- --- Modals & Dialogs --- -->
+
+    <!-- Modal: View credits and dependency list -->
     <dialog id="license-dialog" style="width: 60%; max-height: 80%;">
         <h3>Package Licenses</h3>
         <div id="license-content" style="overflow-y: auto; max-height: 50vh;">
@@ -202,7 +223,7 @@
                     </tr>
                 </thead>
                 <tbody id="license-table-body">
-                    <!-- Rows will be added here -->
+                    <!-- Dynamic rows -->
                 </tbody>
             </table>
         </div>
@@ -211,6 +232,7 @@
         </div>
     </dialog>
 
+    <!-- Modal: View full raw license text for a specific package -->
     <dialog id="license-text-dialog" style="width: 70%; max-height: 80%;">
         <h3 id="license-text-title">License Text</h3>
         <pre id="license-text-content" style="white-space: pre-wrap; background: #1e1e1e; padding: 15px; border-radius: 4px; max-height: 50vh; overflow-y: auto; font-family: monospace; font-size: 0.85em; color: #ccc;"></pre>
@@ -219,15 +241,17 @@
         </div>
     </dialog>
 
+    <!-- Modal: HTML Help Content viewer -->
     <dialog id="help-dialog" style="width: 80%; max-height: 80%;">
         <div id="help-content" style="overflow-y: auto; max-height: 60vh; line-height: 1.6;">
-            <!-- Help content will be loaded here -->
+            <!-- Parsed Markdown content -->
         </div>
         <div style="text-align: right; margin-top: 20px;">
             <button onclick="document.getElementById('help-dialog').close()">Close</button>
         </div>
     </dialog>
 
+    <!-- Settings logic -->
     <script src="settings.js"></script>
 </body>
 </html>
