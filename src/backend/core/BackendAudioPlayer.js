@@ -720,10 +720,13 @@ class BackendAudioPlayer extends EventEmitter {
 
     /**
      * Starts the interval timer that updates the currentTime and UI every second.
+     * Triggers natural crossfading before track completion when enabled.
      */
     _startTimer() {
         // Clear any existing timer first
         this._stopTimer();
+        this.isCrossfadingAtEnd = false;
+
         this.timer = setInterval(() => {
             if (this.isPlaying) {
                 // Calculate elapsed time based on real-world clock to avoid drift
@@ -732,6 +735,20 @@ class BackendAudioPlayer extends EventEmitter {
                 if (this.duration > 0 && this.currentTime > this.duration) {
                     this.currentTime = this.duration;
                 }
+
+                // Check if we should initiate crossfading before track end
+                if (this.crossfadeEnabled && this.duration > 0 && !this.isCrossfadingAtEnd) {
+                    let fadeDur = this.crossfadeDuration;
+                    if (fadeDur > this.duration / 2) fadeDur = Math.max(0.1, this.duration / 2);
+
+                    if (this.currentTime >= this.duration - fadeDur) {
+                        this.isCrossfadingAtEnd = true;
+                        this.log(`[AudioPlayer] Triggering automatic crossfade at ${this.currentTime.toFixed(1)}s / ${this.duration.toFixed(1)}s`);
+                        this.next(false, true);
+                        return;
+                    }
+                }
+
                 // Send time update to the UI
                 this._emitStatusUpdate(true);
             }
