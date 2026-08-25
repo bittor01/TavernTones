@@ -81,6 +81,17 @@ class BackendAudioPlayer extends EventEmitter {
         this.soundboardVolume = 0.5;
         // Volume multiplier for music when SFX are playing (ducking)
         this.duckingVolume = 0.3;
+        // Ducking fade in/out duration in seconds
+        this.duckingFadeDuration = 0.2;
+        // Crossfading configurations
+        this.crossfadeEnabled = false;
+        this.crossfadeDuration = 2.0;
+        // Counter for crossfading streams to manage unique mixer channel IDs
+        this.fadeStreamCounter = 0;
+        // Ducking fade interval reference
+        this.duckingFadeInterval = null;
+        // Current effective music duck multiplier (fades between 1.0 and duckingVolume)
+        this.currentDuckMultiplier = 1.0;
         // Counter for currently playing sound effects to determine when to duck/unduck
         this.activeSfxCount = 0;
 
@@ -251,19 +262,40 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     /**
-     * Updates the music playback volume and adjusts the mixer input.
+     * Configures crossfading parameters.
+     * @param {boolean} enabled - Whether crossfading is active.
+     * @param {number} duration - Duration in seconds (0.1 to 60.0).
+     */
+    setCrossfadeConfig(enabled, duration) {
+        this.crossfadeEnabled = !!enabled;
+        this.crossfadeDuration = Math.max(0.1, Math.min(60.0, parseFloat(duration) || 2.0));
+        this.log(`[AudioPlayer] Crossfade set to: enabled=${this.crossfadeEnabled}, duration=${this.crossfadeDuration}s`);
+    }
+
+    /**
+     * Configures soundboard ducking parameters.
+     * @param {number} volume - Ducking multiplier (0.0 to 1.0).
+     * @param {number} duration - Ducking fade duration in seconds (0.0 to 10.0).
+     */
+    setDuckingConfig(volume, duration) {
+        this.duckingVolume = Math.max(0.0, Math.min(1.0, parseFloat(volume) ?? 0.3));
+        this.duckingFadeDuration = Math.max(0.0, Math.min(10.0, parseFloat(duration) ?? 0.2));
+        this.log(`[AudioPlayer] Ducking set to: volume=${this.duckingVolume}, fadeDuration=${this.duckingFadeDuration}s`);
+    }
+
+    /**
+     * Updates the music playback volume and adjusts active music streams in the mixer.
      * @param {number} volume - Volume multiplier (0.0 to 2.0).
      */
     setVolume(volume) {
-        // Clamp volume to a safe range
         if (volume >= 0 && volume <= 2) {
             this.playbackVolume = volume;
-            // Update the live input volume in the mixer if music is playing
-            if (this.activeStreams.has('music')) {
-                // Account for current ducking state (e.g. if SFX are already playing)
-                const currentVolume = this.activeSfxCount > 0 ? this.playbackVolume * this.duckingVolume : this.playbackVolume;
-                this.mixer.setInputVolume('music', currentVolume);
-            }
+            this.activeStreams.forEach((entry, id) => {
+                if (id === 'music' || id.startsWith('music_fade_')) {
+                    const effectiveVol = (entry.currentVolMultiplier ?? 1.0) * this.playbackVolume * this.currentDuckMultiplier;
+                    this.mixer.setInputVolume(id, effectiveVol);
+                }
+            });
         }
     }
 
@@ -373,22 +405,19 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     /**
-     * Low-level method to start playback of the current track.
+     * Low-level method to start playback of the current track with optional crossfading or volume fade-in.
      * Spawns FFmpeg and pipes it into the mixer.
      * @param {number} [startTime=0] - The offset in seconds to start from.
+     * @param {boolean} [isResume=false] - True if resuming from pause.
      */
-    async _play(startTime = 0) {
-        // Safeguard against playback after destruction
+    async _play(startTime = 0, isResume = false) {
         if (this.isDestroyed) return;
-        // Prevent concurrent calls to _play from creating multiple processes
         if (this.playLock) return;
         this.playLock = true;
-        // Increment play count to identify this specific playback instance
         this.playCount++;
         const currentPlayId = this.playCount;
 
         try {
-            // Validate the current index
             if (this.currentIndex < 0 || this.currentIndex >= this.stack.length) {
                 if (this.stack.length > 0) {
                     this.currentIndex = 0;
@@ -399,29 +428,49 @@ class BackendAudioPlayer extends EventEmitter {
             }
 
             const filePath = this.stack[this.currentIndex];
-            this.log(`[AudioPlayer] Playing: ${path.basename(filePath)} from ${startTime}s`);
+            this.log(`[AudioPlayer] Playing: ${path.basename(filePath)} from ${startTime}s (crossfade=${this.crossfadeEnabled})`);
 
-            // Cleanup any existing music stream or timer before starting new one
-            this._stopMusicStream();
+            // Check if crossfading is applicable
+            const oldMusic = this.activeStreams.get('music');
+            const shouldCrossfade = this.crossfadeEnabled && oldMusic && oldMusic.process;
+
+            if (shouldCrossfade) {
+                // Determine safe crossfade duration (don't exceed track duration if known)
+                let effectiveCrossfadeDur = this.crossfadeDuration;
+                if (this.duration > 0 && effectiveCrossfadeDur > this.duration / 2) {
+                    effectiveCrossfadeDur = Math.max(0.1, this.duration / 2);
+                }
+
+                // Move current active music stream to a unique fading ID
+                const oldFadeId = `music_fade_${this.fadeStreamCounter++}`;
+                this.activeStreams.delete('music');
+                this.activeStreams.set(oldFadeId, oldMusic);
+
+                // Dynamically reassign key in mixer by adding existing stream with new ID or renaming in worker
+                this.mixer.addInput(oldMusic.stream, oldFadeId, (oldMusic.currentVolMultiplier ?? 1.0) * this.playbackVolume * this.currentDuckMultiplier);
+
+                // Fade out old track
+                this._fadeStream(oldFadeId, oldMusic.currentVolMultiplier ?? 1.0, 0.0, effectiveCrossfadeDur, () => {
+                    this._stopStreamById(oldFadeId);
+                });
+            } else if (!isResume) {
+                // If not crossfading or not resuming, stop old music stream cleanly
+                this._stopMusicStream();
+            }
+
             this._stopTimer();
-
-            // Reset timing state for the track
             this.currentTime = startTime;
             this.isPlaying = true;
 
-            // If starting from the beginning, reset duration and mixer state
             if (startTime === 0) {
                 this.duration = 0;
                 this._ensureDiscordPipeline();
-                if (this.mixer) this.mixer.reset();
             }
             this.playerStatus = AudioPlayerStatus.Playing;
             this._emitStatusUpdate();
 
-            // Fetch track duration in the background using ffprobe
             if (startTime === 0) {
                 this._getDuration(filePath).then(duration => {
-                    // Only update if we haven't skipped to a new track while waiting
                     if (this.isPlaying && this.playCount === currentPlayId) {
                         this.duration = duration;
                         this._emitStatusUpdate();
@@ -429,20 +478,15 @@ class BackendAudioPlayer extends EventEmitter {
                 }).catch(err => this.log(`[AudioPlayer] Error fetching duration: ${err.message}`));
             }
 
-            // Track the real-world start time to calculate progress manually
             this.lastPlayStartTime = Date.now() - (startTime * 1000);
 
-            this.log(`[AudioPlayer] Starting FFmpeg stream for: ${path.basename(filePath)} at offset ${startTime}`);
-            // Spawn FFmpeg to decode the file into raw PCM
             const ffmpegProcess = this._createFfmpegStream(filePath, startTime);
 
-            // Handle FFmpeg startup failures
             ffmpegProcess.on('error', (err) => {
                 this.log(`[AudioPlayer] FFmpeg spawn error: ${err.message}`);
                 this._handlePlaybackError(filePath);
             });
 
-            // Log FFmpeg console output for debugging
             ffmpegProcess.stderr.on('data', (data) => {
                 const msg = data.toString();
                 if (msg.toLowerCase().includes('error') || msg.toLowerCase().includes('failed')) {
@@ -451,45 +495,101 @@ class BackendAudioPlayer extends EventEmitter {
             });
 
             const ffmpegOutput = ffmpegProcess.stdout;
-            // Use a PassThrough stream to decouple FFmpeg from the mixer slightly
             const mixerStream = new PassThrough();
             ffmpegOutput.pipe(mixerStream);
 
-            // Triggered when FFmpeg reaches the end of the file
             mixerStream.once('end', () => {
                 const currentMusic = this.activeStreams.get('music');
-                // Ensure we are cleaning up the correct stream instance
                 if (currentMusic && currentMusic.stream === mixerStream) {
                     this.activeStreams.delete('music');
                     this.mixer.removeInput('music');
 
                     this._stopTimer();
                     this._emitStatusUpdate();
-                    // Handle looping or advancing to the next track
                     this._handleMusicFinish();
                 }
             });
 
-            // Add the FFmpeg stream to the audio mixer
-            this.mixer.addInput(mixerStream, 'music');
-            // Store the process reference so we can kill it later
-            this.activeStreams.set('music', { process: ffmpegProcess, stream: mixerStream });
-            // Start the 1-second UI refresh timer
+            // Start incoming stream at 0 volume if crossfading or resuming with fade, then fade up
+            const initialVolMult = (this.crossfadeEnabled || (isResume && this.crossfadeEnabled)) ? 0.0 : 1.0;
+            const streamEntry = { process: ffmpegProcess, stream: mixerStream, currentVolMultiplier: initialVolMult };
+
+            this.activeStreams.set('music', streamEntry);
+            this.mixer.addInput(mixerStream, 'music', initialVolMult * this.playbackVolume * this.currentDuckMultiplier);
+
+            if (initialVolMult === 0.0) {
+                let fadeUpDur = this.crossfadeDuration;
+                if (this.duration > 0 && fadeUpDur > this.duration / 2) {
+                    fadeUpDur = Math.max(0.1, this.duration / 2);
+                }
+                this._fadeStream('music', 0.0, 1.0, fadeUpDur);
+            }
+
             this._startTimer();
-            // Reset error counters on successful start
             this.consecutiveErrors = 0;
             this.recoveryAttempts = [];
-
-            // Set the initial volume in the mixer, accounting for current ducking state
-            const currentVolume = this.activeSfxCount > 0 ? this.playbackVolume * this.duckingVolume : this.playbackVolume;
-            this.mixer.setInputVolume('music', currentVolume);
 
         } catch (error) {
             this.log(`[AudioPlayer] Error in _play: ${error.message}`);
             this._handlePlaybackError(this.stack[this.currentIndex]);
         } finally {
-            // Unlock the play function
             this.playLock = false;
+        }
+    }
+
+    /**
+     * Smoothly fades an active stream's volume multiplier from startVol to endVol over duration seconds.
+     */
+    _fadeStream(streamId, startVol, endVol, durationSec, onComplete) {
+        const entry = this.activeStreams.get(streamId);
+        if (!entry) {
+            if (onComplete) onComplete();
+            return;
+        }
+
+        if (entry.fadeInterval) clearInterval(entry.fadeInterval);
+
+        const steps = Math.max(1, Math.floor(durationSec * 20)); // 20 updates per second (50ms interval)
+        const stepTime = (durationSec * 1000) / steps;
+        const delta = (endVol - startVol) / steps;
+        let currentStep = 0;
+
+        entry.currentVolMultiplier = startVol;
+
+        entry.fadeInterval = setInterval(() => {
+            currentStep++;
+            entry.currentVolMultiplier = Math.max(0.0, Math.min(1.0, startVol + delta * currentStep));
+            const effectiveVol = entry.currentVolMultiplier * this.playbackVolume * this.currentDuckMultiplier;
+            this.mixer.setInputVolume(streamId, effectiveVol);
+
+            if (currentStep >= steps) {
+                clearInterval(entry.fadeInterval);
+                entry.fadeInterval = null;
+                entry.currentVolMultiplier = endVol;
+                this.mixer.setInputVolume(streamId, endVol * this.playbackVolume * this.currentDuckMultiplier);
+                if (onComplete) onComplete();
+            }
+        }, stepTime);
+    }
+
+    /**
+     * Safely stops and removes a specific stream by its map ID.
+     */
+    _stopStreamById(id) {
+        if (this.activeStreams.has(id)) {
+            const entry = this.activeStreams.get(id);
+            if (entry.fadeInterval) clearInterval(entry.fadeInterval);
+            this.mixer.removeInput(id);
+            if (entry.process) {
+                try {
+                    entry.process.stdout.unpipe();
+                    entry.process.kill('SIGKILL');
+                } catch (e) {}
+            }
+            if (entry.stream && entry.stream.end) {
+                try { entry.stream.end(); } catch (e) {}
+            }
+            this.activeStreams.delete(id);
         }
     }
 
@@ -852,13 +952,13 @@ class BackendAudioPlayer extends EventEmitter {
         this.playLock = false;
         // If paused midway through a track, resume from that point
         if (this.playerStatus === AudioPlayerStatus.Paused && this.currentIndex >= 0) {
-            this._play(this.currentTime);
+            this._play(this.currentTime, true);
             return;
         }
         // Initialize index if needed
         if (this.currentIndex < 0 && this.stack.length > 0) this.currentIndex = 0;
         // Start playback
-        if (this.currentIndex >= 0) this._play();
+        if (this.currentIndex >= 0) this._play(0, false);
     }
 
     /**
@@ -872,10 +972,22 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     /**
-     * Pauses playback by killing the FFmpeg process but preserving the currentTime.
+     * Pauses playback by fading out active music stream if crossfading is enabled.
      */
     pause() {
-        this._stopMusicStream();
+        const musicEntry = this.activeStreams.get('music');
+        if (this.crossfadeEnabled && musicEntry) {
+            let fadeOutDur = this.crossfadeDuration;
+            if (this.duration > 0 && fadeOutDur > this.duration / 2) {
+                fadeOutDur = Math.max(0.1, this.duration / 2);
+            }
+            this._fadeStream('music', musicEntry.currentVolMultiplier ?? 1.0, 0.0, fadeOutDur, () => {
+                this._stopMusicStream();
+            });
+        } else {
+            this._stopMusicStream();
+        }
+
         this._stopTimer();
         this.isPlaying = false;
         this.playerStatus = AudioPlayerStatus.Paused;
@@ -918,8 +1030,8 @@ class BackendAudioPlayer extends EventEmitter {
             const stream = ffmpegProcess.stdout;
 
             // Apply music ducking if this is the first SFX to start
-            if (this.activeSfxCount === 0 && this.activeStreams.has('music')) {
-                this.mixer.setInputVolume('music', this.playbackVolume * this.duckingVolume);
+            if (this.activeSfxCount === 0) {
+                this._fadeDuckingMultiplier(1.0, this.duckingVolume, this.duckingFadeDuration);
             }
             this.activeSfxCount++;
 
@@ -932,11 +1044,46 @@ class BackendAudioPlayer extends EventEmitter {
                     this.emit('sound-finished', slotId);
                     this.activeSfxCount = Math.max(0, this.activeSfxCount - 1);
                     // Restore music volume if all SFX have finished
-                    if (this.activeSfxCount === 0 && this.activeStreams.has('music')) {
-                        this.mixer.setInputVolume('music', this.playbackVolume);
+                    if (this.activeSfxCount === 0) {
+                        this._fadeDuckingMultiplier(this.currentDuckMultiplier, 1.0, this.duckingFadeDuration);
                     }
                 }
             });
+        } catch (error) {
+            this.log(`[AudioPlayer] SFX Error: ${error.message}`);
+        }
+    }
+
+    /**
+     * Smoothly fades the music ducking multiplier from startVal to endVol over durationSec.
+     */
+    _fadeDuckingMultiplier(startVal, endVal, durationSec) {
+        if (this.duckingFadeInterval) clearInterval(this.duckingFadeInterval);
+
+        if (durationSec <= 0) {
+            this.currentDuckMultiplier = endVal;
+            this.setVolume(this.playbackVolume);
+            return;
+        }
+
+        const steps = Math.max(1, Math.floor(durationSec * 20));
+        const stepTime = (durationSec * 1000) / steps;
+        const delta = (endVal - startVal) / steps;
+        let currentStep = 0;
+
+        this.duckingFadeInterval = setInterval(() => {
+            currentStep++;
+            this.currentDuckMultiplier = Math.max(0.0, Math.min(1.0, startVal + delta * currentStep));
+            this.setVolume(this.playbackVolume);
+
+            if (currentStep >= steps) {
+                clearInterval(this.duckingFadeInterval);
+                this.duckingFadeInterval = null;
+                this.currentDuckMultiplier = endVal;
+                this.setVolume(this.playbackVolume);
+            }
+        }, stepTime);
+    }
 
             // Add the SFX stream to the mixer
             this.mixer.addInput(stream, id, this.soundboardVolume);
@@ -960,8 +1107,8 @@ class BackendAudioPlayer extends EventEmitter {
             this.activeStreams.delete(id);
             // Adjust ducking counter
             this.activeSfxCount = Math.max(0, this.activeSfxCount - 1);
-            if (this.activeSfxCount === 0 && this.activeStreams.has('music')) {
-                this.mixer.setInputVolume('music', this.playbackVolume);
+            if (this.activeSfxCount === 0) {
+                this._fadeDuckingMultiplier(this.currentDuckMultiplier, 1.0, this.duckingFadeDuration);
             }
         }
     }
@@ -978,31 +1125,33 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     /**
-     * Scans the default music folder for all compatible audio files.
-     * @returns {string[]} List of absolute file paths.
+     * Scans the default music folder asynchronously for all compatible audio files.
+     * @returns {Promise<string[]>} List of absolute file paths.
      */
-    getMusicFiles() {
+    async getMusicFiles() {
         if (!this.musicFolder || !fs.existsSync(this.musicFolder)) return [];
 
-        // Synchronous recursive scan helper
-        const getAllFiles = (dir, results = []) => {
-            const list = fs.readdirSync(dir);
-            list.forEach(file => {
-                const fullPath = path.join(dir, file);
-                const stat = fs.statSync(fullPath);
-                if (stat && stat.isDirectory()) {
-                    getAllFiles(fullPath, results);
-                } else {
-                    const ext = path.extname(fullPath).toLowerCase();
-                    if (['.mp3', '.wav', '.ogg', '.lnk'].includes(ext)) {
-                        results.push(fullPath);
+        const getAllFilesAsync = async (dir, results = []) => {
+            try {
+                const entries = await fsp.readdir(dir, { withFileTypes: true });
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+                    if (entry.isDirectory()) {
+                        await getAllFilesAsync(fullPath, results);
+                    } else {
+                        const ext = path.extname(fullPath).toLowerCase();
+                        if (['.mp3', '.wav', '.ogg', '.lnk'].includes(ext)) {
+                            results.push(fullPath);
+                        }
                     }
                 }
-            });
+            } catch (e) {
+                this.log(`[AudioPlayer] Error scanning directory ${dir}: ${e.message}`);
+            }
             return results;
         };
 
-        return getAllFiles(this.musicFolder);
+        return await getAllFilesAsync(this.musicFolder);
     }
 
     /**

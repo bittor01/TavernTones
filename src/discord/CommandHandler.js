@@ -68,35 +68,40 @@ class CommandHandler {
     }
 
     /**
+     * Recursively gathers all audio files within a directory.
+     * Shared utility to avoid redundant local implementations.
+     * @param {string} dir Directory to traverse.
+     * @param {string[]} [results=[]] Accumulated file list.
+     * @returns {string[]} List of absolute audio file paths.
+     */
+    getAllAudioFiles(dir, results = []) {
+        if (!fs.existsSync(dir)) return results;
+        const list = fs.readdirSync(dir);
+        list.forEach(file => {
+            const fullPath = path.join(dir, file);
+            const stat = fs.statSync(fullPath);
+            if (stat && stat.isDirectory()) {
+                this.getAllAudioFiles(fullPath, results);
+            } else {
+                const ext = path.extname(fullPath).toLowerCase();
+                if (['.mp3', '.wav', '.ogg', '.lnk'].includes(ext)) {
+                    results.push(fullPath);
+                }
+            }
+        });
+        return results;
+    }
+
+    /**
      * Recursively searches for a song file that matches the query.
      * @param {string} query Part of the filename to look for.
      * @returns {string|null} The path to the first matching file, or null.
      */
     findSong(query) {
-        // Get the base music path from config
         const musicPath = this.config.defaultMusicPath;
-        // Safety check: ensure path is valid before proceeding
         if (!musicPath || !fs.existsSync(musicPath)) return null;
 
-        // Inner helper function to traverse directories recursively
-        const getAllFiles = (dir, results = []) => {
-            const list = fs.readdirSync(dir);
-            list.forEach(file => {
-                file = path.join(dir, file);
-                const stat = fs.statSync(file);
-                // If it's a folder, dive deeper
-                if (stat && stat.isDirectory()) getAllFiles(file, results);
-                // Otherwise, check if it's an audio file and add to results
-                else {
-                    const ext = path.extname(file).toLowerCase();
-                    if (['.mp3', '.wav', '.ogg', '.lnk'].includes(ext)) results.push(file);
-                }
-            });
-            return results;
-        };
-
-        // Gather all files and look for one containing the query string (case-insensitive)
-        const allFiles = getAllFiles(musicPath);
+        const allFiles = this.getAllAudioFiles(musicPath);
         return allFiles.find(f => path.parse(f).name.toLowerCase().includes(query.toLowerCase()));
     }
 
@@ -530,7 +535,7 @@ class CommandHandler {
         if (partialRoot) return path.join(musicPath, partialRoot);
 
         // 5. Fallback: Deep Recursive Search through all subfolders
-        const allFiles = getAllFiles(musicPath);
+        const allFiles = this.getAllAudioFiles(musicPath);
         const deepMatch = allFiles.find(f => path.parse(f).name.toLowerCase().includes(term1.toLowerCase()));
         if (deepMatch) return deepMatch;
 

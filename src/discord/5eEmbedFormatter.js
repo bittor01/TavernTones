@@ -183,13 +183,50 @@ function formatItem(item) {
  * @returns {EmbedBuilder} The constructed embed.
  */
 function formatMonster(monster) {
-    // Initialize the embed with basic monster info
     const embed = new EmbedBuilder()
         .setColor(0xE74C3C) // Red color for monsters
         .setTitle(monster.name)
-        .setDescription(`*${monster.size} ${monster.type}, ${monster.alignment}*`)
-        .setFooter({ text: `Source: ${monster.source}` });
-    // Note: Complex stats like HP, AC, and Actions are currently omitted and require further implementation.
+        .setDescription(`*${monster.size || ''} ${typeof monster.type === 'object' ? monster.type.type : monster.type || ''}, ${monster.alignment || ''}*`)
+        .setFooter({ text: `Source: ${monster.source || 'Unknown'}` });
+
+    if (monster.ac) {
+        const acVal = Array.isArray(monster.ac)
+            ? monster.ac.map(a => (a.ac || a) + (a.from ? ` (${a.from.join(', ')})` : '')).join(', ')
+            : monster.ac;
+        addFieldIfPresent(embed, 'Armor Class', acVal.toString(), true);
+    }
+
+    if (monster.hp) {
+        const hpVal = monster.hp.formula
+            ? `${monster.hp.average || monster.hp.hp} (${monster.hp.formula})`
+            : (monster.hp.average || monster.hp.hp || 'N/A').toString();
+        addFieldIfPresent(embed, 'Hit Points', hpVal, true);
+    }
+
+    if (monster.speed) {
+        const speedVal = typeof monster.speed === 'object'
+            ? Object.entries(monster.speed).map(([type, val]) => `${type} ${val.number || val} ft.`).join(', ')
+            : `${monster.speed} ft.`;
+        addFieldIfPresent(embed, 'Speed', speedVal, true);
+    }
+
+    const formatMod = (score) => {
+        const mod = Math.floor(((score || 10) - 10) / 2);
+        return mod >= 0 ? `+${mod}` : `${mod}`;
+    };
+
+    const statsStr = `**STR** ${monster.str || 10} (${formatMod(monster.str)}) | **DEX** ${monster.dex || 10} (${formatMod(monster.dex)}) | **CON** ${monster.con || 10} (${formatMod(monster.con)})\n` +
+                     `**INT** ${monster.int || 10} (${formatMod(monster.int)}) | **WIS** ${monster.wis || 10} (${formatMod(monster.wis)}) | **CHA** ${monster.cha || 10} (${formatMod(monster.cha)})`;
+    addFieldIfPresent(embed, 'Ability Scores', statsStr, false);
+
+    if (monster.trait) {
+        addFieldIfPresent(embed, 'Traits', formatEntries(monster.trait).substring(0, 1024), false);
+    }
+
+    if (monster.action) {
+        addFieldIfPresent(embed, 'Actions', formatEntries(monster.action).substring(0, 1024), false);
+    }
+
     return embed;
 }
 

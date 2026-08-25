@@ -94,6 +94,19 @@
           </div>
         </div>
 
+        <!-- Music Sub-controls Row (Volume & Crossfade) -->
+        <div class="music-subcontrols-row" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-bottom: 1px solid #333; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label for="music-volume-slider" style="font-size: 0.85em;">Vol:</label>
+            <input type="range" id="music-volume-slider" min="0" max="1" step="0.05" value="1.0" style="width: 80px;" title="Music Volume">
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button id="crossfade-toggle-btn" class="small-btn" title="Crossfade" style="font-size: 0.9em; padding: 2px 6px;">🎚️</button>
+            <input type="number" id="crossfade-duration-input" min="0.1" max="60.0" step="0.1" value="2.0" style="width: 50px; font-size: 0.85em; text-align: center;" title="Crossfade Duration (seconds)">
+            <span style="font-size: 0.8em; color: #888;">sec</span>
+          </div>
+        </div>
+
         <!-- Core Playback Controls -->
         <div class="controls music-controls">
           <button id="playPrevButton">⏮️</button>
@@ -173,6 +186,9 @@
             <button id="load-preset-btn" class="small-btn" title="Load Preset">📂</button>
             <label for="soundboard-volume">Vol:</label>
             <input type="range" id="soundboard-volume" min="0" max="1" step="0.05" value="0.5">
+            <label for="ducking-volume" title="Music volume multiplier during SFX ducking">Duck:</label>
+            <input type="range" id="ducking-volume" min="0" max="1" step="0.05" value="0.3" style="width: 50px;" title="Music Volume on Duck">
+            <input type="number" id="ducking-fade-input" min="0.0" max="10.0" step="0.1" value="0.2" style="width: 45px; font-size: 0.85em; text-align: center;" title="Ducking Fade Duration (seconds)">
           </div>
         </div>
         <!-- The grid of sound buttons, dynamically sized via CSS variables -->

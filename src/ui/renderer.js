@@ -800,6 +800,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (musicAutosaveCheck) {
             musicAutosaveCheck.checked = !!config.musicAutosave;
         }
+        const musicVolSlider = document.getElementById('music-volume-slider');
+        if (musicVolSlider) {
+            musicVolSlider.value = config.playbackVolume !== undefined ? config.playbackVolume : 1.0;
+        }
+        const crossfadeToggleBtn = document.getElementById('crossfade-toggle-btn');
+        if (crossfadeToggleBtn) {
+            crossfadeToggleBtn.classList.toggle('active', !!config.crossfadeEnabled);
+        }
+        const crossfadeDurInput = document.getElementById('crossfade-duration-input');
+        if (crossfadeDurInput) {
+            crossfadeDurInput.value = config.crossfadeDuration !== undefined ? config.crossfadeDuration : 2.0;
+        }
+        const duckingVolSlider = document.getElementById('ducking-volume');
+        if (duckingVolSlider) {
+            duckingVolSlider.value = config.duckingVolume !== undefined ? config.duckingVolume : 0.3;
+        }
+        const duckingFadeInput = document.getElementById('ducking-fade-input');
+        if (duckingFadeInput) {
+            duckingFadeInput.value = config.duckingFadeDuration !== undefined ? config.duckingFadeDuration : 0.2;
+        }
         if (discordMediaControlToggle) {
             discordMediaControlToggle.checked = config.showMediaControl !== false;
         }
@@ -1841,6 +1861,58 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         });
+    }
+
+    // --- Music Sub-controls (Volume & Crossfade) Event Listeners ---
+    const musicVolumeSlider = document.getElementById('music-volume-slider');
+    if (musicVolumeSlider) {
+        musicVolumeSlider.addEventListener('input', (e) => {
+            const volume = parseFloat(e.target.value);
+            window.electron.ipcRenderer.send('set-playback-volume', { volume });
+        });
+    }
+
+    const crossfadeToggleBtn = document.getElementById('crossfade-toggle-btn');
+    const crossfadeDurationInput = document.getElementById('crossfade-duration-input');
+
+    if (crossfadeToggleBtn) {
+        crossfadeToggleBtn.addEventListener('click', () => {
+            const isCurrentlyEnabled = crossfadeToggleBtn.classList.contains('active');
+            const newEnabled = !isCurrentlyEnabled;
+            crossfadeToggleBtn.classList.toggle('active', newEnabled);
+            const duration = parseFloat(crossfadeDurationInput ? crossfadeDurationInput.value : 2.0) || 2.0;
+            window.electron.ipcRenderer.send('set-crossfade-config', { enabled: newEnabled, duration });
+        });
+    }
+
+    if (crossfadeDurationInput) {
+        crossfadeDurationInput.addEventListener('change', (e) => {
+            let val = parseFloat(e.target.value);
+            if (isNaN(val) || val < 0.1) val = 0.1;
+            if (val > 60.0) val = 60.0;
+            e.target.value = val.toFixed(1);
+            const enabled = crossfadeToggleBtn ? crossfadeToggleBtn.classList.contains('active') : false;
+            window.electron.ipcRenderer.send('set-crossfade-config', { enabled, duration: val });
+        });
+    }
+
+    // --- Soundboard Ducking Controls Event Listeners ---
+    const duckingVolumeSlider = document.getElementById('ducking-volume');
+    const duckingFadeInput = document.getElementById('ducking-fade-input');
+
+    const updateDuckingConfig = () => {
+        const duckingVolume = parseFloat(duckingVolumeSlider ? duckingVolumeSlider.value : 0.3) || 0.3;
+        let duckingFadeDuration = parseFloat(duckingFadeInput ? duckingFadeInput.value : 0.2);
+        if (isNaN(duckingFadeDuration) || duckingFadeDuration < 0.0) duckingFadeDuration = 0.0;
+        if (duckingFadeDuration > 10.0) duckingFadeDuration = 10.0;
+        window.electron.ipcRenderer.send('set-ducking-config', { duckingVolume, duckingFadeDuration });
+    };
+
+    if (duckingVolumeSlider) {
+        duckingVolumeSlider.addEventListener('input', updateDuckingConfig);
+    }
+    if (duckingFadeInput) {
+        duckingFadeInput.addEventListener('change', updateDuckingConfig);
     }
 
     if (discordMediaControlToggle) {
