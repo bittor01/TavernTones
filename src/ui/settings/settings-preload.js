@@ -27,7 +27,7 @@ contextBridge.exposeInMainWorld('settings', {
 
     // --- Data and Integration Handlers ---
     // Triggers the GitHub sync for bestiary monster data
-    fetchBestiaryData: (repoUrl, localPath, githubToken) => ipcRenderer.invoke('fetch-bestiary-data', { repoUrl, localPath, githubToken }),
+    fetchBestiaryData: (repoUrl, localPath) => ipcRenderer.invoke('fetch-bestiary-data', { repoUrl, localPath }),
     // Commands the bot to register its slash commands with Discord
     registerSlashCommands: () => ipcRenderer.invoke('register-slash-commands'),
     // Commands the bot to remove its slash commands from Discord

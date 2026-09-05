@@ -740,8 +740,8 @@ class BackendAudioPlayer extends EventEmitter {
                     this.currentTime = this.duration;
                 }
 
-                // Check if we should initiate crossfading before track end
-                if (this.crossfadeEnabled && this.duration > 0 && !this.isCrossfadingAtEnd) {
+                // Check if we should initiate crossfading before track end (only when changing tracks, not on Loop Single)
+                if (this.crossfadeEnabled && this.duration > 0 && !this.isCrossfadingAtEnd && this.loopMode !== 2) {
                     let fadeDur = this.crossfadeDuration;
                     if (fadeDur > this.duration / 2) fadeDur = Math.max(0.1, this.duration / 2);
 
@@ -811,7 +811,7 @@ class BackendAudioPlayer extends EventEmitter {
             return;
         }
 
-        // Helper to restart playback with a tiny delay to prevent thrashing
+        // Helper to restart playback with a tiny delay to prevent thrashing if track duration was very short
         const playWithDelay = () => {
             if (elapsed < 500) {
                 this.log("[AudioPlayer] Rapid loop detected, delaying restart by 200ms.");
@@ -823,8 +823,8 @@ class BackendAudioPlayer extends EventEmitter {
 
         // Logic based on loop mode
         if (this.loopMode === 2) {
-            // Loop Single: Just restart the current track
-            this.log("[AudioPlayer] Loop 1: Restarting current track.");
+            // Loop Single: Just restart the current track immediately for tight seamless looping
+            this.log("[AudioPlayer] Loop Single: Restarting current track.");
             playWithDelay();
         } else if (this.loopMode === 1) {
             // Loop All: Move the finished track to the bottom and play the next one

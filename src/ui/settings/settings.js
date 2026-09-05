@@ -27,8 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const bestiaryPathInput = document.getElementById('bestiaryPath');
     // Source URL for syncing 5e data
     const gitRepoUrlInput = document.getElementById('gitRepoUrl');
-    // Optional Personal Access Token for GitHub
-    const githubTokenInput = document.getElementById('githubToken');
     // Path to random tables folder
     const randomTablesPathInput = document.getElementById('randomTablesPath');
     // Base folder for the music library
@@ -66,7 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ffmpegPath: ffmpegPathInput.value,
             bestiaryPath: bestiaryPathInput.value,
             gitRepoUrl: gitRepoUrlInput.value,
-            githubToken: githubTokenInput.value,
             randomTablesPath: randomTablesPathInput.value,
             defaultMusicPath: defaultMusicPathInput.value,
             audioMode: audioModeToggle.checked
@@ -106,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Attach real-time 'dirty' check to all text inputs
-    [tokenInput, voiceChannelInput, textChannelInput, botRoleIdInput, ffmpegPathInput, bestiaryPathInput, gitRepoUrlInput, githubTokenInput, randomTablesPathInput, defaultMusicPathInput].forEach(el => {
+    [tokenInput, voiceChannelInput, textChannelInput, botRoleIdInput, ffmpegPathInput, bestiaryPathInput, gitRepoUrlInput, randomTablesPathInput, defaultMusicPathInput].forEach(el => {
         el.addEventListener('input', checkDirty);
     });
     // Attach check to the audio mode checkbox
@@ -165,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchBestiaryBtn.textContent = "Syncing...";
 
         // Trigger sync via settings API
-        const result = await window.settings.fetchBestiaryData(gitRepoUrlInput.value, bestiaryPathInput.value, githubTokenInput.value);
+        const result = await window.settings.fetchBestiaryData(gitRepoUrlInput.value, bestiaryPathInput.value);
 
         // Show result to user
         if (result.success) {
@@ -351,7 +348,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ffmpegPathInput.value = config.ffmpegPath || '';
             bestiaryPathInput.value = config.bestiaryPath || '';
             gitRepoUrlInput.value = config.gitRepoUrl || 'https://github.com/5etools-mirror-3/5etools-src';
-            githubTokenInput.value = config.githubToken || '';
             randomTablesPathInput.value = config.randomTablesPath || '';
             defaultMusicPathInput.value = config.defaultMusicPath || '';
             audioModeToggle.checked = !!config.audioMode;
@@ -393,7 +389,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ffmpegPath: ffmpegPathInput.value,
             bestiaryPath: bestiaryPathInput.value,
             gitRepoUrl: gitRepoUrlInput.value,
-            githubToken: githubTokenInput.value,
             randomTablesPath: randomTablesPathInput.value,
             defaultMusicPath: defaultMusicPathInput.value,
             audioMode: audioModeToggle.checked

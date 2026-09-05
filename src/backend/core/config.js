@@ -107,20 +107,10 @@ async function getDiscordConfig() {
             // Decryption might fail if the token was stored unencrypted or with a different key
         }
     }
-    // Decrypt the GitHub token used for bestiary syncing
-    if (config.githubToken && safeStorage.isEncryptionAvailable()) {
-        try {
-            config.githubToken = safeStorage.decryptString(Buffer.from(config.githubToken, 'base64'));
-        } catch (e) {
-            // Ignore decryption errors for githubToken
-        }
-    }
-
     // --- Ensure essential keys have default values to avoid 'undefined' issues in the UI ---
     const defaults = {
         enabled: false,
         token: '',
-        githubToken: '',
         voiceChannel: '',
         textChannel: '',
         botRoleId: '',
@@ -155,15 +145,6 @@ async function setDiscordConfig(config) {
             console.error("Failed to encrypt Discord token:", e);
         }
     }
-    // Encrypt the GitHub token
-    if (configToSave.githubToken && safeStorage.isEncryptionAvailable()) {
-        try {
-            configToSave.githubToken = safeStorage.encryptString(configToSave.githubToken).toString('base64');
-        } catch (e) {
-            console.error("Failed to encrypt GitHub token:", e);
-        }
-    }
-
     // Persist the entire merged config object back to the electron-store
     store.set('discord', configToSave);
 }
