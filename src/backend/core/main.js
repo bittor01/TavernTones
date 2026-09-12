@@ -3080,25 +3080,53 @@ client.once(Events.ClientReady, async () => {
             return `${mins}:${secs.toString().padStart(2, '0')}`;
         };
 
+        const embedFields = [
+            { name: 'Status', value: status.isPlaying ? '▶️ Playing' : '⏸️ Paused', inline: true },
+            { name: 'Loop', value: loopIcons[status.loopMode], inline: true },
+            { name: 'Shuffle', value: status.shuffleMode ? '🔀 On' : '🔀 Off', inline: true },
+            { name: 'Track', value: status.currentTrack ? path.basename(status.currentTrack) : 'None' },
+            { name: 'Progress', value: `${createProgressString(status.currentTime, status.duration)} \`[${formatTime(status.currentTime)} / ${formatTime(status.duration)}]\`` },
+            { name: 'Playlist', value: `${status.stackSize} tracks` }
+        ];
+
+        // Display playback error count and most recent failed track if errors occurred
+        if (musicPlayer && musicPlayer.totalPlaybackFailures > 0) {
+            embedFields.push({
+                name: '⚠️ Playback Errors',
+                value: `Recent: \`${musicPlayer.lastFailedTrack || 'Unknown'}\` | Total Failures: **${musicPlayer.totalPlaybackFailures}**`
+            });
+        }
+
         const embed = new EmbedBuilder()
             .setTitle('🎵 Music Player Control')
             .setColor(status.isPlaying ? 0x00FF00 : 0xFF0000)
-            .addFields(
-                { name: 'Status', value: status.isPlaying ? '▶️ Playing' : '⏸️ Paused', inline: true },
-                { name: 'Loop', value: loopIcons[status.loopMode], inline: true },
-                { name: 'Shuffle', value: status.shuffleMode ? '🔀 On' : '🔀 Off', inline: true },
-                { name: 'Track', value: status.currentTrack ? path.basename(status.currentTrack) : 'None' },
-                { name: 'Progress', value: `${createProgressString(status.currentTime, status.duration)} \`[${formatTime(status.currentTime)} / ${formatTime(status.duration)}]\`` },
-                { name: 'Playlist', value: `${status.stackSize} tracks` }
-            )
+            .addFields(embedFields)
             .setTimestamp();
 
         // --- Row 1: Song Selector Dropdown ---
         if (!cachedDiscordSongOptions) {
-            cachedDiscordSongOptions = getFlatMusicList().map(p => ({
-                label: path.basename(p).substring(0, 100),
-                value: getSongId(p)
-            }));
+            cachedDiscordSongOptions = getFlatMusicList().map(p => {
+                let resolved = p;
+                // Resolve shortcut link if path points to a .lnk file
+                if (path.extname(p).toLowerCase() === '.lnk') {
+                    try {
+                        const shortcut = shell.readShortcutLink(p);
+                        if (shortcut.target && fs.existsSync(shortcut.target)) {
+                            resolved = shortcut.target;
+                        } else {
+                            return null; // Exclude broken shortcut from options
+                        }
+                    } catch (e) {
+                        return null; // Exclude broken shortcut on error
+                    }
+                }
+                // Verify file exists on disk
+                if (!fs.existsSync(resolved)) return null;
+                return {
+                    label: path.basename(resolved).substring(0, 100),
+                    value: getSongId(resolved)
+                };
+            }).filter(Boolean);
         }
         const songs = cachedDiscordSongOptions;
 
@@ -3366,15 +3394,15 @@ client.once(Events.ClientReady, async () => {
                     case 'media-play-next':
                         if (selectedSongInDropdown) {
                             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
-                            musicPlayer.stack.splice(musicPlayer.currentIndex + 1, 0, selectedSongInDropdown);
+                            musicPlayer.insertNext(selectedSongInDropdown);
                             selectedSongInDropdown = null;
                         }
                         break;
                     case 'media-play-now':
                         if (selectedSongInDropdown) {
                             if (voiceStatus !== 'connected') await joinVoiceChannelAction();
-                            musicPlayer.stack.splice(musicPlayer.currentIndex + 1, 0, selectedSongInDropdown);
-                            musicPlayer.next();
+                            musicPlayer.insertNext(selectedSongInDropdown);
+                            musicPlayer.next(false, true);
                             selectedSongInDropdown = null;
                         }
                         break;
