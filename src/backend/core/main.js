@@ -40,6 +40,7 @@ const axios = require('axios');
 console.log('Axios loaded.');
 // Import internal modules for audio playback, command handling, and 5e data parsing
 const BackendAudioPlayer = require('./BackendAudioPlayer.js');
+const UrlDownloader = require('./UrlDownloader.js');
 const CommandHandler = require('../../discord/CommandHandler.js');
 const FiveEToolsParser = require('./5eParser.js');
 // Configuration helpers to read/write persistent settings
@@ -396,6 +397,8 @@ async function apploader() {
 
         // Initialize the backend audio player with logging and shell access
         musicPlayer = new BackendAudioPlayer(logToRenderer, shell, discordConfig.defaultMusicPath, discordConfig.ffmpegPath);
+        // Initialize the URL Downloader service for importing media from URLs
+        urlDownloader = new UrlDownloader(discordConfig.defaultMusicPath, discordConfig.ffmpegPath, logToRenderer);
         // Apply persisted volume, crossfade, and ducking settings to the player
         if (discordConfig.playbackVolume !== undefined) musicPlayer.setVolume(discordConfig.playbackVolume);
         if (discordConfig.crossfadeEnabled !== undefined || discordConfig.crossfadeDuration !== undefined) {
@@ -1291,6 +1294,104 @@ async function ipcloader() {
     // Removes a specific track from the playlist by its index
     ipcMain.on('remove-from-stack', (event, { index }) => {
         if (musicPlayer) musicPlayer.removeFromStack(index);
+    });
+
+    // Reorders a track within the playlist stack
+    ipcMain.on('reorder-stack', (event, { oldIndex, newIndex }) => {
+        if (musicPlayer) musicPlayer.reorderStack(oldIndex, newIndex);
+    });
+
+    // Fetches title/metadata for a media URL without downloading
+    ipcMain.handle('fetch-url-details', async (event, { url }) => {
+        if (!urlDownloader) {
+            urlDownloader = new UrlDownloader(discordConfig.defaultMusicPath, discordConfig.ffmpegPath, logToRenderer);
+        }
+        return await urlDownloader.fetchUrlDetails(url);
+    });
+
+    // Retrieves list of folders inside the Music Library directory
+    ipcMain.handle('get-music-folders', async () => {
+        const root = discordConfig.defaultMusicPath;
+        if (!root || !fs.existsSync(root)) return [];
+
+        const folders = [];
+        const scanFolders = (dir, relPath = '') => {
+            folders.push({ name: relPath ? relPath : 'Root (Music Folder)', path: dir });
+            try {
+                const entries = fs.readdirSync(dir, { withFileTypes: true });
+                for (const entry of entries) {
+                    if (entry.isDirectory()) {
+                        const subDir = path.join(dir, entry.name);
+                        const subRel = relPath ? path.join(relPath, entry.name) : entry.name;
+                        scanFolders(subDir, subRel);
+                    }
+                }
+            } catch (e) {
+                console.error('[main] Folder scan error:', e.message);
+            }
+        };
+
+        scanFolders(root);
+        return folders;
+    });
+
+    // Initiates a background download of an audio track from a URL
+    ipcMain.on('import-url-download', async (event, { downloadId, url, fileName, targetFolder, action }) => {
+        try {
+            if (!urlDownloader) {
+                urlDownloader = new UrlDownloader(discordConfig.defaultMusicPath, discordConfig.ffmpegPath, logToRenderer);
+            }
+
+            const result = await urlDownloader.downloadUrlToMp3({
+                downloadId,
+                url,
+                fileName,
+                targetFolder: targetFolder || discordConfig.defaultMusicPath,
+                onProgress: (progress) => {
+                    if (mainWindow && !mainWindow.isDestroyed()) {
+                        mainWindow.webContents.send('url-download-progress', progress);
+                    }
+                }
+            });
+
+            // Clear cache and emit library update
+            cachedMusicLibrary = null;
+            cachedFlatMusicList = null;
+            const newLibrary = getMusicLibrary();
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('music-library-update', { library: newLibrary, diff: { type: 'added', path: result.filePath } });
+                mainWindow.webContents.send('url-download-complete', { downloadId, result });
+            }
+
+            // Perform requested playlist enqueue action
+            if (action && musicPlayer) {
+                if (action === 'play-now') {
+                    await musicPlayer.addToStack([result.filePath]);
+                    const index = musicPlayer.stack.indexOf(result.filePath);
+                    if (index !== -1) {
+                        if (voiceStatus !== 'connected') await joinVoiceChannelAction();
+                        musicPlayer.jumpTo(index, true);
+                    }
+                } else if (action === 'add-top') {
+                    musicPlayer.stack.unshift(result.filePath);
+                    musicPlayer._emitStatusUpdate();
+                } else if (action === 'add-bottom') {
+                    musicPlayer.addToStack([result.filePath]);
+                }
+            }
+        } catch (error) {
+            logToRenderer(`[UrlDownloader] Download error: ${error.message}`);
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('url-download-error', { downloadId, error: error.message });
+            }
+        }
+    });
+
+    // Cancels an active URL download process
+    ipcMain.on('cancel-url-download', (event, { downloadId }) => {
+        if (urlDownloader) {
+            urlDownloader.cancelDownload(downloadId);
+        }
     });
 
     // Empties the entire playlist stack and stops playback

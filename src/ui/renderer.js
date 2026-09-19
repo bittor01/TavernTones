@@ -1121,6 +1121,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         actions.appendChild(playNow);
         actions.appendChild(addTop);
         actions.appendChild(addBottom);
+
+        if (node.type === 'directory') {
+            const importUrl = document.createElement('button');
+            importUrl.className = 'small-btn';
+            importUrl.innerHTML = '🌐';
+            importUrl.title = 'Import track from URL to this folder';
+            importUrl.onclick = (e) => {
+                e.stopPropagation();
+                openUrlImportModal(node.path);
+            };
+            actions.appendChild(importUrl);
+        }
+
         content.appendChild(actions);
 
         div.appendChild(content);
@@ -1345,8 +1358,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const div = document.createElement('div');
                     div.className = 'music-stack-item';
                     div.dataset.index = index;
+                    div.setAttribute('draggable', 'true');
 
                     div.innerHTML = `
+                        <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
                         <span class="track-name">${track.name}</span>
                         <div class="item-actions">
                             <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
@@ -1354,6 +1369,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <button class="small-btn remove-track-btn" data-index="${index}">❌</button>
                         </div>
                     `;
+
+                    // Drag-and-Drop event handlers for reordering playlist items
+                    div.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', index.toString());
+                        e.dataTransfer.effectAllowed = 'move';
+                        div.classList.add('dragging');
+                    });
+
+                    div.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        div.classList.add('drag-over');
+                    });
+
+                    div.addEventListener('dragleave', () => {
+                        div.classList.remove('drag-over');
+                    });
+
+                    div.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        div.classList.remove('drag-over');
+                        const oldIndexStr = e.dataTransfer.getData('text/plain');
+                        if (oldIndexStr !== '') {
+                            const oldIndex = parseInt(oldIndexStr, 10);
+                            const newIndex = index;
+                            if (!isNaN(oldIndex) && oldIndex !== newIndex) {
+                                window.electron.ipcRenderer.send('reorder-stack', { oldIndex, newIndex });
+                            }
+                        }
+                    });
+
+                    div.addEventListener('dragend', () => {
+                        div.classList.remove('dragging');
+                        document.querySelectorAll('.music-stack-item').forEach(item => {
+                            item.classList.remove('drag-over');
+                            item.classList.remove('dragging');
+                        });
+                    });
                     div.querySelector('.play-track-btn').addEventListener('click', (e) => {
                         e.stopPropagation();
                         window.electron.ipcRenderer.send('play-now', { index });
@@ -3623,6 +3676,181 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.electron.ipcRenderer.send('set-discord-config', {
                 musicPlayerHeight: discordConfig.musicPlayerHeight
             });
+        }
+    });
+
+    // --- URL Import Modal Logic ---
+    const urlImportDialog = document.getElementById('url-import-dialog');
+    const urlImportForm = document.getElementById('url-import-form');
+    const urlInputField = document.getElementById('url-input-field');
+    const urlFetchDetailsBtn = document.getElementById('url-fetch-details-btn');
+    const urlFilenameField = document.getElementById('url-filename-field');
+    const urlTargetFolderSelect = document.getElementById('url-target-folder-select');
+    const urlActionSelect = document.getElementById('url-action-select');
+    const importUrlHeaderBtn = document.getElementById('import-url-header-btn');
+    const urlDownloadStatusContainer = document.getElementById('url-download-status-container');
+    const urlDownloadStatusText = document.getElementById('url-download-status-text');
+    const urlDownloadProgressBar = document.getElementById('url-download-progress-bar');
+    const urlDialogCancelBtn = document.getElementById('url-dialog-cancel-btn');
+    const urlDialogSubmitBtn = document.getElementById('url-dialog-submit-btn');
+
+    let currentDownloadId = null;
+
+    /**
+     * Opens the URL import modal dialog and populates available destination folders.
+     * @param {string} [targetFolderPath] - Optional folder path to pre-select.
+     */
+    async function openUrlImportModal(targetFolderPath = null) {
+        if (!urlImportDialog) return;
+
+        // Reset inputs and UI state
+        if (urlInputField) urlInputField.value = '';
+        if (urlFilenameField) urlFilenameField.value = '';
+        if (urlDownloadStatusContainer) urlDownloadStatusContainer.style.display = 'none';
+        if (urlDownloadProgressBar) urlDownloadProgressBar.style.width = '0%';
+        if (urlDialogSubmitBtn) {
+            urlDialogSubmitBtn.disabled = false;
+            urlDialogSubmitBtn.textContent = '⬇️ Download';
+        }
+
+        // Fetch music library subfolders to populate the selection dropdown
+        try {
+            const folders = await window.electron.ipcRenderer.invoke('get-music-folders');
+            if (urlTargetFolderSelect) {
+                urlTargetFolderSelect.innerHTML = '';
+                if (folders && folders.length > 0) {
+                    folders.forEach(f => {
+                        const opt = document.createElement('option');
+                        opt.value = f.path;
+                        opt.textContent = f.name;
+                        if (targetFolderPath && f.path === targetFolderPath) {
+                            opt.selected = true;
+                        }
+                        urlTargetFolderSelect.appendChild(opt);
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('[renderer] Error fetching music folders:', e);
+        }
+
+        urlImportDialog.showModal();
+    }
+
+    if (importUrlHeaderBtn) {
+        importUrlHeaderBtn.addEventListener('click', () => {
+            openUrlImportModal();
+        });
+    }
+
+    /**
+     * Auto-fetches title/metadata for the entered URL and populates the filename field.
+     */
+    async function handleFetchUrlDetails() {
+        if (!urlInputField) return;
+        const url = urlInputField.value.trim();
+        if (!url) return;
+
+        if (urlFetchDetailsBtn) {
+            urlFetchDetailsBtn.disabled = true;
+            urlFetchDetailsBtn.textContent = '⏱️...';
+        }
+
+        try {
+            const details = await window.electron.ipcRenderer.invoke('fetch-url-details', { url });
+            if (details && details.title && urlFilenameField) {
+                let name = details.title;
+                if (!name.toLowerCase().endsWith('.mp3')) name += '.mp3';
+                urlFilenameField.value = name;
+            }
+        } catch (err) {
+            console.error('[renderer] Failed to fetch URL details:', err);
+        } finally {
+            if (urlFetchDetailsBtn) {
+                urlFetchDetailsBtn.disabled = false;
+                urlFetchDetailsBtn.textContent = '🔍 Fetch';
+            }
+        }
+    }
+
+    if (urlFetchDetailsBtn) {
+        urlFetchDetailsBtn.addEventListener('click', handleFetchUrlDetails);
+    }
+
+    if (urlInputField) {
+        urlInputField.addEventListener('blur', () => {
+            if (urlInputField.value.trim() && (!urlFilenameField || !urlFilenameField.value.trim())) {
+                handleFetchUrlDetails();
+            }
+        });
+    }
+
+    if (urlDialogCancelBtn) {
+        urlDialogCancelBtn.addEventListener('click', () => {
+            if (currentDownloadId) {
+                window.electron.ipcRenderer.send('cancel-url-download', { downloadId: currentDownloadId });
+                currentDownloadId = null;
+            }
+            if (urlImportDialog) urlImportDialog.close();
+        });
+    }
+
+    if (urlImportForm) {
+        urlImportForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const url = urlInputField ? urlInputField.value.trim() : '';
+            const fileName = urlFilenameField ? urlFilenameField.value.trim() : '';
+            const targetFolder = urlTargetFolderSelect ? urlTargetFolderSelect.value : '';
+            const action = urlActionSelect ? urlActionSelect.value : 'none';
+
+            if (!url || !fileName) return;
+
+            currentDownloadId = `dl_${Date.now()}`;
+            if (urlDownloadStatusContainer) urlDownloadStatusContainer.style.display = 'flex';
+            if (urlDownloadStatusText) urlDownloadStatusText.textContent = 'Initializing download...';
+            if (urlDownloadProgressBar) urlDownloadProgressBar.style.width = '5%';
+            if (urlDialogSubmitBtn) {
+                urlDialogSubmitBtn.disabled = true;
+                urlDialogSubmitBtn.textContent = 'Downloading...';
+            }
+
+            window.electron.ipcRenderer.send('import-url-download', {
+                downloadId: currentDownloadId,
+                url,
+                fileName,
+                targetFolder,
+                action
+            });
+        });
+    }
+
+    // IPC listeners for background URL download updates
+    window.electron.ipcRenderer.on('url-download-progress', (event, data) => {
+        if (data && data.downloadId === currentDownloadId) {
+            if (urlDownloadStatusText) urlDownloadStatusText.textContent = data.status || 'Downloading...';
+            if (urlDownloadProgressBar) urlDownloadProgressBar.style.width = `${data.percent || 0}%`;
+        }
+    });
+
+    window.electron.ipcRenderer.on('url-download-complete', (event, data) => {
+        if (data && data.downloadId === currentDownloadId) {
+            currentDownloadId = null;
+            showNotification(`Imported '${data.result.fileName}' successfully!`);
+            if (urlImportDialog && urlImportDialog.open) {
+                urlImportDialog.close();
+            }
+        }
+    });
+
+    window.electron.ipcRenderer.on('url-download-error', (event, data) => {
+        if (data && data.downloadId === currentDownloadId) {
+            currentDownloadId = null;
+            if (urlDownloadStatusText) urlDownloadStatusText.textContent = `Error: ${data.error}`;
+            if (urlDialogSubmitBtn) {
+                urlDialogSubmitBtn.disabled = false;
+                urlDialogSubmitBtn.textContent = 'Retry Download';
+            }
+            showNotification(`Download failed: ${data.error}`);
         }
     });
 
