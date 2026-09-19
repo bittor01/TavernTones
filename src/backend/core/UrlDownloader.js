@@ -284,7 +284,7 @@ class UrlDownloader {
                     // Use @distube/ytdl-core for audio streaming
                     inputStream = ytdl(url, {
                         filter: 'audioonly',
-                        quality: 'highestaudio'
+                        quality: 'highest'
                     });
 
                     inputStream.on('progress', (chunkLength, downloaded, total) => {
