@@ -284,7 +284,7 @@ class UrlDownloader {
                     // Use @distube/ytdl-core for audio streaming
                     inputStream = ytdl(url, {
                         filter: 'audioonly',
-                        quality: 'highestaudio'
+                        quality: 'highest'
                     });
 
                     inputStream.on('progress', (chunkLength, downloaded, total) => {
@@ -294,8 +294,16 @@ class UrlDownloader {
                         }
                     });
 
+                    let ytdlErrorOccurred = false;
+                    let ytdlErrorMessage = '';
+
                     inputStream.on('error', (err) => {
                         this.log(`[UrlDownloader] ytdl stream error: ${err.message}`);
+                        ytdlErrorOccurred = true;
+                        ytdlErrorMessage = err.message;
+                        if (ffmpegProcess) {
+                            ffmpegProcess.kill('SIGKILL');
+                        }
                     });
 
                     // Pipe ytdl output into FFmpeg for encoding to MP3
@@ -321,13 +329,17 @@ class UrlDownloader {
 
                     ffmpegProcess.on('close', (code) => {
                         cleanup();
-                        if (code === 0 && fs.existsSync(finalFilePath)) {
+                        if (code === 0 && fs.existsSync(finalFilePath) && !ytdlErrorOccurred) {
                             reportProgress(100, 'Download complete!');
                             resolve({ success: true, filePath: finalFilePath, fileName: sanitizedFileName });
                         } else {
                             // If failed, clean up partial download
                             if (fs.existsSync(finalFilePath)) fs.unlinkSync(finalFilePath);
-                            reject(new Error(`FFmpeg processing failed with exit code ${code}`));
+                            if (ytdlErrorOccurred) {
+                                reject(new Error(`YouTube stream failed: ${ytdlErrorMessage || 'Audio stream error'}`));
+                            } else {
+                                reject(new Error(`FFmpeg processing failed with exit code ${code}`));
+                            }
                         }
                     });
 
