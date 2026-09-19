@@ -71,6 +71,10 @@ class BackendAudioPlayer extends EventEmitter {
         this.cacheInterval = null;
         // Tracks consecutive playback failures to avoid infinite error loops
         this.consecutiveErrors = 0;
+        // Total cumulative playback failures encountered during session
+        this.totalPlaybackFailures = 0;
+        // Name of the most recent track that failed playback
+        this.lastFailedTrack = null;
         // History of recovery attempts to detect rapid-fire crashing
         this.recoveryAttempts = [];
 
@@ -325,6 +329,48 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     /**
+     * Resolves a file path if it is a Windows shortcut (.lnk), returning the valid target path.
+     * Returns original path if not a shortcut or if target resolution fails.
+     * @param {string} filePath - Path to check and resolve.
+     * @returns {string} Target path or original path.
+     */
+    resolveShortcutPath(filePath) {
+        // Return immediately if invalid path supplied
+        if (!filePath) return filePath;
+        // Verify extension is .lnk and shell helper is available
+        if (path.extname(filePath).toLowerCase() === '.lnk' && this.shell) {
+            try {
+                // Read metadata from Windows shortcut
+                const shortcut = this.shell.readShortcutLink(filePath);
+                // Return target if target exists on disk
+                if (shortcut.target && fs.existsSync(shortcut.target)) {
+                    return shortcut.target;
+                }
+            } catch (e) {
+                // Log resolution error to visual console
+                this.log(`[AudioPlayer] Failed to resolve shortcut: ${filePath}`);
+            }
+        }
+        return filePath;
+    }
+
+    /**
+     * Inserts a track immediately after the current playing track in the playlist stack,
+     * resolving any shortcut link first.
+     * @param {string} filePath - Path of track to insert.
+     * @returns {string} Resolved track path added to stack.
+     */
+    insertNext(filePath) {
+        // Resolve shortcut to target file
+        const resolved = this.resolveShortcutPath(filePath);
+        // Insert after active song index (inserts at index 0 if currentIndex is -1)
+        this.stack.splice(this.currentIndex + 1, 0, resolved);
+        // Broadcast playlist update to renderer and Discord
+        this._emitStatusUpdate();
+        return resolved;
+    }
+
+    /**
      * Adds one or more file paths to the playlist stack.
      * Automatically resolves Windows shortcuts (.lnk) to their targets.
      * @param {string|string[]} filePaths - The files to add.
@@ -332,19 +378,9 @@ class BackendAudioPlayer extends EventEmitter {
     async addToStack(filePaths) {
         // Normalize input to an array
         const paths = Array.isArray(filePaths) ? filePaths : [filePaths];
-        for (let filePath of paths) {
-            // Check if the file is a Windows shortcut
-            if (path.extname(filePath).toLowerCase() === '.lnk' && this.shell) {
-                try {
-                    // Resolve the shortcut target
-                    const shortcut = this.shell.readShortcutLink(filePath);
-                    if (shortcut.target && fs.existsSync(shortcut.target)) {
-                        filePath = shortcut.target;
-                    }
-                } catch (e) {
-                    this.log(`[AudioPlayer] Failed to resolve shortcut: ${filePath}`);
-                }
-            }
+        for (let rawPath of paths) {
+            // Resolve shortcut link to absolute target path
+            const filePath = this.resolveShortcutPath(rawPath);
             // Add to stack only if it's not already present (prevent duplicates)
             if (!this.stack.includes(filePath)) {
                 this.stack.push(filePath);
@@ -431,7 +467,21 @@ class BackendAudioPlayer extends EventEmitter {
                 }
             }
 
-            const filePath = this.stack[this.currentIndex];
+            const rawPath = this.stack[this.currentIndex];
+            // Ensure shortcut is resolved if present in stack
+            const filePath = this.resolveShortcutPath(rawPath);
+            // Update stack entry with resolved target if shortcut was resolved
+            if (filePath !== rawPath) {
+                this.stack[this.currentIndex] = filePath;
+            }
+
+            // Verify file actually exists on disk before attempting spawn
+            if (!fs.existsSync(filePath)) {
+                this.log(`[AudioPlayer] File not found: ${filePath}`);
+                this._handlePlaybackError(filePath);
+                return;
+            }
+
             this.log(`[AudioPlayer] Playing: ${path.basename(filePath)} from ${startTime}s (crossfade=${this.crossfadeEnabled})`);
 
             // Check if crossfading is applicable
@@ -599,10 +649,17 @@ class BackendAudioPlayer extends EventEmitter {
 
     /**
      * Handles fatal playback errors by retrying or skipping the track.
+     * Tracks failure statistics for Discord embed error field updates.
      * @param {string} filePath - The file that failed to play.
      */
     _handlePlaybackError(filePath) {
+        // Increment consecutive error counter for circuit breaking
         this.consecutiveErrors++;
+        // Increment total failure count and record last failed filename
+        this.totalPlaybackFailures++;
+        if (filePath) {
+            this.lastFailedTrack = path.basename(filePath);
+        }
         this.isPlaying = false;
         this.playerStatus = AudioPlayerStatus.Idle;
         this._stopTimer();
@@ -740,8 +797,8 @@ class BackendAudioPlayer extends EventEmitter {
                     this.currentTime = this.duration;
                 }
 
-                // Check if we should initiate crossfading before track end
-                if (this.crossfadeEnabled && this.duration > 0 && !this.isCrossfadingAtEnd) {
+                // Check if we should initiate crossfading before track end (only when changing tracks, not on Loop Single)
+                if (this.crossfadeEnabled && this.duration > 0 && !this.isCrossfadingAtEnd && this.loopMode !== 2) {
                     let fadeDur = this.crossfadeDuration;
                     if (fadeDur > this.duration / 2) fadeDur = Math.max(0.1, this.duration / 2);
 
@@ -811,7 +868,7 @@ class BackendAudioPlayer extends EventEmitter {
             return;
         }
 
-        // Helper to restart playback with a tiny delay to prevent thrashing
+        // Helper to restart playback with a tiny delay to prevent thrashing if track duration was very short
         const playWithDelay = () => {
             if (elapsed < 500) {
                 this.log("[AudioPlayer] Rapid loop detected, delaying restart by 200ms.");
@@ -823,8 +880,8 @@ class BackendAudioPlayer extends EventEmitter {
 
         // Logic based on loop mode
         if (this.loopMode === 2) {
-            // Loop Single: Just restart the current track
-            this.log("[AudioPlayer] Loop 1: Restarting current track.");
+            // Loop Single: Just restart the current track immediately for tight seamless looping
+            this.log("[AudioPlayer] Loop Single: Restarting current track.");
             playWithDelay();
         } else if (this.loopMode === 1) {
             // Loop All: Move the finished track to the bottom and play the next one
