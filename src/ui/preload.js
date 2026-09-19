@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('electron', {
         'open-gamify-tool', 'save-high-score', 'open-settings-window',
         'roll-attack', 'push-mob-rules-to-discord', 'save-soundboard-state',
         'play-next', 'play-prev', 'set-loop-mode', 'set-shuffle', 'remove-from-stack', 'clear-stack',
+        'reorder-stack', 'import-url-download', 'cancel-url-download',
         'request-bot-status', 'voice-toggle', 'jump-to-track', 'play-now',
         'library-action', 'get-discord-config', 'seek-music', 'set-discord-config',
         'show-emoji-panel', 'open-walkthrough', 'update-death-saves', 'roll-death-save',
@@ -65,7 +66,8 @@ contextBridge.exposeInMainWorld('electron', {
         'get-image-as-data-url', 'get-preview-audio-data', 'load-sound',
         'get-soundboard-state', 'save-soundboard-preset', 'load-soundboard-preset',
         'read-combat-file', 'save-music-preset', 'load-music-preset',
-        'get-music-library', 'rescan-music-library'
+        'get-music-library', 'rescan-music-library',
+        'fetch-url-details', 'get-music-folders'
       ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, ...args);
@@ -78,7 +80,7 @@ contextBridge.exposeInMainWorld('electron', {
      */
     on: (channel, func) => {
       // Whitelist for incoming events
-      const validChannels = ['log-message', 'music-player-status', 'dice-log', 'update-initiative-list', 'populate-edit-form', 'soundboard-state-change', 'populate-add-form', 'sound-finished', 'discord-bot-status', 'switch-panel', 'music-library-update', 'discord-config'];
+      const validChannels = ['log-message', 'music-player-status', 'dice-log', 'update-initiative-list', 'populate-edit-form', 'soundboard-state-change', 'populate-add-form', 'sound-finished', 'discord-bot-status', 'switch-panel', 'music-library-update', 'discord-config', 'url-download-progress', 'url-download-complete', 'url-download-error'];
       if (validChannels.includes(channel)) {
         // Wrapper function to ensure the original event object isn't leaked directly
         const subscription = (event, ...args) => func(event, ...args);

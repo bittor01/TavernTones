@@ -424,6 +424,34 @@ class BackendAudioPlayer extends EventEmitter {
     }
 
     /**
+     * Reorders a track in the playlist stack from oldIndex to newIndex.
+     * @param {number} oldIndex - Original position of the track.
+     * @param {number} newIndex - Target position of the track.
+     */
+    reorderStack(oldIndex, newIndex) {
+        if (oldIndex < 0 || oldIndex >= this.stack.length || newIndex < 0 || newIndex >= this.stack.length) {
+            return;
+        }
+        if (oldIndex === newIndex) return;
+
+        // Move track in stack array
+        const [movedTrack] = this.stack.splice(oldIndex, 1);
+        this.stack.splice(newIndex, 0, movedTrack);
+
+        // Adjust active playing track index to maintain correct pointing
+        if (this.currentIndex === oldIndex) {
+            this.currentIndex = newIndex;
+        } else if (this.currentIndex > oldIndex && this.currentIndex <= newIndex) {
+            this.currentIndex--;
+        } else if (this.currentIndex < oldIndex && this.currentIndex >= newIndex) {
+            this.currentIndex++;
+        }
+
+        this.log(`[AudioPlayer] Reordered track from ${oldIndex} to ${newIndex}. Current index is now ${this.currentIndex}`);
+        this._emitStatusUpdate();
+    }
+
+    /**
      * Clears the entire playlist and stops playback.
      */
     clearStack() {

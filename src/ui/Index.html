@@ -116,6 +116,7 @@
           <button id="loop-mode-btn">🔁</button>
           <button id="shuffle-btn">🔀</button>
           <button id="selectFileButton" title="Open Music Library">➕</button>
+          <button id="import-url-header-btn" title="Import Song from URL">🌐</button>
           <button id="clear-stack-btn" title="Clear Playlist">🗑️</button>
         </div>
 
@@ -247,6 +248,63 @@
         <button value="cancel">Cancel</button>
         <button id="confirm-import-btn" value="confirm">Import</button>
       </div>
+    </form>
+  </dialog>
+
+  <!-- Modal Dialog for Importing Music from URL -->
+  <dialog id="url-import-dialog" style="width: 480px; max-width: 95vw;">
+    <h3>🌐 Import Song from URL</h3>
+    <form id="url-import-form" method="dialog" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+
+      <!-- Target Folder Field -->
+      <div class="form-group" style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+        <label for="url-target-folder-select" style="font-size: 0.85em; font-weight: bold;">Destination Folder:</label>
+        <select id="url-target-folder-select" style="width: 100%; padding: 6px; background-color: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 4px;"></select>
+      </div>
+
+      <!-- URL Input Field -->
+      <div class="form-group" style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+        <label for="url-input-field" style="font-size: 0.85em; font-weight: bold;">Media URL (YouTube, SoundCloud, Direct MP3):</label>
+        <div style="display: flex; width: 100%; gap: 6px;">
+          <input type="text" id="url-input-field" placeholder="https://..." required style="flex-grow: 1;">
+          <button type="button" id="url-fetch-details-btn" class="small-btn" title="Fetch Title" style="padding: 4px 8px; border: 1px solid #555; background: #333; border-radius: 4px;">🔍 Fetch</button>
+        </div>
+      </div>
+
+      <!-- File Name Input Field -->
+      <div class="form-group" style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+        <label for="url-filename-field" style="font-size: 0.85em; font-weight: bold;">File Name (.mp3):</label>
+        <input type="text" id="url-filename-field" placeholder="My Track.mp3" required>
+      </div>
+
+      <!-- Enqueue Action Choice -->
+      <div class="form-group" style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+        <label for="url-action-select" style="font-size: 0.85em; font-weight: bold;">Playlist Action:</label>
+        <select id="url-action-select" style="width: 100%; padding: 6px; background-color: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 4px;">
+          <option value="none">Just Save to Folder</option>
+          <option value="play-now" selected>Save & Play Now</option>
+          <option value="add-top">Save & Add to Top of Playlist</option>
+          <option value="add-bottom">Save & Add to Bottom of Playlist</option>
+        </select>
+      </div>
+
+      <!-- Download Status & Progress Bar -->
+      <div id="url-download-status-container" style="display: none; flex-direction: column; gap: 6px; background: #1b1b1b; padding: 10px; border-radius: 6px; border: 1px solid #333;">
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85em;">
+          <span id="url-download-status-text">Starting download...</span>
+          <span id="url-download-spinner">⏱️</span>
+        </div>
+        <div class="progress-container" style="height: 12px; margin-top: 0;">
+          <div id="url-download-progress-bar" class="progress-bar" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Dialog Buttons -->
+      <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+        <button type="button" id="url-dialog-cancel-btn" style="background-color: #444;">Cancel</button>
+        <button type="submit" id="url-dialog-submit-btn" style="background-color: #28a745; border-color: #28a745; color: white;">⬇️ Download</button>
+      </div>
+
     </form>
   </dialog>
 
