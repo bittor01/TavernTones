@@ -25,6 +25,10 @@ contextBridge.exposeInMainWorld('settings', {
     // Explicitly select the folder containing FFmpeg
     selectFfmpeg: () => ipcRenderer.invoke('select-ffmpeg-bin-folder'),
 
+    // --- yt-dlp Executable Management ---
+    getYtDlpStatus: () => ipcRenderer.invoke('get-ytdlp-status'),
+    updateYtDlp: () => ipcRenderer.invoke('update-ytdlp'),
+
     // --- Data and Integration Handlers ---
     // Triggers the GitHub sync for bestiary monster data
     fetchBestiaryData: (repoUrl, localPath) => ipcRenderer.invoke('fetch-bestiary-data', { repoUrl, localPath }),

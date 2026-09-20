@@ -41,6 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const browseRandomTablesBtn = document.getElementById('browse-random-tables');
     const browseMusicBtn = document.getElementById('browse-music');
     const setupDefaultFoldersBtn = document.getElementById('setup-default-folders');
+    const fetchYtDlpBtn = document.getElementById('fetch-ytdlp-btn');
+    const ytDlpStatusSpan = document.getElementById('ytdlp-status-span');
     const registerSlashBtn = document.getElementById('register-slash-btn');
     const unregisterSlashBtn = document.getElementById('unregister-slash-btn');
     const walkthroughBtn = document.getElementById('walkthrough-btn');
@@ -131,6 +133,38 @@ document.addEventListener('DOMContentLoaded', () => {
             checkDirty();
         }
     });
+
+    const refreshYtDlpStatus = async () => {
+        if (ytDlpStatusSpan && window.settings.getYtDlpStatus) {
+            ytDlpStatusSpan.textContent = 'Checking status...';
+            const status = await window.settings.getYtDlpStatus();
+            if (status && status.success) {
+                ytDlpStatusSpan.textContent = `Status: ${status.version || 'Installed'}`;
+            } else {
+                ytDlpStatusSpan.textContent = `Status: Not Installed (${status?.error || 'Download required'})`;
+            }
+        }
+    };
+
+    if (fetchYtDlpBtn) {
+        fetchYtDlpBtn.addEventListener('click', async () => {
+            fetchYtDlpBtn.disabled = true;
+            fetchYtDlpBtn.textContent = 'Updating...';
+            if (ytDlpStatusSpan) ytDlpStatusSpan.textContent = 'Downloading latest release...';
+
+            const res = await window.settings.updateYtDlp();
+            if (res && res.success) {
+                alert(res.message || 'yt-dlp updated successfully!');
+            } else {
+                alert('yt-dlp update error: ' + (res?.error || 'Failed to update yt-dlp'));
+            }
+
+            await refreshYtDlpStatus();
+            fetchYtDlpBtn.disabled = false;
+            fetchYtDlpBtn.textContent = 'Fetch/Update yt-dlp';
+        });
+        refreshYtDlpStatus();
+    }
 
     browseBestiaryBtn.addEventListener('click', () => handleBrowse('select-bestiary-folder', bestiaryPathInput).then(checkDirty));
     browseRandomTablesBtn.addEventListener('click', () => handleBrowse('select-random-tables-folder', randomTablesPathInput).then(checkDirty));

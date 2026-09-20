@@ -850,6 +850,17 @@ async function ipcloader() {
     ipcMain.handle('select-music-folder', () => selectDirectory('Select Default Music Folder'));
     ipcMain.handle('select-ffmpeg-bin-folder', () => selectDirectory('Select Folder Containing FFmpeg and ffprobe'));
 
+    // --- yt-dlp Executable Management Handlers ---
+    ipcMain.handle('get-ytdlp-status', async () => {
+        const result = await ensureYtDlpBinary(false);
+        return result;
+    });
+
+    ipcMain.handle('update-ytdlp', async () => {
+        const result = await ensureYtDlpBinary(true);
+        return result;
+    });
+
     /**
      * Wizard-style handler to create and populate the standard Tavern Tones data structure.
      * Handles directory creation and initial file copying.
@@ -933,6 +944,76 @@ async function ipcloader() {
         const sync = new GitHubSync(logToRenderer, dialog, mainWindow);
         return await sync.syncBestiary(repoUrl, localPath);
     });
+
+    /**
+     * Resolves the path to local yt-dlp binary, and downloads/updates the latest release from GitHub if requested or missing.
+     * @param {boolean} [forceUpdate=false]
+     * @returns {Promise<{success: boolean, version: string, message: string}>}
+     */
+    async function ensureYtDlpBinary(forceUpdate = false) {
+        const isWin = process.platform === 'win32';
+        const isMac = process.platform === 'darwin';
+        const exeName = isWin ? 'yt-dlp.exe' : (isMac ? 'yt-dlp_macos' : 'yt-dlp');
+        const localExeName = isWin ? 'yt-dlp.exe' : 'yt-dlp';
+
+        let binFolder = discordConfig && discordConfig.ffmpegPath ? discordConfig.ffmpegPath : path.join(app.getPath('userData'), 'bin');
+        if (!fs.existsSync(binFolder)) {
+            try { fs.mkdirSync(binFolder, { recursive: true }); } catch (e) {}
+        }
+
+        const localPath = path.join(binFolder, localExeName);
+
+        let currentVersion = '';
+        if (fs.existsSync(localPath)) {
+            try {
+                const { execSync } = require('child_process');
+                currentVersion = execSync(`"${localPath}" --version`, { timeout: 5000 }).toString().trim();
+            } catch (e) {}
+        }
+
+        if (fs.existsSync(localPath) && !forceUpdate) {
+            return { success: true, version: currentVersion || 'Installed', message: 'yt-dlp is ready.' };
+        }
+
+        try {
+            logToRenderer('[yt-dlp] Checking GitHub API for latest release...');
+            const res = await axios.get('https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest', {
+                headers: { 'User-Agent': 'TavernTones' },
+                timeout: 10000
+            });
+
+            const latestTag = res.data.tag_name;
+            if (currentVersion && currentVersion === latestTag && !forceUpdate) {
+                return { success: true, version: currentVersion, message: `yt-dlp is up to date (${currentVersion}).` };
+            }
+
+            const asset = res.data.assets.find(a => a.name === exeName || a.name === 'yt-dlp');
+            if (!asset) {
+                throw new Error(`Could not find download asset for ${exeName}`);
+            }
+
+            logToRenderer(`[yt-dlp] Downloading ${asset.name} (${latestTag})...`);
+            const downloadRes = await axios.get(asset.browser_download_url, {
+                responseType: 'arraybuffer',
+                headers: { 'User-Agent': 'TavernTones' },
+                timeout: 30000
+            });
+
+            fs.writeFileSync(localPath, downloadRes.data);
+            if (!isWin) {
+                try { fs.chmodSync(localPath, '755'); } catch (e) {}
+            }
+
+            logToRenderer(`[yt-dlp] Successfully updated to version ${latestTag}`);
+            return { success: true, version: latestTag, message: `Successfully updated yt-dlp to version ${latestTag}` };
+        } catch (e) {
+            logToRenderer(`[yt-dlp] Download/update failed: ${e.message}`);
+            if (fs.existsSync(localPath)) {
+                return { success: true, version: currentVersion || 'Installed', message: `Update failed: ${e.message}. Using existing yt-dlp.` };
+            }
+            return { success: false, version: 'None', error: e.message };
+        }
+    }
 
     /**
      * Attempts to automatically locate the FFmpeg executable on the user's system.

@@ -78,6 +78,28 @@ class UrlDownloader {
     }
 
     /**
+     * Resolves the executable path for yt-dlp binary if available.
+     * @returns {string|null} Absolute path to yt-dlp executable or null if not found.
+     */
+    getYtDlpPath() {
+        const isWin = process.platform === 'win32';
+        const exeName = isWin ? 'yt-dlp.exe' : 'yt-dlp';
+
+        const possibleDirs = [];
+        if (this.ffmpegBinFolder) possibleDirs.push(this.ffmpegBinFolder);
+        if (process.env.APPDATA) possibleDirs.push(path.join(process.env.APPDATA, 'taverntones', 'bin'));
+        possibleDirs.push(path.join(process.cwd(), 'bin'));
+        possibleDirs.push('/tmp');
+
+        for (const dir of possibleDirs) {
+            const fullPath = path.join(dir, exeName);
+            if (fs.existsSync(fullPath)) return fullPath;
+        }
+
+        return null;
+    }
+
+    /**
      * Resolves the executable path for FFmpeg.
      * @returns {string} Absolute path to ffmpeg or fallback executable string.
      */
@@ -195,6 +217,36 @@ class UrlDownloader {
     async fetchUrlDetails(urlStr) {
         this.validateUrl(urlStr);
         const urlLower = urlStr.toLowerCase();
+
+        // 0. yt-dlp metadata extraction if yt-dlp binary is installed
+        const ytDlpPath = this.getYtDlpPath();
+        if (ytDlpPath) {
+            try {
+                const details = await new Promise((resolve, reject) => {
+                    const child = spawn(ytDlpPath, ['-j', '--no-playlist', urlStr]);
+                    let stdout = '';
+                    child.stdout.on('data', d => stdout += d.toString());
+                    child.on('close', code => {
+                        if (code === 0 && stdout) {
+                            try {
+                                const parsed = JSON.parse(stdout);
+                                resolve({
+                                    title: parsed.title || parsed.fulltitle,
+                                    author: parsed.uploader || parsed.channel || parsed.artist || 'Web Media',
+                                    source: parsed.extractor_key || 'yt-dlp'
+                                });
+                            } catch(e) { reject(e); }
+                        } else {
+                            reject(new Error(`yt-dlp exited with code ${code}`));
+                        }
+                    });
+                    child.on('error', reject);
+                });
+                if (details && details.title) return details;
+            } catch (e) {
+                this.log(`[UrlDownloader] yt-dlp metadata extraction note: ${e.message}`);
+            }
+        }
 
         // 1. YouTube metadata extraction via @distube/ytdl-core or play-dl
         if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
@@ -328,6 +380,58 @@ class UrlDownloader {
                     this.activeDownloads.delete(downloadId);
                 }
             };
+
+            // Use yt-dlp binary if available for highest compatibility
+            const ytDlpPath = this.getYtDlpPath();
+            if (ytDlpPath) {
+                try {
+                    reportProgress(10, 'Downloading media via yt-dlp...');
+                    const args = [
+                        '-x',
+                        '--audio-format', 'mp3',
+                        '--audio-quality', '0',
+                        '-o', finalFilePath,
+                        '--no-playlist',
+                        url
+                    ];
+                    if (ffmpegPath && ffmpegPath !== 'ffmpeg' && fs.existsSync(ffmpegPath)) {
+                        args.push('--ffmpeg-location', ffmpegPath);
+                    }
+
+                    ffmpegProcess = spawn(ytDlpPath, args);
+                    if (downloadId) this.activeDownloads.set(downloadId, { ffmpegProcess });
+
+                    ffmpegProcess.stdout.on('data', (data) => {
+                        const msg = data.toString();
+                        const match = msg.match(/\[download\]\s+(\d+\.?\d*)%/);
+                        if (match) {
+                            const pct = Math.min(99, Math.round(parseFloat(match[1])));
+                            reportProgress(pct, `Downloading audio: ${pct}%`);
+                        }
+                    });
+
+                    ffmpegProcess.on('close', (code) => {
+                        cleanup();
+                        if (code === 0 && fs.existsSync(finalFilePath)) {
+                            reportProgress(100, 'Download complete!');
+                            resolve({ success: true, filePath: finalFilePath, fileName: sanitizedFileName });
+                        } else {
+                            if (fs.existsSync(finalFilePath)) fs.unlinkSync(finalFilePath);
+                            reject(new Error(`yt-dlp processing failed with exit code ${code}`));
+                        }
+                    });
+
+                    ffmpegProcess.on('error', (err) => {
+                        cleanup();
+                        if (fs.existsSync(finalFilePath)) fs.unlinkSync(finalFilePath);
+                        reject(err);
+                    });
+
+                    return;
+                } catch (e) {
+                    this.log(`[UrlDownloader] yt-dlp download setup note: ${e.message}`);
+                }
+            }
 
             // Setup SoundCloud streaming if applicable
             if (urlLower.includes('soundcloud.com')) {
