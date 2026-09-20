@@ -27,6 +27,39 @@ class UrlDownloader {
         this.activeDownloads = new Map();
         // Initialize SoundCloud client ID authorization
         this.initSoundCloud();
+        // Load YouTube cookies for ytdl if cookies.json is present
+        this.loadYtdlAgent();
+    }
+
+    /**
+     * Loads YouTube cookies from cookies.json or youtube_cookies.json in musicFolder or current directory if available.
+     * Allows ytdl to bypass YouTube's 'Sign in to confirm you're not a bot' protection on age-restricted or official music videos.
+     */
+    loadYtdlAgent() {
+        const possiblePaths = [];
+        if (this.musicFolder) {
+            possiblePaths.push(path.join(this.musicFolder, 'cookies.json'));
+            possiblePaths.push(path.join(this.musicFolder, 'youtube_cookies.json'));
+        }
+        possiblePaths.push(path.join(process.cwd(), 'cookies.json'));
+        possiblePaths.push(path.join(process.cwd(), 'youtube_cookies.json'));
+
+        for (const cookiePath of possiblePaths) {
+            try {
+                if (fs.existsSync(cookiePath)) {
+                    const content = fs.readFileSync(cookiePath, 'utf8');
+                    const parsed = JSON.parse(content);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        this.ytdlAgent = ytdl.createAgent(parsed);
+                        this.log(`[UrlDownloader] Loaded YouTube cookies from ${cookiePath}`);
+                        return;
+                    }
+                }
+            } catch (e) {
+                this.log(`[UrlDownloader] Error loading cookies from ${cookiePath}: ${e.message}`);
+            }
+        }
+        this.ytdlAgent = null;
     }
 
     /**
@@ -167,7 +200,8 @@ class UrlDownloader {
         if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
             try {
                 if (ytdl.validateURL(urlStr)) {
-                    const info = await ytdl.getBasicInfo(urlStr);
+                    const ytdlOpts = this.ytdlAgent ? { agent: this.ytdlAgent } : {};
+                    const info = await ytdl.getBasicInfo(urlStr, ytdlOpts);
                     if (info && info.videoDetails && info.videoDetails.title) {
                         return {
                             title: info.videoDetails.title,
@@ -368,11 +402,15 @@ class UrlDownloader {
             if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
                 try {
                     reportProgress(10, 'Connecting to YouTube audio stream...');
-                    // Use @distube/ytdl-core for audio streaming
-                    inputStream = ytdl(url, {
+                    // Use @distube/ytdl-core for audio streaming with cookies agent if present
+                    const ytdlOpts = {
                         filter: 'audioonly',
                         quality: 'highest'
-                    });
+                    };
+                    if (this.ytdlAgent) {
+                        ytdlOpts.agent = this.ytdlAgent;
+                    }
+                    inputStream = ytdl(url, ytdlOpts);
 
                     inputStream.on('progress', (chunkLength, downloaded, total) => {
                         if (total) {
