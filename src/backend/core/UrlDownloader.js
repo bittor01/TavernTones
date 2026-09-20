@@ -25,6 +25,23 @@ class UrlDownloader {
         this.log = logCallback || console.log;
         // Track active download processes so they can be canceled if requested
         this.activeDownloads = new Map();
+        // Initialize SoundCloud client ID authorization
+        this.initSoundCloud();
+    }
+
+    /**
+     * Initializes or refreshes the free SoundCloud Client ID for play-dl metadata and stream requests.
+     */
+    async initSoundCloud() {
+        try {
+            const clientID = await play.getFreeClientID();
+            if (clientID) {
+                await play.setToken({ soundcloud: { client_id: clientID } });
+                this.log('[UrlDownloader] SoundCloud client authorization initialized.');
+            }
+        } catch (err) {
+            this.log(`[UrlDownloader] SoundCloud authorization warning: ${err.message}`);
+        }
     }
 
     /**
@@ -180,6 +197,7 @@ class UrlDownloader {
         // 2. SoundCloud metadata extraction via play-dl
         if (urlLower.includes('soundcloud.com')) {
             try {
+                await this.initSoundCloud();
                 const scInfo = await play.soundcloud(urlStr);
                 if (scInfo && scInfo.name) {
                     return {
@@ -276,6 +294,75 @@ class UrlDownloader {
                     this.activeDownloads.delete(downloadId);
                 }
             };
+
+            // Setup SoundCloud streaming if applicable
+            if (urlLower.includes('soundcloud.com')) {
+                (async () => {
+                    try {
+                        reportProgress(10, 'Connecting to SoundCloud audio stream...');
+                        await this.initSoundCloud();
+                        const scStream = await play.stream(url);
+                        inputStream = scStream.stream;
+
+                        let scErrorOccurred = false;
+                        let scErrorMessage = '';
+
+                        inputStream.on('error', (err) => {
+                            this.log(`[UrlDownloader] SoundCloud stream error: ${err.message}`);
+                            scErrorOccurred = true;
+                            scErrorMessage = err.message;
+                            if (ffmpegProcess) {
+                                ffmpegProcess.kill('SIGKILL');
+                            }
+                        });
+
+                        const ffmpegArgs = [
+                            '-y',
+                            '-i', 'pipe:0',
+                            '-vn',
+                            '-ar', '44100',
+                            '-ac', '2',
+                            '-b:a', '192k',
+                            '-f', 'mp3',
+                            finalFilePath
+                        ];
+
+                        ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
+                        if (downloadId) this.activeDownloads.set(downloadId, { ffmpegProcess, inputStream });
+
+                        inputStream.pipe(ffmpegProcess.stdin);
+
+                        ffmpegProcess.on('close', (code) => {
+                            cleanup();
+                            if (code === 0 && fs.existsSync(finalFilePath) && !scErrorOccurred) {
+                                reportProgress(100, 'Download complete!');
+                                resolve({ success: true, filePath: finalFilePath, fileName: sanitizedFileName });
+                            } else {
+                                if (fs.existsSync(finalFilePath)) fs.unlinkSync(finalFilePath);
+                                if (scErrorOccurred) {
+                                    reject(new Error(`SoundCloud stream failed: ${scErrorMessage || 'Audio stream error'}`));
+                                } else {
+                                    reject(new Error(`FFmpeg processing failed with exit code ${code}`));
+                                }
+                            }
+                        });
+
+                        ffmpegProcess.on('error', (err) => {
+                            cleanup();
+                            if (fs.existsSync(finalFilePath)) fs.unlinkSync(finalFilePath);
+                            reject(err);
+                        });
+
+                        return;
+                    } catch (err) {
+                        this.log(`[UrlDownloader] SoundCloud stream setup error: ${err.message}`);
+                        cleanup();
+                        if (fs.existsSync(finalFilePath)) fs.unlinkSync(finalFilePath);
+                        reject(err);
+                    }
+                })();
+                return;
+            }
 
             // Setup YouTube streaming if applicable
             if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
