@@ -78,6 +78,14 @@ class UrlDownloader {
     }
 
     /**
+     * Checks whether a local yt-dlp executable is present.
+     * @returns {boolean}
+     */
+    hasYtDlp() {
+        return !!this.getYtDlpPath();
+    }
+
+    /**
      * Resolves the executable path for yt-dlp binary if available.
      * @returns {string|null} Absolute path to yt-dlp executable or null if not found.
      */

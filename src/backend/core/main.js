@@ -999,9 +999,31 @@ async function ipcloader() {
                 timeout: 30000
             });
 
-            fs.writeFileSync(localPath, downloadRes.data);
+            const tempPath = localPath + '.new';
+            const oldPath = localPath + '.old';
+
+            fs.writeFileSync(tempPath, downloadRes.data);
             if (!isWin) {
-                try { fs.chmodSync(localPath, '755'); } catch (e) {}
+                try { fs.chmodSync(tempPath, '755'); } catch (e) {}
+            }
+
+            if (fs.existsSync(localPath)) {
+                try {
+                    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+                    fs.renameSync(localPath, oldPath);
+                } catch (e) {}
+            }
+
+            try {
+                fs.renameSync(tempPath, localPath);
+            } catch (e) {
+                // If rename fails, try copying over
+                fs.copyFileSync(tempPath, localPath);
+                try { fs.unlinkSync(tempPath); } catch (e2) {}
+            }
+
+            if (fs.existsSync(oldPath)) {
+                try { fs.unlinkSync(oldPath); } catch (e) {}
             }
 
             logToRenderer(`[yt-dlp] Successfully updated to version ${latestTag}`);
@@ -1421,6 +1443,30 @@ async function ipcloader() {
         try {
             if (!urlDownloader) {
                 urlDownloader = new UrlDownloader(discordConfig.defaultMusicPath, discordConfig.ffmpegPath, logToRenderer);
+            }
+
+            // Prompt user if yt-dlp is not installed yet
+            if (!urlDownloader.hasYtDlp()) {
+                const response = await dialog.showMessageBox(mainWindow || settingsWindow, {
+                    type: 'question',
+                    title: 'yt-dlp Required',
+                    message: 'yt-dlp is required to download media from this site. Would you like to fetch and install yt-dlp now?',
+                    buttons: ['Download yt-dlp', 'Cancel'],
+                    defaultId: 0,
+                    cancelId: 1
+                });
+
+                if (response.response === 0) {
+                    if (mainWindow && !mainWindow.isDestroyed()) {
+                        mainWindow.webContents.send('url-download-progress', { downloadId, percent: 5, status: 'Fetching yt-dlp executable...' });
+                    }
+                    const ytdlpResult = await ensureYtDlpBinary(true);
+                    if (!ytdlpResult.success) {
+                        throw new Error(`Failed to install yt-dlp: ${ytdlpResult.error || ytdlpResult.message}`);
+                    }
+                } else {
+                    throw new Error('Download cancelled by user (yt-dlp required).');
+                }
             }
 
             const result = await urlDownloader.downloadUrlToMp3({
