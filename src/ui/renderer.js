@@ -1346,7 +1346,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     div.className = 'music-stack-item';
                     div.dataset.index = index;
 
+                    div.draggable = true;
+
                     div.innerHTML = `
+                        <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
                         <span class="track-name">${track.name}</span>
                         <div class="item-actions">
                             <button class="small-btn play-track-btn" data-index="${index}" title="Play Now">▶️</button>
@@ -1369,6 +1372,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                     div.addEventListener('dblclick', () => {
                         window.electron.ipcRenderer.send('play-now', { index });
                     });
+
+                    // Drag and Drop reordering handlers
+                    div.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', index.toString());
+                        e.dataTransfer.effectAllowed = 'move';
+                        div.classList.add('dragging');
+                    });
+
+                    div.addEventListener('dragend', () => {
+                        div.classList.remove('dragging');
+                        document.querySelectorAll('.music-stack-item').forEach(el => {
+                            el.classList.remove('drag-over');
+                        });
+                    });
+
+                    div.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        div.classList.add('drag-over');
+                    });
+
+                    div.addEventListener('dragleave', () => {
+                        div.classList.remove('drag-over');
+                    });
+
+                    div.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        div.classList.remove('drag-over');
+                        const oldIndexStr = e.dataTransfer.getData('text/plain');
+                        if (oldIndexStr !== '') {
+                            const oldIndex = parseInt(oldIndexStr, 10);
+                            const newIndex = parseInt(div.dataset.index, 10);
+                            if (!isNaN(oldIndex) && !isNaN(newIndex) && oldIndex !== newIndex) {
+                                window.electron.ipcRenderer.send('reorder-stack', { oldIndex, newIndex });
+                            }
+                        }
+                    });
+
                     musicStackList.appendChild(div);
                 });
             }
