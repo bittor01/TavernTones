@@ -1278,6 +1278,13 @@ async function ipcloader() {
         if (musicPlayer) musicPlayer.prev(false);
     });
 
+    // Reorders tracks in the playlist stack via drag-and-drop
+    ipcMain.on('reorder-stack', (event, { oldIndex, newIndex }) => {
+        if (musicPlayer) {
+            musicPlayer.reorderStack(oldIndex, newIndex);
+        }
+    });
+
     // Updates the repeat/loop mode (None, All, or Single)
     ipcMain.on('set-loop-mode', (event, { mode }) => {
         if (musicPlayer) musicPlayer.setLoopMode(mode);

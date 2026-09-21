@@ -32,7 +32,8 @@
     "electron-builder": "^26.0.12"
   },
   "overrides": {
-    "undici": "6.24.1"
+    "undici": "^7.29.1",
+    "mathjs": "^15.2.0"
   },
   "build": {
     "appId": "com.CrispyChestnuts.TavernTones",
