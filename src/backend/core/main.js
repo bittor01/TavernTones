@@ -361,7 +361,12 @@ async function apploader() {
             try {
                 // Parse the requested URL to extract the 'path' parameter
                 const url = new URL(request.url);
-                const absolutePath = url.searchParams.get('path');
+                let absolutePath = url.searchParams.get('path');
+
+                // Resolve Windows shortcut (.lnk) targets if musicPlayer is available
+                if (absolutePath && musicPlayer) {
+                    absolutePath = musicPlayer.resolveShortcutPath(absolutePath);
+                }
 
                 // Basic validation: ensure path exists
                 if (!absolutePath || !fs.existsSync(absolutePath)) {
@@ -1417,6 +1422,8 @@ async function ipcloader() {
         if (!filePath) {
             return { success: false, error: 'No file available for preview.' };
         }
+        // Resolve shortcut to target audio file before passing to safe-media
+        filePath = musicPlayer.resolveShortcutPath(filePath);
         // Construct the custom protocol URL with the encoded file path as a search parameter
         const safeUrl = `safe-media://local/?path=${encodeURIComponent(filePath)}`;
         return { success: true, url: safeUrl };
@@ -1495,13 +1502,19 @@ async function ipcloader() {
      */
     const resolveLibraryPaths = (paths) => {
         return paths.map(p => {
-            // Only process .lnk files
+            if (musicPlayer) {
+                return musicPlayer.resolveShortcutPath(p);
+            }
             if (path.extname(p).toLowerCase() === '.lnk') {
                 try {
-                    // Use Electron shell to read the shortcut metadata
                     const shortcut = shell.readShortcutLink(p);
-                    if (shortcut.target && fs.existsSync(shortcut.target)) {
-                        return shortcut.target;
+                    if (shortcut && shortcut.target) {
+                        let target = shortcut.target;
+                        if (!path.isAbsolute(target)) {
+                            target = path.resolve(shortcut.cwd || path.dirname(p), target);
+                        }
+                        target = path.normalize(target);
+                        if (fs.existsSync(target)) return target;
                     }
                 } catch (e) {
                     console.error(`Failed to resolve shortcut: ${p}`, e);
@@ -3113,20 +3126,9 @@ client.once(Events.ClientReady, async () => {
         // --- Row 1: Song Selector Dropdown ---
         if (!cachedDiscordSongOptions) {
             cachedDiscordSongOptions = getFlatMusicList().map(p => {
-                let resolved = p;
-                // Resolve shortcut link if path points to a .lnk file
-                if (path.extname(p).toLowerCase() === '.lnk') {
-                    try {
-                        const shortcut = shell.readShortcutLink(p);
-                        if (shortcut.target && fs.existsSync(shortcut.target)) {
-                            resolved = shortcut.target;
-                        } else {
-                            return null; // Exclude broken shortcut from options
-                        }
-                    } catch (e) {
-                        return null; // Exclude broken shortcut on error
-                    }
-                }
+                let resolved = musicPlayer ? musicPlayer.resolveShortcutPath(p) : p;
+                // Exclude shortcuts that could not be resolved to valid target files
+                if (path.extname(resolved).toLowerCase() === '.lnk') return null;
                 // Verify file exists on disk
                 if (!fs.existsSync(resolved)) return null;
                 return {

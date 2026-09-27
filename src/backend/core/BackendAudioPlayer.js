@@ -330,24 +330,42 @@ class BackendAudioPlayer extends EventEmitter {
 
     /**
      * Resolves a file path if it is a Windows shortcut (.lnk), returning the valid target path.
+     * Recursively resolves chained shortcuts and handles relative target paths.
      * Returns original path if not a shortcut or if target resolution fails.
      * @param {string} filePath - Path to check and resolve.
+     * @param {number} [depth=0] - Recursion depth limit to prevent infinite shortcut loops.
      * @returns {string} Target path or original path.
      */
-    resolveShortcutPath(filePath) {
-        // Return immediately if invalid path supplied
-        if (!filePath) return filePath;
+    resolveShortcutPath(filePath, depth = 0) {
+        // Return immediately if invalid path supplied or max recursion depth reached
+        if (!filePath || depth > 5) return filePath;
         // Verify extension is .lnk and shell helper is available
-        if (path.extname(filePath).toLowerCase() === '.lnk' && this.shell) {
+        const ext = path.extname(filePath.replace(/\\/g, '/')).toLowerCase();
+        if (ext === '.lnk' && this.shell) {
             try {
-                // Read metadata from Windows shortcut
+                // Read metadata from Windows shortcut via Electron shell
                 const shortcut = this.shell.readShortcutLink(filePath);
-                // Return target if target exists on disk
-                if (shortcut.target && fs.existsSync(shortcut.target)) {
-                    return shortcut.target;
+                if (shortcut && shortcut.target) {
+                    let target = shortcut.target;
+                    // Resolve relative target paths against shortcut cwd or shortcut file directory
+                    const winPath = path.win32 || path;
+                    const isAbs = path.isAbsolute(target) || winPath.isAbsolute(target);
+                    if (!isAbs) {
+                        const baseDir = shortcut.cwd || path.dirname(filePath);
+                        target = winPath.isAbsolute(baseDir) ? winPath.resolve(baseDir, target) : path.resolve(baseDir, target);
+                    }
+                    // Normalize path separators for platform consistency
+                    target = winPath.isAbsolute(target) ? winPath.normalize(target) : path.normalize(target);
+                    // Return target if target exists on disk, recursively resolving if target is also a shortcut
+                    if (fs.existsSync(target)) {
+                        const targetExt = path.extname(target.replace(/\\/g, '/')).toLowerCase();
+                        return targetExt === '.lnk'
+                            ? this.resolveShortcutPath(target, depth + 1)
+                            : target;
+                    }
                 }
             } catch (e) {
-                // Log resolution error to visual console
+                // Log resolution error to visual console for debugging
                 this.log(`[AudioPlayer] Failed to resolve shortcut: ${filePath}`);
             }
         }
@@ -508,6 +526,13 @@ class BackendAudioPlayer extends EventEmitter {
             // Verify file actually exists on disk before attempting spawn
             if (!fs.existsSync(filePath)) {
                 this.log(`[AudioPlayer] File not found: ${filePath}`);
+                this._handlePlaybackError(filePath);
+                return;
+            }
+
+            // Reject raw .lnk files whose shortcut targets could not be resolved
+            if (path.extname(filePath.replace(/\\/g, '/')).toLowerCase() === '.lnk') {
+                this.log(`[AudioPlayer] Shortcut target could not be resolved or target file does not exist: ${filePath}`);
                 this._handlePlaybackError(filePath);
                 return;
             }
@@ -783,14 +808,8 @@ class BackendAudioPlayer extends EventEmitter {
      */
     _getDuration(filePath) {
         return new Promise((resolve, reject) => {
-            let targetPath = filePath;
-            // Resolve shortcuts before probing
-            if (path.extname(filePath).toLowerCase() === '.lnk' && this.shell) {
-                try {
-                    const shortcut = this.shell.readShortcutLink(filePath);
-                    if (shortcut.target && fs.existsSync(shortcut.target)) targetPath = shortcut.target;
-                } catch (e) {}
-            }
+            // Resolve shortcuts before probing duration
+            const targetPath = this.resolveShortcutPath(filePath);
 
             const ffprobePath = this._getFfprobePath();
             const { exec } = require('child_process');
