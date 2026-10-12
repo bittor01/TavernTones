@@ -812,11 +812,11 @@ class BackendAudioPlayer extends EventEmitter {
             const targetPath = this.resolveShortcutPath(filePath);
 
             const ffprobePath = this._getFfprobePath();
-            const { exec } = require('child_process');
-            // Execute ffprobe and request only the duration value
-            const cmd = `"${ffprobePath}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${targetPath}"`;
+            // Import execFile from child_process to safely execute ffprobe without shell injection risks
+            const { execFile } = require('child_process');
 
-            exec(cmd, (error, stdout) => {
+            // Execute ffprobe with array arguments to safely extract duration
+            execFile(ffprobePath, ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', targetPath], (error, stdout) => {
                 if (error) {
                     reject(error);
                     return;
