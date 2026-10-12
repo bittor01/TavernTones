@@ -1233,6 +1233,28 @@ body.audio-only .soundboard-stack-slot .stack-emoji-btn {
     color: #fff;
 }
 
+.music-stack-item .drag-handle {
+    cursor: grab;
+    margin-right: 6px;
+    color: #888;
+    user-select: none;
+    font-size: 1.1em;
+    line-height: 1;
+}
+
+.music-stack-item .drag-handle:active {
+    cursor: grabbing;
+}
+
+.music-stack-item.dragging {
+    opacity: 0.4;
+    background-color: #222;
+}
+
+.music-stack-item.drag-over {
+    border-top: 2px solid #007bff;
+}
+
 .music-stack-item .track-name {
     white-space: nowrap;
     overflow: hidden;

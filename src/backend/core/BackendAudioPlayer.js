@@ -330,24 +330,42 @@ class BackendAudioPlayer extends EventEmitter {
 
     /**
      * Resolves a file path if it is a Windows shortcut (.lnk), returning the valid target path.
+     * Recursively resolves chained shortcuts and handles relative target paths.
      * Returns original path if not a shortcut or if target resolution fails.
      * @param {string} filePath - Path to check and resolve.
+     * @param {number} [depth=0] - Recursion depth limit to prevent infinite shortcut loops.
      * @returns {string} Target path or original path.
      */
-    resolveShortcutPath(filePath) {
-        // Return immediately if invalid path supplied
-        if (!filePath) return filePath;
+    resolveShortcutPath(filePath, depth = 0) {
+        // Return immediately if invalid path supplied or max recursion depth reached
+        if (!filePath || depth > 5) return filePath;
         // Verify extension is .lnk and shell helper is available
-        if (path.extname(filePath).toLowerCase() === '.lnk' && this.shell) {
+        const ext = path.extname(filePath.replace(/\\/g, '/')).toLowerCase();
+        if (ext === '.lnk' && this.shell) {
             try {
-                // Read metadata from Windows shortcut
+                // Read metadata from Windows shortcut via Electron shell
                 const shortcut = this.shell.readShortcutLink(filePath);
-                // Return target if target exists on disk
-                if (shortcut.target && fs.existsSync(shortcut.target)) {
-                    return shortcut.target;
+                if (shortcut && shortcut.target) {
+                    let target = shortcut.target;
+                    // Resolve relative target paths against shortcut cwd or shortcut file directory
+                    const winPath = path.win32 || path;
+                    const isAbs = path.isAbsolute(target) || winPath.isAbsolute(target);
+                    if (!isAbs) {
+                        const baseDir = shortcut.cwd || path.dirname(filePath);
+                        target = winPath.isAbsolute(baseDir) ? winPath.resolve(baseDir, target) : path.resolve(baseDir, target);
+                    }
+                    // Normalize path separators for platform consistency
+                    target = winPath.isAbsolute(target) ? winPath.normalize(target) : path.normalize(target);
+                    // Return target if target exists on disk, recursively resolving if target is also a shortcut
+                    if (fs.existsSync(target)) {
+                        const targetExt = path.extname(target.replace(/\\/g, '/')).toLowerCase();
+                        return targetExt === '.lnk'
+                            ? this.resolveShortcutPath(target, depth + 1)
+                            : target;
+                    }
                 }
             } catch (e) {
-                // Log resolution error to visual console
+                // Log resolution error to visual console for debugging
                 this.log(`[AudioPlayer] Failed to resolve shortcut: ${filePath}`);
             }
         }
@@ -391,6 +409,36 @@ class BackendAudioPlayer extends EventEmitter {
             this.currentIndex = 0;
         }
         // Update UI with the new stack contents
+        this._emitStatusUpdate();
+    }
+
+    /**
+     * Reorders a track from oldIndex to newIndex in the playlist stack,
+     * maintaining active track index and playback continuity.
+     * @param {number} oldIndex - Source index of track being moved.
+     * @param {number} newIndex - Destination index for the track.
+     */
+    reorderStack(oldIndex, newIndex) {
+        if (oldIndex < 0 || oldIndex >= this.stack.length) return;
+        if (newIndex < 0 || newIndex >= this.stack.length) return;
+        if (oldIndex === newIndex) return;
+
+        // Remove track from old position
+        const [movedTrack] = this.stack.splice(oldIndex, 1);
+        // Insert track at new position
+        this.stack.splice(newIndex, 0, movedTrack);
+
+        // Adjust active track pointer dynamically
+        if (this.currentIndex === oldIndex) {
+            this.currentIndex = newIndex;
+        } else if (oldIndex < this.currentIndex && newIndex >= this.currentIndex) {
+            this.currentIndex--;
+        } else if (oldIndex > this.currentIndex && newIndex <= this.currentIndex) {
+            this.currentIndex++;
+        }
+
+        this.log(`[AudioPlayer] Reordered track from index ${oldIndex} to ${newIndex}. Current active index is now ${this.currentIndex}.`);
+        // Notify UI and triggers auto-save sync
         this._emitStatusUpdate();
     }
 
@@ -478,6 +526,13 @@ class BackendAudioPlayer extends EventEmitter {
             // Verify file actually exists on disk before attempting spawn
             if (!fs.existsSync(filePath)) {
                 this.log(`[AudioPlayer] File not found: ${filePath}`);
+                this._handlePlaybackError(filePath);
+                return;
+            }
+
+            // Reject raw .lnk files whose shortcut targets could not be resolved
+            if (path.extname(filePath.replace(/\\/g, '/')).toLowerCase() === '.lnk') {
+                this.log(`[AudioPlayer] Shortcut target could not be resolved or target file does not exist: ${filePath}`);
                 this._handlePlaybackError(filePath);
                 return;
             }
@@ -753,21 +808,15 @@ class BackendAudioPlayer extends EventEmitter {
      */
     _getDuration(filePath) {
         return new Promise((resolve, reject) => {
-            let targetPath = filePath;
-            // Resolve shortcuts before probing
-            if (path.extname(filePath).toLowerCase() === '.lnk' && this.shell) {
-                try {
-                    const shortcut = this.shell.readShortcutLink(filePath);
-                    if (shortcut.target && fs.existsSync(shortcut.target)) targetPath = shortcut.target;
-                } catch (e) {}
-            }
+            // Resolve shortcuts before probing duration
+            const targetPath = this.resolveShortcutPath(filePath);
 
             const ffprobePath = this._getFfprobePath();
-            const { exec } = require('child_process');
-            // Execute ffprobe and request only the duration value
-            const cmd = `"${ffprobePath}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${targetPath}"`;
+            // Import execFile from child_process to safely execute ffprobe without shell injection risks
+            const { execFile } = require('child_process');
 
-            exec(cmd, (error, stdout) => {
+            // Execute ffprobe with array arguments to safely extract duration
+            execFile(ffprobePath, ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', targetPath], (error, stdout) => {
                 if (error) {
                     reject(error);
                     return;
